@@ -1,4 +1,4 @@
-# POT
+# Overview
 
 POT (final naming and nomenclature to-be-determined) is intended to be the
 successor to the Keck Task Library (KTL) applications programming interface
