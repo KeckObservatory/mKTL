@@ -22,7 +22,7 @@ response = response.encode()
 # There's nothing special about this port number, other than it is not
 # privileged, and happens to be prime. It is effectively a shared secret.
 
-default_port = 10111
+default_port = 10103
 
 
 class Listener:
