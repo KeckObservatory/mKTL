@@ -2,7 +2,32 @@
 '''
 
 import os
-import tempfile
+
+
+def data(service):
+    ''' Return cached data for the requested service. Returns None if no
+        cached data is available.
+    '''
+
+    cache_dir = directory()
+
+    if cache_dir is None:
+        return None
+
+    service_dir = os.path.join(cache_dir, service)
+    data_filename = os.path.join(service_dir, 'data')
+
+    try:
+        data = open(data_filename, 'r').read()
+    except (OSError, FileNotFoundError):
+        return None
+
+    data = data.strip()
+    if data == '':
+        data = None
+
+    return data
+
 
 
 def directory():
@@ -19,7 +44,7 @@ def directory():
     try:
         home = os.environ['HOME']
     except KeyError:
-        return
+        return None
 
     found = os.path.join(home, '.pot', 'cache')
 
@@ -31,29 +56,67 @@ directory.found = None
 
 
 
-def id(service):
-    ''' Return the last known configuration identifier for the requested
-        service. If the service has no data or identifier, return None.
+def hostname(service):
+    ''' Return the hostname of the last known source-of-authority for the
+        requested service. Return None if the service has no data or hostname.
     '''
 
     cache_dir = directory()
 
     if cache_dir is None:
-        return
+        return None
 
     service_dir = os.path.join(cache_dir, service)
-    service_id = os.path.join(service_dir, 'data.id')
+    service_data = os.path.join(service_dir, 'data')
+    service_host = os.path.join(service_dir, 'host')
+
+    if os.path.exists(service_data):
+        pass
+    else:
+        return None
 
     try:
-        id_contents = open(service_id, 'r').read()
+        hostname = open(service_host, 'r').read()
     except (OSError, FileNotFoundError):
-        id_contents = None
-    else:
-        id_contents = id_contents.strip()
-        if id_contents == '':
-            id_contents = None
+        return None
 
-    return id_contents
+    hostname = hostname.strip()
+    if hostname == '':
+        hostname = None
+
+    return hostname
+
+
+
+def id(service):
+    ''' Return the last known configuration identifier for the requested
+        service. Return None if the service has no data or identifier.
+    '''
+
+    cache_dir = directory()
+
+    if cache_dir is None:
+        return None
+
+    service_dir = os.path.join(cache_dir, service)
+    service_data = os.path.join(service_dir, 'data')
+    service_id = os.path.join(service_dir, 'data.id')
+
+    if os.path.exists(service_data):
+        pass
+    else:
+        return None
+
+    try:
+        id = open(service_id, 'r').read()
+    except (OSError, FileNotFoundError):
+        return None
+
+    id = id.strip()
+    if id == '':
+        id = None
+
+    return id
 
 
 
@@ -64,47 +127,17 @@ def retrieve(service):
         data; the hostname and id values are both handled as strings.
     '''
 
-    ### TODO: should this just call each of three different methods? id(),
-    ### hostname(), data()?
+    service_data = data(service)
+    service_id = id(service)
+    service_host = hostname(service)
 
-    cache_dir = directory()
-
-    if cache_dir is None:
-        return
-
-    service_dir = os.path.join(cache_dir, service)
-
-    hostname_filename = 'host'
-    id_filename = 'data.id'
-    data_filename = 'data'
-
-    hostname_filename = os.path.join(service_dir, hostname_filename)
-    id_filename = os.path.join(service_dir, id_filename)
-    data_filename = os.path.join(service_dir, data_filename)
-
-    try:
-        hostname = open(hostname_filename, 'r').read()
-    except (OSError, FileNotFoundError):
+    if service_data is None or service_id is None or service_hostname is None:
         return None
-
-    try:
-        id = open(id_filename, 'r').read()
-    except (OSError, FileNotFoundError):
-        return None
-
-    try:
-        data = open(data_filename, 'r').read()
-    except (OSError, FileNotFoundError):
-        return None
-
-    hostname = hostname.strip()
-    id = id.strip()
-    data = data.strip()
 
     results = dict()
-    results['hostname'] = hostname
-    results['id'] = id
-    results['data'] = data
+    results['hostname'] = service_hostname
+    results['id'] = service_id
+    results['data'] = service_data
 
     return results
 
@@ -131,7 +164,7 @@ def store(service, hostname, id, data):
 
     cached_id = id(service)
     if cached_id == id:
-        return
+        return None
 
     writable = os.access(service_dir, os.W_OK)
     if writable != True:
