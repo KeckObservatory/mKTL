@@ -115,16 +115,24 @@ class Server:
         if port is None:
             port = self.port
 
+        # See the ZeroMQ man page for zmq_inproc for a full description of
+        # the connection type. Example URL:
+        #
+        # http://api.zeromq.org/4-2:zmq-inproc
+        #
+        # The usage here is analagous to a socketpair.
+
         port = 'tcp://*:' + str(port)
-        notify_port = 'inproc://Client_' + str(id(self))
+        notify_port = 'inproc://Request.Server.' + str(id(self))
 
         self.socket = zmq_context.socket(zmq.REP)
         self.socket.bind(port)
 
         self.notify_in = zmq_context.socket(zmq.PAIR)
+        self.notify_in.connect(notify_port)
+
         self.notify_out = zmq_context.socket(zmq.PAIR)
         self.notify_out.bind(notify_port)
-        self.notify_in.connect(notify_port)
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
