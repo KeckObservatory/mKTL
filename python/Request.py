@@ -20,7 +20,7 @@ class Client:
     '''
 
     port = default_port
-    grace = 5
+    timeout = 5
 
     def __init__(self, address=None, port=None):
 
@@ -33,8 +33,41 @@ class Client:
         port = str(port)
         server = "tcp://%s:%s" % (address, port)
 
+        self.connected = False
         self.socket = zmq_context.socket(zmq.REQ)
+
+        self.monitor = self.socket.get_monitor_socket()
+        self.monitor_thread = threading.Thread(target=self.checkSocket)
+        self.monitor_thread.daemon = True
+        self.monitor_thread.start()
+
         self.socket.connect(server)
+
+
+    def checkSocket(self):
+        ''' This isn't quite as definitive as one might like-- in particular,
+            it can't really tell you whether the server is out there, waiting
+            to receive a request. It will happily tell you once you're connected,
+            but even if you aren't connected, it might just be that you haven't
+            tried yet.
+        '''
+
+        while True:
+            self.monitor.poll()
+            event = zmq.utils.monitor.recv_monitor_message(self.monitor)
+            event_code = event['event']
+
+            if event_code == zmq.EVENT_CONNECTED:
+                self.connected = True
+            elif event_code == zmq.EVENT_HANDSHAKE_SUCCEEDED:
+                self.connected = True
+            else:
+                self.connected = False
+
+            if event_code == zmq.EVENT_MONITOR_STOPPED:
+                break
+
+        self.monitor.close()
 
 
     def send(self, request):
@@ -42,14 +75,23 @@ class Client:
             server's response.
         '''
 
-        socket = self.socket
+        try:
+            request = request.encode()
+        except AttributeError:
+            if hasattr(request, 'decode'):
+                # Assume it's already bytes.
+                pass
+            else:
+                raise
 
-        ### This needs to check whether the client is properly connected,
-        ### and raise an exception if it is not.
-
-        socket.send_string(request)
+        self.socket.send(request)
         print('Request.Client sent: ' + repr(request))
-        response = socket.recv()
+
+        result = self.socket.poll(self.timeout)
+        if result == 0:
+            raise zmq.ZMQError("no response received in %d ms" % (self.timeout))
+
+        response = self.socket.recv()
         print('Request.Client recv: ' + repr(response))
 
         return response
