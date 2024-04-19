@@ -4,6 +4,7 @@
 
 import atexit
 import threading
+import weakref
 import zmq
 import zmq.utils.monitor
 
@@ -138,7 +139,7 @@ class Server:
         self.thread.daemon = True
         self.thread.start()
 
-        Server.instances.append(self)
+        Server.instances.append(weakref.ref(self))
 
 
     def run(self):
@@ -194,8 +195,14 @@ def send(request, address=None, port=None):
 
 
 def shutdown():
-    for instance in Server.instances:
-        instance.stop()
+    instances = Server.instances
+    Server.instances = list()
+
+    for reference in instances:
+        instance = reference()
+
+        if instance is not None:
+            instance.stop()
 
 
 atexit.register(shutdown)
