@@ -47,9 +47,9 @@ class Client:
     def checkSocket(self):
         ''' This isn't quite as definitive as one might like-- in particular,
             it can't really tell you whether the server is out there, waiting
-            to receive a request. It will happily tell you once you're connected,
-            but even if you aren't connected, it might just be that you haven't
-            tried yet.
+            to receive a request. It will happily tell you once you're
+            connected, but even if you aren't connected, it might just be that
+            you haven't tried yet.
         '''
 
         while True:
@@ -160,7 +160,6 @@ class Server:
                     self.snooze()
 
                 counter += 1
-
 
 
     def snooze(self):
