@@ -3,7 +3,6 @@
 '''
 
 import atexit
-import socket
 import threading
 import zmq
 import zmq.utils.monitor
