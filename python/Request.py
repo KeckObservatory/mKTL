@@ -128,11 +128,11 @@ class Server:
         self.socket = zmq_context.socket(zmq.REP)
         self.socket.bind(port)
 
-        self.notify_in = zmq_context.socket(zmq.PAIR)
-        self.notify_in.connect(notify_port)
-
         self.notify_out = zmq_context.socket(zmq.PAIR)
+        self.notify_in = zmq_context.socket(zmq.PAIR)
+
         self.notify_out.bind(notify_port)
+        self.notify_in.connect(notify_port)
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
