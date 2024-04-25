@@ -14,13 +14,13 @@ zmq_context = zmq.Context()
 
 
 class Client:
-    ''' Issue requests via a ZeroMQ REQ socket and receive responses. Maintains
-        a persistent connection to a single server; the default behavior is to
-        connect to localhost on the default port.
+    ''' Issue requests via a ZeroMQ DEALER socket and receive responses.
+        Maintains a persistent connection to a single server; the default
+        behavior is to connect to localhost on the default port.
     '''
 
     port = default_port
-    timeout = 5
+    timeout = 50
 
     def __init__(self, address=None, port=None):
 
@@ -32,9 +32,11 @@ class Client:
 
         port = str(port)
         server = "tcp://%s:%s" % (address, port)
+        identity = "Request.Client.%d" % (id(self))
 
         self.connected = False
-        self.socket = zmq_context.socket(zmq.REQ)
+        self.socket = zmq_context.socket(zmq.DEALER)
+        self.socket.identity = identity.encode()
 
         self.monitor = self.socket.get_monitor_socket()
         self.monitor_thread = threading.Thread(target=self.checkSocket)
@@ -94,6 +96,9 @@ class Client:
         response = self.socket.recv()
         print('Request.Client recv: ' + repr(response))
 
+        completion = self.socket.recv()
+        print('Request.Client recv: ' + repr(completion))
+
         return response
 
 
@@ -102,7 +107,7 @@ class Client:
 
 
 class Server:
-    ''' Receive requests via a ZeroMQ REP socket, and respond to them. The
+    ''' Receive requests via a ZeroMQ ROUTER socket, and respond to them. The
         default behavior is to listen for incoming requests on all available
         addresses on the default port.
     '''
@@ -125,7 +130,7 @@ class Server:
         port = 'tcp://*:' + str(port)
         notify_port = 'inproc://Request.Server.' + str(id(self))
 
-        self.socket = zmq_context.socket(zmq.REP)
+        self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.bind(port)
 
         self.notify_out = zmq_context.socket(zmq.PAIR)
@@ -153,9 +158,18 @@ class Server:
             sockets = poller.poll(1000)
             for active,flag in sockets:
                 if self.socket == active:
-                    request = self.socket.recv()
+                    ident, request = self.socket.recv_multipart()
+
+                    print('Request.Server message from: ' + repr(ident))
                     print('Request.Server received: ' + repr(request))
-                    self.socket.send_string("Request %d received" % (counter))
+
+                    response = "Request %d received" % (counter)
+                    response = response.encode()
+                    self.socket.send_multipart((ident, response))
+
+                    response = "Request %d complete" % (counter)
+                    response = response.encode()
+                    self.socket.send_multipart((ident, response))
                 else:
                     self.snooze()
 
