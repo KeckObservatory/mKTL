@@ -125,7 +125,7 @@ class Server:
         #
         # http://api.zeromq.org/4-2:zmq-inproc
         #
-        # The usage here is analagous to a socketpair.
+        # The 'inproc' usage here is analagous to a socketpair.
 
         port = 'tcp://*:' + str(port)
         notify_port = 'inproc://Request.Server.' + str(id(self))
