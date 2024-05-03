@@ -36,6 +36,7 @@ class Client:
 
         self.connected = False
         self.socket = zmq_context.socket(zmq.DEALER)
+        self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
 
         self.monitor = self.socket.get_monitor_socket()
@@ -131,6 +132,7 @@ class Server:
         notify_port = 'inproc://Request.Server.' + str(id(self))
 
         self.socket = zmq_context.socket(zmq.ROUTER)
+        self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.bind(port)
 
         self.notify_out = zmq_context.socket(zmq.PAIR)
