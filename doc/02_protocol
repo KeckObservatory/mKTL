@@ -59,6 +59,37 @@ operations:
 	ack = self.socket.recv()
 	response = self.socket.recv()
 
+Some responses may include a bulk data component. These will be distinguished
+by having a 'REP+B' message type. If the 'name' was, for example:
+
+	kpfguide.LASTIMAGE
+
+The contents of the REP+B response may look like:
+
+			{'message': 'REP+B',
+			 'id': deadbeef,
+			 'time': 1715738507.234
+			 'name': 'kpfguide.LASTIMAGE',
+			 'data': JSON description of data}
+
+The '+B' on the message field is an indicator that there is a binary data blob
+that will be sent in a separate message. The separate message would have a
+"topic" identifier of:
+
+	kpfguide.LASTIMAGE;bulk
+
+The formatting of the on-the-wire message would be:
+
+	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
+
+...where the first whitespace-separated field after the "topic" is the same
+unique identifier used in the initial response, and all remaining data after
+the space is a pure byte sequence. Both responses must arrive in order for
+either component to have any meaning; the 'data' from the first response
+will include enough information to reconstruct the binary blob, which at the
+present time is only envisioned as image data, or more generally, something
+that can be appropriately represented as a NumPy array.
+
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 The second socket type implements a publish/subscribe socket pattern. The
@@ -91,37 +122,10 @@ of the response described above:
 			 'name': unique name for this telemetry or data,
 			 'data': data according to request}
 
-There are two special cases of broadcast messages. These are identified by
-a modifier on the "topic" string. If the identifier was, for example:
-
-	kpfguide.LASTIMAGE
-
-The contents of the JSON broadcast would be as described above:
-
-			{'MESSAGE': 'PUB',
-			 'id': deadbeef,
-			 'time': 1715738507.234
-			 'name': 'kpfguide.LASTIMAGE',
-			 'data': JSON description of data,
-			 'bulk': True}
-
-The 'bulk' field is an indicator that there is a binary data blob that will
-be broadcast in a separate message. The separate message would have a "topic"
-identifier of:
-
-	kpfguide.LASTIMAGE;bulk
-
-The formatting of the on-the-wire message would be:
-
-	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
-
-...where the first whitespace-separated field after the "topic" is the same
-unique identifier used in the initial broadcast, and all remaining data after
-the space is a pure byte sequence. Both broadcasts must arrive in order for
-either component to have any meaning; the 'data' from the first broadcast
-will include enough information to reconstruct the binary blob, which at the
-present time is only envisioned as image data, or more generally, something
-that can be appropriately represented as a NumPy array.
+There are two special types of broadcast messages. These are distinguished
+by a modifier on the "topic" string. The first type is the bulk/binary data
+broadcast type, as described above for a REP+B response; there is a similar
+PUB+B broadcast with otherwise exactly the same structure.
 
 The second type of special broadcast message is a bundle of related broadcasts.
 If a server so chooses, it can collect related telemetry in a single broadcast;
@@ -144,12 +148,85 @@ The formatting of the on-the-wire message would be:
 
 	b'deimot.FILTER;bundle JSON...'
 
-...where the JSON would be a sequence of simple telemetry units as described
+...where the JSON would be a sequence of individual PUB elements as described
 above:
 
 	[{'message': 'PUB', 'id': eight hexadecimal digits, ...},
 	 {'message': 'PUB', 'id': eight hexadecimal digits, ...},
 	 {'message': 'PUB', 'id': eight hexadecimal digits, ...}]
 
-The 'id' field would be identical for all messages in the bundle, and the
-message type would be consistent, but all other fields would vary.
+The 'id' field would be identical for all messages in the bundle, but all
+remaining fields would vary according to the message contents.
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+This section is a more complete description of the various fields used in
+the JSON messaging described above.
+
+	'message': a one-word assertion of the type of content represented
+		by this JSON. It is one of a few values:
+
+		'ACK': immediate acknowledgement of a request. If this
+			response is not received with a very small time
+			window after the initial request, the client can
+			and should assume the server for that request is
+			offline.
+
+		'REP': a response to a direct request. This will contain
+			the full data responding to a request to read a
+			value, or the completion status of a write request.
+
+		'REP+B': same as 'REP' except that a second message will
+			arrive with the contents of the bulk data.
+
+		'PUB': an asynchronous broadcast of an event. There aren't
+			any other types of message that will arrive on a
+			SUB socket, the inclusion of this field is strictly
+			for symmetry's sake.
+
+		'PUB+B': same as 'PUB' except that a second message will
+			arrive with the contents of the bulk data.
+
+	'id': an eight character hexadecimal value reasonably unique to
+		this specific transaction. The 'unique' constraint doesn't
+		need to extend beyond a few minutes, at most, for any
+		transaction; the id allows the client to tie together
+		ACK and REP messages, to combine the JSON with the data
+		buffer for a 'bulk' broadcast, and to further associate
+		individual PUB messages contained in a 'bundle' broadcast.
+
+	'time': a UNIX epoch timestamp associated with the generation of
+		the event. This is not intended to represent some time
+		prior to the actual broadcast or response, it is intended
+		to represent the time at which that message was created,
+		such that 'now' - 'time' should represent the transmission
+		and POT handling delay between the server and the client.
+		This timestamp should not be expected to represent the
+		last known change of the value in question, though in some
+		(if not most) cases it will be a reasonable approximation.
+
+	'name': the unique name for this piece of telemetry or data. In
+		KTL parlance, this would be the service.KEYWORD name; in
+		EPICS parlance, it would be the full IOC+channel name, as
+		one might use with caput or caget on the command line.
+
+	'data': the real payload of the message. For a read operation, this
+		will be the telemetry requested, whether it be a string,
+		integer, floating point number, or short sequence. For a
+		response with no data this field will either not be present
+		or it will be the JSON null value.
+
+	'error': a JSON dictionary with information about any error that
+		occurred while processing the request. If the value is
+		not present or is the JSON null value, no error occurred.
+		If it is present, it will have these values:
+
+		'type': analagous to the Python exception type (ValueError,
+			TypeError, etc.).
+
+		'text': descriptive text of the error.
+
+		The intent of this error field is not to provide enough
+		information for debugging of code, it is intended to
+		provide enough information to the client for it to perform
+		meaningful error handling in its own software.
