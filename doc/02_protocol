@@ -45,7 +45,6 @@ unless and until the next request arrives.
 The full exchange on the client side is represented by this sequence of
 operations:
 
-	zmq_context = zmq.Context()
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
