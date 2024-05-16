@@ -150,9 +150,9 @@ The formatting of the on-the-wire message would be:
 ...where the JSON would be a sequence of individual PUB elements as described
 above:
 
-	[{'message': 'PUB', 'id': eight hexadecimal digits, ...},
-	 {'message': 'PUB', 'id': eight hexadecimal digits, ...},
-	 {'message': 'PUB', 'id': eight hexadecimal digits, ...}]
+	[{'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERNAM, ...},
+	 {'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERORD, ...},
+	 {'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERRAW, ...}]
 
 The 'id' field would be identical for all messages in the bundle, but all
 remaining fields would vary according to the message contents.
