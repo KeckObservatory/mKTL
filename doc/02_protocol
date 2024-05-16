@@ -27,17 +27,17 @@ portable way to encapsulate the response. The 'request' field is a truncated
 readback of the request from the client; this allows the client to confirm
 the server is responding to the correct request.
 
-The ACK response comes back quickly. The absence of a quick response is an
-indication to the client that the server is not available, and it should
-immediately raise an error. After the client has received the initial ACK
-it should then wait for the full response for its request:
+The ACK response comes back immediately upon receipt of the request. The
+absence of a quick response is an indication to the client that the server
+is not available, and it should immediately raise an error. After the client
+has received the initial ACK it should then wait for the full response for
+its request:
 
 	Server says:	bJSON: {'message': 'REP',
 				'id': eight hexadecimal digits,
 				'time', timestamp for this response,
 				'name': unique name for this telemetry or data,
 				'data': data according to request}
-
 
 At this point the request is complete and no further messages will be issued,
 unless and until the next request arrives.
