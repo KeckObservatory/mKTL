@@ -30,7 +30,7 @@ the server is responding to the correct request.
 The ACK response comes back immediately upon receipt of the request. The
 absence of a quick response is an indication to the client that the server
 is not available, and it should immediately raise an error. After the client
-has received the initial ACK it should then wait for the full response for
+has received the initial ACK it should then look for the full response for
 its request:
 
 	Server says:	bJSON: {'message': 'REP',
@@ -40,10 +40,14 @@ its request:
 				'data': data according to request}
 
 At this point the request is complete and no further messages will be issued,
-unless and until the next request arrives.
+unless and until the next request arrives. Note that all requests are handled
+fully asynchronously; a client could send a thousand requests in quick
+succession, but the responses will not be serialized, and the response order
+is not guaranteed. The client is responsible for creating any synchronous
+behavior on top of this asynchronous messaging.
 
 The full exchange on the client side is represented by this sequence of
-operations:
+operations, in this simplified case treating it as a synchronous request:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -73,7 +77,7 @@ The contents of the REP+B response may look like:
 
 The '+B' on the message field is an indicator that there is a binary data blob
 that will be sent in a separate message. The separate message would have a
-"topic" identifier of:
+topic identifier of:
 
 	kpfguide.LASTIMAGE;bulk
 
@@ -81,7 +85,7 @@ The formatting of the on-the-wire message would be:
 
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
-...where the first whitespace-separated field after the "topic" is the same
+...where the first whitespace-separated field after the topic is the same
 unique identifier used in the initial response, and all remaining data after
 the space is a pure byte sequence. Both responses must arrive in order for
 either component to have any meaning; the 'data' from the first response
@@ -91,21 +95,96 @@ that can be appropriately represented as a NumPy array.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+This section is a description of the various requests a client can make of
+the POT server via the request/reply socket.
+
+	'READ': request the current value for a single element of telemetry.
+		The specific element is always requested by its full unique
+		name. The data field will be as described above in the
+		description of the REQ/REP behavior; the data field will be
+		the telemetry value, whether it is an integer, floating point
+		number, string, boolean value, etc. Bulk data, as described
+		above, is sent as raw bytes in a second message.
+
+		Example request: b'READ kpfguide.DISP2MSG'
+
+		Example request: b'READ kpfguide.DISP3STA'
+
+
+	'WRITE': request a change to the value of a single element of
+		telemetry. Depending on the server, this could result in a
+		variety of behavior, from simply caching the value up to
+		slewing a telescope. In order to mitigate formatting issues
+		for transporting values over the wire, the request data is
+		formatted in JSON.
+
+		Example request: b'WRITE {'name': kpfguide.EXPTIME, 'data': 4}
+
+		If a JSON sequence is sent, the entire write operation will
+		be considered "atomic", in the sense that the server is given
+		the opportunity to perform special handling by virtue of being
+		passed multiple values simultaneously.
+
+
+
+
+	'ID': request the current cache identifier for the configuration
+		of a single POT service. If no service is specified, all
+		available cache identifiers will be returned. An error
+		will be returned If a service is requested and the contacted
+		server does not have a cached configuration for it.
+
+		Each identifier is up to eight hexadecimal digits. It is
+		expected that the identifiers for a given service will be
+		sequential, but is not strictly required.
+
+		To unify processing, the response is always a sequence of
+		individual identifiers, even if the sequence is only one
+		element long.
+
+		Example request: b'ID'
+
+		Response data: [{'name': kpfguide, 'id': 84a30b35},
+				{'name': kpfmet, 'id': 983ae10f}]
+
+		Example request: b'ID kpfguide'
+
+		Response data: [{'name': kpfguide, 'id': 84a30b35},]
+
+	'CONFIG': request the full configuration contents for a single
+		POT service. There is no option to dump the configuration
+		data for all services simultaneously. A typical client
+		interaction will request the configuration ID first, and
+		if the local copy is not a match, request the full contents
+		from the server to update the local cache.
+
+		The configuration contents are not fully described here.
+
+		Example request: b'CONFIG kpfguide'
+
+		Response data: {'name': kpfguide', 'id': 84a30b35,
+				'elements': [{'name': 'DISP1CLK', ...},
+					     {'name': 'DISP1STA', ...}
+					     ...,
+					     {'name': 'ZEDZEDTOP', ...}]}
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 The second socket type implements a publish/subscribe socket pattern. The
 desired functionality is a neat match for the PUB/SUB socket pattern offered
 by ZeroMQ:
 
-	* SUB clients subscribe to one or more "topics" from
+	* SUB clients subscribe to one or more topics from
 	  a given PUB socket, or can subscribe to all topics
 	  by subscribing to the empty string. This aligns well
 	  with existing usage patterns, where KTL keyword
 	  names and EPICS channel names are treated as unique
 	  identifiers.
 
-	* The filtering of "topics" occurs on the server side,
+	* The filtering of topics occurs on the server side,
 	  so if a PUB is publishing a mixture of high-frequency
 	  or large broadcasts, and a client is not subscribed
-	  to those "topics", the broadcasts are never sent to
+	  to those topics, the broadcasts are never sent to
 	  the client.
 
 The messages received by the client include the full topic as the leading
@@ -122,7 +201,7 @@ of the response described above:
 			 'data': data according to request}
 
 There are two special types of broadcast messages. These are distinguished
-by a modifier on the "topic" string. The first type is the bulk/binary data
+by a modifier on the topic string. The first type is the bulk/binary data
 broadcast type, as described above for a REP+B response; there is a similar
 PUB+B broadcast with otherwise exactly the same structure.
 
@@ -139,7 +218,7 @@ wheel, the individual items might have names like:
 	deimot.FILTERRAW
 
 The POT server could elect to broadcast a single bundle containing all of those
-values. The bundle message would have a "topic" identifier of:
+values. The bundle message would have a topic identifier of:
 
 	deimot.FILTER;bundle
 
@@ -159,8 +238,8 @@ remaining fields would vary according to the message contents.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-This section is a more complete description of the various fields used in
-the JSON messaging described above.
+This section is a description of the various fields used in the JSON messaging
+described above.
 
 	'message': a one-word assertion of the type of content represented
 		by this JSON. It is one of a few values:
