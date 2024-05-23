@@ -85,13 +85,16 @@ The formatting of the on-the-wire message would be:
 
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
-...where the first whitespace-separated field after the topic is the same
-unique identifier used in the initial response, and all remaining data after
-the space is a pure byte sequence. Both responses must arrive in order for
-either component to have any meaning; the 'data' from the first response
-will include enough information to reconstruct the binary blob, which at the
-present time is only envisioned as image data, or more generally, something
-that can be appropriately represented as a NumPy array.
+...where the first whitespace separated field is largely noise for the REP+B
+case, but the formatting is kept identical to the PUB+B version so that any
+bulk images handling can be shared between the two. The second whitespace
+separated field is the same unique identifier found in the JSON from the
+other half of the response. All remaining data after the space is a pure byte
+sequence. Both messages must arrive in order for either component to have any
+meaning; the 'data' from the first response will include enough information to
+reconstruct the binary blob, which at the present time is only envisioned as
+image data, or more generally, something that can be appropriately represented
+as a NumPy array.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -110,7 +113,6 @@ the POT server via the request/reply socket.
 
 		Example request: b'READ kpfguide.DISP3STA'
 
-
 	'WRITE': request a change to the value of a single element of
 		telemetry. Depending on the server, this could result in a
 		variety of behavior, from simply caching the value up to
@@ -119,14 +121,6 @@ the POT server via the request/reply socket.
 		formatted in JSON.
 
 		Example request: b'WRITE {'name': kpfguide.EXPTIME, 'data': 4}
-
-		If a JSON sequence is sent, the entire write operation will
-		be considered "atomic", in the sense that the server is given
-		the opportunity to perform special handling by virtue of being
-		passed multiple values simultaneously.
-
-
-
 
 	'ID': request the current cache identifier for the configuration
 		of a single POT service. If no service is specified, all
