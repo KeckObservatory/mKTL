@@ -1,0 +1,70 @@
+This document defines the common nomenclature used within POT. Some of the
+terms are inherited from KTL; some are inherited from common design patterns
+in the broader software world. Where there is a conflict between the two,
+we prefer to use the common industry definition rather than traditional use
+within WMKO.
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	WMKO: W. M. Keck Observatory, where POT was initially
+		established, in collaboration with WMKO partner
+		institutions at the University of California and
+		California Institute of Technology.
+
+	POT: POT is not an acronym. It is a reference to the proverb
+		"the pot calling the kettle black", where "kettle"
+		is the common spoken pronunciation of KTL.
+
+	KTL: Keck Task Library, the predecessor to POT at WMKO.
+		KTL is a key-value API, written in C, and has been
+		the dominant API for interprocess communication
+		at both WMKO and Lick Observatory since the 1990's.
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+	Server: a process providing some or all of the key-value
+		pairs in a given dictionary. This is analagous to
+		a KTL dispatcher, or an EPICS IOC.
+
+	Dictionary: a dictionary is an aggregation of individual
+		key-value pairs. Within a given deployment of POT
+		the dictionary will have a unique name. This is
+		analagous to a KTL service, or an EPICS database.
+
+	Key: a unique name within a dictionary, identifying a single
+		key-value pair. This is analagous to a KTL keyword,
+		or an EPICS channel.
+
+	Value: the other half of the key-value pair. Like a KTL
+		keyword, a POT value can be one of many native
+		types (integer, floating point, string, etc.),
+		and includes the possibility of compound values,
+		similar to KTL arrays.
+
+	Get: retrieve a value corresponding to an individual key
+		in a dictionary. A typical client can issue a
+		blocking or a non-blocking (synchronous or
+		asynchronous) operation. This is analagous to a
+		KTL read or an EPICS get.
+
+	Set: establish a new value for an individual key in a
+		dictionary. A typical client can request a blocking
+		or a non-blocking (synchronous or asynchronous)
+		operation. This is analagous to a KTL modify or
+		an EPICS put.
+
+	Publish: broadcast a new value for an individual key in a
+		dictionary. The dictionary name combined with the key
+		makes up the bulk of the topic, as understood for a
+		typical publish-subscribe design pattern.
+
+	Subscribe: request the receipt of any/all published broadcasts
+		of an individual key in a dictionary. This is analagous
+		to a KTL monitor or EPICS monitor request.
+
+	Callback: a method to be called whenever a published broadcast
+		arrives for an individual key in a dictionary.
+
+	Register: the act of associating a callback with a specific
+		key in a dictionary. The callback will now be invoked
+		whenever the value of that key changes.
