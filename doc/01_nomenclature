@@ -5,22 +5,33 @@ we prefer to use the common industry definition rather than traditional use
 within WMKO.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+			External definitions
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	WMKO: W. M. Keck Observatory, where POT was initially
 		established, in collaboration with WMKO partner
 		institutions at the University of California and
 		California Institute of Technology.
 
+	KTL: Keck Task Library, the predecessor to POT at WMKO.
+		KTL is a key-value application programming interface
+		(API), written in C, and has been the dominant API
+		for interprocess communication at both WMKO and Lick
+		Observatory since the 1990's.
+
+	EPICS: Experimental Physics and Industrial Control System,
+		another key-value API that WMKO adopted for its
+		telescope control system and adaptive optics control
+		system. EPICS is one of the interprocess communication
+		APIs that KTL provides a common abstraction for.
+
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+			POT-specific terms
+	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 	POT: POT is not an acronym. It is a reference to the proverb
 		"the pot calling the kettle black", where "kettle"
 		is the common spoken pronunciation of KTL.
-
-	KTL: Keck Task Library, the predecessor to POT at WMKO.
-		KTL is a key-value API, written in C, and has been
-		the dominant API for interprocess communication
-		at both WMKO and Lick Observatory since the 1990's.
-
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 	Server: a process providing some or all of the key-value
 		pairs in a given dictionary. This is analagous to
