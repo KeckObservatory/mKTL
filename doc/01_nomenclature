@@ -37,10 +37,11 @@ within WMKO.
 		pairs in a given dictionary. This is analagous to
 		a KTL dispatcher, or an EPICS IOC.
 
-	Dictionary: a dictionary is an aggregation of individual
-		key-value pairs. Within a given deployment of POT
-		the dictionary will have a unique name. This is
-		analagous to a KTL service, or an EPICS database.
+	Store: a store is an aggregation of individual key-value
+		pairs. Within a given deployment of POT the store
+		will have a unique name. This is analagous to a KTL
+		service, or an EPICS database, and behaves similarly
+		in concept to a Python dictionary.
 
 	Key: a unique name within a dictionary, identifying a single
 		key-value pair. This is analagous to a KTL keyword,
