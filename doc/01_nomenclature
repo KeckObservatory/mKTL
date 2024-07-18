@@ -34,8 +34,8 @@ within WMKO.
 		is the common spoken pronunciation of KTL.
 
 	Server: a process providing some or all of the key-value
-		pairs in a given dictionary. This is analagous to
-		a KTL dispatcher, or an EPICS IOC.
+		pairs in a given store. This is analagous to a KTL
+		dispatcher, or an EPICS IOC.
 
 	Store: a store is an aggregation of individual key-value
 		pairs. Within a given deployment of POT the store
@@ -43,7 +43,7 @@ within WMKO.
 		service, or an EPICS database, and behaves similarly
 		in concept to a Python dictionary.
 
-	Key: a unique name within a dictionary, identifying a single
+	Key: a unique name within a store, identifying a single
 		key-value pair. This is analagous to a KTL keyword,
 		or an EPICS channel.
 
@@ -54,29 +54,29 @@ within WMKO.
 		similar to KTL arrays.
 
 	Get: retrieve a value corresponding to an individual key
-		in a dictionary. A typical client can issue a
-		blocking or a non-blocking (synchronous or
-		asynchronous) operation. This is analagous to a
-		KTL read or an EPICS get.
+		in a store. A typical client can issue a blocking
+		or a non-blocking (synchronous or asynchronous)
+		operation. This is analagous to a KTL read or an
+		EPICS get.
 
 	Set: establish a new value for an individual key in a
-		dictionary. A typical client can request a blocking
+		store. A typical client can request a blocking
 		or a non-blocking (synchronous or asynchronous)
 		operation. This is analagous to a KTL modify or
 		an EPICS put.
 
 	Publish: broadcast a new value for an individual key in a
-		dictionary. The dictionary name combined with the key
-		makes up the bulk of the topic, as understood for a
+		store. The store name combined with the key makes
+		up the bulk of the topic, as understood for a
 		typical publish-subscribe design pattern.
 
 	Subscribe: request the receipt of any/all published broadcasts
-		of an individual key in a dictionary. This is analagous
-		to a KTL monitor or EPICS monitor request.
+		of an individual key in a store. This is analagous to
+		a KTL monitor or EPICS monitor request.
 
 	Callback: a method to be called whenever a published broadcast
-		arrives for an individual key in a dictionary.
+		arrives for an individual key in a store.
 
 	Register: the act of associating a callback with a specific
-		key in a dictionary. The callback will now be invoked
-		whenever the value of that key changes.
+		key in a store. The callback will now be invoked whenever
+		the value of that key changes.
