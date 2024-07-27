@@ -41,7 +41,10 @@ within WMKO.
 		pairs. Within a given deployment of POT the store
 		will have a unique name. This is analagous to a KTL
 		service, or an EPICS database, and behaves similarly
-		in concept to a Python dictionary.
+		in concept to a Python dictionary. "Database" is
+		another term used in similar contexts, but that
+		term is more commonly used in reference to a
+		relational database.
 
 	Key: a unique name within a store, identifying a single
 		key-value pair. This is analagous to a KTL keyword,
@@ -78,5 +81,7 @@ within WMKO.
 		arrives for an individual key in a store.
 
 	Register: the act of associating a callback with a specific
-		key in a store. The callback will now be invoked whenever
-		the value of that key changes.
+		key in a store. The callback will now be invoked
+		whenever the value of that key changes. "Connect"
+		is another term used in similar contexts, but that
+		term is more commonly used with network sockets.
