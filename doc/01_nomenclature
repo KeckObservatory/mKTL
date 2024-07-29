@@ -33,9 +33,9 @@ within WMKO.
 		"the pot calling the kettle black", where "kettle"
 		is the common spoken pronunciation of KTL.
 
-	Server: a process providing some or all of the key-value
-		pairs in a given store. This is analagous to a KTL
-		dispatcher, or an EPICS IOC.
+	Daemon: a persistent process providing some or all of the
+		key-value pairs in a given store. This is analagous
+		to a KTL dispatcher, or an EPICS IOC.
 
 	Store: a store is an aggregation of individual key-value
 		pairs. Within a given deployment of POT the store
@@ -72,6 +72,8 @@ within WMKO.
 		store. The store name combined with the key makes
 		up the bulk of the topic, as understood for a
 		typical publish-subscribe design pattern.
+
+		https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern
 
 	Subscribe: request the receipt of any/all published broadcasts
 		of an individual key in a store. This is analagous to
