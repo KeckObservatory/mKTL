@@ -31,10 +31,13 @@ within WMKO.
 
 	POT: POT is not an acronym. It is a reference to the proverb
 		"the pot calling the kettle black", where "kettle"
-		is the common spoken pronunciation of KTL.
+		is the common spoken pronunciation of KTL, and POT
+		is the successor to KTL.
 
-	Daemon: a persistent process providing some or all of the
-		key-value pairs in a given store. This is analagous
+	Daemon: a persistent process responsible for some or all of
+		the key-value pairs in a given store. When client
+		requests are initiated it is the daemon that will be
+		contacted to satisfy the request. This is analagous
 		to a KTL dispatcher, or an EPICS IOC.
 
 	Store: a store is an aggregation of individual key-value
