@@ -23,9 +23,9 @@ The handshaking between the client and server is of this form:
 All messages on the ZeroMQ sockets are formatted as raw bytes. The initial
 Client request is simple enough that no formatting is necessary; the server
 response is somewhat more involved, and JSON is used as a convenient and
-portable way to encapsulate the response. The 'request' field is a truncated
-readback of the request from the client; this allows the client to confirm
-the server is responding to the correct request.
+portable way to encapsulate the response. The 'data' field is a truncated
+readback of the request from the client; this allows the client to associate
+the server response (including the id number) with the initial request.
 
 The ACK response comes back immediately upon receipt of the request. The
 absence of a quick response is an indication to the client that the server
@@ -73,7 +73,7 @@ The contents of the REP+B response may look like:
 			 'id': deadbeef,
 			 'time': 1715738507.234
 			 'name': 'kpfguide.LASTIMAGE',
-			 'data': JSON description of data}
+			 'data': JSON description of bulk data}
 
 The '+B' on the message field is an indicator that there is a binary data blob
 that will be sent in a separate message. The separate message would have a
@@ -86,15 +86,15 @@ The formatting of the on-the-wire message would be:
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
 ...where the first whitespace separated field is largely noise for the REP+B
-case, but the formatting is kept identical to the PUB+B version so that any
-bulk images handling can be shared between the two. The second whitespace
-separated field is the same unique identifier found in the JSON from the
-other half of the response. All remaining data after the space is a pure byte
-sequence. Both messages must arrive in order for either component to have any
-meaning; the 'data' from the first response will include enough information to
-reconstruct the binary blob, which at the present time is only envisioned as
-image data, or more generally, something that can be appropriately represented
-as a NumPy array.
+case, where what you truly care about is the message id, but the formatting is
+kept identical to the PUB+B version so that any bulk data handling code can be
+shared between the two. The second whitespace separated field is the same
+unique identifier found in the JSON from the other half of the response. All
+remaining data after the space is a pure byte sequence. Both messages must
+arrive in order for either component to have any meaning; the 'data' from the
+first response will include enough information to reconstruct the binary blob,
+which at the present time is only envisioned as image data, or more generally,
+something that can be represented as a NumPy array.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
