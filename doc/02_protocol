@@ -94,42 +94,45 @@ remaining data after the space is a pure byte sequence. Both messages must
 arrive in order for either component to have any meaning; the 'data' from the
 first response will include enough information to reconstruct the binary blob,
 which at the present time is only envisioned as image data, or more generally,
-something that can be represented as a NumPy array.
+something that can be represented as a NumPy array. Thus, the 'data' would
+include information like the dimensions of the array and the datatype of the
+numbers (int16, uint32, float64, etc.).
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 This section is a description of the various requests a client can make of
 the POT server via the request/reply socket.
 
-	'READ': request the current value for a single element of telemetry.
-		The specific element is always requested by its full unique
-		name. The data field will be as described above in the
-		description of the REQ/REP behavior; the data field will be
-		the telemetry value, whether it is an integer, floating point
-		number, string, boolean value, etc. Bulk data, as described
-		above, is sent as raw bytes in a second message.
+	'GET': request the current value for a single key. The key is always
+		requested by its full unique name. The data field will be as
+		described above in the description of the REQ/REP behavior;
+		the data field will be the telemetry value, whether it is an
+		integer, floating point number, string, boolean value, etc.
+		Bulk data, as described above, is sent as raw bytes in a
+		second message.
 
-		Example request: b'READ kpfguide.DISP2MSG'
+		Example request: b'GET kpfguide.DISP2MSG'
 
-		Example request: b'READ kpfguide.DISP3STA'
+		Example request: b'GET kpfguide.DISP3STA'
 
-	'WRITE': request a change to the value of a single element of
-		telemetry. Depending on the server, this could result in a
-		variety of behavior, from simply caching the value up to
-		slewing a telescope. In order to mitigate formatting issues
-		for transporting values over the wire, the request data is
-		formatted in JSON.
+	'SET': request a change to the value of a single key. Depending on
+		the daemon, this could result in a variety of behavior, from
+		simply caching the to slewing a telescope, and anything
+		in-between. The request data is formatted in JSON in order
+		to mitigate formatting issues for transporting the new value
+		over the wire.
 
-		Example request: b'WRITE {'name': kpfguide.EXPTIME, 'data': 4}
+		Example request: b'SET {'name': kpfguide.EXPTIME, 'data': 4}
 
 	'ID': request the current cache identifier for the configuration
-		of a single POT service. If no service is specified, all
-		available cache identifiers will be returned. An error
-		will be returned If a service is requested and the contacted
-		server does not have a cached configuration for it.
+		of a single POT store. If no store name is specified, all
+		available cache identifiers will be returned, for any known
+		stores. An error will be returned If a store is requested
+		and the contacted daemon does not have a cached configuration
+		for it.
 
 		Each identifier is up to eight hexadecimal digits. It is
-		expected that the identifiers for a given service will be
+		expected that the identifiers for a given store will be
 		sequential, but is not strictly required.
 
 		To unify processing, the response is always a sequence of
@@ -146,8 +149,8 @@ the POT server via the request/reply socket.
 		Response data: [{'name': kpfguide, 'id': 84a30b35},]
 
 	'CONFIG': request the full configuration contents for a single
-		POT service. There is no option to dump the configuration
-		data for all services simultaneously. A typical client
+		POT store. There is no option to dump the configuration
+		data for all stores simultaneously. A typical client
 		interaction will request the configuration ID first, and
 		if the local copy is not a match, request the full contents
 		from the server to update the local cache.
@@ -157,10 +160,10 @@ the POT server via the request/reply socket.
 		Example request: b'CONFIG kpfguide'
 
 		Response data: {'name': kpfguide', 'id': 84a30b35,
-				'elements': [{'name': 'DISP1CLK', ...},
-					     {'name': 'DISP1STA', ...}
-					     ...,
-					     {'name': 'ZEDZEDTOP', ...}]}
+				'keys': [{'name': 'DISP1CLK', ...},
+					 {'name': 'DISP1STA', ...}
+					 ...,
+					 {'name': 'ZEDZEDTOP', ...}]}
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -173,7 +176,7 @@ by ZeroMQ:
 	  by subscribing to the empty string. This aligns well
 	  with existing usage patterns, where KTL keyword
 	  names and EPICS channel names are treated as unique
-	  identifiers.
+	  identifiers, and map easily to the notion of a topic.
 
 	* The filtering of topics occurs on the server side,
 	  so if a PUB is publishing a mixture of high-frequency
@@ -184,14 +187,14 @@ by ZeroMQ:
 The messages received by the client include the full topic as the leading
 element in the message-as-bytes, followed by a space, followed by the remainder
 of the message contents. The structure of a simple broadcast mimics the form
-of the response described above:
+of the request/response exchange described above:
 
 	Server says:	b'unique_topic_string JSON...'
 
 	JSON expanded:	{'message': 'PUB',
 			 'id': eight hexadecimal digits,
 			 'time', timestamp for this broadcast,
-			 'name': unique name for this telemetry or data,
+			 'name': unique key name for this telemetry or data,
 			 'data': data according to request}
 
 There are two special types of broadcast messages. These are distinguished
@@ -277,7 +280,7 @@ described above.
 		last known change of the value in question, though in some
 		(if not most) cases it will be a reasonable approximation.
 
-	'name': the unique name for this piece of telemetry or data. In
+	'name': the unique name for this key; this will be re. In
 		KTL parlance, this would be the service.KEYWORD name; in
 		EPICS parlance, it would be the full IOC+channel name, as
 		one might use with caput or caget on the command line.
