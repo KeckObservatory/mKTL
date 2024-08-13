@@ -12,41 +12,41 @@ we use DEALER/ROUTER, which allows any amount of messages at any time.
 
 The handshaking between the client and daemon is of this form:
 
-	Client says:	b'ACTION argument1 argument2 argument3'
+	Client says:	b'{'request': REQ, 'handshake': some integer, ...}
 
-	Server says:	bJSON: {'message': 'ACK',
+	Daemon says:	bJSON: {'message': 'ACK',
 				'id': eight hexadecimal digits,
 				'time', timestamp for this acknowledgement,
-				'data': first 32 characters of request}
+				'data': handshake integer}
 
-All messages on the ZeroMQ sockets are formatted as raw bytes. The initial
-Client request is simple enough that no additional syntax is necessary; the
-daemon response is more involved, and JSON is used as a convenient and portable
-way to encapsulate the response. The 'data' field is a truncated readback of
-the request from the client; this allows the client to associate the daemon
-response (including the id number) with the initial request. 'data' is somewhat
-generic in this context, but the same field is used for every response type.
+All messages on the ZeroMQ sockets are formatted as raw bytes. JSON is used
+as a convenient and portable way to encapsulate both the request and the
+response. The 'data' identifier is somewhat generic, but the same field is
+used for every response type, regardless of the request. In the case of the
+ACK message, the 'data' is a recital of the initial handshake integer, so
+enabling the client to tie the message back to the new unique identifier
+provided by the daemon.
 
-The ACK response comes back immediately upon receipt of the request. The
+The ACK message comes back immediately upon receipt of the request. The
 absence of a quick response is an indication to the client that the daemon
 is not available, and it should immediately raise an error. After the client
-has received the initial ACK it should then look for the full response for
-its request:
+has received the initial ACK it should then look for the full response:
 
-	Server says:	bJSON: {'message': 'REP',
+	Daemon says:	bJSON: {'message': 'RESPONSE',
 				'id': eight hexadecimal digits,
 				'time', timestamp for this response,
 				'name': unique POT key name,
-				'data': response for the request}
+				'data': response payload}
 
-At this point the request is complete and the daemon will issue no further
-messages with this request ID. All requests are handled fully asynchronously;
-a client could send a thousand requests in quick succession, but the responses
-will not be serialized, and the response order is not guaranteed. Synchronous
-behavior is implemented in the client side, not in the protocol itself.
+After receiving the RESPONSE message the request is complete and the daemon
+will issue no further messages with this request ID. All requests are handled
+fully asynchronously; a client could send a thousand requests in quick
+succession, but the responses will not be serialized, and the response order
+is not guaranteed. Synchronous behavior is implemented on the client side,
+not in the protocol itself.
 
 The full exchange on the client side is represented by this sequence of
-operations, in this simplified case treating it as a synchronous request:
+operations, in this case treating it as a synchronous request:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -100,7 +100,7 @@ uint32, float64, etc.).
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 This section is a description of the various requests a client can make of
-the POT daemon via the request/reply socket.
+the POT daemon via the request/response socket.
 
 	'GET': request the current value for a single key. The key is always
 		requested by its full unique name: the name of the store, and
@@ -190,7 +190,7 @@ leading element in the message-as-bytes, followed by a space, followed by
 the remainder of the message contents. The structure of a simple broadcast
 mimics the form of the request/response exchange described above:
 
-	Server says:	b'unique_topic_string JSON...'
+	Daemon says:	b'unique_topic_string JSON...'
 
 	JSON expanded:	{'message': 'PUB',
 			 'id': eight hexadecimal digits,
@@ -272,7 +272,7 @@ described above.
 		individual PUB messages contained in a 'bundle' broadcast.
 
 	'time': a UNIX epoch timestamp associated with the generation of
-		the event. This is not intended to represent some time
+		the event. This is not intended to represent any time
 		prior to the actual broadcast or response, it is intended
 		to represent the time at which that message was created,
 		such that 'now' - 'time' should represent the transmission
