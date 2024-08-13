@@ -1,17 +1,16 @@
-POT clients and servers communicate using ZeroMQ sockets. This document
+POT clients and daemons communicate using ZeroMQ sockets. This document
 describes the socket types and the formatting of the messages for the
 various requests.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-The first socket type implements a request/response socket pattern. This
-represents the bulk of the interactive traffic between a POT client and
-server. Because requests can be asynchronous, this does not use the
-REQ/REP implementation in ZeroMQ, which enforces a strict one request,
-one response pattern; instead, we use DEALER/ROUTER, which allows any
-amount of messages at any time.
+The first socket type implements a request/response pattern. This represents
+the bulk of the interactive traffic between a POT client and deamon. Because
+requests can be asynchronous, POT does not use the REQ/REP implementation in
+ZeroMQ, which enforces a strict one request, one response pattern; instead,
+we use DEALER/ROUTER, which allows any amount of messages at any time.
 
-The handshaking between the client and server is of this form:
+The handshaking between the client and daemon is of this form:
 
 	Client says:	b'ACTION argument1 argument2 argument3'
 
@@ -21,14 +20,15 @@ The handshaking between the client and server is of this form:
 				'data': first 32 characters of request}
 
 All messages on the ZeroMQ sockets are formatted as raw bytes. The initial
-Client request is simple enough that no formatting is necessary; the server
-response is somewhat more involved, and JSON is used as a convenient and
-portable way to encapsulate the response. The 'data' field is a truncated
-readback of the request from the client; this allows the client to associate
-the server response (including the id number) with the initial request.
+Client request is simple enough that no additional syntax is necessary; the
+daemon response is more involved, and JSON is used as a convenient and portable
+way to encapsulate the response. The 'data' field is a truncated readback of
+the request from the client; this allows the client to associate the daemon
+response (including the id number) with the initial request. 'data' is somewhat
+generic in this context, but the same field is used for every response type.
 
 The ACK response comes back immediately upon receipt of the request. The
-absence of a quick response is an indication to the client that the server
+absence of a quick response is an indication to the client that the daemon
 is not available, and it should immediately raise an error. After the client
 has received the initial ACK it should then look for the full response for
 its request:
@@ -36,15 +36,14 @@ its request:
 	Server says:	bJSON: {'message': 'REP',
 				'id': eight hexadecimal digits,
 				'time', timestamp for this response,
-				'name': unique name for this telemetry or data,
-				'data': data according to request}
+				'name': unique POT key name,
+				'data': response for the request}
 
-At this point the request is complete and no further messages will be issued,
-unless and until the next request arrives. Note that all requests are handled
-fully asynchronously; a client could send a thousand requests in quick
-succession, but the responses will not be serialized, and the response order
-is not guaranteed. The client is responsible for creating any synchronous
-behavior on top of this asynchronous messaging.
+At this point the request is complete and the daemon will issue no further
+messages with this request ID. All requests are handled fully asynchronously;
+a client could send a thousand requests in quick succession, but the responses
+will not be serialized, and the response order is not guaranteed. Synchronous
+behavior is implemented in the client side, not in the protocol itself.
 
 The full exchange on the client side is represented by this sequence of
 operations, in this simplified case treating it as a synchronous request:
@@ -52,7 +51,7 @@ operations, in this simplified case treating it as a synchronous request:
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
-        self.socket.connect(server)
+        self.socket.connect(daemon)
 
 	self.socket.send(request)
 	result = self.socket.poll(100) # milliseconds
@@ -70,14 +69,13 @@ by having a 'REP+B' message type. If the 'name' was, for example:
 The contents of the REP+B response may look like:
 
 			{'message': 'REP+B',
-			 'id': deadbeef,
+			 'id': 0xdeadbeef,
 			 'time': 1715738507.234
 			 'name': 'kpfguide.LASTIMAGE',
 			 'data': JSON description of bulk data}
 
-The '+B' on the message field is an indicator that there is a binary data blob
-that will be sent in a separate message. The separate message would have a
-topic identifier of:
+The '+B' on the message field indicates that a binary data blob will be sent
+in a separate message. The separate message would have a topic identifier of:
 
 	kpfguide.LASTIMAGE;bulk
 
@@ -86,26 +84,28 @@ The formatting of the on-the-wire message would be:
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
 ...where the first whitespace separated field is largely noise for the REP+B
-case, where what you truly care about is the message id, but the formatting is
-kept identical to the PUB+B version so that any bulk data handling code can be
-shared between the two. The second whitespace separated field is the same
-unique identifier found in the JSON from the other half of the response. All
-remaining data after the space is a pure byte sequence. Both messages must
-arrive in order for either component to have any meaning; the 'data' from the
-first response will include enough information to reconstruct the binary blob,
-which at the present time is only envisioned as image data, or more generally,
+case, the important metadata is the message id linking it to the other half
+of the response, but the message structure is identical to the PUB+B version
+(which does need the "topic") so that any bulk data handling code can be
+shared. The second whitespace separated field is the same unique identifier
+found in the JSON from the other half of the response. All remaining data after
+the subsequent whitespace is a pure byte sequence. Both messages must arrive
+in order for either component to have any meaning; the 'data' from the JSON
+response will include enough information to reconstruct the binary blob, which
+at the present time is only envisioned as image data, or more generally,
 something that can be represented as a NumPy array. Thus, the 'data' would
-include information like the dimensions of the array and the datatype of the
-numbers (int16, uint32, float64, etc.).
+include information like the dimensions of the array and its datatype (int16,
+uint32, float64, etc.).
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 This section is a description of the various requests a client can make of
-the POT server via the request/reply socket.
+the POT daemon via the request/reply socket.
 
 	'GET': request the current value for a single key. The key is always
-		requested by its full unique name. The data field will be as
-		described above in the description of the REQ/REP behavior;
+		requested by its full unique name: the name of the store, and
+		the name of the key, concatenated with a period. The data field
+		will be as above in the description of the REQ/REP behavior;
 		the data field will be the telemetry value, whether it is an
 		integer, floating point number, string, boolean value, etc.
 		Bulk data, as described above, is sent as raw bytes in a
@@ -117,25 +117,25 @@ the POT server via the request/reply socket.
 
 	'SET': request a change to the value of a single key. Depending on
 		the daemon, this could result in a variety of behavior, from
-		simply caching the to slewing a telescope, and anything
+		simply caching the value to slewing a telescope, and anything
 		in-between. The request data is formatted in JSON in order
 		to mitigate formatting issues for transporting the new value
-		over the wire.
+		over the wire (embedded whitespace, etc.).
 
 		Example request: b'SET {'name': kpfguide.EXPTIME, 'data': 4}
 
 	'ID': request the current cache identifier for the configuration
 		of a single POT store. If no store name is specified, all
-		available cache identifiers will be returned, for any known
-		stores. An error will be returned If a store is requested
+		available cache identifiers will be returned, for all known
+		stores. An error will be returned if a store is requested
 		and the contacted daemon does not have a cached configuration
-		for it.
+		describing it.
 
 		Each identifier is up to eight hexadecimal digits. It is
 		expected that the identifiers for a given store will be
 		sequential, but is not strictly required.
 
-		To unify processing, the response is always a sequence of
+		To unify processing the response is always a sequence of
 		individual identifiers, even if the sequence is only one
 		element long.
 
@@ -148,14 +148,15 @@ the POT server via the request/reply socket.
 
 		Response data: [{'name': kpfguide, 'id': 84a30b35},]
 
-	'CONFIG': request the full configuration contents for a single
-		POT store. There is no option to dump the configuration
-		data for all stores simultaneously. A typical client
-		interaction will request the configuration ID first, and
-		if the local copy is not a match, request the full contents
-		from the server to update the local cache.
+	'CONFIG': request the full configuration contents for a single POT
+		store. There is no option to dump the configuration data for
+		all known stores. A typical client interaction will request
+		the configuration ID first, and if the local copy is not a
+		match, request the full contents from the daemon to update
+		the local cache.
 
-		The configuration contents are not fully described here.
+		The configuration contents are not fully described here,
+		this is just a representation of the format.
 
 		Example request: b'CONFIG kpfguide'
 
@@ -178,23 +179,23 @@ by ZeroMQ:
 	  names and EPICS channel names are treated as unique
 	  identifiers, and map easily to the notion of a topic.
 
-	* The filtering of topics occurs on the server side,
+	* The filtering of topics occurs on the daemon side,
 	  so if a PUB is publishing a mixture of high-frequency
-	  or large broadcasts, and a client is not subscribed
-	  to those topics, the broadcasts are never sent to
-	  the client.
+	  values or large broadcasts, and a client is not
+	  subscribed to those topics, the broadcasts are never
+	  sent to the client.
 
-The messages received by the client include the full topic as the leading
-element in the message-as-bytes, followed by a space, followed by the remainder
-of the message contents. The structure of a simple broadcast mimics the form
-of the request/response exchange described above:
+The ZeroMQ messages received by the client include the full topic as the
+leading element in the message-as-bytes, followed by a space, followed by
+the remainder of the message contents. The structure of a simple broadcast
+mimics the form of the request/response exchange described above:
 
 	Server says:	b'unique_topic_string JSON...'
 
 	JSON expanded:	{'message': 'PUB',
 			 'id': eight hexadecimal digits,
 			 'time', timestamp for this broadcast,
-			 'name': unique key name for this telemetry or data,
+			 'name': unique POT key name,
 			 'data': data according to request}
 
 There are two special types of broadcast messages. These are distinguished
@@ -203,7 +204,7 @@ broadcast type, as described above for a REP+B response; there is a similar
 PUB+B broadcast with otherwise exactly the same structure.
 
 The second type of special broadcast message is a bundle of related broadcasts.
-If a server so chooses, it can collect related telemetry in a single broadcast;
+If a daemon so chooses, it can collect related telemetry in a single broadcast;
 this offers clients the option of treating the entire bundle as an atomic
 entity. Each bundle is a sequence of simple JSON messages as described above.
 
@@ -214,7 +215,7 @@ wheel, the individual items might have names like:
 	deimot.FILTERORD
 	deimot.FILTERRAW
 
-The POT server could elect to broadcast a single bundle containing all of those
+The POT daemon could elect to broadcast a single bundle containing all of those
 values. The bundle message would have a topic identifier of:
 
 	deimot.FILTER;bundle
@@ -226,9 +227,9 @@ The formatting of the on-the-wire message would be:
 ...where the JSON would be a sequence of individual PUB elements as described
 above:
 
-	[{'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERNAM, ...},
-	 {'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERORD, ...},
-	 {'message': 'PUB', 'id': 0123abcd, 'name': deimot.FILTERRAW, ...}]
+	[{'message': 'PUB', 'id': 0x0123abcd, 'name': deimot.FILTERNAM, ...},
+	 {'message': 'PUB', 'id': 0x0123abcd, 'name': deimot.FILTERORD, ...},
+	 {'message': 'PUB', 'id': 0x0123abcd, 'name': deimot.FILTERRAW, ...}]
 
 The 'id' field would be identical for all messages in the bundle, but all
 remaining fields would vary according to the message contents.
@@ -244,12 +245,12 @@ described above.
 		'ACK': immediate acknowledgement of a request. If this
 			response is not received with a very small time
 			window after the initial request, the client can
-			and should assume the server for that request is
-			offline.
+			and should assume the daemon handling that request
+			is offline.
 
 		'REP': a response to a direct request. This will contain
-			the full data responding to a request to read a
-			value, or the completion status of a write request.
+			the full data responding to a request to get a
+			value, or the completion status of setting a value.
 
 		'REP+B': same as 'REP' except that a second message will
 			arrive with the contents of the bulk data.
@@ -275,15 +276,18 @@ described above.
 		prior to the actual broadcast or response, it is intended
 		to represent the time at which that message was created,
 		such that 'now' - 'time' should represent the transmission
-		and POT handling delay between the server and the client.
+		and POT handling delay between the daemon and the client.
 		This timestamp should not be expected to represent the
 		last known change of the value in question, though in some
 		(if not most) cases it will be a reasonable approximation.
 
-	'name': the unique name for this key; this will be re. In
-		KTL parlance, this would be the service.KEYWORD name; in
-		EPICS parlance, it would be the full IOC+channel name, as
-		one might use with caput or caget on the command line.
+	'name': the unique POT key name, or the unique POT store name for
+		some of the metadata queries. The POT key name, at the
+		protocol level, is a concatenation of the POT store name
+		and the key name within that store. In KTL parlance, this
+		would be the service.KEYWORD name; in EPICS parlance, it
+		would be the full IOC+channel name, as one might use with
+		caput or caget on the command line.
 
 	'data': the real payload of the message. For a read operation, this
 		will be the telemetry requested, whether it be a string,
@@ -304,4 +308,4 @@ described above.
 		The intent of this error field is not to provide enough
 		information for debugging of code, it is intended to
 		provide enough information to the client for it to perform
-		meaningful error handling in its own software.
+		meaningful error handling.
