@@ -32,14 +32,14 @@ absence of a quick response is an indication to the client that the daemon
 is not available, and it should immediately raise an error. After the client
 has received the initial ACK it should then look for the full response:
 
-	Daemon says:	bJSON: {'message': 'RESPONSE',
+	Daemon says:	bJSON: {'message': 'REP',
 				'id': eight hexadecimal digits,
 				'time', timestamp for this response,
 				'name': unique POT key name,
 				'data': response payload}
 
-After receiving the RESPONSE message the request is complete and the daemon
-will issue no further messages with this request ID. All requests are handled
+After receiving the REP message the request is complete and the daemon will
+issue no further messages with this request ID. All requests are handled
 fully asynchronously; a client could send a thousand requests in quick
 succession, but the responses will not be serialized, and the response order
 is not guaranteed. Synchronous behavior is implemented on the client side,
@@ -62,40 +62,46 @@ operations, in this case treating it as a synchronous request:
 	response = self.socket.recv()
 
 Some responses may include a bulk data component. These will be distinguished
-by having a 'REP+B' message type. If the 'name' was, for example:
+by having a 'bulk' attribute set in the response. If the key name was, for
+example:
 
 	kpfguide.LASTIMAGE
 
-The contents of the REP+B response may look like:
+The contents of the response may look like:
 
-			{'message': 'REP+B',
+			{'message': 'REP',
 			 'id': 0xdeadbeef,
-			 'time': 1715738507.234
+			 'time': 1715738507.234,
 			 'name': 'kpfguide.LASTIMAGE',
-			 'data': JSON description of bulk data}
+			 'data': JSON description of bulk data,
+			 'bulk': True}
 
-The '+B' on the message field indicates that a binary data blob will be sent
-in a separate message. The separate message would have a topic identifier of:
-
-	kpfguide.LASTIMAGE;bulk
-
-The formatting of the on-the-wire message would be:
+The 'bulk' setting in the message contents indicates that a binary data blob
+will be sent in a separate message. The message format would look like:
 
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
-...where the first whitespace separated field is largely noise for the REP+B
+...where the first whitespace separated field is largely noise for the REP
 case, the important metadata is the message id linking it to the other half
-of the response, but the message structure is identical to the PUB+B version
-(which does need the "topic") so that any bulk data handling code can be
-shared. The second whitespace separated field is the same unique identifier
-found in the JSON from the other half of the response. All remaining data after
-the subsequent whitespace is a pure byte sequence. Both messages must arrive
+of the response, but the message structure is identical to the PUB version
+(which needs the "topic") so that any bulk data handling code can be shared.
+The second whitespace separated field is the same unique identifier found in
+the JSON from the other half of the response. All remaining data after the
+subsequent whitespace is a pure byte sequence. Both messages must arrive
 in order for either component to have any meaning; the 'data' from the JSON
 response will include enough information to reconstruct the binary blob, which
 at the present time is only envisioned as image data, or more generally,
 something that can be represented as a NumPy array. Thus, the 'data' would
 include information like the dimensions of the array and its datatype (int16,
 uint32, float64, etc.).
+
+The motivation for splitting out the bulk data into its own message type is
+to leverage the efficiency of representing data as raw bytes. The bulk data
+would need to be encoded as a string to include in the JSON; the encoding
+step alone is very demanding of processor time, appending it to a JSON
+structure makes it an order of magnitude slower. The combination of these
+additional processing steps is adequate to prevent a simple client from
+saturating a basic gigabit network link.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -200,8 +206,10 @@ mimics the form of the request/response exchange described above:
 
 There are two special types of broadcast messages. These are distinguished
 by a modifier on the topic string. The first type is the bulk/binary data
-broadcast type, as described above for a REP+B response; there is a similar
-PUB+B broadcast with otherwise exactly the same structure.
+broadcast type, as described above for a REP response; there is a similar
+PUB broadcast with otherwise exactly the same structure, setting the 'bulk'
+flag in the PUB message to True, and the bulk data transmitted in a separate
+message.
 
 The second type of special broadcast message is a bundle of related broadcasts.
 If a daemon so chooses, it can collect related telemetry in a single broadcast;
@@ -252,16 +260,10 @@ described above.
 			the full data responding to a request to get a
 			value, or the completion status of setting a value.
 
-		'REP+B': same as 'REP' except that a second message will
-			arrive with the contents of the bulk data.
-
 		'PUB': an asynchronous broadcast of an event. There aren't
 			any other types of message that will arrive on a
 			SUB socket, the inclusion of this field is strictly
 			for symmetry's sake.
-
-		'PUB+B': same as 'PUB' except that a second message will
-			arrive with the contents of the bulk data.
 
 	'id': an eight character hexadecimal value reasonably unique to
 		this specific transaction. The 'unique' constraint doesn't
@@ -294,6 +296,12 @@ described above.
 		integer, floating point number, or short sequence. For a
 		response with no data this field will either not be present
 		or it will be the JSON null value.
+
+	'bulk': a boolean flag indicating there is a separate bulk-formatted
+		message that will contain the bulk data associated with
+		the message. If the value is not present, or is the JSON
+		null value, or is the JSON False value, there is no bulk
+		message.
 
 	'error': a JSON dictionary with information about any error that
 		occurred while processing the request. If the value is
