@@ -218,15 +218,15 @@ daemon via the request/response socket.
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 The second socket type implements a publish/subscribe socket pattern. The
-desired functionality is a neat match for the PUB/SUB socket pattern offered
-by ZeroMQ:
+desired functionality in POT is a neat match for the PUB/SUB socket pattern
+offered by ZeroMQ:
 
 	* SUB clients subscribe to one or more topics from
 	  a given PUB socket, or can subscribe to all topics
 	  by subscribing to the empty string. This aligns well
 	  with existing usage patterns, where KTL keyword
 	  names and EPICS channel names are treated as unique
-	  identifiers, and map easily to the notion of a topic.
+	  identifiers, and map easily to a PUB/SUB topic.
 
 	* The filtering of topics occurs on the daemon side,
 	  so if a PUB is publishing a mixture of high-frequency
@@ -245,7 +245,7 @@ mimics the form of the request/response exchange described above:
 			 'id': eight hexadecimal digits,
 			 'time': timestamp for this broadcast,
 			 'name': unique POT key name,
-			 'data': data according to request}
+			 'data': current key value}
 
 There are two special types of broadcast messages. These are distinguished
 by a modifier on the topic string. The first type is the bulk/binary data
