@@ -1,6 +1,6 @@
 POT clients and daemons communicate using ZeroMQ sockets. This document
-describes the socket types and the formatting of the messages for the
-various requests.
+describes the socket types used, the formatting of the messages, and the
+types of requests that can be made.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -8,9 +8,10 @@ The first socket type implements a request/response pattern. This represents
 the bulk of the interactive traffic between a POT client and deamon. Because
 requests can be asynchronous, POT does not use the REQ/REP implementation in
 ZeroMQ, which enforces a strict one request, one response pattern; instead,
-we use DEALER/ROUTER, which allows any amount of messages at any time.
+we use DEALER/ROUTER, which allows any amount of messages in any order, in
+any direction.
 
-The handshaking between the client and daemon is of this form:
+The request/response interaction between the client and daemon is of this form:
 
 	Client says:	b'{'request': REQ, 'handshake': some integer, ...}
 
@@ -19,18 +20,19 @@ The handshaking between the client and daemon is of this form:
 				'time', timestamp for this acknowledgement,
 				'data': handshake integer}
 
-All messages on the ZeroMQ sockets are formatted as raw bytes. JSON is used
+All messages on ZeroMQ sockets are formatted as raw bytes. JSON is used
 as a convenient and portable way to encapsulate both the request and the
 response. The 'data' identifier is somewhat generic, but the same field is
 used for every response type, regardless of the request. In the case of the
-ACK message, the 'data' is a recital of the initial handshake integer, so
-enabling the client to tie the message back to the new unique identifier
-provided by the daemon.
+ACK message, the 'data' is a recital of the initial handshake integer, which
+allows the client to associate the response with its initial request, and
+provides the daemon-supplied identification number that will be used for
+future messages.
 
-The ACK message comes back immediately upon receipt of the request. The
-absence of a quick response is an indication to the client that the daemon
-is not available, and it should immediately raise an error. After the client
-has received the initial ACK it should then look for the full response:
+The daemon immediately issues the ACK response upon receipt of the request.
+The absence of a quick response indicates that the daemon is not available,
+and the client should immediately raise an error. After the client receives
+the initial ACK it should then look for the full response:
 
 	Daemon says:	bJSON: {'message': 'REP',
 				'id': eight hexadecimal digits,
@@ -45,8 +47,8 @@ succession, but the responses will not be serialized, and the response order
 is not guaranteed. Synchronous behavior is implemented on the client side,
 not in the protocol itself.
 
-The full exchange on the client side is represented by this sequence of
-operations, in this case treating it as a synchronous request:
+Here is an example of what the full exchange on the client side might look
+like, in this case handling the exchange as a synchronous request:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -62,12 +64,7 @@ operations, in this case treating it as a synchronous request:
 	response = self.socket.recv()
 
 Some responses may include a bulk data component. These will be distinguished
-by having a 'bulk' attribute set in the response. If the key name was, for
-example:
-
-	kpfguide.LASTIMAGE
-
-The contents of the response may look like:
+by having a 'bulk' attribute set in the response. Here is an example response:
 
 			{'message': 'REP',
 			 'id': 0xdeadbeef,
@@ -82,31 +79,31 @@ will be sent in a separate message. The message format would look like:
 	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
 
 ...where the first whitespace separated field is largely noise for the REP
-case, the important metadata is the message id linking it to the other half
-of the response, but the message structure is identical to the PUB version
-(which needs the "topic") so that any bulk data handling code can be shared.
-The second whitespace separated field is the same unique identifier found in
-the JSON from the other half of the response. All remaining data after the
-subsequent whitespace is a pure byte sequence. Both messages must arrive
-in order for either component to have any meaning; the 'data' from the JSON
-response will include enough information to reconstruct the binary blob, which
-at the present time is only envisioned as image data, or more generally,
-something that can be represented as a NumPy array. Thus, the 'data' would
-include information like the dimensions of the array and its datatype (int16,
-uint32, float64, etc.).
+case, the important metadata is the unique id linking the two responses,
+but the message structure is identical to the PUB version (which needs the
+"topic") so that any bulk data handling code can be shared. The second
+whitespace separated field is the same unique identifier found in the JSON
+from the other half of the response. All remaining data after the subsequent
+whitespace is a pure byte sequence representing the payload. Both messages
+must arrive in order for either component to have any meaning; the 'data'
+from the JSON response will include enough information to reconstruct the
+binary blob, which at the present time is only envisioned as image data,
+or more generally, something that can be represented as a NumPy array.
+Thus, the 'data' would include information like the dimensions of the array
+and its datatype (int16, uint32, float64, etc.).
 
-The motivation for splitting out the bulk data into its own message type is
-to leverage the efficiency of representing data as raw bytes. The bulk data
-would need to be encoded as a string to include in the JSON; the encoding
-step alone is very demanding of processor time, appending it to a JSON
-structure makes it an order of magnitude slower. The combination of these
-additional processing steps is adequate to prevent a simple client from
-saturating a basic gigabit network link.
+The motivation for separating the bulk data into its own message type is
+performance. The bulk data would need to be encoded as a string (base64, etc.)
+to be usable in JSON; the encoding step alone is very demanding of processor
+time, appending it to a JSON structure makes it an order of magnitude slower.
+The combination of these additional processing steps is adequate to prevent
+a simple client from saturating a basic gigabit network link with continuous
+bulk data requests, whereas saturating the link is trivial with raw bytes.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-This section is a description of the various requests a client can make of
-the POT daemon via the request/response socket.
+This section describes the various requests a client can make of the POT
+daemon via the request/response socket.
 
 	'GET': request the current value for a single key. The key is always
 		requested by its full unique name: the name of the store, and
