@@ -13,11 +13,11 @@ any direction.
 
 The request/response interaction between the client and daemon is of this form:
 
-	Client says:	b'{'request': REQ, 'handshake': some integer, ...}
+	Client says:	b'{'request': 'REQ', 'handshake': some integer, ...}
 
 	Daemon says:	bJSON: {'message': 'ACK',
 				'id': eight hexadecimal digits,
-				'time', timestamp for this acknowledgement,
+				'time': timestamp for this acknowledgement,
 				'data': handshake integer}
 
 All messages on ZeroMQ sockets are formatted as raw bytes. JSON is used
@@ -36,8 +36,7 @@ the initial ACK it should then look for the full response:
 
 	Daemon says:	bJSON: {'message': 'REP',
 				'id': eight hexadecimal digits,
-				'time', timestamp for this response,
-				'name': unique POT key name,
+				'time': timestamp for this response,
 				'data': response payload}
 
 After receiving the REP message the request is complete and the daemon will
@@ -69,7 +68,6 @@ by having a 'bulk' attribute set in the response. Here is an example response:
 			{'message': 'REP',
 			 'id': 0xdeadbeef,
 			 'time': 1715738507.234,
-			 'name': 'kpfguide.LASTIMAGE',
 			 'data': JSON description of bulk data,
 			 'bulk': True}
 
@@ -114,18 +112,47 @@ daemon via the request/response socket.
 		Bulk data, as described above, is sent as raw bytes in a
 		second message.
 
-		Example request: b'GET kpfguide.DISP2MSG'
+		Example request:	bJSON: '{'request': 'GET',
+						   'name': 'kpfpower.OUTLET_1A',
+						   'handshake': 5742}
 
-		Example request: b'GET kpfguide.DISP3STA'
+		Example ACK:		bJSON: {'message': 'ACK',
+						'id': 0x00001231,
+						'time': 1723668130.123456,
+						'data': 5742}
+
+		Example REP:		bJSON: {'message': 'REP',
+						'id': 0x00001231,
+						'time': 1723668130.124,
+						'data': {'bin': 0,
+							 'asc': 'Off'}}
 
 	'SET': request a change to the value of a single key. Depending on
 		the daemon, this could result in a variety of behavior, from
 		simply caching the value to slewing a telescope, and anything
-		in-between. The request data is formatted in JSON in order
-		to mitigate formatting issues for transporting the new value
-		over the wire (embedded whitespace, etc.).
+		in-between. The final response indicates the request is
+		complete but does not indicate what the new key value is.
 
-		Example request: b'SET {'name': kpfguide.EXPTIME, 'data': 4}
+		Example request:	bJSON: '{'request': 'SET',
+						   'name': 'kpfpower.OUTLET_1A',
+						   'handshake': 5744,
+						   'data': 'On'}
+
+		Example ACK:		bJSON: {'message': 'ACK',
+						'id': 0x00002199,
+						'time': 1723668131.214123,
+						'data': 5744}
+
+		Example REP:		bJSON: {'message': 'REP',
+						'id': 0x00002199,
+						'time': 1723668134.12549}
+
+		Alternate REP:		bJSON: {'message': 'REP',
+						'id': 0x00002199,
+						'time': 1723668132.12549,
+						'error': {'type': 'ValueError',
+							  'text': 'bad input'}}
+
 
 	'ID': request the current cache identifier for the configuration
 		of a single POT store. If no store name is specified, all
@@ -142,14 +169,27 @@ daemon via the request/response socket.
 		individual identifiers, even if the sequence is only one
 		element long.
 
-		Example request: b'ID'
+		Example request: bJSON: '{'request': 'ID', 'handshake': 234}
 
-		Response data: [{'name': kpfguide, 'id': 84a30b35},
-				{'name': kpfmet, 'id': 983ae10f}]
+		Example ACK as above...
 
-		Example request: b'ID kpfguide'
+		Example REP:	 bJSON: '{'message': 'REP',
+					  'id': 0x23487214,
+					  'data': [{'name': kpfguide,
+							'id': 84a30b35},
+						   {'name': kpfmet,
+							'id': 983ae10f}]}'
 
-		Response data: [{'name': kpfguide, 'id': 84a30b35},]
+		Example request: bJSON: '{'request': 'ID',
+					  'handshake': 236,
+					  'data': 'kpfguide'}
+
+		Example ACK as above...
+
+		Example REP:	 bJSON: '{'message': 'REP',
+					  'id': 0x23488334,
+					  'data': [{'name': kpfguide,
+							'id': 84a30b35}]}'
 
 	'CONFIG': request the full configuration contents for a single POT
 		store. There is no option to dump the configuration data for
@@ -161,13 +201,19 @@ daemon via the request/response socket.
 		The configuration contents are not fully described here,
 		this is just a representation of the format.
 
-		Example request: b'CONFIG kpfguide'
+		Example request: bJSON: '{'request': 'CONFIG',
+					  'handshake': 563,
+					  'data': 'kpfguide'}
 
-		Response data: {'name': kpfguide', 'id': 84a30b35,
-				'keys': [{'name': 'DISP1CLK', ...},
-					 {'name': 'DISP1STA', ...}
-					 ...,
-					 {'name': 'ZEDZEDTOP', ...}]}
+		Example ACK as above...
+
+		Example REP:	 bJSON: '{'message': 'REP',
+					  'id': 0x9883ac34,
+					  'data': {'name': kpfguide,
+						   'id': 84a30b35,
+						   'keys': [{...},
+							    {...},
+							    ...]}}'
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -197,7 +243,7 @@ mimics the form of the request/response exchange described above:
 
 	JSON expanded:	{'message': 'PUB',
 			 'id': eight hexadecimal digits,
-			 'time', timestamp for this broadcast,
+			 'time': timestamp for this broadcast,
 			 'name': unique POT key name,
 			 'data': data according to request}
 
