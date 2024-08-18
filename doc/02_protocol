@@ -146,33 +146,31 @@ daemon via the request/response socket.
 							  'text': 'bad input'}}
 
 
-	'ID': request the current cache identifier for the configuration
+	'HASH': request the current hash identifier for the configuration
 		of a single POT store. If no store name is specified, all
-		available cache identifiers will be returned, for all known
+		available hash identifiers will be returned, for all known
 		stores. An error will be returned if a store is requested
 		and the contacted daemon does not have a cached configuration
 		describing it.
 
-		Each identifier is up to eight hexadecimal digits. It is
-		expected that the identifiers for a given store will be
-		sequential, but is not strictly required.
+		The hash is 32 hexadecimal integers.
 
 		To unify processing the response is always a sequence of
 		individual identifiers, even if the sequence is only one
 		element long.
 
-		Example request: bJSON: '{'request': 'ID', 'id': 234}
+		Example request: bJSON: '{'request': 'HASH', 'id': 234}
 
 		Example ACK as above...
 
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 234,
 					  'data': [{'name': kpfguide,
-							'id': 84a30b35},
+							'hash': 0x84a30b35...},
 						   {'name': kpfmet,
-							'id': 983ae10f}]}'
+							'hash': 0x983ae10f...}]}'
 
-		Example request: bJSON: '{'request': 'ID',
+		Example request: bJSON: '{'request': 'HASH',
 					  'id': 236,
 					  'data': 'kpfguide'}
 
@@ -181,12 +179,12 @@ daemon via the request/response socket.
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 236,
 					  'data': [{'name': kpfguide,
-							'id': 84a30b35}]}'
+							'hash': 0x84a30b35}]}'
 
 	'CONFIG': request the full configuration contents for a single POT
 		store. There is no option to dump the configuration data for
 		all known stores. A typical client interaction will request
-		the configuration ID first, and if the local copy is not a
+		the configuration hash first, and if the local copy is not a
 		match, request the full contents from the daemon to update
 		the local cache.
 
@@ -202,7 +200,7 @@ daemon via the request/response socket.
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 563,
 					  'data': {'name': kpfguide,
-						   'id': 84a30b35,
+						   'hash': 0x84a30b35...,
 						   'keys': [{...},
 							    {...},
 							    ...]}}'
