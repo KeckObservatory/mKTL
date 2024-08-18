@@ -13,21 +13,15 @@ any direction.
 
 The request/response interaction between the client and daemon is of this form:
 
-	Client says:	b'{'request': 'REQ', 'handshake': some integer, ...}
+	Client says:	b'{'request': 'REQ', 'id': some integer, ...}
 
 	Daemon says:	bJSON: {'message': 'ACK',
-				'id': eight hexadecimal digits,
-				'time': timestamp for this acknowledgement,
-				'data': handshake integer}
+				'id': matching the original request,
+				'time': timestamp for this acknowledgement}
 
 All messages on ZeroMQ sockets are formatted as raw bytes. JSON is used
 as a convenient and portable way to encapsulate both the request and the
-response. The 'data' identifier is somewhat generic, but the same field is
-used for every response type, regardless of the request. In the case of the
-ACK message, the 'data' is a recital of the initial handshake integer, which
-allows the client to associate the response with its initial request, and
-provides the daemon-supplied identification number that will be used for
-future messages.
+response.
 
 The daemon immediately issues the ACK response upon receipt of the request.
 The absence of a quick response indicates that the daemon is not available,
@@ -35,7 +29,7 @@ and the client should immediately raise an error. After the client receives
 the initial ACK it should then look for the full response:
 
 	Daemon says:	bJSON: {'message': 'REP',
-				'id': eight hexadecimal digits,
+				'id': matching the original request,
 				'time': timestamp for this response,
 				'data': response payload}
 
@@ -114,15 +108,14 @@ daemon via the request/response socket.
 
 		Example request:	bJSON: '{'request': 'GET',
 						   'name': 'kpfpower.OUTLET_1A',
-						   'handshake': 5742}
+						   'id': 5742}
 
 		Example ACK:		bJSON: {'message': 'ACK',
-						'id': 0x00001231,
-						'time': 1723668130.123456,
-						'data': 5742}
+						'id': 5742,
+						'time': 1723668130.123456}
 
 		Example REP:		bJSON: {'message': 'REP',
-						'id': 0x00001231,
+						'id': 5742,
 						'time': 1723668130.124,
 						'data': {'bin': 0,
 							 'asc': 'Off'}}
@@ -135,20 +128,19 @@ daemon via the request/response socket.
 
 		Example request:	bJSON: '{'request': 'SET',
 						   'name': 'kpfpower.OUTLET_1A',
-						   'handshake': 5744,
+						   'id': 5744,
 						   'data': 'On'}
 
 		Example ACK:		bJSON: {'message': 'ACK',
-						'id': 0x00002199,
-						'time': 1723668131.214123,
-						'data': 5744}
+						'id': 5744,
+						'time': 1723668131.214123}
 
 		Example REP:		bJSON: {'message': 'REP',
-						'id': 0x00002199,
+						'id': 5744,
 						'time': 1723668134.12549}
 
 		Alternate REP:		bJSON: {'message': 'REP',
-						'id': 0x00002199,
+						'id': 5744,
 						'time': 1723668132.12549,
 						'error': {'type': 'ValueError',
 							  'text': 'bad input'}}
@@ -169,25 +161,25 @@ daemon via the request/response socket.
 		individual identifiers, even if the sequence is only one
 		element long.
 
-		Example request: bJSON: '{'request': 'ID', 'handshake': 234}
+		Example request: bJSON: '{'request': 'ID', 'id': 234}
 
 		Example ACK as above...
 
 		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 0x23487214,
+					  'id': 234,
 					  'data': [{'name': kpfguide,
 							'id': 84a30b35},
 						   {'name': kpfmet,
 							'id': 983ae10f}]}'
 
 		Example request: bJSON: '{'request': 'ID',
-					  'handshake': 236,
+					  'id': 236,
 					  'data': 'kpfguide'}
 
 		Example ACK as above...
 
 		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 0x23488334,
+					  'id': 236,
 					  'data': [{'name': kpfguide,
 							'id': 84a30b35}]}'
 
@@ -202,13 +194,13 @@ daemon via the request/response socket.
 		this is just a representation of the format.
 
 		Example request: bJSON: '{'request': 'CONFIG',
-					  'handshake': 563,
+					  'id': 563,
 					  'data': 'kpfguide'}
 
 		Example ACK as above...
 
 		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 0x9883ac34,
+					  'id': 563,
 					  'data': {'name': kpfguide,
 						   'id': 84a30b35,
 						   'keys': [{...},
@@ -315,6 +307,9 @@ described above.
 		ACK and REP messages, to combine the JSON with the data
 		buffer for a 'bulk' broadcast, and to further associate
 		individual PUB messages contained in a 'bundle' broadcast.
+		For client-initiated requests, the client is expected to
+		provide a sufficiently unique integer to allow it to
+		associate all responses with the initial request.
 
 	'time': a UNIX epoch timestamp associated with the generation of
 		the event. This is not intended to represent any time
