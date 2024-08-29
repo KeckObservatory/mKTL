@@ -201,8 +201,9 @@ daemon via the request/response socket.
 					  'id': 563,
 					  'data': {'name': kpfguide,
 						   'hash': 0x84a30b35...,
-						   'time': 1724892333.924,
+						   'origin': somehostname,
 						   'stratum': 0,
+						   'time': 1724892333.924,
 						   'keys': [{...},
 							    {...},
 							    ...]}}'
