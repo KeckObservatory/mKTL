@@ -17,7 +17,7 @@ class Store:
 
 
     def __setitem__(self, name, value):
-        raise NotImplementedError('you cannot set a Store's key directly')
+        raise NotImplementedError("you cannot set a Store's key directly")
 
 
     def __getitem__(self, name):
@@ -44,11 +44,11 @@ class Store:
 
 
     def __delitem__(self, name):
-        raise NotImplementedError('you cannot delete a Store's key directly')
+        raise NotImplementedError("you cannot delete a Store's key directly")
 
 
     def clear(self):
-        raise NotImplementedError('you cannot delete a Store's keys directly')
+        raise NotImplementedError("you cannot delete a Store's keys directly")
 
 
     def copy(self):
@@ -60,7 +60,7 @@ class Store:
 
 
     def update(self, *args, **kwargs):
-        raise NotImplementedError('you cannot update a Store's keys directly')
+        raise NotImplementedError("you cannot update a Store's keys directly")
 
 
     def keys(self):
