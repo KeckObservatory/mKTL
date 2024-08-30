@@ -5,8 +5,8 @@ from . import Config
 class Store:
     ''' The :class:`Store` implements a key/value store, effectively a Python
         dictionary with some additional context. A store has a unique *name*
-        corresponding to one or more POT daemons that can be contacted to
-        handle requests.
+        within the local POT context; which daemons will be contacted to handle
+        further requests is determined by the per-Key configuration.
     '''
 
     def __init__(self, name):
