@@ -193,7 +193,7 @@ daemon via the request/response socket.
 
 		Example request: bJSON: '{'request': 'CONFIG',
 					  'id': 563,
-					  'data': 'kpfguide'}
+					  'name': 'kpfguide'}
 
 		Example ACK as above...
 
