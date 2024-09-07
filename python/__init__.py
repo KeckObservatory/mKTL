@@ -3,6 +3,8 @@
     key/value pairs and handling client requests.
 '''
 
+from . import WeakRef
+
 from . import Get
 from . import Publish
 from . import Request
