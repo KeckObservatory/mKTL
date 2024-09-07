@@ -207,7 +207,6 @@ class Server:
                 raise
 
         self.socket.send(message)
-        print('Publish.Server sent: ' + repr(message))
 
 
     def wake(self):
