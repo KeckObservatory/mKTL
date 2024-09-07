@@ -4,10 +4,11 @@
 
 import atexit
 import threading
-import weakref
+import traceback
 import zmq
 import zmq.utils.monitor
 
+from . import WeakRef
 
 default_port = 10133
 zmq_context = zmq.Context()
@@ -49,6 +50,8 @@ class Client:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
 
+        self.callbacks = list()
+
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -56,7 +59,7 @@ class Client:
 
         self.socket.connect(server)
 
-        Client.instances.append(weakref.ref(self))
+        Client.instances.append(WeakRef.ref(self))
 
 
     def checkSocket(self):
@@ -85,6 +88,43 @@ class Client:
         self.monitor.close()
 
 
+    def propagate(self, message):
+        ''' Invoke any/all callbacks registered via :func:`register` for
+            a newly arrived message.
+        '''
+
+        invalid = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+
+            try:
+                callback(message)
+            except:
+                print(traceback.format_exc())
+                continue
+
+        for reference in invalid:
+            self.callbacks.remove(reference)
+
+
+    def register(self, callback):
+        ''' Register a callback that will be invoked every time a new
+            broadcast message arrives.
+        '''
+
+        if callable(callback):
+            pass
+        else:
+            raise TypeError('callback must be callable')
+
+        reference = WeakRef.ref(callback)
+        self.callbacks.append(reference)
+
+
     def run(self):
 
         counter = 0
@@ -96,8 +136,8 @@ class Client:
             sockets = poller.poll(1000)
             for active,flag in sockets:
                 if self.socket == active:
-                    request = self.socket.recv()
-                    print('Publish.Client received: ' + repr(request))
+                    message = self.socket.recv()
+                    self.propagate(message)
                 else:
                     self.snooze()
 
@@ -118,11 +158,11 @@ class Client:
 
 
     def subscribe(self, topic):
-        ''' ZeroMQ subscriptions are based on a "topic" number. The number
-            is an integer.
+        ''' ZeroMQ subscriptions are based on a topic. Filtering of messages
+            happens on the server side, based on whether a given client is
+            subscribed to a given topic.
         '''
 
-        topic = int(topic)
         topic = str(topic)
         topic = topic.encode()
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
