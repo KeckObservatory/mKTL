@@ -3,6 +3,8 @@
 '''
 
 import atexit
+import json
+import sys
 import threading
 import weakref
 import zmq
@@ -149,9 +151,46 @@ class Server:
         Server.instances.append(weakref.ref(self))
 
 
+    def req_incoming(self, ident, request):
+
+        request = json.reads(request)
+
+        id = request['id']
+
+        ack = dict()
+        ack['message'] = 'ACK'
+        ack['id'] = id
+        ack['time'] = time.time()
+        ack = json.dumps(ack)
+
+        self.socket.send_multipart((ident, ack))
+        self.req_handler(ident, request)
+
+
+    def req_handler(self, ident, request):
+        ''' The default request handler is for debug purposes only, and is
+            effectively a no-op.
+        '''
+
+        error = None
+        payload = None
+
+        response = dict()
+        response['message'] = 'REP'
+        response['id'] = request['id']
+        response['time'] = time.time()
+
+        if error is not None:
+            response['error'] = error
+        if payload is not None:
+            response['data'] = payload
+
+        response = json.dumps(response)
+        self.req_socket.send_multipart((ident, response))
+
+
     def run(self):
 
-        counter = 0
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
         poller.register(self.notify_in, zmq.POLLIN)
@@ -162,20 +201,15 @@ class Server:
                 if self.socket == active:
                     ident, request = self.socket.recv_multipart()
 
-                    print('Request.Server message from: ' + repr(ident))
-                    print('Request.Server received: ' + repr(request))
+                    try:
+                        self.req_incoming(ident, request)
+                    except:
+                        ### Proper error handling needs to go here.
+                        print('Request.Server.req_incoming threw an exception')
+                        print(str(sys.exc_info[1]))
 
-                    response = "Request %d received" % (counter)
-                    response = response.encode()
-                    self.socket.send_multipart((ident, response))
-
-                    response = "Request %d complete" % (counter)
-                    response = response.encode()
-                    self.socket.send_multipart((ident, response))
                 else:
                     self.snooze()
-
-                counter += 1
 
 
     def snooze(self):
