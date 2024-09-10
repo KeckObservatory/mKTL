@@ -186,7 +186,7 @@ class Server:
             response['data'] = payload
 
         response = json.dumps(response)
-        self.req_socket.send_multipart((ident, response))
+        self.socket.send_multipart((ident, response))
 
 
     def run(self):
