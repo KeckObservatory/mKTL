@@ -163,7 +163,7 @@ class Server:
         ack['time'] = time.time()
         ack = json.dumps(ack)
 
-        self.socket.send_multipart((ident, ack))
+        self.send(ident, ack)
         self.req_handler(ident, request)
 
 
@@ -186,6 +186,7 @@ class Server:
             response['data'] = payload
 
         response = json.dumps(response)
+        response = response.encode()
         self.socket.send_multipart((ident, response))
 
 
@@ -210,6 +211,22 @@ class Server:
 
                 else:
                     self.snooze()
+
+
+    def send(self, ident, response):
+        ''' Send a string response to the connected client.
+        '''
+
+        try:
+            response = response.encode()
+        except AttributeError:
+            if hasattr(response, 'decode'):
+                # Assume it's already bytes.
+                pass
+            else:
+                raise
+
+        self.socket.send_multipart((ident, response))
 
 
     def snooze(self):
