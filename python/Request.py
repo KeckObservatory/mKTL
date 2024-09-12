@@ -6,6 +6,7 @@ import atexit
 import json
 import sys
 import threading
+import time
 import weakref
 import zmq
 import zmq.utils.monitor
@@ -90,17 +91,13 @@ class Client:
                 raise
 
         self.socket.send(request)
-        print('Request.Client sent: ' + repr(request))
 
         result = self.socket.poll(self.timeout)
         if result == 0:
             raise zmq.ZMQError("no response received in %d ms" % (self.timeout))
 
+        ack = self.socket.recv()
         response = self.socket.recv()
-        print('Request.Client recv: ' + repr(response))
-
-        completion = self.socket.recv()
-        print('Request.Client recv: ' + repr(completion))
 
         return response
 
@@ -153,7 +150,7 @@ class Server:
 
     def req_incoming(self, ident, request):
 
-        request = json.reads(request)
+        request = json.loads(request)
 
         id = request['id']
 
@@ -162,6 +159,7 @@ class Server:
         ack['id'] = id
         ack['time'] = time.time()
         ack = json.dumps(ack)
+        ack = ack.encode()
 
         self.send(ident, ack)
         self.req_handler(ident, request)
@@ -207,7 +205,8 @@ class Server:
                     except:
                         ### Proper error handling needs to go here.
                         print('Request.Server.req_incoming threw an exception')
-                        print(str(sys.exc_info[1]))
+                        print(str(sys.exc_info()[1]))
+                        raise
 
                 else:
                     self.snooze()
