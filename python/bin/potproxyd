@@ -8,7 +8,6 @@ import atexit
 import itertools
 import json
 import os
-import queue
 import subprocess
 import sys
 import tempfile
