@@ -62,8 +62,7 @@ def main():
         references['req'] = RequestRelay(req, req_server)
 
         # The subprocess should be instantiated last so that the relays are
-        # intact and ready to be accessed before invoking the subprocess that
-        # generates events.
+        # intact and ready to be accessed.
 
         references['sub'] = ProxySubprocess(req, pub, name)
 
@@ -299,15 +298,20 @@ class RequestServer(POT.Protocol.Request.Server):
             raise KeyError('CONFIG request must specify a name')
 
         try:
-            sub = main.subs[name]
+            sub = main.subs[request_name]
         except KeyError:
-            raise KeyError('no local configuration for ' + repr(name))
+            raise KeyError('no local configuration for ' + repr(request_name))
 
         config = sub['config']
         return config
 
 
     def req_handler(self, ident, request):
+        ''' Inspect the incoming request type and decide how a response
+            will be generated. Interactive requests are handled exclusively
+            by the subprocess, including the ACK of the request; other request
+            types are handled immediately via subroutines called here.
+        '''
 
         type = request['request']
         name = request['name']
@@ -321,10 +325,14 @@ class RequestServer(POT.Protocol.Request.Server):
         try:
             if type == 'GET' or type == 'SET':
                 self.req_relay(ident, request)
-            elif type == 'CONFIG':
-                payload = self.req_config(ident, request)
             else:
-                raise ValueError('unhandled request type: ' + type)
+                self.req_ack(ident, request)
+                if type == 'HASH':
+                    payload = self.req_hash(ident, request)
+                elif type == 'CONFIG':
+                    payload = self.req_config(ident, request)
+                else:
+                    raise ValueError('unhandled request type: ' + type)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -347,9 +355,38 @@ class RequestServer(POT.Protocol.Request.Server):
             self.socket.send_multipart((ident, response))
 
 
+    def req_hash(self, ident, request):
+
+        try:
+            request = request['name']
+        except KeyError:
+            request = None
+
+        if request is not None:
+            try:
+                main.subs[request]
+            except KeyError:
+                raise KeyError('no local configuration for ' + repr(request))
+
+
+        hashes = list()
+        for name in main.subs:
+            if request is None or request == name:
+                config = main.subs[name]['config']
+
+                payload = dict()
+                payload['name'] = name
+                payload['hash'] = config['hash']
+                hashes.append(payload)
+
+        return hashes
+
+
     def req_incoming(self, ident, request):
-        ''' The parent req_incoming() would send an ACK. We want the ACK
-            to come from the subprocess, not from this supervisor.
+        ''' This is the entry point for all inbound requests.
+
+            The parent req_incoming() would send an ACK. If appropriate, we
+            want the ACK to come from the subprocess, not from this supervisor.
         '''
 
         request = json.loads(request)
@@ -357,9 +394,9 @@ class RequestServer(POT.Protocol.Request.Server):
 
 
     def req_relay(self, ident, request):
-        ''' Relay the incoming request to the correct subprocess. The response
-            will be handled by the thread watching the subprocess for outbound
-            messages.
+        ''' Relay the incoming request to the correct subprocess. The
+            :class:`RequestRelay` instance associated with that subprocess
+            handles the communication in both directions.
         '''
 
         # The request could be for one of any of the stores associated with
