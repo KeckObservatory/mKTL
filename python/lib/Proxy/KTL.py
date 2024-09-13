@@ -18,7 +18,7 @@ class KTL(Common.Base):
         if ktl is None:
             raise ModuleNotFoundError("cannot import the 'ktl' module")
 
-        Proxy.Base.__init__(self, req, pub)
+        Common.Base.__init__(self, req, pub)
 
         self.name = name
         service = ktl.cache(name)

@@ -7,7 +7,7 @@
 import sys
 import time
 
-import KTL
+import POT
 
 
 def main():
@@ -24,7 +24,7 @@ def main():
     req = sys.argv[1]
     pub =sys.argv[2]
 
-    proxy = KTL.KTL(req, pub, service)
+    proxy = POT.Proxy.KTL(req, pub, service)
 
     while True:
         try:
