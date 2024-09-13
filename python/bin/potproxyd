@@ -187,8 +187,6 @@ class PublishRelay:
 
 class RequestRelay:
 
-    timeout = 50
-
     def __init__(self, internal, external):
 
         identity = "RequestRelay.%d" % (id(self))
