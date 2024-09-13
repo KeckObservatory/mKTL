@@ -148,9 +148,7 @@ class Server:
         Server.instances.append(weakref.ref(self))
 
 
-    def req_incoming(self, ident, request):
-
-        request = json.loads(request)
+    def req_ack(self, ident, request):
 
         id = request['id']
 
@@ -162,6 +160,13 @@ class Server:
         ack = ack.encode()
 
         self.send(ident, ack)
+
+
+    def req_incoming(self, ident, request):
+
+        request = json.loads(request)
+
+        self.req_ack(ident, request)
         self.req_handler(ident, request)
 
 
