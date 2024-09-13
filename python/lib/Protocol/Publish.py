@@ -8,7 +8,7 @@ import traceback
 import zmq
 import zmq.utils.monitor
 
-from . import WeakRef
+from .. import WeakRef
 
 default_port = 10133
 zmq_context = zmq.Context()
