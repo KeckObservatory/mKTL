@@ -22,7 +22,7 @@ def main():
 
     service = sys.argv[3]
     req = sys.argv[1]
-    pub =sys.argv[2]
+    pub = sys.argv[2]
 
     proxy = POT.Proxy.KTL(req, pub, service)
 
