@@ -4,21 +4,21 @@ import json
 import threading
 import time
 
-from . import Common
+from . import Subprocess
 
 try:
     import ktl
 except ModuleNotFoundError:
     ktl = None
 
-class KTL(Common.Base):
+class KTL(Subprocess.Base):
 
     def __init__(self, req, pub, name):
 
         if ktl is None:
             raise ModuleNotFoundError("cannot import the 'ktl' module")
 
-        Common.Base.__init__(self, req, pub)
+        Subprocess.Base.__init__(self, req, pub)
 
         self.name = name
         service = ktl.cache(name)
