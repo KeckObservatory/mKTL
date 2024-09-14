@@ -316,12 +316,14 @@ class RequestServer(POT.Protocol.Request.Server):
         try:
             type = request['request']
         except KeyError:
+            self.req_ack(ident, request)
             raise KeyError("invalid request JSON, 'request' not set")
 
         try:
             name = request['name']
         except KeyError:
             if type != 'HASH':
+                self.req_ack(ident, request)
                 raise KeyError("invalid request JSON, 'name' not set")
 
         if type == 'GET' or type == 'SET':
