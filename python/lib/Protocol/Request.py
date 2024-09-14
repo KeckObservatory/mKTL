@@ -98,8 +98,21 @@ class Client:
             raise zmq.ZMQError("no response received in %d ms" % (self.timeout))
 
         ack = self.socket.recv()
-        response = self.socket.recv()
+        ack_dict = json.loads(ack)
+        ack_type = ack_dict['message']
 
+        if ack_type == 'REP':
+            # We were expecting an ACK, but we got the full response instead.
+            # We could be hard-nosed about it and throw an exception, but the
+            # intent of requiring the ACK (is the server alive?) is moot if we
+            # have a proper full response.
+            response = ack
+            return response
+
+        elif ack_type != 'ACK':
+            raise ValueError('expected an ACK response, got ' + ack_type)
+
+        response = self.socket.recv()
         return response
 
 
