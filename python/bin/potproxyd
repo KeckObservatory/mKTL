@@ -32,8 +32,8 @@ def main():
 
     names = sys.argv[1:]
 
-    pub_server = POT.Protocol.Publish.Server()
-    req_server = RequestServer()
+    pub = POT.Protocol.Publish.Server()
+    req = RequestServer()
 
     # PUB and REP messages can flow directly from the subprocess out to the
     # external interface without any additional handling; inbound requests
@@ -45,27 +45,7 @@ def main():
     # multiple subprocesses associated with a single store name?
 
     for name in names:
-
-        references = dict()
-        main.subs[name] = references
-
-        socketdir = tempfile.mkdtemp()
-        atexit.register(cleanupSockets, socketdir)
-
-        req = os.path.join(socketdir, 'req')
-        pub = os.path.join(socketdir, 'pub')
-
-        req = 'ipc://' + req
-        pub = 'ipc://' + pub
-
-        references['pub'] = PublishRelay(pub, pub_server)
-        references['req'] = RequestRelay(req, req_server)
-
-        # The subprocess should be instantiated last so that the relays are
-        # intact and ready to be accessed.
-
-        references['sub'] = ProxySubprocess(req, pub, name)
-
+        main.subs[name] = ProxySubprocess(name, req, pub)
 
     while True:
         try:
@@ -108,10 +88,27 @@ class InternalRequest:
 
 class ProxySubprocess:
 
-    def __init__(self, req, pub, name):
-        self.req = req
-        self.pub = pub
+    def __init__(self, name, req_server, pub_server):
+
+        socketdir = tempfile.mkdtemp()
+        atexit.register(cleanupSockets, socketdir)
+
+        req_address = os.path.join(socketdir, 'req')
+        pub_address = os.path.join(socketdir, 'pub')
+
+        req_address = 'ipc://' + req_address
+        pub_address = 'ipc://' + pub_address
+
+        self.config = None
         self.name = name
+        self.pub_address = pub_address
+        self.req_address = req_address
+
+        self.pub = PublishRelay(pub_address, pub_server)
+        self.req = RequestRelay(req_address, req_server)
+
+        # The subprocess should be instantiated last so that the relays are
+        # intact and ready to be accessed.
 
         self.subprocess = None
 
@@ -141,19 +138,33 @@ class ProxySubprocess:
             self.subprocess = self.startSubprocess()
 
 
+    def reconfig(self):
+
+        request = dict()
+        request['request'] = 'CONFIG'
+        request['name'] = self.name
+
+        new_config = self.req.internal_request(request)
+
+        ### Error handling goes here. If there is an error, or there is
+        ### no configuration data, log the error, at a minimum.
+
+        self.config = new_config['data']
+
+
     def startSubprocess(self):
 
         arguments = list()
         arguments.append('./potsub')
-        arguments.append(self.req)
-        arguments.append(self.pub)
+        arguments.append(self.req_address)
+        arguments.append(self.pub_address)
         arguments.append(self.name)
 
         pipe = subprocess.PIPE
         ##proxysub = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
         proxysub = subprocess.Popen(arguments)
 
-        reconfig(sub=self)
+        self.reconfig()
         return proxysub
 
 
@@ -302,8 +313,7 @@ class RequestServer(POT.Protocol.Request.Server):
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request_name))
 
-        config = sub['config']
-        return config
+        return sub.config
 
 
     def req_handler(self, ident, request):
@@ -358,15 +368,14 @@ class RequestServer(POT.Protocol.Request.Server):
             except KeyError:
                 raise KeyError('no local configuration for ' + repr(request))
 
-
         hashes = list()
         for name in main.subs:
             if request is None or request == name:
-                config = main.subs[name]['config']
+                sub = main.subs[name]
 
                 payload = dict()
                 payload['name'] = name
-                payload['hash'] = config['hash']
+                payload['hash'] = sub.config['hash']
                 hashes.append(payload)
 
         return hashes
@@ -391,8 +400,7 @@ class RequestServer(POT.Protocol.Request.Server):
         except KeyError:
             raise KeyError('no local store for ' + repr(store))
 
-        req = sub['req']
-        req.external_request(ident, request)
+        sub.req.external_request(ident, request)
 
 
 # end of class RequestServer
@@ -406,28 +414,6 @@ def cleanupSockets(socketdir):
         os.remove(os.path.join(socketdir, socket))
 
     os.rmdir(socketdir)
-
-
-def reconfig(sub):
-    ''' Retrieve the current configuration associated with a subcomponent and
-        update the global configuration. The subcomponent in question is
-        presently just the subprocess.
-    '''
-
-    for name in main.subs:
-        if main.subs[name]['sub'] is sub:
-            req = main.subs[name]['req']
-
-            request = dict()
-            request['request'] = 'CONFIG'
-            request['name'] = name
-
-            new_config = req.internal_request(request)
-
-            ### Error handling goes here. If there is an error, or there is
-            ### no configuration data, log the error, at a minimum.
-
-            main.subs[name]['config'] = new_config['data']
 
 
 
