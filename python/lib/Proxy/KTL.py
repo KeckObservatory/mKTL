@@ -77,7 +77,11 @@ class KTL(Subprocess.Base):
 
     def relay(self, keyword):
 
-        slice = keyword.history[-1]
+        try:
+            slice = keyword.history[-1]
+        except IndexError:
+            return
+
         timestamp = slice.time
         ascii = slice.ascii
         binary = slice.binary
