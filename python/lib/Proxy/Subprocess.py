@@ -33,12 +33,6 @@ class Base:
         self.pub_socket.bind(pub)
 
         self.req = req
-        self.req_socket = zmq_context.socket(zmq.ROUTER)
-        self.req_socket.bind(req)
-
-        self.workers_url = 'inproc://workers'
-        self.workers = zmq_context.socket(zmq.DEALER)
-        self.workers.bind(self.workers_url)
 
         self.worker_shutdown = False
 
@@ -46,11 +40,6 @@ class Base:
             thread = threading.Thread(target=self.worker_main)
             thread.daemon = True
             thread.start()
-
-        proxy_args = (self.req_socket, self.workers)
-        thread = threading.Thread(target=zmq.proxy, args=proxy_args)
-        thread.daemon = True
-        thread.start()
 
 
     def publish(self, bytes):
@@ -83,7 +72,7 @@ class Base:
         self.pub_id = itertools.count(self.pub_id_min)
 
 
-    def req_ack(self, socket, ident1, ident2, request):
+    def req_ack(self, socket, ident, request):
 
         id = request['id']
 
@@ -94,7 +83,7 @@ class Base:
         ack = json.dumps(ack)
         ack = ack.encode()
 
-        socket.send_multipart((ident1, ident2, ack))
+        socket.send_multipart((ident, ack))
 
 
     def req_config(self, name):
@@ -113,9 +102,9 @@ class Base:
         raise NotImplmentedError('must be implemented by the subclass')
 
 
-    def req_handler(self, socket, ident1, ident2, request):
+    def req_handler(self, socket, ident, request):
 
-        self.req_ack(socket, ident1, ident2, request)
+        self.req_ack(socket, ident, request)
 
         type = request['request']
 
@@ -131,7 +120,7 @@ class Base:
         return payload
 
 
-    def req_incoming(self, socket, ident1, ident2, request):
+    def req_incoming(self, socket, ident, request):
         ''' There are two ident values as a result of the daisy-chaining of
             ROUTER/DEALER connections: one is from the subprocess interface,
             the second is from the worker pool interface.
@@ -142,7 +131,7 @@ class Base:
 
         try:
             request = json.loads(request)
-            payload = self.req_handler(socket, ident1, ident2, request)
+            payload = self.req_handler(socket, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -162,7 +151,7 @@ class Base:
 
         response = json.dumps(response)
         response = response.encode()
-        socket.send_multipart((ident1, ident2, response))
+        socket.send_multipart((ident, response))
 
 
     def req_set(self, key, value):
@@ -176,7 +165,7 @@ class Base:
     def worker_main(self):
 
         socket = zmq_context.socket(zmq.ROUTER)
-        socket.connect(self.workers_url)
+        socket.connect(self.req)
 
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
