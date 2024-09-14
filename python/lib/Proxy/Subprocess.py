@@ -4,6 +4,7 @@ import json
 import sys
 import threading
 import time
+import traceback
 import zmq
 
 zmq_context = zmq.Context()
@@ -42,7 +43,7 @@ class Base:
         self.worker_shutdown = False
 
         for thread_number in range(self.worker_count):
-            thread = threading.Thread(target=self.handler)
+            thread = threading.Thread(target=self.worker_main)
             thread.daemon = True
             thread.start()
 
@@ -50,33 +51,6 @@ class Base:
         thread = threading.Thread(target=zmq.proxy, args=proxy_args)
         thread.daemon = True
         thread.start()
-
-
-    def handler(self):
-
-        socket = zmq_context.socket(zmq.ROUTER)
-        socket.connect(self.workers_url)
-
-        poller = zmq.Poller()
-        poller.register(socket, zmq.POLLIN)
-
-        while True:
-            if self.worker_shutdown == True:
-                break
-
-            sockets = poller.poll(10000)
-
-            for active,flag in sockets:
-                if socket == active:
-                    request = socket.recv_multipart()
-
-                    try:
-                        self.req_incoming(socket, *request)
-                    except:
-                        ### Proper error handling needs to go here.
-                        print('req_incoming() threw an exception')
-                        print(str(sys.exc_info()[1]))
-                        raise
 
 
     def publish(self, bytes):
@@ -109,6 +83,20 @@ class Base:
         self.pub_id = itertools.count(self.pub_id_min)
 
 
+    def req_ack(self, socket, ident1, ident2, request):
+
+        id = request['id']
+
+        ack = dict()
+        ack['message'] = 'ACK'
+        ack['id'] = id
+        ack['time'] = time.time()
+        ack = json.dumps(ack)
+        ack = ack.encode()
+
+        socket.send_multipart((ident1, ident2, ack))
+
+
     def req_config(self, name):
         ''' Retrieve the current configuration of this store.
         '''
@@ -125,43 +113,36 @@ class Base:
         raise NotImplmentedError('must be implemented by the subclass')
 
 
+    def req_handler(self, socket, ident1, ident2, request):
+
+        self.req_ack(socket, ident1, ident2, request)
+
+        type = request['request']
+
+        if type == 'GET':
+            payload = self.req_get(request)
+        elif type == 'SET':
+            payload = self.req_set(request)
+        elif type == 'CONFIG':
+            payload = self.req_config(request)
+        else:
+            raise ValueError('unhandled request type: ' + type)
+
+        return payload
+
+
     def req_incoming(self, socket, ident1, ident2, request):
         ''' There are two ident values as a result of the daisy-chaining of
             ROUTER/DEALER connections: one is from the subprocess interface,
             the second is from the worker pool interface.
         '''
 
-        request = json.loads(request)
-
-        id = request['id']
-
-        ack = dict()
-        ack['message'] = 'ACK'
-        ack['id'] = id
-        ack['time'] = time.time()
-        ack = json.dumps(ack)
-        ack = ack.encode()
-
-        socket.send_multipart((ident1, ident2, ack))
-
-        type = request['request']
-        name = request['name']
-
         error = None
         payload = None
 
-        # Is there a more elegant way to wrap this up instead of having
-        # a big block in a try/except clause?
-
         try:
-            if type == 'GET':
-                payload = self.req_get(request)
-            elif type == 'SET':
-                payload = self.req_set(request)
-            elif type == 'CONFIG':
-                payload = self.req_config(request)
-            else:
-                raise ValueError('unhandled request type: ' + type)
+            request = json.loads(request)
+            payload = self.req_handler(socket, ident1, ident2, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -171,7 +152,7 @@ class Base:
 
         response = dict()
         response['message'] = 'REP'
-        response['id'] = id
+        response['id'] = request['id']
         response['time'] = time.time()
 
         if error is not None:
@@ -190,6 +171,31 @@ class Base:
         '''
 
         raise NotImplmentedError('must be implemented by the subclass')
+
+
+    def worker_main(self):
+
+        socket = zmq_context.socket(zmq.ROUTER)
+        socket.connect(self.workers_url)
+
+        poller = zmq.Poller()
+        poller.register(socket, zmq.POLLIN)
+
+        while True:
+            if self.worker_shutdown == True:
+                break
+
+            sockets = poller.poll(10000)
+
+            for active,flag in sockets:
+                if socket == active:
+                    request = socket.recv_multipart()
+
+                    try:
+                        self.req_incoming(socket, *request)
+                    except:
+                        ### Proper error handling needs to go here.
+                        print(traceback.format_exc())
 
 
 # end of class Base
