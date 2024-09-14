@@ -313,46 +313,34 @@ class RequestServer(POT.Protocol.Request.Server):
             types are handled immediately via subroutines called here.
         '''
 
-        type = request['request']
-        name = request['name']
-
-        error = None
-        payload = None
-
-        # Is there a more elegant way to wrap this up instead of having
-        # a big block in a try/except clause?
+        try:
+            type = request['request']
+        except KeyError:
+            raise KeyError("invalid request JSON, 'request' not set")
 
         try:
-            if type == 'GET' or type == 'SET':
-                self.req_relay(ident, request)
+            name = request['name']
+        except KeyError:
+            if type != 'HASH':
+                raise KeyError("invalid request JSON, 'name' not set")
+
+        if type == 'GET' or type == 'SET':
+            # The subprocess will ACK these requests, as well as issue
+            # appropriate responses once the request is handled; returning
+            # None from this routine will indicate no immediate response
+            # should be issued.
+            self.req_relay(ident, request)
+            payload = None
+        else:
+            self.req_ack(ident, request)
+            if type == 'HASH':
+                payload = self.req_hash(ident, request)
+            elif type == 'CONFIG':
+                payload = self.req_config(ident, request)
             else:
-                self.req_ack(ident, request)
-                if type == 'HASH':
-                    payload = self.req_hash(ident, request)
-                elif type == 'CONFIG':
-                    payload = self.req_config(ident, request)
-                else:
-                    raise ValueError('unhandled request type: ' + type)
-        except:
-            e_class, e_instance, e_traceback = sys.exc_info()
-            error = dict()
-            error['type'] = e_class.__name__
-            error['text'] = str(e_instance)
+                raise ValueError('unhandled request type: ' + type)
 
-        if error is not None or payload is not None:
-            response = dict()
-            response['message'] = 'REP'
-            response['id'] = request['id']
-            response['time'] = time.time()
-
-            if error is not None:
-                response['error'] = error
-            if payload is not None:
-                response['data'] = payload
-
-            response = json.dumps(response)
-            response = response.encode()
-            self.socket.send_multipart((ident, response))
+        return payload
 
 
     def req_hash(self, ident, request):
@@ -380,17 +368,6 @@ class RequestServer(POT.Protocol.Request.Server):
                 hashes.append(payload)
 
         return hashes
-
-
-    def req_incoming(self, ident, request):
-        ''' This is the entry point for all inbound requests.
-
-            The parent req_incoming() would send an ACK. If appropriate, we
-            want the ACK to come from the subprocess, not from this supervisor.
-        '''
-
-        request = json.loads(request)
-        self.req_handler(ident, request)
 
 
     def req_relay(self, ident, request):
