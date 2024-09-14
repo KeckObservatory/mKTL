@@ -199,13 +199,11 @@ class RequestRelay:
 
     def __init__(self, internal, external):
 
-        identity = "RequestRelay.%d" % (id(self))
         self.external = external
 
         self.internal = internal
         self.internal_socket = zmq_context.socket(zmq.DEALER)
-        self.internal_socket.connect(internal)
-        self.internal_socket.identity = identity.encode()
+        self.internal_socket.bind(internal)
 
         self.internal_requests = dict()
         self.external_requests = dict()
