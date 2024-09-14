@@ -7,6 +7,7 @@ import json
 import sys
 import threading
 import time
+import traceback
 import weakref
 import zmq
 import zmq.utils.monitor
@@ -164,19 +165,23 @@ class Server:
 
     def req_incoming(self, ident, request):
 
-        request = json.loads(request)
-
-        self.req_ack(ident, request)
-        self.req_handler(ident, request)
-
-
-    def req_handler(self, ident, request):
-        ''' The default request handler is for debug purposes only, and is
-            effectively a no-op.
-        '''
-
         error = None
         payload = None
+
+        try:
+            request = json.loads(request)
+            payload = self.req_handler(ident, request)
+        except:
+            e_class, e_instance, e_traceback = sys.exc_info()
+            error = dict()
+            error['type'] = e_class.__name__
+            error['text'] = str(e_instance)
+
+        if payload is None and error is None:
+            # The handler should only return None when no response is
+            # immediately forthcoming-- the handler has invoked some
+            # other processing chain that will issue a proper response.
+            return
 
         response = dict()
         response['message'] = 'REP'
@@ -191,6 +196,27 @@ class Server:
         response = json.dumps(response)
         response = response.encode()
         self.socket.send_multipart((ident, response))
+
+
+    def req_handler(self, ident, request):
+        ''' The default request handler is for debug purposes only, and is
+            effectively a no-op. Normally :func:`req_handler` is expected to
+            return a payload
+        '''
+
+        self.req_ack(ident, request)
+
+        response = dict()
+        response['message'] = 'REP'
+        response['id'] = request['id']
+        response['time'] = time.time()
+        response = json.dumps(response)
+        response = response.encode()
+
+        self.socket.send_multipart((ident, response))
+
+        # This default handler returns None, which indicates to req_incoming()
+        # that it should not issue a response of its own.
 
 
     def run(self):
@@ -209,9 +235,7 @@ class Server:
                         self.req_incoming(ident, request)
                     except:
                         ### Proper error handling needs to go here.
-                        print('Request.Server.req_incoming threw an exception')
-                        print(str(sys.exc_info()[1]))
-                        raise
+                        print(traceback.format_exc())
 
                 else:
                     self.snooze()
