@@ -18,9 +18,9 @@ class KTL(Subprocess.Base):
         if ktl is None:
             raise ModuleNotFoundError("cannot import the 'ktl' module")
 
+        self.name = name
         Subprocess.Base.__init__(self, req, pub)
 
-        self.name = name
         service = ktl.cache(name)
 
         for name in service:
