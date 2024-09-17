@@ -50,7 +50,8 @@ class Client:
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
 
-        self.callbacks = list()
+        self.callback_all = list()
+        self.callback_specific = dict()
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
@@ -93,9 +94,12 @@ class Client:
             a newly arrived message.
         '''
 
-        invalid = list()
+        # Handle the case where a callback is registered for any/all messages.
 
-        for reference in self.callbacks:
+        invalid = list()
+        references = self.callback_all
+
+        for reference in references:
             callback = reference()
 
             if callback is None:
@@ -108,12 +112,47 @@ class Client:
                 continue
 
         for reference in invalid:
-            self.callbacks.remove(reference)
+            references.remove(reference)
 
 
-    def register(self, callback):
-        ''' Register a callback that will be invoked every time a new
-            broadcast message arrives.
+        # Handle the case where a callback is registered for a specific topic.
+
+        if len(self.callback_specific) == 0:
+            return
+
+        topic = message.split(b' ', 1)[0]
+
+        try:
+            references = self.callback_specific[topic]
+        except KeyError:
+            return
+
+        invalid = list()
+
+        for reference in references:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+
+            try:
+                callback(message)
+            except:
+                print(traceback.format_exc())
+                continue
+
+        for reference in invalid:
+            references.remove(reference)
+
+        if len(references) == 0:
+            del self.callback_specific[topic]
+
+
+    def register(self, callback, topic=None):
+        ''' Register a callback that will be invoked every time a new broadcast
+            message arrives. If no topic is specified the callback will be
+            invoked for all broadcast messages. The topic is case-sensitive and
+            must be an exact match.
         '''
 
         if callable(callback):
@@ -122,7 +161,21 @@ class Client:
             raise TypeError('callback must be callable')
 
         reference = WeakRef.ref(callback)
-        self.callbacks.append(reference)
+
+        if topic is None:
+            self.callback_all.append(reference)
+        else:
+            topic = str(topic)
+            topic = topic.strip()
+            topic = topic.encode()
+
+            try:
+                callbacks = self.callback_specific[topic]
+            except:
+                callbacks = list()
+                self.callback_specific[topic] = callbacks
+
+            callbacks.append(reference)
 
 
     def run(self):
@@ -160,7 +213,8 @@ class Client:
     def subscribe(self, topic):
         ''' ZeroMQ subscriptions are based on a topic. Filtering of messages
             happens on the server side, based on whether a given client is
-            subscribed to a given topic.
+            subscribed to a given topic. A client can subscribe to all messages
+            by providing the empty string as the topic.
         '''
 
         topic = str(topic)
@@ -207,10 +261,6 @@ class Server:
                 raise
 
         self.socket.send(message)
-
-
-    def wake(self):
-        self.notify_out.send_string('hello')
 
 
 # end of class Server
