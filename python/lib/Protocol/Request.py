@@ -177,6 +177,17 @@ class Server:
 
 
     def req_incoming(self, ident, request):
+        ''' All inbound requests are filtered through this method. It will
+            parse the request as JSON into a Python dictionary, and hand it
+            off to :func:`req_handler` for further processing. Error handling
+            is managed here; if :func:`req_handler` raises an exception it
+            will be packaged up and returned to the client as an error.
+
+            :func:`req_handler` is expected to call :func:`req_ack` to
+            acknowledge the incoming request; if :func:`req_handler` is
+            returning a simple payload it will be packged into a REP response;
+            no response will be issued if :func:`req_handler` returns None.
+        '''
 
         error = None
         payload = None
@@ -189,6 +200,7 @@ class Server:
             error = dict()
             error['type'] = e_class.__name__
             error['text'] = str(e_instance)
+            error['debug'] = traceback.format_exc()
 
         if payload is None and error is None:
             # The handler should only return None when no response is
@@ -213,8 +225,7 @@ class Server:
 
     def req_handler(self, ident, request):
         ''' The default request handler is for debug purposes only, and is
-            effectively a no-op. Normally :func:`req_handler` is expected to
-            return a payload
+            effectively a no-op.
         '''
 
         self.req_ack(ident, request)

@@ -137,6 +137,7 @@ class Base:
             error = dict()
             error['type'] = e_class.__name__
             error['text'] = str(e_instance)
+            error['debug'] = traceback.format_exc()
 
 
         response = dict()
