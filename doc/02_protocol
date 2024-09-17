@@ -352,6 +352,9 @@ described above.
 
 		'text': descriptive text of the error.
 
+		'debug': optional additional information about the error,
+			 such as a Python traceback
+
 		The intent of this error field is not to provide enough
 		information for debugging of code, it is intended to
 		provide enough information to the client for it to perform
