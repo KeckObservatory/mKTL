@@ -120,7 +120,7 @@ class Client:
         if len(self.callback_specific) == 0:
             return
 
-        topic = message.split(b' ', 1)[0]
+        topic = message.split(maxsplit=1)[0]
 
         try:
             references = self.callback_specific[topic]
