@@ -218,9 +218,9 @@ class Client:
 
     def subscribe(self, topic):
         ''' ZeroMQ subscriptions are based on a topic. Filtering of messages
-            happens on the server side, based on whether a given client is
-            subscribed to a given topic. A client can subscribe to all messages
-            by providing the empty string as the topic.
+            happens on the server side, depending on what a client is subscribed
+            to. A client can subscribe to all messages by providing the empty
+            string as the topic.
         '''
 
         topic = str(topic)
