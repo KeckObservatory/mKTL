@@ -116,8 +116,14 @@ class Client:
 
 
         # Handle the case where a callback is registered for a specific topic.
+        # If there are no topic-specific callbacks, no further processing is
+        # required.
 
-        if len(self.callback_specific) == 0:
+        # Yes, this is the fastest way to see if a dictionary is empty. Sigh.
+
+        if self.callback_specific:
+            pass
+        else:
             return
 
         topic = message.split(maxsplit=1)[0]
