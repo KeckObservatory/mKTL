@@ -1,3 +1,8 @@
+''' Common routines and classes for use as part of a proxy subprocess. The
+    subprocess is responsible for handling incoming requests managed by the
+    proxy daemon; this is where the translation to any other protocol, such
+    as KTL or EPICS, will occur.
+'''
 
 import itertools
 import json
@@ -11,9 +16,15 @@ zmq_context = zmq.Context()
 
 
 class Base:
-    ''' The :class:`Base` proxy establishes a few common routines and
-        the template for what any subclasses need to implement in order
-        to successfully communicate with a standard client.
+    ''' The :class:`Base` proxy establishes a few common routines and a template
+        for any subclasses focused on a specific protocol.
+
+        The parent daemon establishes a pair of ZeroMQ sockets for our use;
+        the PUB/SUB component is simple, any events published here are proxied
+        directly out to external connections by the parent daemon. The REQ/REP
+        component involves a worker pool to service incoming requests; this is
+        a neat match for the DEALER/ROUTER ZeroMQ socket type, and results in
+        round-robin handling of requests among the worker pool.
     '''
 
     pub_id_min = 0
@@ -23,7 +34,7 @@ class Base:
 
     def __init__(self, req, pub):
         ''' The *req* and *pub* values are interprocess addresses that the
-            controlling daemon will use to communicate with this proxy instance.
+            proxy daemon will estalbish for communication with this subprocess.
         '''
 
         self.pub = pub
@@ -50,6 +61,10 @@ class Base:
 
 
     def pub_id_next(self):
+        ''' Return the next publication identification number for subroutines to
+            use when constructing a broadcast message.
+        '''
+
         self.pub_id_lock.acquire()
         pub_id = next(self.pub_id)
 
@@ -73,6 +88,16 @@ class Base:
 
 
     def req_ack(self, socket, ident, request):
+        ''' Acknowledge the incoming request. The client is expecting an
+            immediate ACK for all request types, including errors; this is how a
+            client knows whether a daemon is online to respond to its request.
+            The proxy daemon expects any requests destined for a subprocess to
+            be acknowledged by that subprocess, not by the parent daemon.
+
+            This method closely mirrors :func:`Request.Server.req_ack`, though
+            in the :class:`Base` case the socket is a required argument, since
+            it is owned by a worker background thread.
+        '''
 
         id = request['id']
 
@@ -103,6 +128,11 @@ class Base:
 
 
     def req_handler(self, socket, ident, request):
+        ''' Acknowledge the incoming request. The client is expecting an
+            immediate ACK for all request types, including errors; any daemon
+            passing a request to a subprocess expects that subprocess to
+            generate all further messages destined for the requesting client.
+        '''
 
         self.req_ack(socket, ident, request)
 
@@ -121,9 +151,20 @@ class Base:
 
 
     def req_incoming(self, socket, ident, request):
-        ''' There are two ident values as a result of the daisy-chaining of
-            ROUTER/DEALER connections: one is from the subprocess interface,
-            the second is from the worker pool interface.
+        ''' All inbound requests are filtered through this method. It will
+            parse the request as JSON into a Python dictionary, and hand it
+            off to :func:`req_handler` for further processing. Error handling
+            is managed here; if :func:`req_handler` raises an exception it
+            will be packaged up and returned to the client as an error.
+
+            :func:`req_handler` is expected to call :func:`req_ack` to
+            acknowledge the incoming request; if :func:`req_handler` is
+            returning a simple payload it will be packged into a REP response;
+            no response will be issued if :func:`req_handler` returns None.
+
+            This method closely mirrors :func:`Request.Server.req_incoming`,
+            though in the :class:`Base` case the socket is a required argument,
+            since it is owned by a worker background thread.
         '''
 
         error = None
@@ -157,13 +198,23 @@ class Base:
 
     def req_set(self, key, value):
         ''' Set the value of a key. This routine is expected to block until
-            completion of the request.
+            completion of the request; this will wholly occupy one worker
+            thread for the duration of the request.
         '''
 
         raise NotImplmentedError('must be implemented by the subclass')
 
 
     def worker_main(self):
+        ''' This is the 'main' method for the worker threads responsible for
+            handling incoming requests. With the way the ROUTER/DEALER sockets
+            are connected, each request will be allocated to a worker on a
+            round-robin basis; first request goes to thread 1, second to
+            thread 2, and so on.
+
+            The task of a worker thread is limited: receive a request, and
+            feed it to :func:`req_incoming` for processing.
+        '''
 
         socket = zmq_context.socket(zmq.ROUTER)
         socket.connect(self.req)
