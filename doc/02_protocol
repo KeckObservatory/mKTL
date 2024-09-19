@@ -310,7 +310,10 @@ described above.
 		individual PUB messages contained in a 'bundle' broadcast.
 		For client-initiated requests, the client is expected to
 		provide a sufficiently unique integer to allow it to
-		associate all responses with the initial request.
+		associate all responses with the initial request. For
+		daemon-initiated broadcasts, the uniqueness constraint
+		should only be applied for a given key name, as opposed
+		to being unique across an entire store or daemon.
 
 	'time': a UNIX epoch timestamp associated with the generation of
 		the event. This is not intended to represent any time
