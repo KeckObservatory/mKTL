@@ -142,6 +142,18 @@ def describeKeyword(keyword):
         if value is not None:
             if attribute == 'help':
                 attribute = 'description'
+
+            elif attribute == 'enumerators':
+                rebuilt = list()
+                for key in range(len(value)):
+                    key_value = value[key]
+                    if key_value == '':
+                        continue
+                    else:
+                        rebuilt.append({key: key_value})
+
+                value = rebuilt
+
             keyword_dict[attribute] = value
 
     for attribute in ('broadcasts', 'reads', 'writes'):
