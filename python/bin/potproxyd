@@ -60,6 +60,10 @@ main.shutdown = threading.Event()
 
 
 class InternalRequest:
+    ''' The :class:`InternalRequest` provides a very thin wrapper around a
+        :class:`threading.Event` that can be used to signal the internal
+        caller that the request has been handled.
+    '''
 
     def __init__(self, req_id):
         self.event = threading.Event()
@@ -67,11 +71,21 @@ class InternalRequest:
 
 
     def complete(self, response):
+        ''' If a response to an internal request arrives the
+            :class:`RequestRelay` instance will check whether the response
+            belongs to an internal request, and if it does, call
+            :func:`complete` to indicate the response has arrived.
+        '''
+
         self.response = response
         self.event.set()
 
 
     def wait(self):
+        ''' The invoker of the :class:`InternalRequest` will call :func:`wait`
+            to block until the request has been handled.
+        '''
+
         self.event.wait()
         return self.response
 
@@ -204,8 +218,7 @@ class RequestRelay:
         self.internal_socket = zmq_context.socket(zmq.DEALER)
         self.internal_socket.bind(internal)
 
-        self.internal_requests = dict()
-        self.external_requests = dict()
+        self.active_requests = dict()
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -226,11 +239,10 @@ class RequestRelay:
         req_id = self.req_id_next()
         request['id'] = req_id
 
-        self.external_requests[req_id] = (original_id, ident)
+        self.active_requests[req_id] = (original_id, ident)
 
         request = json.dumps(request)
         request = request.encode()
-
         self.internal_socket.send(request)
 
 
@@ -240,21 +252,28 @@ class RequestRelay:
         '''
 
         req_id = self.req_id_next()
-        internal = InternalRequest(req_id)
-        self.internal_requests[req_id] = internal
-
         request['id'] = req_id
+
+        internal = InternalRequest(req_id)
+        self.active_requests[req_id] = (internal, None)
+
         request = json.dumps(request)
         request = request.encode()
         self.internal_socket.send(request)
 
         response = internal.wait()
-        del self.internal_requests[req_id]
+        del self.active_requests[req_id]
 
         return response
 
 
     def req_id_next(self):
+        ''' Return the next request identification number for subroutines to
+            use when relaying a request. Internal requests are assigned a
+            number; external requests have their original identifier mapped to
+            a locally unique identifier.
+        '''
+
         self.req_id_lock.acquire()
         req_id = next(self.req_id)
 
@@ -293,30 +312,29 @@ class RequestRelay:
             for active, flag in sockets:
                 if self.internal_socket == active:
                     response = self.internal_socket.recv()
-                    response_dict = json.loads(response)
-                    response_id = response_dict['id']
 
                     ### This assumes the response is JSON. This won't work
                     ### in the bulk data case.
 
-                    if len(self.internal_requests) > 0:
-                        try:
-                            request = self.internal_requests[response_id]
-                        except KeyError:
-                            pass
-                        else:
-                            response_type = response_dict['message']
-                            if response_type == 'REP':
-                                request.complete(response_dict)
-                            continue
+                    response_dict = json.loads(response)
+                    response_id = response_dict['id']
 
-                    # If the response is not due to an internal request it
-                    # should be a response destined for the external interface.
-                    # The original request id was remapped to a locally unique
-                    # value; the client is expecting to see the original id
-                    # in the response.
+                    (original_id, ident) = self.active_requests[response_id]
 
-                    (original_id, ident) = self.external_requests[response_id]
+                    if ident is None:
+                        # This is an internal request. We aren't handling ACK
+                        # responses, just real ones.
+                        response_type = response_dict['message']
+                        if response_type == 'REP':
+                            request = original_id
+                            request.complete(response_dict)
+                        continue
+
+                    # Any response that is not strictly internal is destined
+                    # for the external interface. The original request id was
+                    # remapped to a locally unique value; the client is
+                    # expecting to see the original id in the response.
+
                     response_dict['id'] = original_id
                     response = json.dumps(response_dict)
                     response = response.encode()
@@ -325,7 +343,7 @@ class RequestRelay:
                     ### more intelligent to handle the bulk data case.
 
                     if response_dict['message'] != 'ACK':
-                        del self.external_requests[response_id]
+                        del self.active_requests[response_id]
 
                     self.external.send(ident, response)
 
