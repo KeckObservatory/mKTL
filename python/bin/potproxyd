@@ -62,7 +62,8 @@ main.shutdown = threading.Event()
 class InternalRequest:
     ''' The :class:`InternalRequest` provides a very thin wrapper around a
         :class:`threading.Event` that can be used to signal the internal
-        caller that the request has been handled.
+        caller that the request has been handled. It also provides a vehicle
+        for the response to be passed to the caller.
     '''
 
     def __init__(self, req_id):
@@ -95,6 +96,24 @@ class InternalRequest:
 
 
 class ProxySubprocess:
+    ''' The :class:`ProxySubprocess` contains all the elements associated
+        with the subprocess handling proxied requests. Those components are:
+
+          * The subprocess itself.
+
+          * ZeroMQ sockets to communicate with the subprocess.
+
+          * A :class:`RequestRelay` instance to receive requests from the
+            proxy's external interface and redirect them to the subprocess;
+            likewise, to redirect responses back to the external interface.
+
+          * A :class:`PublishRelay` instance that acts as a direct conduit
+            for broadcasts published by the subprocess, relaying them
+            unchanged to the external interface.
+
+        The subprocess will be restarted if it stops running for any reason.
+        The ZeroMQ sockets created here get re-used if that occurs.
+    '''
 
     def __init__(self, name, req_server, pub_server):
 
@@ -179,7 +198,15 @@ class ProxySubprocess:
 # end of class ProxySubprocess
 
 
+
 class PublishRelay:
+    ''' A :class:`PublishRelay` instance acts as a direct conduit for broadcasts
+        published by the subprocess, relaying them unchanged to the external
+        interface.
+
+        This is accomplished very efficiently by :func:`zmq.proxy`, which means
+        we are not inspecting or modifying any broadcasts as part of the relay.
+    '''
 
     def __init__(self, internal, external):
 
@@ -203,7 +230,16 @@ class PublishRelay:
 # end of class PublishRelay
 
 
+
 class RequestRelay:
+    ''' A :class:`RequestRelay` instance receives requests from the external
+        interface and redirects them to the subprocess; likewise, it redirects
+        responses back to the external interface.
+
+        Requests have locally unique internal identifier numbers, which implies
+        the need to remap external request numbers to something locally unique,
+        and back again for the response.
+    '''
 
     req_id_min = 0
     req_id_max = 0xFFFFFFFF
@@ -230,10 +266,12 @@ class RequestRelay:
             proper handling.
         '''
 
-        # The original id and ident need to be preserved for the future reponse.
-        # The request id must be remapped to a value that is locally unique;
+        # Preserve the original id and ident for the future response. The
+        # request id must be remapped to a value that is locally unique;
         # otherwise, two clients using the same id would cause problems with
-        # the tracking of the request.
+        # our internal tracking of the request. It is perfectly reasonable for
+        # two clients to issue requests starting with 1 as their locally unique
+        # identifier, and we must be able to distinguish between them.
 
         original_id = request['id']
         req_id = self.req_id_next()
@@ -248,7 +286,7 @@ class RequestRelay:
 
     def internal_request(self, request):
         ''' Issue an internal request to a subprocess, via the subprocess
-            request socket.
+            request socket. Return the response to the caller.
         '''
 
         req_id = self.req_id_next()
@@ -353,8 +391,16 @@ class RequestRelay:
 
 
 class RequestServer(POT.Protocol.Request.Server):
+    ''' Subclass the generic :class:POT.Protocol.Request.Server`, adding
+        additional logic to locally handle CONFIG requests, and to determine
+        which proxied subprocess should receive the incoming request.
+    '''
 
     def req_config(self, ident, request):
+        ''' Return a configuration block for the requested store name. The
+            configuration blocks are stored locally every time a subprocess
+            starts running.
+        '''
 
         try:
             request_name = request['name']
@@ -392,11 +438,17 @@ class RequestServer(POT.Protocol.Request.Server):
         if type == 'GET' or type == 'SET':
             # The subprocess will ACK these requests, as well as issue
             # appropriate responses once the request is handled; returning
-            # None from this routine will indicate no immediate response
+            # None from this routine will indicates no immediate response
             # should be issued.
+
             self.req_relay(ident, request)
             payload = None
+
         else:
+            # Configuration requests are handled locally. ACK the request,
+            # though the response will arrive quickly enough that an ACK
+            # may not strictly be necessary.
+
             self.req_ack(ident, request)
             if type == 'HASH':
                 payload = self.req_hash(ident, request)
@@ -409,6 +461,10 @@ class RequestServer(POT.Protocol.Request.Server):
 
 
     def req_hash(self, ident, request):
+        ''' Return the hash of a configuration block for a requested store name,
+            or all hashes for all locally known stores.
+        '''
+
 
         try:
             request = request['name']
@@ -435,8 +491,8 @@ class RequestServer(POT.Protocol.Request.Server):
 
 
     def req_relay(self, ident, request):
-        ''' Relay the incoming request to the correct subprocess. The
-            :class:`RequestRelay` instance associated with that subprocess
+        ''' Relay the incoming GET or SET request to the correct subprocess.
+            The :class:`RequestRelay` instance associated with that subprocess
             handles the communication in both directions.
         '''
 
@@ -445,7 +501,6 @@ class RequestServer(POT.Protocol.Request.Server):
         # to send it to.
 
         name = request['name']
-
         store = name.split('.', 1)[0]
 
         try:
