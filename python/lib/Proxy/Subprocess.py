@@ -4,6 +4,7 @@
     as KTL or EPICS, will occur.
 '''
 
+import hashlib
 import itertools
 import json
 import sys
@@ -51,6 +52,20 @@ class Base:
             thread = threading.Thread(target=self.worker_main)
             thread.daemon = True
             thread.start()
+
+
+    def hash(self, keys):
+        ''' Convert the supplied keyword dictionary to JSON, hash the results,
+            and return the hash. The protocol description limits the hash to
+            32 hexadecimal integers.
+        '''
+
+        keys_json = json.dumps(keys)
+        keys_json = keys_json.encode()
+
+        hash = hashlib.shake_256(keys_json)
+        hash = int(hash.hexdigest(16), 16)
+        return hash
 
 
     def publish(self, bytes):

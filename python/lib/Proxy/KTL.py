@@ -1,5 +1,4 @@
 
-import hashlib
 import json
 import threading
 import time
@@ -34,14 +33,8 @@ class KTL(Subprocess.Base):
     def req_config(self, request):
         service_dict = describeService(self.name)
 
-        ### Probably makes sense to break out the hash and timestamp handling
-        ### to common code.
-
-        keywords_json = json.dumps(service_dict['keys'])
-        keywords_json = keywords_json.encode()
-        keywords_hash = hashlib.shake_256(keywords_json)
-
-        service_dict['hash'] = int(keywords_hash.hexdigest(16), 16)
+        hash = self.hash(service_dict['keys'])
+        service_dict['hash'] = hash
         service_dict['time'] = time.time()
 
         return service_dict
