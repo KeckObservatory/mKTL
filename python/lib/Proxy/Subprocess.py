@@ -57,7 +57,9 @@ class Base:
     def hash(self, keys):
         ''' Convert the supplied keyword dictionary to JSON, hash the results,
             and return the hash. The protocol description limits the hash to
-            32 hexadecimal integers.
+            32 hexadecimal integers, but the specific hash type is unspecified,
+            and allowed to vary between implementations-- as long as it is
+            consistent.
         '''
 
         keys_json = json.dumps(keys)
