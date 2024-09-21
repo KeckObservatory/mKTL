@@ -178,11 +178,11 @@ def describeKeyword(keyword):
                             binary_units = None
 
                 if binary_units is not None:
-                    rebuilt = dict()
-                    rebuilt['asc'] = value
-                    rebuilt['bin'] = binary_units
+                    units = dict()
+                    units['asc'] = value
+                    units['bin'] = binary_units
 
-                    value = rebuilt
+                    value = units
 
             keyword_dict[attribute] = value
 
