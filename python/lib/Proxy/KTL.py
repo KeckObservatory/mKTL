@@ -157,6 +157,33 @@ def describeKeyword(keyword):
             if attribute == 'help':
                 attribute = 'description'
 
+            if attribute == 'units':
+                more_units = keyword.ktlc.units()
+                binary_units = None
+
+                if len(more_units) > 1:
+                    # The fields are:
+                    # 0: ascii units
+                    # 1: empty string
+                    # 2: printf format
+                    # 3: binary units
+
+                    try:
+                        binary_units = more_units[3]
+                    except IndexError:
+                        pass
+                    else:
+                        binary_units = binary_units.strip()
+                        if binary_units == '':
+                            binary_units = None
+
+                if binary_units is not None:
+                    rebuilt = dict()
+                    rebuilt['asc'] = value
+                    rebuilt['bin'] = binary_units
+
+                    value = rebuilt
+
             keyword_dict[attribute] = value
 
     for attribute in ('broadcasts', 'reads', 'writes'):
