@@ -165,7 +165,7 @@ def describeKeyword(keyword):
                     # The fields are:
                     # 0: ascii units
                     # 1: empty string
-                    # 2: printf format
+                    # 2: printf format (asc:bin)
                     # 3: binary units
 
                     try:
