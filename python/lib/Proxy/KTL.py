@@ -133,26 +133,36 @@ def describeKeyword(keyword):
     type = type_mapping[type]
     keyword_dict['type'] = type
 
-    for attribute in ('units', 'range', 'help', 'enumerators'):
+    try:
+        enumerators = keyword['enumerators']
+    except ValueError:
+        enumerators = None
+    else:
+        rebuilt = list()
+        for key in range(len(enumerators)):
+            enumerator = enumerators[key]
+            if enumerator == '':
+                continue
+            else:
+                rebuilt.append({key: enumerator})
+
+        enumerators = rebuilt
+
+    for attribute in ('units', 'range', 'help'):
         try:
             value = keyword[attribute]
         except ValueError:
             value = None
 
+        if attribute == 'units' and enumerators is not None:
+            # Keywords with enumerators overload the 'units' string in order
+            # to provide the enumerators. Including the 0th enumerator again
+            # here would be a mistake.
+            value = None
+
         if value is not None:
             if attribute == 'help':
                 attribute = 'description'
-
-            elif attribute == 'enumerators':
-                rebuilt = list()
-                for key in range(len(value)):
-                    key_value = value[key]
-                    if key_value == '':
-                        continue
-                    else:
-                        rebuilt.append({key: key_value})
-
-                value = rebuilt
 
             keyword_dict[attribute] = value
 
@@ -164,6 +174,9 @@ def describeKeyword(keyword):
 
         if value is False:
             keyword_dict[attribute] = value
+
+    if enumerators is not None:
+        keyword_dict['enumerators'] = enumerators
 
     return keyword_dict
 
