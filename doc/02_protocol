@@ -153,7 +153,10 @@ daemon via the request/response socket.
 		and the contacted daemon does not have a cached configuration
 		describing it.
 
-		The hash is 32 hexadecimal integers.
+		The hash is 32 hexadecimal integers. The actual hash format
+		is not particularly important, as long as the source of
+		authority is consistent about which hash format it uses--
+		and it can be bounded to 32 hexadecimal integers.
 
 		To unify processing the response is always a sequence of
 		individual identifiers, even if the sequence is only one
