@@ -176,7 +176,15 @@ class ProxySubprocess:
         ### Error handling goes here. If there is an error, or there is
         ### no configuration data, log the error, at a minimum.
 
-        self.config = new_config['data']
+        try:
+            self.config = new_config['data']
+        except KeyError:
+            error = new_config['error']
+            print(error['debug'])
+            exception = RuntimeError('request for configuration data failed')
+            exception.add_note('Original traceback:')
+            exception.add_note(error['debug'])
+            raise exception
 
 
     def startSubprocess(self):
