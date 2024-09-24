@@ -308,17 +308,37 @@ class Server:
 
 
 
+client_connections = dict()
+
+def client(address=None, port=None):
+    ''' Factory function for a :class:`Client` instance.
+    '''
+
+    try:
+        instance = client_connections[(address, port)]
+    except KeyError:
+        instance = Client(address, port)
+        client_connections[(address, port)] = instance
+
+    return instance
+
+
+
 def send(request, address=None, port=None):
     ''' Creates a :class:`Client` instance and invokes the :func:`Client.send`
         method.
     '''
 
-    client = Client(address, port)
-    response = client.send(request)
+    connection = client(address, port)
+    response = connection.send(request)
+    #response = pending.wait()
     return response
 
 
 def shutdown():
+
+    client_connections.clear()
+
     instances = Server.instances
     Server.instances = list()
 
