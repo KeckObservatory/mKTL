@@ -108,14 +108,14 @@ daemon via the request/response socket.
 
 		The default behavior for a GET request is for a cached value
 		to be allowed as the returned response. A client can explicitly
-		request an up-to-date value by setting the 'freshen' field to
+		request an up-to-date value by setting the 'refresh' field to
 		'True'; in that case, the daemon should provide the most
 		up-to-date value available, even if that means communicating
 		with a hardware controller to satisfy the request.
 
 		Example request:	bJSON: '{'request': 'GET',
 						   'name': 'kpfpower.OUTLET_1A',
-						   'freshen': True,
+						   'refresh': True,
 						   'id': 5742}
 
 		Example ACK:		bJSON: {'message': 'ACK',
