@@ -66,9 +66,8 @@ class InternalRequest:
         for the response to be passed to the caller.
     '''
 
-    def __init__(self, req_id):
+    def __init__(self):
         self.event = threading.Event()
-        self.req_id = req_id
 
 
     def complete(self, response):
@@ -300,7 +299,7 @@ class RequestRelay:
         req_id = self.req_id_next()
         request['id'] = req_id
 
-        internal = InternalRequest(req_id)
+        internal = InternalRequest()
         self.active_requests[req_id] = (internal, None)
 
         request = json.dumps(request)
