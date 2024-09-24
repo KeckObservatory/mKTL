@@ -24,7 +24,7 @@ class Client:
     '''
 
     port = default_port
-    timeout = 50
+    timeout = 0.05
 
     def __init__(self, address=None, port=None):
 
@@ -38,6 +38,8 @@ class Client:
         server = "tcp://%s:%s" % (address, port)
         identity = "Request.Client.%d" % (id(self))
 
+        self.pending = dict()
+
         self.connected = False
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -47,6 +49,10 @@ class Client:
         self.monitor_thread = threading.Thread(target=self.checkSocket)
         self.monitor_thread.daemon = True
         self.monitor_thread.start()
+
+        self.pending_thread = threading.Thread(target=self.run)
+        self.pending_thread.daemon = True
+        self.pending_thread.start()
 
         self.socket.connect(server)
 
@@ -77,47 +83,132 @@ class Client:
         self.monitor.close()
 
 
-    def send(self, request):
-        ''' Send a string request to the connected server, and return the
-            server's response. This routine (presently) blocks until a final
-            response is received.
+    def run(self):
+
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN)
+
+        while True:
+            sockets = poller.poll(10000)
+            for active, flag in sockets:
+                if self.socket == active:
+                    response = self.socket.recv()
+
+                    ### This assumes the response is JSON. This won't work
+                    ### in the bulk data case.
+
+                    response_dict = json.loads(response)
+                    response_id = response_dict['id']
+
+                    try:
+                        pending = self.pending[response_id]
+                    except KeyError:
+                        # No further processing requested.
+                        continue
+
+                    response_type = response_dict['message']
+                    if response_type == 'ACK':
+                        pending.complete_ack(response_dict)
+                    else:
+                        pending.complete(response_dict)
+                        del self.pending[response_id]
+
+
+    def send(self, request, response=True):
+        ''' A *request* is a Python dictionary ready to be converted to a JSON
+            byte string and sent to the connected server. If *response* is True
+            a :class:`PendingRequest` instance will be returned that a client
+            can use to wait on for further notification. Set *response* to any
+            other value to indicate a return response is not of interest.
         '''
 
-        try:
-            request = request.encode()
-        except AttributeError:
-            if hasattr(request, 'decode'):
-                # Assume it's already bytes.
-                pass
-            else:
-                raise
+        req_id = request['id']
+        request = json.dumps(request)
+        request = request.encode()
+
+        if response == True:
+            pending = PendingRequest()
+            self.pending[req_id] = pending
 
         self.socket.send(request)
 
-        result = self.socket.poll(self.timeout)
-        if result == 0:
-            raise zmq.ZMQError("no response received in %d ms" % (self.timeout))
+        if response != True:
+            return
 
-        ack = self.socket.recv()
-        ack_dict = json.loads(ack)
-        ack_type = ack_dict['message']
+        ack = pending.wait_ack(self.timeout)
+
+        if ack is None:
+            raise zmq.ZMQError("no response received in %.2f s" % (self.timeout))
+
+        ack_type = ack['message']
 
         if ack_type == 'REP':
             # We were expecting an ACK, but we got the full response instead.
             # We could be hard-nosed about it and throw an exception, but the
             # intent of requiring the ACK (is the server alive?) is moot if we
             # have a proper full response.
-            response = ack
-            return response
+            pending.complete(ack)
 
         elif ack_type != 'ACK':
             raise ValueError('expected an ACK response, got ' + ack_type)
 
-        response = self.socket.recv()
-        return response
+        return pending
 
 
 # end of class Client
+
+
+
+class PendingRequest:
+    ''' The :class:`PendinglRequest` provides a very thin wrapper around a
+        :class:`threading.Event` that can be used to signal the internal
+        caller that the request has been handled. It also provides a vehicle
+        for the response to be passed to the caller.
+    '''
+
+    def __init__(self):
+        self.ack = None
+        self.rep = None
+
+        self.event_ack = threading.Event()
+        self.event_rep = threading.Event()
+
+
+    def complete_ack(self, ack):
+        self.ack = ack
+        self.event_ack.set()
+
+
+    def complete(self, response):
+        ''' If a response to a pending request arrives the :class:`Client`
+            instance will check whether the response is of interest, and if
+            it is, call :func:`complete` to indicate the response has arrived.
+        '''
+
+        self.rep = response
+
+        if self.ack is None:
+            self.ack = response
+            self.event_ack.set()
+
+        self.event_rep.set()
+
+
+    def wait_ack(self, timeout):
+        self.event_ack.wait(timeout)
+        return self.ack
+
+
+    def wait(self, timeout=60):
+        ''' The invoker of the :class:`PendingRequest` will call :func:`wait`
+            to block until the request has been handled.
+        '''
+
+        self.event_rep.wait(timeout)
+        return self.rep
+
+
+# end of class PendingRequest
 
 
 
@@ -330,8 +421,8 @@ def send(request, address=None, port=None):
     '''
 
     connection = client(address, port)
-    response = connection.send(request)
-    #response = pending.wait()
+    pending = connection.send(request)
+    response = pending.wait()
     return response
 
 
