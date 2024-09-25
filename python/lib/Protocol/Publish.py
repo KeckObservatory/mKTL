@@ -175,6 +175,9 @@ class Client:
             message arrives. If no topic is specified the callback will be
             invoked for all broadcast messages. The topic is case-sensitive and
             must be an exact match.
+
+            :func:`subscribe` will be invoked for any/all topics registered
+            with a callback.
         '''
 
         if callable(callback):
@@ -186,6 +189,7 @@ class Client:
 
         if topic is None:
             self.callback_all.append(reference)
+            self.subscribe('')
         else:
             topic = str(topic)
             topic = topic.strip()
@@ -198,6 +202,7 @@ class Client:
                 self.callback_specific[topic] = callbacks
 
             callbacks.append(reference)
+            self.subscribe(topic)
 
 
     def run(self):
@@ -245,8 +250,12 @@ class Client:
             string as the topic.
         '''
 
-        topic = str(topic)
-        topic = topic.encode()
+        try:
+            topic.decode
+        except AttributeError:
+            topic = str(topic)
+            topic = topic.encode()
+
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 
