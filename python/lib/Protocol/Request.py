@@ -3,6 +3,7 @@
 '''
 
 import atexit
+import itertools
 import json
 import sys
 import threading
@@ -26,7 +27,13 @@ class Client:
     port = default_port
     timeout = 0.05
 
+    req_id_min = 0
+    req_id_max = 0xFFFFFFFF
+
     def __init__(self, address=None, port=None):
+
+        self.req_id_lock = threading.Lock()
+        self.req_id_reset()
 
         if address is None:
             address = 'localhost'
@@ -83,6 +90,33 @@ class Client:
         self.monitor.close()
 
 
+    def req_id_next(self):
+        ''' Return the next request identification number for subroutines to
+            use when constructing a request.
+        '''
+
+        self.req_id_lock.acquire()
+        req_id = next(self.req_id)
+
+        if req_id >= self.req_id_max:
+            self.req_id_reset()
+
+            if req_id > self.req_id_max:
+                # This shouldn't happen, but here we are...
+                req_id = self.req_id_min
+                next(self.req_id)
+
+        self.req_id_lock.release()
+        return req_id
+
+
+    def req_id_reset(self):
+        ''' Reset the request identification number to the minimum value.
+        '''
+
+        self.req_id = itertools.count(self.req_id_min)
+
+
     def run(self):
 
         poller = zmq.Poller()
@@ -120,9 +154,12 @@ class Client:
             a :class:`PendingRequest` instance will be returned that a client
             can use to wait on for further notification. Set *response* to any
             other value to indicate a return response is not of interest.
+
+            The 'id' field in the *request*, if specified, will be overwritten.
         '''
 
-        req_id = request['id']
+        req_id = self.req_id_next()
+        request['id'] = req_id
         request = json.dumps(request)
         request = request.encode()
 
