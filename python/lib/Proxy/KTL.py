@@ -44,7 +44,15 @@ class KTL(Subprocess.Base):
         name = request['name']
         keyword = ktl.cache(name)
 
-        if keyword['monitored'] != True:
+        try:
+            refresh = request['refresh']
+        except KeyError:
+            refresh = False
+        else:
+            if refresh == None or refresh == '':
+                refresh = False
+
+        if keyword['monitored'] != True or refresh == True:
             keyword.read()
 
         slice = keyword.history[-1]
