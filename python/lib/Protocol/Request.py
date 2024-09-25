@@ -138,7 +138,7 @@ class Client:
         ack = pending.wait_ack(self.timeout)
 
         if ack is None:
-            raise zmq.ZMQError("no response received in %.2f s" % (self.timeout))
+            raise zmq.ZMQError("no response received in %.2fs" % (self.timeout))
 
         ack_type = ack['message']
 
