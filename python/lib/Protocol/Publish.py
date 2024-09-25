@@ -295,7 +295,26 @@ class Server:
 
 
 
+client_connections = dict()
+
+def client(address=None, port=None):
+    ''' Factory function for a :class:`Client` instance.
+    '''
+
+    try:
+        instance = client_connections[(address, port)]
+    except KeyError:
+        instance = Client(address, port)
+        client_connections[(address, port)] = instance
+
+    return instance
+
+
+
 def shutdown():
+
+    client_connections.clear()
+
     instances = Client.instances
     Client.instances = list()
 
