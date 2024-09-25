@@ -3,6 +3,7 @@
 '''
 
 import atexit
+import json
 import threading
 import traceback
 import zmq
@@ -94,6 +95,25 @@ class Client:
             a newly arrived message.
         '''
 
+        # Do nothing if nobody is listening.
+
+        if self.callback_all or self.callback_specific:
+            pass
+        else:
+            return
+
+        # A message is either JSON-formatted or a binary blob. Parse any JSON
+        # now so that it only has to happen once; callbacks are expecting to
+        # receive a Python dictionary representing the parsed JSON.
+
+        topic, message = message.split(maxsplit=1)
+
+        if topic[-4:] == b'bulk':
+            pass
+        else:
+            message = message.decode()
+            message = json.loads(message)
+
         # Handle the case where a callback is registered for any/all messages.
 
         invalid = list()
@@ -119,14 +139,10 @@ class Client:
         # If there are no topic-specific callbacks, no further processing is
         # required.
 
-        # Yes, this is the fastest way to see if a dictionary is empty. Sigh.
-
         if self.callback_specific:
             pass
         else:
             return
-
-        topic = message.split(maxsplit=1)[0]
 
         try:
             references = self.callback_specific[topic]
@@ -185,6 +201,12 @@ class Client:
 
 
     def run(self):
+
+        ### Does this need to be fed into a pool of threads via a DEALER
+        ### socket? So that one bad propagation doesn't bring it all down?
+
+        ### The notify_in construct probably needs to go. Fine proof of
+        ### concept, but doesn't appear to be critical here (so far).
 
         counter = 0
         poller = zmq.Poller()
