@@ -1,6 +1,7 @@
 
 import traceback
 
+from .Protocol import Publish
 from .Protocol import Request
 from . import WeakRef
 
@@ -25,7 +26,7 @@ class Key:
 
     def get(self, refresh=False):
 
-        if refresh == False and self.subscribed == True
+        if refresh == False and self.subscribed == True:
             return self.cached
 
         request = dict()
@@ -79,8 +80,7 @@ class Key:
             try:
                 callback(self, new_data, new_timestamp)
             except:
-                ### This should probably be logged in some more graceful
-                ### fashion.
+                ### This should probably be logged in a more graceful fashion.
                 print(traceback.format_exc())
                 continue
 
@@ -102,8 +102,38 @@ class Key:
             self.subscribe()
 
 
-    def set(self, new):
-        return
+    def set(self, new_value, wait=True):
+
+        request = dict()
+        request['request'] = 'SET'
+        request['name'] = self.name
+        request['data'] = new_value
+
+        pending = self.req.send(request)
+
+        if wait == False:
+            return pending
+
+        response = pending.wait(self.timeout)
+
+        try:
+            error = response['error']
+        except KeyError:
+            pass
+        else:
+            if error is not None and error != '':
+                e_type = error['type']
+                e_text = error['text']
+
+                ### This debug print should be removed.
+                try:
+                    print(error['debug'])
+                except KeyError:
+                    pass
+
+                ### The exception type here should be something unique.
+                raise RuntimeError("SET failed: %s: %s" % (e_type, e_text))
+
 
     def subscribe(self):
 
