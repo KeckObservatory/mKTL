@@ -148,7 +148,7 @@ class Client:
                         del self.pending[response_id]
 
 
-    def send(self, request, response=True):
+    def send(self, request, response=True, bulk=None):
         ''' A *request* is a Python dictionary ready to be converted to a JSON
             byte string and sent to the connected server. If *response* is True
             a :class:`PendingRequest` instance will be returned that a client
@@ -156,7 +156,13 @@ class Client:
             other value to indicate a return response is not of interest.
 
             The 'id' field in the *request*, if specified, will be overwritten.
+
+            If the *bulk* field is provided it must be a byte sequence that
+            will be sent as a separate message to the connected daemon.
         '''
+
+        if bulk is not None:
+            raise NotImplementedError('bulk handling not implemented')
 
         req_id = self.req_id_next()
         request['id'] = req_id
