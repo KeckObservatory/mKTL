@@ -11,4 +11,9 @@ from . import Proxy
 from . import Get
 get = Get.get
 
+### Not sure whether Key needs to be exposed at the top level. Useful for
+### debugging at the moment.
+
+from .Key import Key
+
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
