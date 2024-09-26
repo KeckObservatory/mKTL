@@ -70,11 +70,27 @@ class Base:
         return hash
 
 
-    def publish(self, bytes):
-        ''' Publish bytes on the wire.
+    def publish(self, message, bulk=None):
+        ''' A *message* is a Python dictionary ready to be converted to a
+            JSON byte string and broadcast.
+
+            The 'id' field in the *message*, if specified, will be overwritten.
+
+            If the *bulk* field is provided it must be a byte sequence that
+            will be sent as a separate message to the connected daemon.
         '''
 
-        self.pub_socket.send(bytes)
+        if bulk is not None:
+            raise NotImplementedError('bulk handling not implemented')
+
+        topic = message['name']
+
+        pub_id = self.pub_id_next()
+        message['id'] = pub_id
+        message = topic + ' ' + json.dumps(message)
+        message = message.encode()
+
+        self.pub_socket.send(message)
 
 
     def pub_id_next(self):

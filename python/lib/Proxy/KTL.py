@@ -91,21 +91,13 @@ class KTL(Subprocess.Base):
         payload['asc'] = ascii
         payload['bin'] = binary
 
-        pub_id = self.pub_id_next()
-
         broadcast_dict = dict()
         broadcast_dict['message'] = 'PUB'
-        broadcast_dict['id'] = pub_id
         broadcast_dict['time'] = timestamp
         broadcast_dict['name'] = keyword.full_name
         broadcast_dict['data'] = payload
 
-        broadcast_json = json.dumps(broadcast_dict)
-
-        broadcast_bytes = keyword.full_name + ' ' + broadcast_json
-        broadcast_bytes = broadcast_bytes.encode()
-
-        self.publish(broadcast_bytes)
+        self.publish(broadcast_dict)
 
 
 # end of class KTL
