@@ -3,6 +3,7 @@
 '''
 
 import atexit
+import itertools
 import json
 import threading
 import traceback
@@ -274,6 +275,8 @@ class Server:
     '''
 
     port = default_port
+    pub_id_min = 0
+    pub_id_max = 0xFFFFFFFF
 
     def __init__(self, port=None):
 
@@ -285,17 +288,56 @@ class Server:
         self.socket = zmq_context.socket(zmq.PUB)
         self.socket.bind(port)
 
+        self.pub_id_lock = threading.Lock()
+        self.pub_id_reset()
 
-    def publish(self, message):
 
-        try:
-            message = message.encode()
-        except AttributeError:
-            if hasattr(message, 'decode'):
-                # Assume it's already bytes.
-                pass
-            else:
-                raise
+    def pub_id_next(self):
+        ''' Return the next publication identification number for subroutines to
+            use when constructing a broadcast message.
+        '''
+
+        self.pub_id_lock.acquire()
+        pub_id = next(self.pub_id)
+
+        if pub_id >= self.pub_id_max:
+            self.pub_id_reset()
+
+            if pub_id > self.pub_id_max:
+                # This shouldn't happen, but here we are...
+                pub_id = self.pub_id_min
+                next(self.pub_id)
+
+        self.pub_id_lock.release()
+        return pub_id
+
+
+    def pub_id_reset(self):
+        ''' Reset the publication identification number to the minimum value.
+        '''
+
+        self.pub_id = itertools.count(self.pub_id_min)
+
+
+    def publish(self, message, bulk=None):
+        ''' A *message* is a Python dictionary ready to be converted to a
+            JSON byte string and broadcast.
+
+            The 'id' field in the *message*, if specified, will be overwritten.
+
+            If the *bulk* field is provided it must be a byte sequence that
+            will be sent as a separate message to the connected daemon.
+        '''
+
+        if bulk is not None:
+            raise NotImplementedError('bulk handling not implemented')
+
+        topic = message['name']
+
+        pub_id = self.pub_id_next()
+        message['id'] = pub_id
+        message = topic + ' ' + json.dumps(message)
+        message = message.encode()
 
         self.socket.send(message)
 
