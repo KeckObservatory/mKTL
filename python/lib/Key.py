@@ -25,6 +25,10 @@ class Key:
 
 
     def get(self, refresh=False):
+        ''' Retrieve the current value. Set *refresh* to True to prompt
+            the daemon handling the request to provide the most up-to-date
+            value available, potentially bypassing any local cache.
+        '''
 
         if refresh == False and self.subscribed == True:
             return self.cached
@@ -58,37 +62,15 @@ class Key:
                 raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
 
-        self.update(response)
+        self._update(response)
         return self.cached
 
 
-    def propagate(self, new_data, new_timestamp):
-
-        if self.callbacks:
-            pass
-        else:
-            return
-
-        invalid = list()
-
-        for reference in self.callbacks:
-            callback = reference()
-
-            if callback is None:
-                invalid.append(reference)
-
-            try:
-                callback(self, new_data, new_timestamp)
-            except:
-                ### This should probably be logged in a more graceful fashion.
-                print(traceback.format_exc())
-                continue
-
-        for reference in invalid:
-            self.callbacks.remove(reference)
-
-
     def register(self, method):
+        ''' Register a callback to be invoked whenever a new value is received,
+            either by a direct :func:`get` request or the arrival of an
+            asynchronous broadcast.
+        '''
 
         if callable(method):
             pass
@@ -103,6 +85,14 @@ class Key:
 
 
     def set(self, new_value, wait=True):
+        ''' Set a new value. Set *wait* to True to block until the request
+            completes; this is the default behavior. If *wait* is set to
+            False, the caller will be returned a :class:`PendingRequest`
+            instance, which has a :func:`PendingRequest.wait` method that
+            can (optionally) be invoked block until completion of the
+            request; the wait will return immediately if the request is
+            already satisfied.
+        '''
 
         request = dict()
         request['request'] = 'SET'
@@ -136,6 +126,10 @@ class Key:
 
 
     def subscribe(self):
+        ''' Subscribe to all future broadcast events. Doing so ensures that
+            locally cached values will always be current, regardless of whether
+            :func:`get` has been invoked recently.
+        '''
 
         if self.subscribed == True:
             return
@@ -146,10 +140,39 @@ class Key:
         ### If this Key is a leaf of a structured Key we may need to register
         ### a callback on a topic substring of our name.
 
-        self.pub.register(self.update, self.name)
+        self.pub.register(self._update, self.name)
+        self.subscribed = True
 
 
-    def update(self, new_message):
+    def _propagate(self, new_data, new_timestamp):
+        ''' Invoke any registered callbacks upon receipt of a new value.
+        '''
+
+        if self.callbacks:
+            pass
+        else:
+            return
+
+        invalid = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+
+            try:
+                callback(self, new_data, new_timestamp)
+            except:
+                ### This should probably be logged in a more graceful fashion.
+                print(traceback.format_exc())
+                continue
+
+        for reference in invalid:
+            self.callbacks.remove(reference)
+
+
+    def _update(self, new_message):
         ''' The caller received a new data segment either from a directed
             GET request or from a PUB subscription.
         '''
@@ -165,7 +188,7 @@ class Key:
 
         self.cached = new_data
         self.cached_timestamp = new_timestamp
-        self.propagate(new_data, new_timestamp)
+        self._propagate(new_data, new_timestamp)
 
 
 # end of class Key
