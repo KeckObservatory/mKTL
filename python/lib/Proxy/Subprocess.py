@@ -80,17 +80,24 @@ class Base:
             will be sent as a separate message to the connected daemon.
         '''
 
-        if bulk is not None:
-            raise NotImplementedError('bulk handling not implemented')
-
+        pub_id = self.pub_id_next()
         topic = message['name']
 
-        pub_id = self.pub_id_next()
         message['id'] = pub_id
+        if bulk is not None:
+            message['bulk'] = True
+
         message = topic + ' ' + json.dumps(message)
         message = message.encode()
 
         self.pub_socket.send(message)
+
+        if bulk is not None:
+            prefix = topic + ';bulk ' + str(pub_id) + ' '
+            prefix = prefix.encode()
+
+            bulk_payload = prefix + bulk
+            self.pub_socket.send(bulk_payload)
 
 
     def pub_id_next(self):
