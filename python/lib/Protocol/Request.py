@@ -161,19 +161,28 @@ class Client:
             will be sent as a separate message to the connected daemon.
         '''
 
-        if bulk is not None:
-            raise NotImplementedError('bulk handling not implemented')
-
         req_id = self.req_id_next()
-        request['id'] = req_id
-        request = json.dumps(request)
-        request = request.encode()
+        name = request['name']
 
         if response == True:
             pending = PendingRequest()
             self.pending[req_id] = pending
 
+        request['id'] = req_id
+        if bulk is not None:
+            request['bulk'] = True
+
+        request = json.dumps(request)
+        request = request.encode()
         self.socket.send(request)
+
+        if bulk is not None:
+            prefix = name + ';bulk ' + str(req_id) + ' '
+            prefix = prefix.encode()
+
+            bulk_payload = prefix + bulk
+            self.socket.send(bulk_payload)
+
 
         if response != True:
             return
@@ -458,13 +467,13 @@ def client(address=None, port=None):
 
 
 
-def send(request, address=None, port=None):
+def send(request, address=None, port=None, bulk=None):
     ''' Creates a :class:`Client` instance and invokes the :func:`Client.send`
-        method.
+        method. This method blocks until the completion of the request.
     '''
 
     connection = client(address, port)
-    pending = connection.send(request)
+    pending = connection.send(request, bulk)
     response = pending.wait()
     return response
 
