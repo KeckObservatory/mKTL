@@ -1,12 +1,13 @@
 
 from . import Config
+from . import Item
 
 
 class Store:
     ''' The :class:`Store` implements a key/value store, effectively a Python
         dictionary with some additional context. A store has a unique *name*
         within the local POT context; which daemons will be contacted to handle
-        further requests is determined by the per-Key configuration.
+        further requests is determined by the per-Item configuration.
     '''
 
     def __init__(self, name):
@@ -25,7 +26,7 @@ class Store:
 
         if item is None:
             config = self.config[key]
-            item = Key.Key(self, config)
+            item = Item.Item(self, config)
             self._items[key] = item
 
         return item
