@@ -13,22 +13,22 @@ class Store:
 
         config = Config.get(name)
         self.config = config
-        self._keys = dict()
+        self._items = dict()
 
 
     def __setitem__(self, name, value):
         raise NotImplementedError("you cannot set a Store's key directly")
 
 
-    def __getitem__(self, name):
-        key = self._keys[name]
+    def __getitem__(self, key):
+        item = self._items[key]
 
-        if key is None:
-            config = self.config[name]
-            key = Key.Key(self, config)
-            self._keys[name] = key
+        if item is None:
+            config = self.config[key]
+            item = Key.Key(self, config)
+            self._items[key] = item
 
-        return key
+        return item
 
 
     def __iter__(self):
@@ -36,14 +36,14 @@ class Store:
 
 
     def __repr__(self):
-        return repr(self._keys)
+        return repr(self._items)
 
 
     def __len__(self):
-        return len(self._keys)
+        return len(self._items)
 
 
-    def __delitem__(self, name):
+    def __delitem__(self, key):
         raise NotImplementedError("you cannot delete a Store's key directly")
 
 
@@ -55,8 +55,8 @@ class Store:
         raise NotImplementedError('a Store is intended to be a singleton')
 
 
-    def has_key(self, name):
-        return name in self._keys
+    def has_key(self, key):
+        return key in self._items
 
 
     def update(self, *args, **kwargs):
@@ -64,11 +64,11 @@ class Store:
 
 
     def keys(self):
-        return self._keys.keys()
+        return self._items.keys()
 
 
     def values(self):
-        return self._keys.values()
+        return self._items.values()
 
 
 # end of class Store
@@ -77,7 +77,7 @@ class Store:
 
 class Iterator:
     ''' Internal class for iteration over a :class:`Store` instance. The custom
-        iterator allows easier just-in-time instantiation of any missing Key
+        iterator allows easier just-in-time instantiation of any missing Item
         instances.
     '''
 
@@ -89,20 +89,20 @@ class Iterator:
 
     def __next__(self):
 
-        key = None
+        item = None
 
-        while key is None:
+        while item is None:
             try:
-                name = self.keys.pop()
+                key = self.keys.pop()
             except IndexError:
                 raise StopIteration
 
             try:
-                key = self.store[name]
+                item = self.store[key]
             except KeyError:
-                key = None
+                item = None
 
-        return key
+        return item
 
     next = __next__
 
