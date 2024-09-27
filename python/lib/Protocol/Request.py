@@ -11,7 +11,6 @@ import time
 import traceback
 import weakref
 import zmq
-import zmq.utils.monitor
 
 
 default_port = 10111
@@ -52,42 +51,11 @@ class Client:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
 
-        self.monitor = self.socket.get_monitor_socket()
-        self.monitor_thread = threading.Thread(target=self.checkSocket)
-        self.monitor_thread.daemon = True
-        self.monitor_thread.start()
-
         self.pending_thread = threading.Thread(target=self.run)
         self.pending_thread.daemon = True
         self.pending_thread.start()
 
         self.socket.connect(server)
-
-
-    def checkSocket(self):
-        ''' This isn't quite as definitive as one might like-- in particular,
-            it can't really tell you whether the server is out there, waiting
-            to receive a request. It will happily tell you once you're
-            connected, but even if you aren't connected, it might just be that
-            you haven't tried yet.
-        '''
-
-        while True:
-            self.monitor.poll()
-            event = zmq.utils.monitor.recv_monitor_message(self.monitor)
-            event_code = event['event']
-
-            if event_code == zmq.EVENT_CONNECTED:
-                self.connected = True
-            elif event_code == zmq.EVENT_HANDSHAKE_SUCCEEDED:
-                self.connected = True
-            else:
-                self.connected = False
-
-            if event_code == zmq.EVENT_MONITOR_STOPPED:
-                break
-
-        self.monitor.close()
 
 
     def req_id_next(self):
