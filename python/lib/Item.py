@@ -6,7 +6,7 @@ from .Protocol import Request
 from . import WeakRef
 
 
-class Key:
+class Item:
 
     def __init__(self, name, config):
 
@@ -134,10 +134,10 @@ class Key:
         if self.subscribed == True:
             return
 
-        ### If this Key has a bulk component this also needs to subscribe
+        ### If this Item has a bulk component this also needs to subscribe
         ### to the bulk topic
 
-        ### If this Key is a leaf of a structured Key we may need to register
+        ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our name.
 
         self.pub.register(self._update, self.name)
@@ -191,7 +191,7 @@ class Key:
         self._propagate(new_data, new_timestamp)
 
 
-# end of class Key
+# end of class Item
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
