@@ -22,7 +22,6 @@ class Client:
     '''
 
     port = default_port
-    timeout = 5
 
     def __init__(self, address=None, port=None):
 
@@ -167,7 +166,6 @@ class Client:
         ### Does this need to be fed into a pool of threads via a DEALER
         ### socket? So that one bad propagation doesn't bring it all down?
 
-        counter = 0
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
 
@@ -177,8 +175,6 @@ class Client:
                 if self.socket == active:
                     message = self.socket.recv()
                     self.propagate(message)
-
-                counter += 1
 
 
     def subscribe(self, topic):
