@@ -21,7 +21,6 @@ class Client:
         default port.
     '''
 
-    instances = list()
     port = default_port
     timeout = 5
 
@@ -35,28 +34,17 @@ class Client:
 
         port = str(port)
         server = "tcp://%s:%s" % (address, port)
-        notify_port = 'inproc://Publish.Client.' + str(id(self))
 
-        self.connected = False
         self.socket = zmq_context.socket(zmq.SUB)
-
-        self.notify_out = zmq_context.socket(zmq.PAIR)
-        self.notify_in = zmq_context.socket(zmq.PAIR)
-
-        self.notify_out.bind(notify_port)
-        self.notify_in.connect(notify_port)
+        self.socket.connect(server)
 
         self.callback_all = list()
         self.callback_specific = dict()
-
         self.shutdown = False
+
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
-
-        self.socket.connect(server)
-
-        Client.instances.append(WeakRef.ref(self))
 
 
     def propagate(self, message):
@@ -179,13 +167,9 @@ class Client:
         ### Does this need to be fed into a pool of threads via a DEALER
         ### socket? So that one bad propagation doesn't bring it all down?
 
-        ### The notify_in construct probably needs to go. Fine proof of
-        ### concept, but doesn't appear to be critical here (so far).
-
         counter = 0
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.notify_in, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(1000)
@@ -193,23 +177,8 @@ class Client:
                 if self.socket == active:
                     message = self.socket.recv()
                     self.propagate(message)
-                else:
-                    self.snooze()
 
                 counter += 1
-
-
-    def snooze(self):
-        while True:
-            try:
-                message = self.notify_in.recv()
-            except ValueError:
-                break
-
-
-    def stop(self):
-        self.shutdown = True
-        self.wake()
 
 
     def subscribe(self, topic):
@@ -226,10 +195,6 @@ class Client:
             topic = topic.encode()
 
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-
-    def wake(self):
-        self.notify_out.send_string('hello')
 
 
 # end of class Client
@@ -338,17 +303,7 @@ def client(address=None, port=None):
 
 
 def shutdown():
-
     client_connections.clear()
-
-    instances = Client.instances
-    Client.instances = list()
-
-    for reference in instances:
-        instance = reference()
-
-        if instance is not None:
-            instance.stop()
 
 
 atexit.register(shutdown)

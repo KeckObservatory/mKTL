@@ -46,16 +46,14 @@ class Client:
 
         self.pending = dict()
 
-        self.connected = False
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
+        self.socket.connect(server)
 
         self.pending_thread = threading.Thread(target=self.run)
         self.pending_thread.daemon = True
         self.pending_thread.start()
-
-        self.socket.connect(server)
 
 
     def req_id_next(self):
@@ -254,17 +252,10 @@ class Server:
         # The 'inproc' usage here is analagous to a socketpair.
 
         port = 'tcp://*:' + str(port)
-        notify_port = 'inproc://Request.Server.' + str(id(self))
 
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.bind(port)
-
-        self.notify_out = zmq_context.socket(zmq.PAIR)
-        self.notify_in = zmq_context.socket(zmq.PAIR)
-
-        self.notify_out.bind(notify_port)
-        self.notify_in.connect(notify_port)
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
@@ -364,7 +355,6 @@ class Server:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.notify_in, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(1000)
@@ -377,9 +367,6 @@ class Server:
                     except:
                         ### Proper error handling needs to go here.
                         print(traceback.format_exc())
-
-                else:
-                    self.snooze()
 
 
     def send(self, ident, response):
@@ -396,23 +383,6 @@ class Server:
                 raise
 
         self.socket.send_multipart((ident, response))
-
-
-    def snooze(self):
-        while True:
-            try:
-                message = self.notify_in.recv()
-            except ValueError:
-                break
-
-
-    def stop(self):
-        self.shutdown = True
-        self.wake()
-
-
-    def wake(self):
-        self.notify_out.send_string('hello')
 
 
 # end of class Server
@@ -447,17 +417,7 @@ def send(request, address=None, port=None, bulk=None):
 
 
 def shutdown():
-
     client_connections.clear()
-
-    instances = Server.instances
-    Server.instances = list()
-
-    for reference in instances:
-        instance = reference()
-
-        if instance is not None:
-            instance.stop()
 
 
 atexit.register(shutdown)
