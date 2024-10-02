@@ -5,11 +5,11 @@
 import atexit
 import itertools
 import json
+import queue
 import sys
 import threading
 import time
 import traceback
-import weakref
 import zmq
 
 
@@ -237,7 +237,7 @@ class Server:
     '''
 
     port = default_port
-    instances = list()
+    worker_count = 10
 
     def __init__(self, port=None):
 
@@ -257,15 +257,22 @@ class Server:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.bind(port)
 
+        self.queue = queue.SimpleQueue()
+
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
 
-        Server.instances.append(weakref.ref(self))
+        self.workers = list()
+        for thread_number in range(self.worker_count):
+            thread = threading.Thread(target=self.worker_main)
+            thread.daemon = True
+            thread.start()
+            self.workers.append(thread)
 
 
-    def req_ack(self, ident, request):
+    def req_ack(self, socket, ident, request):
         ''' Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
@@ -281,15 +288,15 @@ class Server:
         ack = json.dumps(ack)
         ack = ack.encode()
 
-        self.send(ident, ack)
+        socket.send_multipart((ident, ack))
 
 
-    def req_handler(self, ident, request):
+    def req_handler(self, socket, ident, request):
         ''' The default request handler is for debug purposes only, and is
             effectively a no-op.
         '''
 
-        self.req_ack(ident, request)
+        self.req_ack(socket, ident, request)
 
         response = dict()
         response['message'] = 'REP'
@@ -298,13 +305,13 @@ class Server:
         response = json.dumps(response)
         response = response.encode()
 
-        self.socket.send_multipart((ident, response))
+        socket.send_multipart((ident, response))
 
         # This default handler returns None, which indicates to req_incoming()
         # that it should not issue a response of its own.
 
 
-    def req_incoming(self, ident, request):
+    def req_incoming(self, socket, ident, request):
         ''' All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
@@ -322,7 +329,7 @@ class Server:
 
         try:
             request = json.loads(request)
-            payload = self.req_handler(ident, request)
+            payload = self.req_handler(socket, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -361,28 +368,40 @@ class Server:
             for active,flag in sockets:
                 if self.socket == active:
                     ident, request = self.socket.recv_multipart()
-
-                    try:
-                        self.req_incoming(ident, request)
-                    except:
-                        ### Proper error handling needs to go here.
-                        print(traceback.format_exc())
+                    self.queue.put((self.socket, ident, request))
 
 
-    def send(self, ident, response):
-        ''' Send a string response to the connected client.
+    def worker_main(self):
+        ''' This is the 'main' method for the worker threads responsible for
+            handling incoming requests. The task of a worker thread is limited:
+            receive a request, and feed it to :func:`req_incoming` for
+            processing. Multiple threads are allocated to this function to
+            allow for long-duration requests to be handled gracefully without
+            jamming up the processing of subsequent requests; simple round-robin
+            allocation of threads, as done by ROUTER/DEALER and PUSH/PULL, do
+            not alter their allocation of inbound messages if a thread is
+            already busy.
         '''
 
-        try:
-            response = response.encode()
-        except AttributeError:
-            if hasattr(response, 'decode'):
-                # Assume it's already bytes.
-                pass
-            else:
-                raise
+        while self.shutdown == False:
+            try:
+                dequeued = self.queue.get(timeout=300)
+            except queue.Empty:
+                continue
 
-        self.socket.send_multipart((ident, response))
+            if dequeued is None:
+                continue
+
+            try:
+                self.req_incoming(*dequeued)
+            except:
+                ### Proper error handling needs to go here.
+                print(traceback.format_exc())
+
+        # Make sure the queue has something in it to wake up the other
+        # worker threads if we're doing a controlled shutdown.
+
+        self.queue.put(None)
 
 
 # end of class Server
