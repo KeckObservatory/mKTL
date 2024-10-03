@@ -7,28 +7,30 @@
 # the right build process this could be determined at build time, instead
 # of at run time.
 
+msgspec = None
+orjson = None
+json = None
+
 try:
     import msgspec
 except ImportError:
-    msgspec = None
-else:
-    orjson = None
-    json = None
+    pass
 
 if msgspec is None:
     try:
         import orjson
     except ImportError:
-        orjson = None
-    else:
-        json = None
+        pass
 
 if msgspec is None and orjson is None:
     import json
 
 
-# msgspec returns bytes.
-orjson_dumps
+# The msgspec 'encode' operation returns bytes, as does orjson.dumps. To
+# maintain alignment all 'dumps' methods need to do so as well.
+
+def json_dumps(*args, **kwargs):
+    return json.dumps(*args, **kwargs).encode()
 
 if msgspec is not None:
     encoder = msgspec.json.Encoder()
@@ -36,5 +38,10 @@ if msgspec is not None:
     dumps = encoder.encode
     loads = decoder.decode
 elif orjson is not None:
+    dumps = orjson.dumps
+    loads = orjson.loads
+else:
+    dumps = json_dumps
+    loads = json.loads
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
