@@ -41,6 +41,10 @@ elif orjson is not None:
     dumps = orjson.dumps
     loads = orjson.loads
 else:
+    # One could use cached instances of json.JSONEncoder and json.JSONDecoder
+    # here, but it doesn't appear to be any more efficient than calling the
+    # top-level methods directly. The JSONDecoder also won't accept bytes
+    # for decoding, but json.loads() will.
     dumps = json_dumps
     loads = json.loads
 
