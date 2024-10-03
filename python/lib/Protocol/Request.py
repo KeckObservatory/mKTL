@@ -4,13 +4,14 @@
 
 import atexit
 import itertools
-import json
 import queue
 import sys
 import threading
 import time
 import traceback
 import zmq
+
+from . import Json
 
 
 default_port = 10111
@@ -97,7 +98,7 @@ class Client:
                     ### This assumes the response is JSON. This won't work
                     ### in the bulk data case.
 
-                    response_dict = json.loads(response)
+                    response_dict = Json.loads(response)
                     response_id = response_dict['id']
 
                     try:
@@ -138,8 +139,7 @@ class Client:
         if bulk is not None:
             request['bulk'] = True
 
-        request = json.dumps(request)
-        request = request.encode()
+        request = Json.dumps(request)
         self.socket.send(request)
 
         if bulk is not None:
@@ -285,8 +285,7 @@ class Server:
         ack['message'] = 'ACK'
         ack['id'] = id
         ack['time'] = time.time()
-        ack = json.dumps(ack)
-        ack = ack.encode()
+        ack = Json.dumps(ack)
 
         socket.send_multipart((ident, ack))
 
@@ -302,8 +301,7 @@ class Server:
         response['message'] = 'REP'
         response['id'] = request['id']
         response['time'] = time.time()
-        response = json.dumps(response)
-        response = response.encode()
+        response = Json.dumps(response)
 
         socket.send_multipart((ident, response))
 
@@ -328,7 +326,7 @@ class Server:
         payload = None
 
         try:
-            request = json.loads(request)
+            request = Json.loads(request)
             payload = self.req_handler(socket, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
@@ -353,8 +351,7 @@ class Server:
         if payload is not None:
             response['data'] = payload
 
-        response = json.dumps(response)
-        response = response.encode()
+        response = Json.dumps(response)
         self.socket.send_multipart((ident, response))
 
 

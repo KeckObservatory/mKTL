@@ -4,11 +4,11 @@
 
 import atexit
 import itertools
-import json
 import threading
 import traceback
 import zmq
 
+from . import Json
 from .. import WeakRef
 
 default_port = 10133
@@ -68,7 +68,7 @@ class Client:
             pass
         else:
             message = message.decode()
-            message = json.loads(message)
+            message = Json.loads(message)
 
         # Handle the case where a callback is registered for any/all messages.
 
@@ -265,9 +265,7 @@ class Server:
         if bulk is not None:
             message['bulk'] = True
 
-        message = topic + ' ' + json.dumps(message)
-        message = message.encode()
-
+        message = topic + ' ' + Json.dumps(message)
         self.socket.send(message)
 
         if bulk is not None:
