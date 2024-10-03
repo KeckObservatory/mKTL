@@ -31,8 +31,10 @@ if msgspec is None and orjson is None:
 orjson_dumps
 
 if msgspec is not None:
-    dumps = msgspec.json.dumps
-    loads = msgspec.json.loads
+    encoder = msgspec.json.Encoder()
+    decoder = msgspec.json.Decoder()
+    dumps = encoder.encode
+    loads = decoder.decode
 elif orjson is not None:
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
