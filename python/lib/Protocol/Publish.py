@@ -265,7 +265,10 @@ class Server:
         if bulk is not None:
             message['bulk'] = True
 
-        message = topic + ' ' + Json.dumps(message)
+        prefix = topic + ' '
+        prefix = prefix.encode()
+
+        message = prefix + Json.dumps(message)
         self.socket.send(message)
 
         if bulk is not None:
