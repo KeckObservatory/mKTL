@@ -201,7 +201,7 @@ def describeKeyword(keyword):
     return keyword_dict
 
 
-# Translate KTL data types to POT types.
+# Translate KTL data types to mKTL types.
 
 type_mapping = dict()
 type_mapping['KTL_BOOLEAN'] = 'boolean'
