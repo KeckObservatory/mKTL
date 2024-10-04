@@ -1,4 +1,4 @@
-This document defines the common nomenclature used within POT. Some of the
+This document defines the common nomenclature used within mKTL. Some of the
 terms are inherited from KTL; some are inherited from common design patterns
 in the broader software world. Where there is a conflict between the two,
 we prefer to use the common industry definition rather than traditional use
@@ -8,12 +8,12 @@ within WMKO.
 			External definitions
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	WMKO: W. M. Keck Observatory, where POT was initially
+	WMKO: W. M. Keck Observatory, where mKTL was initially
 		established, in collaboration with WMKO partner
 		institutions at the University of California and
 		California Institute of Technology.
 
-	KTL: Keck Task Library, the predecessor to POT at WMKO.
+	KTL: Keck Task Library, the predecessor to mKTL at WMKO.
 		KTL is a key-value application programming interface
 		(API), written in C, and has been the dominant API
 		for interprocess communication at both WMKO and Lick
@@ -26,13 +26,13 @@ within WMKO.
 		APIs that KTL provides a common abstraction for.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-			POT-specific terms
+			mKTL-specific terms
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-	POT: POT is not an acronym. It is a reference to the proverb
-		"the pot calling the kettle black", where "kettle"
-		is the common spoken pronunciation of KTL, and POT
-		is the successor to KTL.
+	mKTL: modern Keck Task Library. It's just a name, but it's
+		ours, and was the clear choice out of a field of a
+		dozen options that were presented to the future
+		power users of the protocol.
 
 	Daemon: a persistent process responsible for some or all of
 		the key-value pairs in a given store. When client
@@ -41,7 +41,7 @@ within WMKO.
 		to a KTL dispatcher, or an EPICS IOC.
 
 	Store: a store is an aggregation of individual key-value
-		pairs. Within a given deployment of POT the store
+		pairs. Within a given deployment of mKTL the store
 		will have a unique name. This is analagous to a KTL
 		service, or an EPICS database, and is effectively
 		an associative array, or a Python dictionary.
@@ -54,14 +54,14 @@ within WMKO.
 		or an EPICS channel.
 
 	Value: the other half of the key-value pair. Like a KTL
-		keyword, a POT value can be one of many native
+		keyword, a mKTL value can be one of many native
 		types (integer, floating point, string, etc.),
 		and includes the possibility of compound values,
 		similar to KTL arrays.
 
 	Item: the combination of the key/value pair. This term is
 		borrowed from Python's dictionary, where it has a
-		similar meaning. In the context of POT, the Store
+		similar meaning. In the context of mKTL, the Store
 		class in the reference Python module will return
 		Item instances when referenced by the key name.
 
