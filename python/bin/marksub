@@ -1,18 +1,18 @@
 #! /usr/bin/env kpython3
 
 # This is the subprocess that will be invoked by the proxy daemon. The proxy
-# daemon is responsible for broader POT communication; this subprocess is
+# daemon is responsible for broader mKTL communication; this subprocess is
 # relaying communications for a single proxied component.
 
 import sys
 import time
 
-import POT
+import mKTL
 
 
 def main():
 
-    ### This is a quick+dirty approach to running up a KTL/POT proxy. The real
+    ### This is a quick+dirty approach to running up a KTL/mKTL proxy. The real
     ### proxy daemon should be driven by a ConfigParser configuration file,
     ### which defines the name of the store, the proxy import that should be
     ### used, and any optional arguments.
@@ -24,7 +24,7 @@ def main():
     req = sys.argv[1]
     pub = sys.argv[2]
 
-    proxy = POT.Proxy.KTL(req, pub, service)
+    proxy = mKTL.Proxy.KTL(req, pub, service)
 
     while True:
         try:

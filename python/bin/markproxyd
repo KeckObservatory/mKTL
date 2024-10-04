@@ -1,8 +1,8 @@
 #! /usr/bin/env kpython3
 
-# This is a POT proxy front-end. It should be configuration driven, and be
+# This is a mKTL proxy front-end. It should be configuration driven, and be
 # willing to invoke as many subprocesses as necessary in order to provide
-# POT access to any number of different proxied store components.
+# mKTL access to any number of different proxied store components.
 
 import atexit
 import itertools
@@ -15,14 +15,14 @@ import threading
 import time
 import zmq
 
-import POT
+import mKTL
 
 zmq_context = zmq.Context()
 
 
 def main():
 
-    ### This is a quick+dirty approach to running up a KTL/POT proxy. The real
+    ### This is a quick+dirty approach to running up a KTL/mKTL proxy. The real
     ### proxy daemon should be driven by a ConfigParser configuration file,
     ### which defines the name of the store, the proxy subprocess call that
     ### should be invoked, and any optional arguments.
@@ -32,7 +32,7 @@ def main():
 
     names = sys.argv[1:]
 
-    pub = POT.Protocol.Publish.Server()
+    pub = mKTL.Protocol.Publish.Server()
     req = RequestServer()
 
     # PUB and REP messages can flow directly from the subprocess out to the
@@ -189,7 +189,7 @@ class ProxySubprocess:
     def startSubprocess(self):
 
         arguments = list()
-        arguments.append('./potsub')
+        arguments.append('./marksub')
         arguments.append(self.req_address)
         arguments.append(self.pub_address)
         arguments.append(self.name)
@@ -397,8 +397,8 @@ class RequestRelay:
 
 
 
-class RequestServer(POT.Protocol.Request.Server):
-    ''' Subclass the generic :class:POT.Protocol.Request.Server`, adding
+class RequestServer(mKTL.Protocol.Request.Server):
+    ''' Subclass the generic :class:mKTL.Protocol.Request.Server`, adding
         additional logic to locally handle CONFIG requests, and to determine
         which proxied subprocess should receive the incoming request.
     '''
