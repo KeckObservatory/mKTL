@@ -4,7 +4,7 @@ from .Protocol import Request
 
 
 def get(name):
-    ''' Retrieve the POT configuration for the specified `name`.
+    ''' Retrieve the mKTL configuration for the specified `name`.
     '''
 
     ## check the cache

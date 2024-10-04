@@ -6,7 +6,7 @@ from . import Item
 class Store:
     ''' The :class:`Store` implements a key/value store, effectively a Python
         dictionary with some additional context. A store has a unique *name*
-        within the local POT context; which daemons will be contacted to handle
+        within the local mKTL context; which daemons will be contacted to handle
         further requests is determined by the per-Item configuration.
     '''
 

@@ -1,4 +1,4 @@
-''' Python implementation of POT. This includes client functions, such as
+''' Python implementation of mKTL. This includes client functions, such as
     interacting with key/value stores, and daemon functions, such as publishing
     key/value pairs and handling client requests.
 '''
