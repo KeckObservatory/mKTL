@@ -257,6 +257,15 @@ class Server:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.bind(port)
 
+        # The use of worker threads and a synchronization primitive is something
+        # like a 10-20% hit in performance compared to using a single thread.
+        # Multiple worker threads allow for a request to block until completion.
+
+        # Using a deque and a synchronization construct (such as a Condition)
+        # is similar in performance to using a SimpleQueue. Using a fast
+        # Condition implementation might make it worth the trouble, but the
+        # one in the threading module is slow enough that it's not any better.
+
         self.queue = queue.SimpleQueue()
 
         self.shutdown = False
