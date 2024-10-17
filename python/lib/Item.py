@@ -96,11 +96,12 @@ class Item:
     def set(self, new_value, wait=True):
         ''' Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to
-            False, the caller will be returned a :class:`PendingRequest`
-            instance, which has a :func:`PendingRequest.wait` method that
+            False, the caller will be returned a :class:`Request.Pending`
+            instance, which has a :func:`Request.Pending.wait` method that
             can (optionally) be invoked block until completion of the
             request; the wait will return immediately if the request is
-            already satisfied.
+            already satisfied. There is no return value for a blocking
+            request; failed requests will raise exceptions.
         '''
 
         request = dict()
@@ -130,7 +131,8 @@ class Item:
                 except KeyError:
                     pass
 
-                ### The exception type here should be something unique.
+                ### The exception type here should be something unique
+                ### instead of a RuntimeError.
                 raise RuntimeError("SET failed: %s: %s" % (e_type, e_text))
 
 

@@ -118,9 +118,9 @@ class Client:
     def send(self, request, response=True, bulk=None):
         ''' A *request* is a Python dictionary ready to be converted to a JSON
             byte string and sent to the connected server. If *response* is True
-            a :class:`PendingRequest` instance will be returned that a client
-            can use to wait on for further notification. Set *response* to any
-            other value to indicate a return response is not of interest.
+            a :class:`Pending` instance will be returned that a client can use
+            to wait on for further notification. Set *response* to any other
+            value to indicate a return response is not of interest.
 
             The 'id' field in the *request*, if specified, will be overwritten.
 
@@ -132,7 +132,7 @@ class Client:
         name = request['name']
 
         if response == True:
-            pending = PendingRequest()
+            pending = Pending()
             self.pending[req_id] = pending
 
         request['id'] = req_id
@@ -177,8 +177,8 @@ class Client:
 
 
 
-class PendingRequest:
-    ''' The :class:`PendinglRequest` provides a very thin wrapper around a
+class Pending:
+    ''' The :class:`Pending` provides a very thin wrapper around a
         :class:`threading.Event` that can be used to signal the internal
         caller that the request has been handled. It also provides a vehicle
         for the response to be passed to the caller.
@@ -218,7 +218,7 @@ class PendingRequest:
 
 
     def wait(self, timeout=60):
-        ''' The invoker of the :class:`PendingRequest` will call :func:`wait`
+        ''' The invoker of the :class:`Pending` will call :func:`wait`
             to block until the request has been handled.
         '''
 
@@ -226,7 +226,7 @@ class PendingRequest:
         return self.rep
 
 
-# end of class PendingRequest
+# end of class Pending
 
 
 
