@@ -7,6 +7,13 @@ from . import WeakRef
 
 
 class Item:
+    ''' An Item represents a key/value pair, where the key is the name of the
+        Item, and the value is whatever is provided by the daemon, according to
+        :func:`get` and :func:`subscribe` requests. A :func:`set` request does
+        not update the local value, it only issues a request to the remote
+        daemon; it is the daemon's responsibility to issue a post-set update
+        with any new value(s).
+    '''
 
     def __init__(self, name, config):
 
@@ -58,7 +65,8 @@ class Item:
                 except KeyError:
                     pass
 
-                ### The exception type here should be something unique.
+                ### The exception type here should be something unique
+                ### instead of a RuntimeError.
                 raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
 
@@ -69,7 +77,8 @@ class Item:
     def register(self, method):
         ''' Register a callback to be invoked whenever a new value is received,
             either by a direct :func:`get` request or the arrival of an
-            asynchronous broadcast.
+            asynchronous broadcast. :func:`subscribe` will be invoked if
+            a subscription has not already occurred.
         '''
 
         if callable(method):
