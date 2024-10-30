@@ -5,11 +5,11 @@ types of requests that can be made.
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 The first socket type implements a request/response pattern. This represents
-the bulk of the interactive traffic between a mKTL client and deamon. Because
-requests can be asynchronous, mKTL does not use the REQ/REP implementation in
-ZeroMQ, which enforces a strict one request, one response pattern; instead,
-we use DEALER/ROUTER, which allows any amount of messages in any order, in
-any direction.
+the majority of the interactive traffic between a mKTL client and deamon.
+Because requests can be asynchronous, mKTL does not use the REQ/REP
+implementation in ZeroMQ, which enforces a strict one request, one response
+pattern; instead, we use DEALER/ROUTER, which allows any amount of messages
+in any order, in any direction.
 
 The request/response interaction between the client and daemon is of this form:
 
@@ -68,7 +68,7 @@ by having a 'bulk' attribute set in the response. Here is an example response:
 The 'bulk' setting in the message contents indicates that a binary data blob
 will be sent in a separate message. The message format would look like:
 
-	b'kpfguide.LASTIMAGE;bulk deadbeef 6712437631249763124962431...'
+	b'bulk:kpfguide.LASTIMAGE deadbeef 6712437631249763124962431...'
 
 ...where the first whitespace separated field is largely noise for the REP
 case, the important metadata is the unique id linking the two responses,
@@ -77,12 +77,12 @@ but the message structure is identical to the PUB version (which needs the
 whitespace separated field is the same unique identifier found in the JSON
 from the other half of the response. All remaining data after the subsequent
 whitespace is a pure byte sequence representing the payload. Both messages
-must arrive in order for either component to have any meaning; the 'data'
-from the JSON response will include enough information to reconstruct the
-binary blob, which at the present time is only envisioned as image data,
-or more generally, something that can be represented as a NumPy array.
-Thus, the 'data' would include information like the dimensions of the array
-and its datatype (int16, uint32, float64, etc.).
+must arrive for either component to have any meaning; the 'data' from the
+JSON response will include enough information to reconstruct the binary blob,
+which at the present time is only envisioned as image data, or more generally,
+something that can be represented as a NumPy array. Thus, the 'data' would
+include information like the dimensions of the array and its datatype (int16,
+uint32, float64, etc.).
 
 The motivation for separating the bulk data into its own message type is
 performance. The bulk data would need to be encoded as a string (base64, etc.)
@@ -256,7 +256,9 @@ by a modifier on the topic string. The first type is the bulk/binary data
 broadcast type, as described above for a REP response; there is a similar
 PUB broadcast with otherwise exactly the same structure, setting the 'bulk'
 flag in the PUB message to True, and the bulk data transmitted in a separate
-message.
+message. The topic for the bulk message has a 'bulk:' prefix to avoid
+accidentally subscribing to bulk messages, since ZeroMQ uses a leading
+substring match on the topic when a client initiates a subscription.
 
 The second type of special broadcast message is a bundle of related broadcasts.
 If a daemon so chooses, it can collect related telemetry in a single broadcast;
