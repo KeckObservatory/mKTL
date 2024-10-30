@@ -143,7 +143,7 @@ class Client:
         self.socket.send(request)
 
         if bulk is not None:
-            prefix = name + ';bulk ' + str(req_id) + ' '
+            prefix = 'bulk:' + name + ' ' + str(req_id) + ' '
             prefix = prefix.encode()
 
             bulk_payload = prefix + bulk

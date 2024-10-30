@@ -64,7 +64,7 @@ class Client:
 
         topic, message = message.split(maxsplit=1)
 
-        if topic[-4:] == b'bulk':
+        if topic[:5] == b'bulk:':
             pass
         else:
             message = message.decode()
@@ -272,7 +272,7 @@ class Server:
         self.socket.send(message)
 
         if bulk is not None:
-            prefix = topic + ';bulk ' + str(pub_id) + ' '
+            prefix = 'bulk:' + topic + ' ' + str(pub_id) + ' '
             prefix = prefix.encode()
 
             bulk_payload = prefix + bulk

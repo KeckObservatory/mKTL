@@ -93,7 +93,7 @@ class Base:
         self.pub_socket.send(message)
 
         if bulk is not None:
-            prefix = topic + ';bulk ' + str(pub_id) + ' '
+            prefix = 'bulk:' + topic + ' ' + str(pub_id) + ' '
             prefix = prefix.encode()
 
             bulk_payload = prefix + bulk
