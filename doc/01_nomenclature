@@ -63,7 +63,7 @@ within WMKO.
 		borrowed from Python's dictionary, where it has a
 		similar meaning. In the context of mKTL, the Store
 		class in the reference Python module will return
-		Item instances when referenced by the key name.
+		Item instances when referenced by the key.
 
 	Get: retrieve a value corresponding to an individual key
 		in a store. A typical client can issue a blocking
