@@ -95,8 +95,24 @@ class Client:
                 if self.socket == active:
                     response = self.socket.recv()
 
-                    ### This assumes the response is JSON. This won't work
-                    ### in the bulk data case.
+                    # Check for bulk data first, since it cannot be processed
+                    # as JSON.
+
+                    if response[:5] == b'bulk:':
+                        topic, response_id, bulk = response.split(maxsplit=2)
+                        response_id = int(response_id)
+
+                        try:
+                            pending = self.pending[response_id]
+                        except KeyError:
+                            # No further processing required.
+                            continue
+
+                        pending.partial(bulk=bulk)
+                        continue
+
+
+                    # All other responses are expected to be JSON.
 
                     response_dict = Json.loads(response)
                     response_id = response_dict['id']
@@ -111,8 +127,18 @@ class Client:
                     if response_type == 'ACK':
                         pending.complete_ack(response_dict)
                     else:
-                        pending.complete(response_dict)
-                        del self.pending[response_id]
+                        try:
+                            bulk = response_dict['bulk']
+                        except KeyError:
+                            bulk = False
+
+                        if bulk == True:
+                            done = pending.partial(response=response_dict)
+                            if done == True:
+                                del self.pending[response_id]
+                        else:
+                            pending.complete(response_dict)
+                            del self.pending[response_id]
 
 
     def send(self, request, response=True, bulk=None):
@@ -186,6 +212,7 @@ class Pending:
 
     def __init__(self):
         self.ack = None
+        self.bulk = None
         self.rep = None
 
         self.event_ack = threading.Event()
@@ -210,6 +237,28 @@ class Pending:
             self.event_ack.set()
 
         self.event_rep.set()
+
+
+    def partial(self, response=None, bulk=None):
+        ''' A response may come in two pieces. This is effectively a two-step
+            version of :func:`complete`, where there should be two calls to
+            :func:`partial` before a request is complete. This method will
+            return True when both responses have been received.
+        '''
+
+        if response is not None:
+            self.rep = response
+
+            if self.ack is None:
+                self.ack = response
+                self.event_ack.set()
+
+        if bulk is not None:
+            self.bulk = bulk
+
+        if self.rep is not None and self.bulk is not None:
+            self.event_rep.set()
+            return True
 
 
     def wait_ack(self, timeout):
