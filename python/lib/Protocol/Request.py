@@ -141,7 +141,7 @@ class Client:
                             del self.pending[response_id]
 
 
-    def send(self, request, response=True, bulk=None):
+    def send(self, request, response=True):
         ''' A *request* is a Python dictionary ready to be converted to a JSON
             byte string and sent to the connected server. If *response* is True
             a :class:`Pending` instance will be returned that a client can use
@@ -150,8 +150,9 @@ class Client:
 
             The 'id' field in the *request*, if specified, will be overwritten.
 
-            If the *bulk* field is provided it must be a byte sequence that
-            will be sent as a separate message to the connected daemon.
+            If the 'bulk' field is present in the *request* it must be a byte
+            sequence, and will be sent as a separate message to the connected
+            daemon.
         '''
 
         req_id = self.req_id_next()
@@ -162,7 +163,12 @@ class Client:
             self.pending[req_id] = pending
 
         request['id'] = req_id
-        if bulk is not None:
+
+        try:
+            bulk = request['bulk']
+        except KeyError:
+            bulk = None
+        else:
             request['bulk'] = True
 
         request = Json.dumps(request)
@@ -479,13 +485,13 @@ def client(address=None, port=None):
 
 
 
-def send(request, address=None, port=None, bulk=None):
+def send(request, address=None, port=None):
     ''' Creates a :class:`Client` instance and invokes the :func:`Client.send`
         method. This method blocks until the completion of the request.
     '''
 
     connection = client(address, port)
-    pending = connection.send(request, bulk)
+    pending = connection.send(request)
     response = pending.wait()
     return response
 

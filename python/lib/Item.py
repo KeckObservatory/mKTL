@@ -116,7 +116,10 @@ class Item:
         request['name'] = self.name
         request['data'] = new_value
 
-        pending = self.req.send(request, bulk=bulk)
+        if bulk is not None:
+            request['bulk'] = bulk
+
+        pending = self.req.send(request)
 
         if wait == False:
             return pending

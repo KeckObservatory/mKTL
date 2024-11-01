@@ -65,7 +65,10 @@ class Client:
         topic, message = message.split(maxsplit=1)
 
         if topic[:5] == b'bulk:':
-            pass
+            ## It may make more sense for a different callback to be invoked
+            ## for bulk data. For now, we will rely on the callback to be
+            ## smart and recognize when it is receiving a byte stream.
+            topic = topic[5:]
         else:
             message = message.decode()
             message = Json.loads(message)
@@ -248,21 +251,26 @@ class Server:
         self.pub_id = itertools.count(self.pub_id_min)
 
 
-    def publish(self, message, bulk=None):
+    def publish(self, message):
         ''' A *message* is a Python dictionary ready to be converted to a
             JSON byte string and broadcast.
 
             The 'id' field in the *message*, if specified, will be overwritten.
 
-            If the *bulk* field is provided it must be a byte sequence that
-            will be sent as a separate message to the connected daemon.
+            If the 'bulk' field is present in the *message* it must be a byte
+            sequence, and will be sent as a separate message to any listeners.
         '''
 
         pub_id = self.pub_id_next()
         topic = message['name']
 
         message['id'] = pub_id
-        if bulk is not None:
+
+        try:
+            bulk = message['bulk']
+        except KeyError:
+            bulk = None
+        else:
             message['bulk'] = True
 
         prefix = topic + ' '
