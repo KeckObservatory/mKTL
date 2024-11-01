@@ -263,6 +263,7 @@ class Pending:
             self.bulk = bulk
 
         if self.rep is not None and self.bulk is not None:
+            self.rep['bulk'] = self.bulk
             self.event_rep.set()
             return True
 
