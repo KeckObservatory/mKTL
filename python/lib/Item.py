@@ -93,7 +93,7 @@ class Item:
             self.subscribe()
 
 
-    def set(self, new_value, wait=True):
+    def set(self, new_value, wait=True, bulk=None):
         ''' Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to
             False, the caller will be returned a :class:`Request.Pending`
@@ -102,6 +102,13 @@ class Item:
             request; the wait will return immediately if the request is
             already satisfied. There is no return value for a blocking
             request; failed requests will raise exceptions.
+
+            If *bulk* is set to anything it should be an as-bytes representation
+            of the new value; the *new_value* component should be a dictionary
+            providing whatever metadata is required to appropriately handle
+            the as-bytes representation; for example, if a numpy array is being
+            transmitted, the *new_value* dictionary will need to include the
+            dimensions of the array as well as its data type.
         '''
 
         request = dict()
@@ -109,7 +116,7 @@ class Item:
         request['name'] = self.name
         request['data'] = new_value
 
-        pending = self.req.send(request)
+        pending = self.req.send(request, bulk=bulk)
 
         if wait == False:
             return pending
