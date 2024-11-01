@@ -5,7 +5,7 @@ types of requests that can be made.
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 The first socket type implements a request/response pattern. This represents
-the majority of the interactive traffic between a mKTL client and deamon.
+the majority of the interactive traffic between a mKTL client and daemon.
 Because requests can be asynchronous, mKTL does not use the REQ/REP
 implementation in ZeroMQ, which enforces a strict one request, one response
 pattern; instead, we use DEALER/ROUTER, which allows any amount of messages
@@ -98,13 +98,12 @@ This section describes the various requests a client can make of the mKTL
 daemon via the request/response socket.
 
 	'GET': request the current value for a single key. The key is always
-		requested by its full unique name: the name of the store, and
-		the name of the key, concatenated with a period. The data field
-		will be as above in the description of the REQ/REP behavior;
-		the data field will be the telemetry value, whether it is an
-		integer, floating point number, string, boolean value, etc.
-		Bulk data, as described above, is sent as raw bytes in a
-		second message.
+		the name of the store, and the name of the item, concatenated
+		with a period. The data field will be as in the description of
+		the REQ/REP behavior; the data field will be the telemetry
+		value, whether it is an integer, floating point number, string,
+		boolean value, etc. Bulk data, as described above, is sent as
+		raw bytes in a second message.
 
 		The default behavior for a GET request is for a cached value
 		to be allowed as the returned response. A client can explicitly
@@ -132,7 +131,7 @@ daemon via the request/response socket.
 		the daemon, this could result in a variety of behavior, from
 		simply caching the value to slewing a telescope, and anything
 		in-between. The final response indicates the request is
-		complete but does not indicate what the new key value is.
+		complete but does not indicate what the new item value is.
 
 		Example request:	bJSON: '{'request': 'SET',
 						   'name': 'kpfpower.OUTLET_1A',
@@ -248,8 +247,8 @@ mimics the form of the request/response exchange described above:
 	JSON expanded:	{'message': 'PUB',
 			 'id': eight hexadecimal digits,
 			 'time': timestamp for this broadcast,
-			 'name': unique mKTL key name,
-			 'data': current key value}
+			 'name': unique mKTL item name,
+			 'data': current item value}
 
 There are two special types of broadcast messages. These are distinguished
 by a modifier on the topic string. The first type is the bulk/binary data
@@ -266,7 +265,7 @@ this offers clients the option of treating the entire bundle as an atomic
 entity. Each bundle is a sequence of simple JSON messages as described above.
 
 If, for example, there was a bundle of telemetry messages relating to a filter
-wheel, the individual items might have names like:
+wheel, the individual items might have keys like:
 
 	deimot.FILTERNAM
 	deimot.FILTERORD
@@ -325,8 +324,8 @@ described above.
 		provide a sufficiently unique integer to allow it to
 		associate all responses with the initial request. For
 		daemon-initiated broadcasts, the uniqueness constraint
-		should only be applied for a given key name, as opposed
-		to being unique across an entire store or daemon.
+		should only be applied for a given key, as opposed to
+		being unique across an entire store or daemon.
 
 	'time': a UNIX epoch timestamp associated with the generation of
 		the event. This is not intended to represent any time
@@ -338,13 +337,13 @@ described above.
 		last known change of the value in question, though in some
 		(if not most) cases it will be a reasonable approximation.
 
-	'name': the unique mKTL key name, or the unique mKTL store name for
-		some of the metadata queries. The mKTL key name, at the
-		protocol level, is a concatenation of the mKTL store name
-		and the key name within that store. In KTL parlance, this
-		would be the service.KEYWORD name; in EPICS parlance, it
-		would be the full IOC+channel name, as one might use with
-		caput or caget on the command line.
+	'name': the unique mKTL key, or the unique mKTL store name for some
+		of the metadata queries. The mKTL key, at the protocol level,
+		is a concatenation of the mKTL store name and the item name
+		within that store. In KTL parlance, this would be the
+		service.KEYWORD name; in EPICS parlance, it would be the full
+		IOC+channel name, as one might use with caput or caget on the
+		command line.
 
 	'data': the real payload of the message. For a read operation, this
 		will be the telemetry requested, whether it be a string,
