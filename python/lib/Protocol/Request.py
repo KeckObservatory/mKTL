@@ -51,6 +51,7 @@ class Client:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
+        self.socket_lock = threading.Lock()
 
         self.pending_thread = threading.Thread(target=self.run)
         self.pending_thread.daemon = True
@@ -172,14 +173,16 @@ class Client:
             request['bulk'] = True
 
         request = Json.dumps(request)
+        self.socket_lock.acquire()
         self.socket.send(request)
 
         if bulk is not None:
             prefix = 'bulk:' + name + ' ' + str(req_id) + ' '
             prefix = prefix.encode()
 
-            bulk_payload = prefix + bulk
-            self.socket.send(bulk_payload)
+            bulk_request = prefix + bulk
+            self.socket.send(bulk_request)
+        self.socket_lock.release()
 
 
         if response != True:
@@ -300,18 +303,12 @@ class Server:
         if port is None:
             port = self.port
 
-        # See the ZeroMQ man page for zmq_inproc for a full description of
-        # the connection type. Example URL:
-        #
-        # http://api.zeromq.org/4-2:zmq-inproc
-        #
-        # The 'inproc' usage here is analagous to a socketpair.
-
         port = 'tcp://*:' + str(port)
 
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.bind(port)
+        self.socket_lock = threading.Lock()
 
         # The use of worker threads and a synchronization primitive is something
         # like a 10-20% hit in performance compared to using a single thread.
@@ -321,6 +318,11 @@ class Server:
         # is similar in performance to using a SimpleQueue. Using a fast
         # Condition implementation might make it worth the trouble, but the
         # one in the threading module is slow enough that it's not any better.
+
+        # Using ZeroMQ sockets to implement a multithreaded queue was much
+        # slower (in the absence of multiprocessing). The use of a lock is
+        # necessary when sharing a ZeroMQ socket across threads as ZeroMQ
+        # makes no attempt to be thread-safe.
 
         self.queue = queue.SimpleQueue()
 
@@ -337,7 +339,7 @@ class Server:
             self.workers.append(thread)
 
 
-    def req_ack(self, socket, ident, request):
+    def req_ack(self, socket, lock, ident, request):
         ''' Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
@@ -352,15 +354,17 @@ class Server:
         ack['time'] = time.time()
         ack = Json.dumps(ack)
 
+        lock.acquire()
         socket.send_multipart((ident, ack))
+        lock.release()
 
 
-    def req_handler(self, socket, ident, request):
+    def req_handler(self, socket, lock, ident, request):
         ''' The default request handler is for debug purposes only, and is
             effectively a no-op.
         '''
 
-        self.req_ack(socket, ident, request)
+        self.req_ack(socket, lock, ident, request)
 
         response = dict()
         response['message'] = 'REP'
@@ -368,13 +372,15 @@ class Server:
         response['time'] = time.time()
         response = Json.dumps(response)
 
+        lock.acquire()
         socket.send_multipart((ident, response))
+        lock.release()
 
         # This default handler returns None, which indicates to req_incoming()
         # that it should not issue a response of its own.
 
 
-    def req_incoming(self, socket, ident, request):
+    def req_incoming(self, socket, lock, ident, request):
         ''' All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
@@ -384,7 +390,9 @@ class Server:
             :func:`req_handler` is expected to call :func:`req_ack` to
             acknowledge the incoming request; if :func:`req_handler` is
             returning a simple payload it will be packged into a REP response;
-            no response will be issued if :func:`req_handler` returns None.
+            the payload is always a dictionary, containing at minimum a 'data'
+            value, and an optional 'bulk' value. No response will be issued if
+            :func:`req_handler` returns None.
         '''
 
         error = None
@@ -392,7 +400,7 @@ class Server:
 
         try:
             request = Json.loads(request)
-            payload = self.req_handler(socket, ident, request)
+            payload = self.req_handler(socket, lock, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -414,10 +422,28 @@ class Server:
         if error is not None:
             response['error'] = error
         if payload is not None:
-            response['data'] = payload
+            response['data'] = payload['data']
+
+            try:
+                bulk = payload['bulk']
+            except KeyError:
+                pass
+            else:
+                name = request['name']
+                id = str(response['id'])
+                prefix = 'bulk:' + name + ' ' + id + ' '
+                prefix = prefix.encode()
+
+                bulk_response = prefix + bulk
+                lock.acquire()
+                self.socket.send_multipart((ident, bulk_response))
+                lock.release()
+
 
         response = Json.dumps(response)
+        lock.acquire()
         self.socket.send_multipart((ident, response))
+        lock.release()
 
 
     def run(self):
@@ -430,7 +456,7 @@ class Server:
             for active,flag in sockets:
                 if self.socket == active:
                     ident, request = self.socket.recv_multipart()
-                    self.queue.put((self.socket, ident, request))
+                    self.queue.put((self.socket, self.socket_lock, ident, request))
 
 
     def worker_main(self):
