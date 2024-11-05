@@ -1,6 +1,11 @@
 
 import traceback
 
+try:
+    import numpy
+except ImportError:
+    numpy = None
+
 from .Protocol import Publish
 from .Protocol import Request
 from . import WeakRef
@@ -165,6 +170,30 @@ class Item:
         self.subscribed = True
 
 
+    def _interpret_bulk(self, new_message):
+        ''' Interpret a new bulk value, returning the new rich data construct
+            for further handling by methods like :func:`_update`. The default
+            handling here treats the bulk message as if it is an N-dimensional
+            numpy array; breaking out the interpretation allows future handlers
+            to expand as necessary for subclasses.
+        '''
+
+        if numpy is None:
+            raise ImportError('numpy module not available')
+
+        description = new_message['data']
+        bulk = new_message['bulk']
+
+        shape = description['shape']
+        dtype = description['dtype']
+        dtype = getattr(numpy, dtype)
+
+        serialized = numpy.frombuffer(bulk, dtype=dtype)
+        reshaped = numpy.reshape(serialized, newshape=shape)
+
+        return reshaped
+
+
     def _propagate(self, new_data, new_timestamp):
         ''' Invoke any registered callbacks upon receipt of a new value.
         '''
@@ -198,12 +227,17 @@ class Item:
             GET request or from a PUB subscription.
         '''
 
-        ### How does this handle bulk data?
-
         try:
             new_data = new_message['data']
         except KeyError:
             return
+
+        try:
+            new_message['bulk']
+        except KeyError:
+            pass
+        else:
+            new_data = self._interpret_bulk(new_message)
 
         new_timestamp = new_message['time']
 
