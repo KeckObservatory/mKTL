@@ -429,6 +429,7 @@ class Server:
             except KeyError:
                 pass
             else:
+                response['bulk'] = True
                 name = request['name']
                 id = str(response['id'])
                 prefix = 'bulk:' + name + ' ' + id + ' '
