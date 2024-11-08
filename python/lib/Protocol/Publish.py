@@ -46,7 +46,7 @@ class Client:
         self.thread.start()
 
 
-    def propagate(self, message):
+    def propagate(self, topic, message):
         ''' Invoke any/all callbacks registered via :func:`register` for
             a newly arrived message.
         '''
@@ -58,20 +58,6 @@ class Client:
         else:
             return
 
-        # A message is either JSON-formatted or a binary blob. Parse any JSON
-        # now so that it only has to happen once; callbacks are expecting to
-        # receive a Python dictionary representing the parsed JSON.
-
-        topic, message = message.split(maxsplit=1)
-
-        if topic[:5] == b'bulk:':
-            ## It may make more sense for a different callback to be invoked
-            ## for bulk data. For now, we will rely on the callback to be
-            ## smart and recognize when it is receiving a byte stream.
-            topic = topic[5:]
-        else:
-            message = message.decode()
-            message = Json.loads(message)
 
         # Handle the case where a callback is registered for any/all messages.
 
@@ -166,18 +152,72 @@ class Client:
 
     def run(self):
 
-        ### Does this need to be fed into a pool of threads via a DEALER
-        ### socket? So that one bad propagation doesn't bring it all down?
+        ### Does this need to be fed into a pool of threads?
+        ### So that one bad propagation doesn't slow everything?
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
+
+        pending = dict()
 
         while self.shutdown == False:
             sockets = poller.poll(1000)
             for active,flag in sockets:
                 if self.socket == active:
                     message = self.socket.recv()
-                    self.propagate(message)
+
+                    # A message is either JSON-formatted or a binary blob.
+                    # Parse any JSON now so that it only has to happen once;
+                    # callbacks are expecting to receive a Python dictionary
+                    # representing the parsed JSON.
+
+                    # We could receive the two pieces of a bulk message in
+                    # either order; in either case the message needs to be
+                    # reconstructed from its two parts before being propagated
+                    # to any subscribed clients.
+
+                    topic, message = message.split(maxsplit=1)
+
+                    if topic[:5] == b'bulk:':
+                        message_id, bulk = message.split(maxsplit=1)
+                        message_id = int(message_id)
+
+                        topic = topic[5:]
+                        key = (topic, message_id)
+
+                        try:
+                            previous = pending[key]
+                        except KeyError:
+                            pending[key] = bulk
+                            continue
+                        else:
+                            # Reconstitute the final message.
+                            message = previous
+                            message['bulk'] = bulk
+                            del pending[key]
+
+                    else:
+                        message = message.decode()
+                        message = Json.loads(message)
+
+                        try:
+                            bulk = message['bulk']
+                        except KeyError:
+                            bulk = False
+
+                        if bulk == True:
+                            key = (topic, message['id'])
+                            try:
+                                previous = pending[key]
+                            except KeyError:
+                                pending[key] = message
+                                continue
+                            else:
+                                # Reconstitute the final message.
+                                message['bulk'] = bulk
+                                del pending[key]
+
+                    self.propagate(topic, message)
 
 
     def subscribe(self, topic):
@@ -194,6 +234,13 @@ class Client:
             topic = topic.encode()
 
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+        # Someone that knows whether a given item has a bulk component should
+        # decide whether to subscribe to the bulk-specific topic. We could
+        # do it here, for every subscribed channel regardless of whether it
+        # actually has a bulk component, but that seems inefficient.
+
+        ### self.socket.setsockopt(zmq.SUBSCRIBE, b'bulk:' + topic)
 
 
 # end of class Client
