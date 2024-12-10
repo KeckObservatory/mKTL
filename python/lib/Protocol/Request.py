@@ -41,8 +41,8 @@ class Client:
         if port is None:
             port = self.port
 
-        port = str(port)
-        server = "tcp://%s:%s" % (address, port)
+        port = int(port)
+        server = "tcp://%s:%d" % (address, port)
         identity = "Request.Client.%d" % (id(self))
         self.address = address
         self.port = port
