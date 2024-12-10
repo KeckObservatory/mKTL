@@ -209,14 +209,32 @@ daemon via the request/response socket.
 
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 563,
-					  'data': {'name': kpfguide,
-						   'hash': 0x84a30b35...,
-						   'origin': somehostname,
-						   'stratum': 0,
+					  'data': [{'name': kpfguide,
+						    'hash': 0x84a30b35...,
+						    'provenance':
+						    	[{'stratum': 1,
+						   	  'address': '192.1...',
+							  'port': 10111},
+						         {'stratum': 0,
+						   	  'address': '128.1...',
+							  'port': 10111}]
 						   'time': 1724892333.924,
 						   'keys': [{...},
 							    {...},
-							    ...]}}'
+							    ...]},
+					           {'name': kpfguide,
+						    'hash': 0x84fe97a3...,
+						    'provenance':
+						    	[{'stratum': 1,
+						   	  'address': '10.1...',
+							  'port': 10111},
+						         {'stratum': 0,
+						   	  'address': '172.1...',
+							  'port': 10111}]
+						   'time': 1724892345.924,
+						   'keys': [{...},
+							    {...},
+							    ...]}]}'
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
