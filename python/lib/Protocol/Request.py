@@ -44,6 +44,8 @@ class Client:
         port = str(port)
         server = "tcp://%s:%s" % (address, port)
         identity = "Request.Client.%d" % (id(self))
+        self.address = address
+        self.port = port
 
         self.pending = dict()
 
