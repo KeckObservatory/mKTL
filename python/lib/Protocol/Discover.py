@@ -12,11 +12,12 @@ import socket
 import threading
 import time
 
+from . import Request
 
 query = 'I heard it'
 query = query.encode()
 
-response = 'on the X'
+response = 'on the X:'
 response = response.encode()
 
 # There's nothing special about this port number, other than it is not
@@ -30,12 +31,17 @@ class Listener:
         Up to the application to decide where to go from there.
     '''
 
-    def __init__(self, port=default_port):
+    def __init__(self, port=default_port, request_port=Request.default_port):
         self.delay = 1
         self.listening = False
         self.seen = dict()
         self.socket = None
         self.thread = None
+
+        request_port = int(request_port)
+        request_port = str(request_port)
+        request_port = request_port.encode()
+        self.response = response + request_port
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -85,7 +91,7 @@ class Listener:
 
             data = data.strip()
             if data == query:
-                self.socket.sendto(response, address)
+                self.socket.sendto(self.response, address)
                 self.seen[address] = now
 
 
@@ -134,8 +140,10 @@ def search(port=default_port, wait=False):
             elapsed = now - start
 
         data = data.strip()
-        if data == response:
-            found.append(server[0])
+        if response in data:
+            request_port = data[len(response):]
+            request_port = int(request_port)
+            found.append((server[0], request_port))
 
             if wait == True:
                 sock.settimeout(expiration - elapsed)
