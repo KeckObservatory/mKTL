@@ -5,6 +5,7 @@
 import atexit
 import itertools
 import queue
+import socket
 import sys
 import threading
 import time
@@ -300,7 +301,12 @@ class Server:
     port = default_port
     worker_count = 10
 
-    def __init__(self, port=None):
+    def __init__(self, hostname=None, port=None):
+
+        if hostname is None:
+            hostname = socket.getfqdn()
+
+        self.hostname = hostname
 
         if port is None:
             port = self.port
@@ -462,6 +468,20 @@ class Server:
                 if self.socket == active:
                     ident, request = self.socket.recv_multipart()
                     self.queue.put((self.socket, self.socket_lock, ident, request))
+
+
+    def send(self, ident, response):
+        ''' Convenience method for subclasses to fire off a message response.
+            Any such subclasses are not using the background threads to handle
+            requests, and are handling asynchronous responses that need to be
+            relayed back to the original caller. Otherwise, they would have a
+            reference to the lock and the socket, and would be making these
+            calls directly.
+        '''
+
+        self.socket_lock.acquire()
+        self.socket.send_multipart((ident, response))
+        self.socket_lock.release()
 
 
     def worker_main(self):
