@@ -305,11 +305,13 @@ class Server:
         if port is None:
             port = self.port
 
-        port = 'tcp://*:' + str(port)
+        self.port = port
+
+        listen_address = 'tcp://*:' + str(port)
 
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.bind(port)
+        self.socket.bind(listen_address)
         self.socket_lock = threading.Lock()
 
         # The use of worker threads and a synchronization primitive is something
