@@ -34,6 +34,7 @@ class KTL(Subprocess.Base):
         service_dict = describeService(self.name)
 
         hash = self.hash(service_dict['keys'])
+        service_dict['name'] = self.name
         service_dict['hash'] = hash
         service_dict['time'] = time.time()
 
