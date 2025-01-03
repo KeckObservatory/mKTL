@@ -8,6 +8,7 @@ import atexit
 import itertools
 import json
 import os
+import socket
 import subprocess
 import sys
 import tempfile
@@ -419,6 +420,16 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request_name))
 
+        # Treat this daemon as the stratum 0 for this configuration block,
+        # since it is coming from a running subprocess.
+
+        provenance = dict()
+        provenance['stratum'] = 0
+        provenance['hostname'] = socket.getfqdn()
+        provenance['port'] = self.port
+
+        self.config['provenance'] = list()
+        self.config['provenance'].append(provenance)
         return sub.config
 
 
