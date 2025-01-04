@@ -420,20 +420,27 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request_name))
 
+        response = dict()
+        response['message'] = 'REP'
+        response['id'] = request['id']
+
         # Treat this daemon as the stratum 0 for this configuration block,
-        # since it is coming from a running subprocess.
+        # since it is coming from a running subprocess. This overwrites any
+        # provenance that might already be present in the configuration block.
 
         provenance = dict()
         provenance['stratum'] = 0
-        provenance['hostname'] = socket.getfqdn()
+        provenance['hostname'] = self.hostname
         provenance['port'] = self.port
 
-        self.config['provenance'] = list()
-        self.config['provenance'].append(provenance)
-        return sub.config
+        sub.config['provenance'] = list()
+        sub.config['provenance'].append(provenance)
+
+        response['data'] = sub.config
+        return response
 
 
-    def req_handler(self, ident, request):
+    def req_handler(self, socket, lock, ident, request):
         ''' Inspect the incoming request type and decide how a response
             will be generated. Interactive requests are handled exclusively
             by the subprocess, including the ACK of the request; other request
@@ -443,14 +450,14 @@ class RequestServer(mKTL.Protocol.Request.Server):
         try:
             type = request['request']
         except KeyError:
-            self.req_ack(ident, request)
+            self.req_ack(socket, lock, ident, request)
             raise KeyError("invalid request JSON, 'request' not set")
 
         try:
             name = request['name']
         except KeyError:
             if type != 'HASH':
-                self.req_ack(ident, request)
+                self.req_ack(socket, lock, ident, request)
                 raise KeyError("invalid request JSON, 'name' not set")
 
         if type == 'GET' or type == 'SET':
@@ -467,7 +474,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
             # though the response will arrive quickly enough that an ACK
             # may not strictly be necessary.
 
-            self.req_ack(ident, request)
+            self.req_ack(socket, lock, ident, request)
             if type == 'HASH':
                 payload = self.req_hash(ident, request)
             elif type == 'CONFIG':
@@ -482,7 +489,6 @@ class RequestServer(mKTL.Protocol.Request.Server):
         ''' Return the hash of a configuration block for a requested store name,
             or all hashes for all locally known stores.
         '''
-
 
         try:
             request = request['name']
