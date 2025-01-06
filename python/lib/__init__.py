@@ -5,6 +5,7 @@
 
 from . import WeakRef
 
+from . import Config
 from . import Protocol
 from . import Proxy
 
