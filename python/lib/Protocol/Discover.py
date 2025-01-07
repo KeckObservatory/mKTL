@@ -1,9 +1,9 @@
 ''' A simple broadcast UDP discovery method. A persistent server would fire up a
-    :class:`Listener` instance, and clients would use the func:`search` method
+    :class:`Server` instance, and clients would use the func:`search` method
     to find any available listeners.
 
     No other information is exchanged beyond establishing that a
-    :class:`Listener` is running on a specific address. Clients can then attempt
+    :class:`Server` is running on a specific address. Clients can then attempt
     more interesting questions once they know which addresses might participate
     in answering those questions.
 '''
@@ -26,7 +26,7 @@ response = response.encode()
 default_port = 10103
 
 
-class Listener:
+class Server:
     ''' Respond to any queries, acknowledging that we're running. That's it.
         Up to the application to decide where to go from there.
     '''
@@ -98,15 +98,15 @@ class Listener:
         self.cleanup()
 
 
-# end of class Listener
+# end of class Server
 
 
 
 def search(port=default_port, wait=False):
-    ''' Find locally available Listener instances. If *wait* is True, the search
-        will delay returning until multiple Listeners have an opportunity to
-        respond; otherwise, the fastest responding Listeners will be identified
-        and there will be no additional delay.
+    ''' Find locally available :class:`Server` instances. If *wait* is True, the
+        search will delay returning until multiple instances have an opportunity
+        to respond; otherwise, the fastest responding instance will be included
+        in the returned list and there will be no additional delay.
     '''
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
