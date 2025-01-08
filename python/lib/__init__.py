@@ -5,9 +5,9 @@
 
 from . import WeakRef
 
-from . import Config
 from . import Protocol
 from . import Proxy
+from . import Config
 
 from . import Get
 get = Get.get
