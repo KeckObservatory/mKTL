@@ -31,7 +31,8 @@ def add(block, hostname, port):
 
 
 def contains(block, provenance):
-    ''' Does this configuration block contain this provenance?
+    ''' Does this configuration block contain this provenance? The stratum
+        field of the provenance is ignored for this check.
     '''
 
     try:
