@@ -4,7 +4,7 @@
 cache = dict()
 
 
-def add(self, name, data):
+def add(name, data):
     ''' Add a configuration block to the local cache.
     '''
 
@@ -20,7 +20,7 @@ def add(self, name, data):
     blocks.append(data)
 
 
-def get(self, name):
+def get(name):
     ''' Retrieve the locally stored configuration for a given store. A KeyError
         exception is raised if there are no locally stored configuration blocks.
     '''
