@@ -37,4 +37,31 @@ def get(name):
     return blocks
 
 
+def list():
+    ''' Return a list of known store names currently in the local cache.
+    '''
+
+    names = cache.keys()
+    results = list()
+
+    for name in names:
+        blocks = cache[name]
+        if len(blocks) > 0:
+            results.append(name)
+
+    return results
+
+
+def remove(name, data):
+    ''' Remove a configuration block from the local cache.
+    '''
+
+    try:
+        blocks = cache[name]
+    except KeyError:
+        raise KeyError('no local configuration for ' + repr(name))
+
+    blocks.remove(data)
+
+
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
