@@ -1,7 +1,7 @@
 ''' Routines to handle provenance information.
 '''
 
-def add(self, block, hostname, port):
+def add(block, hostname, port):
     ''' Add the provenance of this daemon to the supplied configuration
         block. The block is provided as a Python dictionary; the hostname
         and port combine to provide a unique location identifier that
@@ -23,16 +23,14 @@ def add(self, block, hostname, port):
         if provenance['stratum'] > stratum:
             stratum = provenance['stratum']
 
-    provenance = dict()
-    provenance['stratum'] = stratum + 1
-    provenance['hostname'] = hostname
-    provenance['port'] = port
+    provenance = create(stratum + 1, hostname, port)
 
     block['provenance'].append(provenance)
     return provenance
 
 
-def contains(self, block, provenance):
+
+def contains(block, provenance):
     ''' Does this configuration block contain this provenance?
     '''
 
@@ -55,7 +53,24 @@ def contains(self, block, provenance):
     return False
 
 
-def match(self, block1, block2):
+
+def create(stratum, hostname, port):
+    ''' Create a provenance dictionary.
+    '''
+
+    provenance = dict()
+
+    if stratum is None:
+        pass
+    else:
+        provenance['stratum'] = stratum
+
+    provenance['hostname'] = str(hostname)
+    provenance['port'] = int(port)
+
+
+
+def match(block1, block2):
     ''' Check the provenance for the two provided blocks, and return True
         if they match. This check allows for one provenance to be longer
         than the other-- if they are aligned from stratum 0 up to the full
