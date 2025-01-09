@@ -11,7 +11,7 @@ def add(name, data):
     try:
         blocks = cache[name]
     except KeyError:
-        blocks = list()
+        blocks = []             # list() is now the method defined here.
         cache[name] = blocks
 
     ## Does there need to be a provenance check here?
@@ -28,7 +28,7 @@ def get(name):
     try:
         blocks = cache[name]
     except KeyError:
-        blocks = list()
+        blocks = []             # list() is now the method defined here.
         cache[name] = blocks
 
     if len(blocks) == 0:
@@ -42,7 +42,7 @@ def list():
     '''
 
     names = cache.keys()
-    results = list()
+    results = []                # list() is now the method defined here.
 
     for name in names:
         blocks = cache[name]
