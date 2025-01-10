@@ -4,7 +4,6 @@
     as KTL or EPICS, will occur.
 '''
 
-import hashlib
 import itertools
 import sys
 import threading
@@ -13,6 +12,7 @@ import traceback
 import zmq
 
 from ..Protocol import Json
+from ..Config import Hash
 
 zmq_context = zmq.Context()
 
@@ -56,18 +56,7 @@ class Base:
 
 
     def hash(self, keys):
-        ''' Convert the supplied keyword dictionary to JSON, hash the results,
-            and return the hash. The protocol description limits the hash to
-            32 hexadecimal integers, but the specific hash type is unspecified,
-            and allowed to vary between implementations-- as long as it is
-            consistent.
-        '''
-
-        keys_json = Json.dumps(keys)
-
-        hash = hashlib.shake_256(keys_json)
-        hash = int(hash.hexdigest(16), 16)
-        return hash
+        return Hash.hash(keys)
 
 
     def publish(self, message, bulk=None):
