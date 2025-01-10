@@ -6,12 +6,13 @@
 
 import hashlib
 import itertools
-import json
 import sys
 import threading
 import time
 import traceback
 import zmq
+
+from ..Protocol import Json
 
 zmq_context = zmq.Context()
 
@@ -62,8 +63,7 @@ class Base:
             consistent.
         '''
 
-        keys_json = json.dumps(keys)
-        keys_json = keys_json.encode()
+        keys_json = Json.dumps(keys)
 
         hash = hashlib.shake_256(keys_json)
         hash = int(hash.hexdigest(16), 16)
@@ -87,8 +87,9 @@ class Base:
         if bulk is not None:
             message['bulk'] = True
 
-        message = topic + ' ' + json.dumps(message)
-        message = message.encode()
+        prefix = topic + ' '
+        prefix = prefix.encode()
+        message = prefix + Json.dumps(message)
 
         self.pub_socket.send(message)
 
@@ -145,8 +146,7 @@ class Base:
         ack['message'] = 'ACK'
         ack['id'] = id
         ack['time'] = time.time()
-        ack = json.dumps(ack)
-        ack = ack.encode()
+        ack = Json.dumps(ack)
 
         socket.send_multipart((ident, ack))
 
@@ -211,7 +211,7 @@ class Base:
         payload = None
 
         try:
-            request = json.loads(request)
+            request = Json.loads(request)
             payload = self.req_handler(socket, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
@@ -231,8 +231,7 @@ class Base:
         if payload is not None:
             response['data'] = payload
 
-        response = json.dumps(response)
-        response = response.encode()
+        response = Json.dumps(response)
         socket.send_multipart((ident, response))
 
 
