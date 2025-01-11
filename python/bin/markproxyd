@@ -36,6 +36,8 @@ def main():
     pub = mKTL.Protocol.Publish.Server()
     req = RequestServer()
 
+    discovery = mKTL.Protocol.Discover.Server(request_port=req.port)
+
     # PUB and REP messages can flow directly from the subprocess out to the
     # external interface without any additional handling; inbound requests
     # on the external interface have to be parsed to know which subprocess
@@ -48,13 +50,22 @@ def main():
     for name in names:
         main.subs[name] = ProxySubprocess(name, req, pub)
 
+
     while True:
+
+        # Look for any/all locally available mKTL daemons to share our
+        # configuration data with. Re-running this periodically allows us
+        # to identify any newly running daemons.
+
+        main.discovered = mKTL.Protocol.Discover.search(wait=True)
+
         try:
             main.shutdown.wait(30)
         except (KeyboardInterrupt, SystemExit):
             break
 
 
+main.discovered = list()
 main.subs = dict()
 main.shutdown = threading.Event()
 
@@ -126,7 +137,6 @@ class ProxySubprocess:
         req_address = 'ipc://' + req_address
         pub_address = 'ipc://' + pub_address
 
-        self.config = None
         self.name = name
         self.pub_address = pub_address
         self.req_address = req_address
@@ -177,7 +187,7 @@ class ProxySubprocess:
         ### no configuration data, log the error, at a minimum.
 
         try:
-            self.config = new_config['data']
+            new_config['data']
         except KeyError:
             error = new_config['error']
             print(error['debug'])
@@ -185,6 +195,21 @@ class ProxySubprocess:
             exception.add_note('Original traceback:')
             exception.add_note(error['debug'])
             raise exception
+
+
+        # Pass the new configuration upstream so it can be cached for future
+        # queries. Reaching in here feels a bit like too much close coupling;
+        # it'd be nice if we could pass a request "up" through a more normal
+        # channel instead of calling a "private" method in this fashion.
+
+        provenance = dict()
+        provenance['stratum'] = 0
+        provenance['hostname'] = self.req.external.hostname
+        provenance['port'] = self.req.external.port
+
+        request['data'] = new_config['data']
+        request['data']['provenance'] = provenance
+        self.req.external.req_config(None, request)
 
 
     def startSubprocess(self):
@@ -416,27 +441,33 @@ class RequestServer(mKTL.Protocol.Request.Server):
             raise KeyError('CONFIG request must specify a name')
 
         try:
-            sub = main.subs[request_name]
+            data = request['data']
+        except KeyError:
+            pass
+        else:
+            # The presence of a data block implies a 'set' operation.
+            # Cache the information, and return an empty dict to indicate
+            # the requested operation is complete.
+
+            ## This makes no attempt to handle a case where we are replacing
+            ## an existing configuration block-- removing it first, and adding
+            ## the block we currently have access to. If a subprocess hands us
+            ## a new configuration block, as will happen when it gets restarted,
+            ## how can we tell?
+
+            mKTL.Config.Cache.add(request_name, data)
+            return dict()
+
+        try:
+            data = mKTL.Config.Cache.get(request_name)
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request_name))
 
         response = dict()
         response['message'] = 'REP'
         response['id'] = request['id']
+        response['data'] = mKTL.Config.Cache.get(request_name)
 
-        # Treat this daemon as the stratum 0 for this configuration block,
-        # since it is coming from a running subprocess. This overwrites any
-        # provenance that might already be present in the configuration block.
-
-        provenance = dict()
-        provenance['stratum'] = 0
-        provenance['hostname'] = self.hostname
-        provenance['port'] = self.port
-
-        sub.config['provenance'] = list()
-        sub.config['provenance'].append(provenance)
-
-        response['data'] = sub.config
         return response
 
 
@@ -491,27 +522,31 @@ class RequestServer(mKTL.Protocol.Request.Server):
         '''
 
         try:
-            request = request['name']
+            name = request['name']
         except KeyError:
-            request = None
+            name = None
 
-        if request is not None:
-            try:
-                main.subs[request]
-            except KeyError:
-                raise KeyError('no local configuration for ' + repr(request))
+
+        cached = mKTL.Config.Hash.get(name)
+
+        if name is None:
+            cached = list(cached)
+        else:
+            cached = [(name, cached),]
 
         hashes = list()
-        for name in main.subs:
-            if request is None or request == name:
-                sub = main.subs[name]
+        for name,hash in cached:
+            payload = dict()
+            payload['name'] = name
+            payload['hash'] = hash
+            hashes.append(payload)
 
-                payload = dict()
-                payload['name'] = name
-                payload['hash'] = sub.config['hash']
-                hashes.append(payload)
+        response = dict()
+        response['message'] = 'REP'
+        response['id'] = request['id']
+        response['data'] = hashes
 
-        return hashes
+        return response
 
 
     def req_relay(self, ident, request):
