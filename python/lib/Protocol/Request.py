@@ -160,7 +160,6 @@ class Client:
         '''
 
         req_id = self.req_id_next()
-        name = request['name']
 
         if response == True:
             pending = Pending()
@@ -180,6 +179,7 @@ class Client:
         self.socket.send(request)
 
         if bulk is not None:
+            name = request['name']
             prefix = 'bulk:' + name + ' ' + str(req_id) + ' '
             prefix = prefix.encode()
 
