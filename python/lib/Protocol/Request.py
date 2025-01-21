@@ -432,11 +432,11 @@ class Server:
         if error is not None:
             response['error'] = error
         if payload is not None:
-            response['data'] = payload['data']
+            response['data'] = payload
 
             try:
                 bulk = payload['bulk']
-            except KeyError:
+            except (KeyError, TypeError):
                 pass
             else:
                 response['bulk'] = True
