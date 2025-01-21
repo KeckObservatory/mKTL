@@ -2,6 +2,7 @@
 '''
 
 from . import Hash
+from . import Provenance
 
 cache = dict()
 
@@ -20,8 +21,18 @@ def add(name, data):
     except KeyError:
         data['hash'] = Hash.hash(data['keys'])
 
-    ## Does there need to be a provenance check here?
-    ## What about duplicate keys?
+    print('Cache.add(): ' + repr(data))
+
+    # Provenance should be unique for a given store name. Pre-emptively
+    # remove the previous data block, if any.
+
+    try:
+        remove(name, data)
+    except KeyError:
+        pass
+
+    ## What about duplicate keys? Or is something upstream in the configuration
+    ## handling chain handling that before this method gets called?
 
     def get_hash(config_block):
         return config_block['hash']
@@ -64,7 +75,8 @@ def list():
 
 
 def remove(name, data):
-    ''' Remove a configuration block from the local cache.
+    ''' Remove a configuration block from the local cache. Matches are
+        determined via provenance.
     '''
 
     try:
@@ -72,7 +84,19 @@ def remove(name, data):
     except KeyError:
         raise KeyError('no local configuration for ' + repr(name))
 
-    blocks.remove(data)
+    to_remove = None
+
+    for block in blocks:
+        matched = Provenance.match(block, data)
+
+        if matched == True:
+            to_remove = block
+            break
+
+    if to_remove is None:
+        raise KeyError('no matching provenance found for data block')
+
+    blocks.remove(to_remove)
     Hash.rehash(name)
 
 
