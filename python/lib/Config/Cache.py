@@ -21,8 +21,6 @@ def add(name, data):
     except KeyError:
         data['hash'] = Hash.hash(data['keys'])
 
-    print('Cache.add(): ' + repr(data))
-
     # Provenance should be unique for a given store name. Pre-emptively
     # remove the previous data block, if any.
 
@@ -87,7 +85,7 @@ def remove(name, data):
     to_remove = None
 
     for block in blocks:
-        matched = Provenance.match(block, data)
+        matched = Provenance.match(block['provenance'], data['provenance'])
 
         if matched == True:
             to_remove = block

@@ -69,27 +69,15 @@ def create(stratum, hostname, port):
     provenance['hostname'] = str(hostname)
     provenance['port'] = int(port)
 
+    return provenance
 
 
-def match(block1, block2):
-    ''' Check the provenance for the two provided blocks, and return True
-        if they match. This check allows for one provenance to be longer
-        than the other-- if they are aligned from stratum 0 up to the full
-        length of the shorter provenance, that is considered a match.
+def match(full_provenance1, full_provenance2):
+    ''' Check the two provided provenance lists, and return True if they match.
+        This check allows for one provenance to be longer than the other; if
+        they are aligned from stratum 0 up to the full length of the shorter
+        provenance, that is considered a match.
     '''
-
-    try:
-        full_provenance1 = block1['provenance']
-    except KeyError:
-        full_provenance1 = list()
-        block1['provenance'] = full_provenance1
-
-    try:
-        full_provenance2 = block2['provenance']
-    except KeyError:
-        full_provenance2 = list()
-        block2['provenance'] = full_provenance2
-
 
     # There has to be at least one matching stratum in the provenance
     # in order for it to be a match. Two empty provenances compared
