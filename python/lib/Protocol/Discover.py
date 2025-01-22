@@ -25,6 +25,15 @@ response = response.encode()
 
 default_port = 10103
 
+# The default port is used for discovery of intermediaries, daemons that are
+# willing to cache and share second-hand information aggregated from one or
+# more authoritative daemons, and be the first stop for any new clients on
+# the network. The direct port is used by last-stop daemons, those that are
+# authoritative for their respective stores; the intermediaries will use this
+# direct port to find them.
+
+direct_port = 10111
+
 
 class Server:
     ''' Respond to any queries, acknowledging that we're running. That's it.
@@ -102,6 +111,20 @@ class Server:
 
 
 
+class DirectServer(Server):
+    ''' Same as the :class:`Server`, but intended for use by authoritative
+        daemons answering only for themselves, not aggregating content from
+        any other sources.
+    '''
+
+    def __init__(self, port=direct_port, request_port=Request.default_port):
+        return Server.__init__(self, port, request_port)
+
+
+# end of class DirectServer
+
+
+
 def search(port=default_port, wait=False):
     ''' Find locally available :class:`Server` instances. If *wait* is True, the
         search will delay returning until multiple instances have an opportunity
@@ -161,6 +184,13 @@ def search(port=default_port, wait=False):
 
     return found
 
+
+def search_direct(port=direct_port, wait=True):
+    ''' The same as :func:`search`, but looking for :class:`DirectServer`
+        instances listening on the alternate port.
+    '''
+
+    return search(port, wait)
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
