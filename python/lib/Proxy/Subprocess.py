@@ -9,6 +9,7 @@ import sys
 import threading
 import time
 import traceback
+import uuid
 import zmq
 
 from ..Protocol import Json
@@ -231,6 +232,15 @@ class Base:
         '''
 
         raise NotImplmentedError('must be implemented by the subclass')
+
+
+    def uuid(self, identifier):
+        ''' Generate a deterministic UUID based on the provided *identifier*.
+            For any given *identifier*, the returned UUID is always the same;
+            it is effectively a hash of the identifier.
+        '''
+
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, identifier))
 
 
     def worker_main(self):

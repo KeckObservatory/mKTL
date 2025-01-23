@@ -30,14 +30,16 @@ class KTL(Subprocess.Base):
 
 
     def req_config(self, request):
-        service_dict = describeService(self.name)
+        configuration = describeService(self.name)
 
-        hash = self.hash(service_dict['keys'])
-        service_dict['name'] = self.name
-        service_dict['hash'] = hash
-        service_dict['time'] = time.time()
+        hash = self.hash(configuration['keys'])
+        uuid = self.uuid('ktl.' + self.name)
+        configuration['name'] = self.name
+        configuration['hash'] = hash
+        configuration['uuid'] = uuid
+        configuration['time'] = time.time()
 
-        return service_dict
+        return configuration
 
 
     def req_get(self, request):
@@ -91,13 +93,13 @@ class KTL(Subprocess.Base):
         payload['asc'] = ascii
         payload['bin'] = binary
 
-        broadcast_dict = dict()
-        broadcast_dict['message'] = 'PUB'
-        broadcast_dict['time'] = timestamp
-        broadcast_dict['name'] = keyword.full_name
-        broadcast_dict['data'] = payload
+        broadcast = dict()
+        broadcast['message'] = 'PUB'
+        broadcast['time'] = timestamp
+        broadcast['name'] = keyword.full_name
+        broadcast['data'] = payload
 
-        self.publish(broadcast_dict)
+        self.publish(broadcast)
 
 
 # end of class KTL
