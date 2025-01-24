@@ -134,7 +134,7 @@ def load_one(name, specific):
             target_uuid = base_filename
 
         else:
-            raise ValueError("file not found in %s: %s" % (base_directory, repr(specific))
+            raise ValueError("file not found in %s: %s" % (base_directory, repr(specific)))
 
     raw_json = open(target_file, 'r').read()
     configuration = Json.loads(raw_json)
@@ -177,7 +177,7 @@ def save(name, configuration):
         os.makedirs(cache_directory, mode=0o775)
 
     if os.access(cache_directory, os.W_OK) != True:
-        raise OSError('cannot write to cache directory: ' + cache_directory))
+        raise OSError('cannot write to cache directory: ' + cache_directory)
 
     raw_json = Json.dumps(configuration)
 
