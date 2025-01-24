@@ -33,6 +33,8 @@ def directory():
     directory.found = found
     return found
 
+directory.found = None
+
 
 
 def load(name, specific=None):
@@ -164,6 +166,7 @@ def save(name, configuration):
         # a single block. Try handling it that way.
         for block in configuration:
             save(name, block)
+        return
 
     base_directory = directory()
     base_filename = block_uuid
@@ -181,12 +184,18 @@ def save(name, configuration):
 
     raw_json = Json.dumps(configuration)
 
-    os.remove(json_filename)
-    writer = open(json_filename, 'w')
+    target_filename = os.path.join(cache_directory, json_filename)
+
+    try:
+        os.remove(target_filename)
+    except FileNotFoundError:
+        pass
+
+    writer = open(target_filename, 'wb')
     writer.write(raw_json)
     writer.close()
 
-    os.chmod(json_filename, 0o664)
+    os.chmod(target_filename, 0o664)
 
 
 
