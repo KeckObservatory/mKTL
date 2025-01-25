@@ -34,9 +34,16 @@ def main():
     names = sys.argv[1:]
 
     pub = mKTL.Protocol.Publish.Server()
-    req = RequestServer()
+    req = RequestServer(port=10112)
+    ##req = RequestServer(port=10111)
 
-    discovery = mKTL.Protocol.Discover.Server(request_port=req.port)
+    discovery = mKTL.Protocol.Discover.DirectServer(request_port=req.port)
+
+    # Try once to locate any running guide processes and notify them about
+    # our unique local configuration. Further discovery of running daemons,
+    # as might need to occur after the guide restarts, is their responsibility.
+
+    main.guides = mKTL.Protocol.Discover.search(wait=True)
 
     # PUB and REP messages can flow directly from the subprocess out to the
     # external interface without any additional handling; inbound requests
@@ -53,19 +60,12 @@ def main():
 
     while True:
 
-        # Look for any/all locally available mKTL daemons to share our
-        # configuration data with. Re-running this periodically allows us
-        # to identify any newly running daemons.
-
-        main.discovered = mKTL.Protocol.Discover.search(wait=True)
-
         try:
             main.shutdown.wait(30)
         except (KeyboardInterrupt, SystemExit):
             break
 
 
-main.discovered = list()
 main.subs = dict()
 main.shutdown = threading.Event()
 
@@ -129,7 +129,7 @@ class ProxySubprocess:
     def __init__(self, name, req_server, pub_server):
 
         socketdir = tempfile.mkdtemp()
-        atexit.register(cleanupSockets, socketdir)
+        atexit.register(cleanup_sockets, socketdir)
 
         req_address = os.path.join(socketdir, 'req')
         pub_address = os.path.join(socketdir, 'pub')
@@ -202,14 +202,27 @@ class ProxySubprocess:
         # it'd be nice if we could pass a request "up" through a more normal
         # channel instead of calling a "private" method in this fashion.
 
-        provenance = dict()
-        provenance['stratum'] = 0
-        provenance['hostname'] = self.req.external.hostname
-        provenance['port'] = self.req.external.port
+        # Using an mKTL client connection to ourself is one possible approach,
+        # but that still involves reaching into self.req.external to know what
+        # address and port to contact.
+
+        local_provenance = dict()
+        local_provenance['stratum'] = 0
+        local_provenance['hostname'] = self.req.external.hostname
+        local_provenance['port'] = self.req.external.port
+
+        provenance = list()
+        provenance.append(local_provenance)
 
         request['data'] = new_config['data']
         request['data']['provenance'] = provenance
         self.req.external.req_config(None, request)
+
+        # Distribute what we know to any established guides.
+
+        for address,port in main.guides:
+            send_configuration(address, port)
+
 
 
     def startSubprocess(self):
@@ -286,6 +299,9 @@ class RequestRelay:
         self.internal = internal
         self.internal_socket = zmq_context.socket(zmq.DEALER)
         self.internal_socket.bind(internal)
+        self.internal_socket_lock = threading.Lock()
+        self.internal_socket_poller = zmq.Poller()
+        self.internal_socket_poller.register(self.internal_socket, zmq.POLLOUT)
 
         self.active_requests = dict()
 
@@ -314,7 +330,9 @@ class RequestRelay:
 
         request = json.dumps(request)
         request = request.encode()
+        self.internal_socket_lock.acquire()
         self.internal_socket.send(request)
+        self.internal_socket_lock.release()
 
 
     def internal_request(self, request):
@@ -330,7 +348,16 @@ class RequestRelay:
 
         request = json.dumps(request)
         request = request.encode()
+
+        # Not entirely sure why polling here is required, but it is. The poll
+        # call always returns, sometimes at the timeout, sometimes sooner,
+        # reporting that the socket is ready for output.
+
+        sockets = self.internal_socket_poller.poll(200)
+
+        self.internal_socket_lock.acquire()
         self.internal_socket.send(request)
+        self.internal_socket_lock.release()
 
         response = internal.wait()
         del self.active_requests[req_id]
@@ -382,7 +409,9 @@ class RequestRelay:
             sockets = poller.poll(10000)
             for active, flag in sockets:
                 if self.internal_socket == active:
+                    self.internal_socket_lock.acquire()
                     response = self.internal_socket.recv()
+                    self.internal_socket_lock.release()
 
                     ### This assumes the response is JSON. This won't work
                     ### in the bulk data case.
@@ -440,6 +469,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             raise KeyError('CONFIG request must specify a name')
 
+
         try:
             data = request['data']
         except KeyError:
@@ -449,12 +479,6 @@ class RequestServer(mKTL.Protocol.Request.Server):
             # Cache the information, and return an empty dict to indicate
             # the requested operation is complete.
 
-            ## This makes no attempt to handle a case where we are replacing
-            ## an existing configuration block-- removing it first, and adding
-            ## the block we currently have access to. If a subprocess hands us
-            ## a new configuration block, as will happen when it gets restarted,
-            ## how can we tell?
-
             mKTL.Config.Cache.add(request_name, data)
             return dict()
 
@@ -463,12 +487,8 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request_name))
 
-        response = dict()
-        response['message'] = 'REP'
-        response['id'] = request['id']
-        response['data'] = mKTL.Config.Cache.get(request_name)
-
-        return response
+        payload = mKTL.Config.Cache.get(request_name)
+        return payload
 
 
     def req_handler(self, socket, lock, ident, request):
@@ -541,12 +561,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
             payload['hash'] = hash
             hashes.append(payload)
 
-        response = dict()
-        response['message'] = 'REP'
-        response['id'] = request['id']
-        response['data'] = hashes
-
-        return response
+        return hashes
 
 
     def req_relay(self, ident, request):
@@ -574,13 +589,34 @@ class RequestServer(mKTL.Protocol.Request.Server):
 
 
 
-def cleanupSockets(socketdir):
+def cleanup_sockets(socketdir):
     sockets = os.listdir(socketdir)
 
     for socket in sockets:
         os.remove(os.path.join(socketdir, socket))
 
     os.rmdir(socketdir)
+
+
+
+def send_configuration(address, port):
+    ''' Send a CONFIG request providing locally known data to the daemon
+        running on the specified address and port.
+    '''
+
+    names = mKTL.Config.Cache.list()
+
+    request = dict()
+    request['request'] = 'CONFIG'
+
+    for name in names:
+        request['name'] = name
+        request['data'] = mKTL.Config.Cache.get(name)
+
+        try:
+            mKTL.Protocol.Request.send(request, address, port)
+        except zmq.error.ZMQError:
+            pass
 
 
 
