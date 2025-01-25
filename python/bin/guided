@@ -1,0 +1,298 @@
+#! /usr/bin/env kpython3
+
+# The guide daemon acts as a broker for configuration requests; when daemons
+# first start running they will seek out any guides on their local network
+# and provide configuration updates; any clients broadcasting will discover
+# a local guide, and ask for any available configuration information.
+
+# Daemons and clients can both bypass broadcast discovery for a local guide
+# if they already know where to find a guide.
+
+import threading
+import socket
+import time
+
+import mKTL
+
+
+def main():
+
+    ## The hostname and port should come from a configuration file.
+
+    port = mKTL.Protocol.Request.default_port
+
+    main.beacon = mKTL.Protocol.Discover.Server(request_port=port)
+    main.req = RequestServer(port=port)
+
+    delay = 30
+    ### It needs to be possible to manipulate this set from the
+    ### RequestServer on a CONFIG 'push' request.
+    known = set()
+
+    hash_request = dict()
+    hash_request['request'] = 'HASH'
+
+    config_request = dict()
+    config_request['request'] = 'CONFIG'
+
+    while True:
+        not_seen = set(known)
+        discovered = mKTL.Protocol.Discover.search_direct()
+
+        for seen in discovered:
+            if seen in known:
+                not_seen.remove(seen)
+                continue
+
+            # This is a new daemon to us. Request its known hashes, which
+            # also tells us which store names it has access to; cache any/all
+            # configuration blocks discovered in this fashion.
+
+            address,port = seen
+            hashes = mKTL.Protocol.Request.send(hash_request, address, port)
+            hashes = hashes['data']
+
+            for hash in hashes:
+                name = hash['name']
+                config_request['name'] = name
+                config = mKTL.Protocol.Request.send(config_request, address, port)
+
+                try:
+                    blocks = config['data']
+                except KeyError:
+                    ## No data; there's probably an error we could inspect
+                    ## and log here.
+                    pass
+                else:
+                    for block in blocks:
+                        mKTL.Config.Cache.add(name, block)
+
+            known.add(seen)
+
+        for missed in not_seen:
+            known.remove(missed)
+
+        try:
+            main.shutdown.wait(delay)
+        except (KeyboardInterrupt, SystemExit):
+            break
+
+
+main.shutdown = threading.Event()
+main.pub = None
+main.req = None
+
+
+
+class RequestServer(mKTL.Protocol.Request.Server):
+    ''' Subclass the generic :class:mKTL.Protocol.Request.Server`, adding
+        additional logic to locally handle requests.
+    '''
+
+    def checkKeys(self, new):
+        ''' Confirm that any keys unique to this new configuration block are
+            not present in any other blocks.
+        '''
+
+        ## The configuration format isn't yet set. This will need to be
+        ## revisited to have more accurate names and use the right fields.
+
+        new_items = new['keys']
+        new_keys = set()
+
+        for item in new_items:
+            key = item['name']
+
+            if key in new_keys:
+                raise KeyError('redundant key in configuration block: ' + key)
+
+            new_keys.add(key)
+
+        name = new['name']
+
+        try:
+            known_blocks = mKTL.Config.Cache.get(name)
+        except KeyError:
+            # No previously stored blocks to check against. That's a pass.
+            return
+
+        for known in known_blocks:
+
+            if new['uuid'] == known['uuid']:
+                # Doesn't make sense to check a block for duplicates against
+                # any version of itself. Skip this one.
+                continue
+
+            ## Similar caveats about nomenclature here as above.
+
+            old_items = known['keys']
+            for item in old_items:
+                key = item['name']
+
+                if key in new_keys:
+                    raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+
+
+    def processConfigurationBlock(self, new):
+
+        def get_stratum(provenance):
+            return provenance['stratum']
+
+        new['provenance'].sort(key=get_stratum)
+        name = new['name']
+
+        try:
+            known_blocks = mKTL.Config.Cache.get(name)
+        except KeyError:
+            known_blocks = list()
+
+        local_provenance = dict()
+        local_provenance['hostname'] = self.hostname
+        local_provenance['port'] = self.port
+
+        if mKTL.Config.Provenance.contains(new, local_provenance):
+            raise ProvenanceLoopError('circular provenance detected')
+
+        to_add = list()
+        unique = True
+
+        for known in known_blocks:
+
+            new_uuid = new['uuid']
+            known_uuid = known['uuid']
+
+            if known['uuid'] != new['uuid']:
+                continue
+
+            unique = False
+
+            if known['hash'] == new['hash']:
+                continue
+
+            if known['time'] < new['time']:
+                to_add.append(new)
+
+        if unique == True:
+            # Reject a configuration block if it contains keys that collide
+            # with another block in the cache. Not looking for a return
+            # value here, exceptions are raised when there are problems.
+            self.checkKeys(new)
+
+            to_add.append(new)
+
+        # Now that all the checks have passed it's time to update the local
+        # cache of configuration data.
+
+        for new in to_add:
+            mKTL.Config.Provenance.add(new, self.hostname, self.port)
+            mKTL.Config.Cache.add(name, new)
+
+
+    def req_config(self, request):
+        ''' When a daemon sets a configuration block it will include a 'data'
+            segment in the request; an empty response is expected upon receipt
+            of the configuration block. That 'data' segment is not present in a
+            client request; a client expects a sequence of configuration blobs
+            representing the full configuration of the store, one blob per
+            daemon in the store.
+        '''
+
+        payload = dict()
+
+        if 'data' in request:
+            payload['data'] = list()
+
+            new_blocks = request['data']
+            for new_block in new_blocks:
+                try:
+                    self.processConfigurationBlock(new_block)
+                except ProvenanceLoopError:
+                    # This configuration block came from us.
+                    continue
+
+        else:
+            name = request['name']
+            try:
+                config = mKTL.Config.Cache.get(name)
+            except KeyError:
+                raise KeyError('no configuration available for ' + repr(name))
+
+            payload['data'] = config
+
+        return payload
+
+
+    def req_handler(self, socket, lock, ident, request):
+        ''' Inspect the incoming request type and decide how a response
+            will be generated.
+        '''
+
+        self.req_ack(socket, lock, ident, request)
+
+        try:
+            type = request['request']
+        except KeyError:
+            raise KeyError("invalid request JSON, 'request' not set")
+
+        try:
+            name = request['name']
+        except KeyError:
+            if type != 'HASH':
+                raise KeyError("invalid request JSON, 'name' not set")
+
+        if type == 'HASH':
+            payload = self.req_hash(request)
+        elif type == 'CONFIG':
+            payload = self.req_config(request)
+        else:
+            raise ValueError('invalid request type: ' + type)
+
+        return payload
+
+
+    def req_hash(self, request):
+        ''' Return the hash of a configuration block for a requested store name,
+            or all hashes for all locally known stores.
+        '''
+
+        try:
+            request = request['name']
+        except KeyError:
+            request = None
+
+        names = list()
+
+        if request is not None:
+            names.append(request)
+            try:
+                mKTL.Config.Cache.get(name)
+            except KeyError:
+                raise KeyError('no local configuration for ' + repr(request))
+        else:
+            names.extend(mKTL.Config.Cache.list())
+
+        hashes = list()
+        payload = dict()
+
+        for name in names:
+            for block in mKTL.Config.Cache.get(name):
+                hash = dict()
+                hash['name'] = name
+                hash['hash'] = block['hash']
+                hashes.append(hash)
+
+        payload['data'] = hashes
+        return payload
+
+
+# end of class RequestServer
+
+
+class ProvenanceLoopError(RuntimeError):
+    pass
+
+
+if __name__ == '__main__':
+    main()
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
