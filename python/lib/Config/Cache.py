@@ -1,6 +1,7 @@
 ''' Local storage for configuration data.
 '''
 
+from . import File
 from . import Hash
 from . import Provenance
 
@@ -21,8 +22,8 @@ def add(name, data):
     except KeyError:
         data['hash'] = Hash.hash(data['keys'])
 
-    # Provenance should be unique for a given store name. Pre-emptively
-    # remove the previous data block, if any.
+    # The uniqueness of a configuration block is determined by UUID.
+    # Remove the previous data block, if any.
 
     try:
         remove(name, data)
@@ -32,12 +33,14 @@ def add(name, data):
     ## What about duplicate keys? Or is something upstream in the configuration
     ## handling chain handling that before this method gets called?
 
-    def get_hash(config_block):
-        return config_block['hash']
+    def get_uuid(config_block):
+        return config_block['uuid']
 
     blocks.append(data)
-    blocks.sort(key=get_hash)
+    blocks.sort(key=get_uuid)
     Hash.rehash(name)
+    File.save(name, blocks)
+
 
 
 def get(name):
@@ -57,6 +60,7 @@ def get(name):
     return blocks
 
 
+
 def list():
     ''' Return a list of known store names currently in the local cache.
     '''
@@ -74,7 +78,7 @@ def list():
 
 def remove(name, data):
     ''' Remove a configuration block from the local cache. Matches are
-        determined via provenance.
+        determined via UUID.
     '''
 
     try:
@@ -83,11 +87,12 @@ def remove(name, data):
         raise KeyError('no local configuration for ' + repr(name))
 
     to_remove = None
+    target_uuid = data['uuid']
 
     for block in blocks:
-        matched = Provenance.match(block['provenance'], data['provenance'])
+        block_uuid = block['uuid']
 
-        if matched == True:
+        if block_uuid == target_uuid:
             to_remove = block
             break
 
@@ -96,6 +101,7 @@ def remove(name, data):
 
     blocks.remove(to_remove)
     Hash.rehash(name)
+    File.remove(name, data)
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
