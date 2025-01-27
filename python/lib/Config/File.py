@@ -55,18 +55,18 @@ def load(name, specific=None):
     if base_directory is None:
         raise RuntimeError('cannot determine location of mKTL configuration files')
 
-    local_directory = os.path.join(base_directory, 'local', name)
-    cache_directory = os.path.join(base_directory, 'cache', name)
+    daemon_directory = os.path.join(base_directory, 'daemon', 'store', name)
+    cache_directory = os.path.join(base_directory, 'client', 'cache', name)
 
-    if os.path.isdir(local_directory) or os.path.isdir(cache_directory):
+    if os.path.isdir(daemon_directory) or os.path.isdir(cache_directory):
         pass
     else:
         raise ValueError('no locally stored configuration for ' + repr(name))
 
     files = list()
-    local_files = os.listdir(local_directory)
-    for local_file in local_files:
-        file = os.path.join(local_directory, local_file)
+    daemon_files = os.listdir(daemon_directory)
+    for daemon_file in daemon_files:
+        file = os.path.join(daemon_directory, daemon_file)
         files.append(file)
 
     cache_files = os.listdir(cache_directory)
@@ -116,12 +116,15 @@ def load_one(name, specific):
 
         uuid_filename = base_filename + '.uuid'
 
-        local_file = os.path.join(base_directory, 'local', name, json_filename)
-        uuid_file = os.path.join(base_directory, 'local', name, uuid_filename)
-        cache_file = os.path.join(base_directory, 'cache', name, json_filename)
+        daemon_directory = os.path.join(base_directory, 'daemon', 'store', name)
+        cache_directory = os.path.join(base_directory, 'client', 'cache', name)
 
-        if os.path.exists(local_file):
-            target_file = local_file
+        daemon_file = os.path.join(daemon_directory, json_filename)
+        uuid_file = os.path.join(daemon_directory, uuid_filename)
+        cache_file = os.path.join(cache_directory, json_filename)
+
+        if os.path.exists(daemon_file):
+            target_file = daemon_file
             if os.path.exists(uuid_file):
                 target_uuid = open(uuid_file, 'r').read()
                 target_uuid = target_uuid.strip()
@@ -172,7 +175,7 @@ def save(name, configuration):
     base_filename = block_uuid
     json_filename = base_filename + '.json'
 
-    cache_directory = os.path.join(base_directory, 'cache', name)
+    cache_directory = os.path.join(base_directory, 'client', 'cache', name)
 
     if os.path.exists(cache_directory):
         pass
