@@ -197,10 +197,8 @@ class RequestServer(mKTL.Protocol.Request.Server):
             daemon in the store.
         '''
 
-        payload = dict()
-
         if 'data' in request:
-            payload['data'] = list()
+            payload = list()
 
             new_blocks = request['data']
             for new_block in new_blocks:
@@ -213,11 +211,10 @@ class RequestServer(mKTL.Protocol.Request.Server):
         else:
             name = request['name']
             try:
-                config = mKTL.Config.Cache.get(name)
+                payload = mKTL.Config.Cache.get(name)
             except KeyError:
                 raise KeyError('no configuration available for ' + repr(name))
 
-            payload['data'] = config
 
         return payload
 
