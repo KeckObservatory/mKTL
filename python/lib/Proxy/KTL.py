@@ -131,13 +131,16 @@ def describeKeyword(keyword):
     except ValueError:
         enumerators = None
     else:
-        rebuilt = list()
+        rebuilt = dict()
+        if type == 'mask':
+           rebuilt['None'] = enumerators[0]
+           enumerators = enumerators[1:]
         for key in range(len(enumerators)):
             enumerator = enumerators[key]
             if enumerator == '':
                 continue
             else:
-                rebuilt.append({key: enumerator})
+                rebuilt[key] = enumerator
 
         enumerators = rebuilt
 
@@ -205,16 +208,16 @@ def describeKeyword(keyword):
 
 type_mapping = dict()
 type_mapping['KTL_BOOLEAN'] = 'boolean'
-type_mapping['KTL_DOUBLE_ARRAY'] = 'double array'
-type_mapping['KTL_DOUBLE'] = 'double'
+type_mapping['KTL_DOUBLE_ARRAY'] = 'numeric array'
+type_mapping['KTL_DOUBLE'] = 'numeric'
 type_mapping['KTL_ENUM'] = 'enumerated'
 type_mapping['KTL_ENUMM'] = 'enumerated'
-type_mapping['KTL_FLOAT_ARRAY'] = 'double array'
-type_mapping['KTL_FLOAT'] = 'double'
-type_mapping['KTL_INT64_ARRAY'] = 'integer array'
-type_mapping['KTL_INT64'] = 'integer'
-type_mapping['KTL_INT_ARRAY'] = 'integer array'
-type_mapping['KTL_INT'] = 'integer'
+type_mapping['KTL_FLOAT_ARRAY'] = 'numeric array'
+type_mapping['KTL_FLOAT'] = 'numeric'
+type_mapping['KTL_INT64_ARRAY'] = 'numeric array'
+type_mapping['KTL_INT64'] = 'numeric'
+type_mapping['KTL_INT_ARRAY'] = 'numeric array'
+type_mapping['KTL_INT'] = 'numeric'
 type_mapping['KTL_MASK'] = 'mask'
 type_mapping['KTL_STRING'] = 'string'
 
