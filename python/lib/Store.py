@@ -18,15 +18,14 @@ class Store:
 
 
     def __setitem__(self, name, value):
-        raise NotImplementedError("you cannot set a Store's key directly")
+        raise NotImplementedError('you cannot assign a key to a Store directly')
 
 
     def __getitem__(self, key):
         item = self._items[key]
 
         if item is None:
-            config = self.config[key]
-            item = Item.Item(self, config)
+            item = Item.Item(self, store)
             self._items[key] = item
 
         return item

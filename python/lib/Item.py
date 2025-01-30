@@ -20,10 +20,10 @@ class Item:
         with any new value(s).
     '''
 
-    def __init__(self, name, config):
+    def __init__(self, name, store):
 
         self.name = name
-        self.config = config
+        self.store = store
 
         self.callbacks = list()
         self.cached = None
@@ -31,7 +31,10 @@ class Item:
         self.subscribed = False
         self.timeout = 120
 
-        ## Determine the location we need to connect to from the config
+        ## Determine the location we need to connect to from store.config.
+        ## There are two pieces to it: the metadata associated with the daemon,
+        ## in particular the provenance, and the key-specific configuration.
+
         self.pub = Publish.client()
         self.req = Request.client()
 
