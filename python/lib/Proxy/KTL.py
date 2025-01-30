@@ -30,14 +30,15 @@ class KTL(Subprocess.Base):
 
 
     def req_config(self, request):
-        configuration = describeService(self.name)
-
-        hash = self.hash(configuration['keys'])
         uuid = self.uuid('ktl.' + self.name)
+
+        configuration = dict()
         configuration['name'] = self.name
-        configuration['hash'] = hash
         configuration['uuid'] = uuid
         configuration['time'] = time.time()
+        configuration['keys'] = describeService(self.name)
+        hash = self.hash(configuration['keys'])
+        configuration['hash'] = hash
 
         return configuration
 
@@ -108,16 +109,13 @@ class KTL(Subprocess.Base):
 
 def describeService(name):
     service = ktl.cache(name)
-    service_dict = dict()
-    service_dict['name'] = name
 
     keywords = list()
     for keyword in service:
         keyword_dict = describeKeyword(keyword)
         keywords.append(keyword_dict)
 
-    service_dict['keys'] = keywords
-    return service_dict
+    return keywords
 
 
 def describeKeyword(keyword):
