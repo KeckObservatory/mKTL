@@ -6,7 +6,7 @@ from . import Store
 
 
 def get(store, key=None):
-    ''' Return a cached :class:`Store` or :class:`Key` instance. If both a
+    ''' Return a cached :class:`Store` or :class:`Item` instance. If both a
         *store* and a *key* are specified, the requested *key* will be returned
         from the requested *store*. The same will occur if the sole argument is
         a store and key name concatenated with a dot (store.KEY). If only a
@@ -14,7 +14,7 @@ def get(store, key=None):
         returned.
 
         If the caller always uses :func:`get` to retrieve a :class:`Store` or
-        :class:`Key` they will always receive the same instance of that class.
+        :class:`Item` they will always receive the same instance of that class.
 
         The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store, acting like a factory method
