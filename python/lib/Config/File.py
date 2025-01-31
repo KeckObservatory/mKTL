@@ -64,12 +64,21 @@ def load(name, specific=None):
         raise ValueError('no locally stored configuration for ' + repr(name))
 
     files = list()
-    daemon_files = os.listdir(daemon_directory)
+
+    try:
+        daemon_files = os.listdir(daemon_directory)
+    except FileNotFoundError:
+        daemon_files = tuple()
+
     for daemon_file in daemon_files:
         file = os.path.join(daemon_directory, daemon_file)
         files.append(file)
 
-    cache_files = os.listdir(cache_directory)
+    try:
+        cache_files = os.listdir(cache_directory)
+    except FileNotFoundError:
+        cache_files = tuple()
+
     for cache_file in cache_files:
         file = os.path.join(cache_directory, cache_file)
         files.append(file)
@@ -149,6 +158,24 @@ def load_one(name, specific):
     results[target_uuid] = configuration
 
     return results
+
+
+
+def remove(store, uuid):
+    ''' Remove the cache file associated with this store name and UUID.
+        Takes no action and throws no errors if the file does not exist.
+    '''
+
+    base_directory = directory()
+    json_filename = uuid + '.json'
+
+    cache_directory = os.path.join(base_directory, 'client', 'cache', name)
+    target_filename = os.path.join(cache_directory, json_filename)
+
+    try:
+        os.remove(target_filename)
+    except FileNotFoundError:
+        pass
 
 
 
