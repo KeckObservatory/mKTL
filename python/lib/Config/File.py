@@ -97,25 +97,32 @@ def load(name, specific=None):
 
 
 
-def load_one(name, specific):
+def load_one(store, specific):
     ''' Similar to :func:`load`, except only ingesting a single file. A lot of
         checks will be bypassed if *specific* is provided as an absolute path;
         it is assumed the caller knows exactly which file they want, and have
         provided the full and correct path.
     '''
 
+    # Some of these checks are redundant if we got here via the load() method,
+    # but it's unavoidable that we need the information in both places.
+
+    base_directory = directory()
+
+    if base_directory is None:
+        raise RuntimeError('cannot determine location of mKTL configuration files')
+
+    daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
+    cache_directory = os.path.join(base_directory, 'client', 'cache', store)
+
+
     if os.path.isabs(specific):
         if os.path.exists(specific):
-            target_file = specific
+            target_filename = specific
         else:
             raise ValueError('file not found: ' + repr(specific))
 
     else:
-        base_directory = directory()
-
-        if base_directory is None:
-            raise RuntimeError('cannot determine location of mKTL configuration files')
-
         if specific[-5:] != '.json':
             base_filename = specific
             json_filename = base_filename + '.json'
@@ -123,34 +130,48 @@ def load_one(name, specific):
             base_filename = specific[:-5]
             json_filename = specific
 
-        uuid_filename = base_filename + '.uuid'
+        daemon_filename = os.path.join(daemon_directory, json_filename)
+        cache_filename = os.path.join(cache_directory, json_filename)
 
-        daemon_directory = os.path.join(base_directory, 'daemon', 'store', name)
-        cache_directory = os.path.join(base_directory, 'client', 'cache', name)
-
-        daemon_file = os.path.join(daemon_directory, json_filename)
-        uuid_file = os.path.join(daemon_directory, uuid_filename)
-        cache_file = os.path.join(cache_directory, json_filename)
-
-        if os.path.exists(daemon_file):
-            target_file = daemon_file
-            if os.path.exists(uuid_file):
-                target_uuid = open(uuid_file, 'r').read()
-                target_uuid = target_uuid.strip()
-            else:
-                target_uuid = str(uuid.uuid4())
-                writer = open(uuid_file, 'w')
-                writer.write(target_uuid)
-                writer.close()
-
-        elif os.path.exists(cache_file):
-            target_file = cache_file
-            target_uuid = base_filename
-
+        if os.path.exists(daemon_filename):
+            target_filename = daemon_filename
+        elif os.path.exists(cache_filename):
+            target_filename = cache_filename
         else:
             raise ValueError("file not found in %s: %s" % (base_directory, repr(specific)))
 
-    raw_json = open(target_file, 'r').read()
+        return load_one(store, target_filename)
+
+
+    # After passing through the above conditions we have an absolute path
+    # to the filename that should be loaded. Still need to do the check
+    # for the adjacent UUID file if this is a daemon load of an authoritative
+    # configuration file.
+
+    base_filename = target_filename[:-5]
+
+    if daemon_directory in target_filename:
+        uuid_filename = base_filename + '.uuid'
+
+        if os.path.exists(uuid_filename):
+            target_uuid = open(uuid_filename, 'r').read()
+            target_uuid = target_uuid.strip()
+        else:
+            target_uuid = str(uuid.uuid4())
+            writer = open(uuid_filename, 'w')
+            writer.write(target_uuid)
+            writer.close()
+
+    elif cache_directory in target_filename:
+        # This should always be true if we sailed through all the previous
+        # conditions.
+
+        target_uuid = os.path.basename(base_filename)
+
+    else:
+        raise ValueError("file not found in %s: %s" % (base_directory, repr(specific)))
+
+    raw_json = open(target_filename, 'r').read()
     configuration = Json.loads(raw_json)
     configuration['uuid'] = target_uuid
 
@@ -188,15 +209,19 @@ def save(name, configuration):
     base_directory = directory()
 
     try:
-        block_uuid = configuration['uuid']
+        configuration['name']
     except KeyError:
-        raise KeyError("the 'uuid' field must be included in the configuration")
-    except TypeError:
-        # Maybe we received a sequence of configuration blocks instead of
-        # a single block. Try handling it that way.
-        for block in configuration:
+        # Assume this is a dictionary of configuration blocks, as you might
+        # get from Config.Cache.
+        for uuid in configuration.keys():
+            block = configuration[uuid]
             save(name, block)
         return
+
+    try:
+        block_uuid = configuration['uuid']
+    except KeyError:
+        raise KeyError("the 'uuid' field must be in each configuration block")
 
     base_directory = directory()
     base_filename = block_uuid
