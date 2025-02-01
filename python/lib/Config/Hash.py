@@ -49,7 +49,14 @@ def rehash(name):
     config = Cache.get(name)
     hashable = list()
 
-    for block in config:
+    # Sorting the UUIDs is important to ensure we're concatenating the blocks
+    # in the same order each time.
+
+    uuids = list(config.keys())
+    uuids.sort()
+
+    for uuid in uuids:
+        block = config[uuid]
         hashable.append(block['keys'])
 
     if len(hashable) == 0:
