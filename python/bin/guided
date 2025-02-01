@@ -64,8 +64,7 @@ def main():
                     ## and log here.
                     pass
                 else:
-                    for block in blocks:
-                        mKTL.Config.Cache.add(name, block)
+                    mKTL.Config.Cache.add(name, blocks)
 
             known.add(seen)
 
@@ -116,13 +115,14 @@ class RequestServer(mKTL.Protocol.Request.Server):
             # No previously stored blocks to check against. That's a pass.
             return
 
-        for known in known_blocks:
+        for known_uuid in known_blocks.keys():
 
-            if new['uuid'] == known['uuid']:
+            if new['uuid'] == known_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
+            known = known_blocks[known_uuid]
             ## Similar caveats about nomenclature here as above.
 
             old_items = known['keys']
@@ -144,7 +144,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
         try:
             known_blocks = mKTL.Config.Cache.get(name)
         except KeyError:
-            known_blocks = list()
+            known_blocks = dict()
 
         local_provenance = dict()
         local_provenance['hostname'] = self.hostname
@@ -156,14 +156,14 @@ class RequestServer(mKTL.Protocol.Request.Server):
         to_add = list()
         unique = True
 
-        for known in known_blocks:
+        for known_uuid in known_blocks.keys():
 
             new_uuid = new['uuid']
-            known_uuid = known['uuid']
 
-            if known['uuid'] != new['uuid']:
+            if known_uuid != new['uuid']:
                 continue
 
+            known = known_blocks[known_uuid]
             unique = False
 
             if known['hash'] == new['hash']:
@@ -262,7 +262,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
         if request is not None:
             names.append(request)
             try:
-                mKTL.Config.Cache.get(name)
+                mKTL.Config.Hash.get(name)
             except KeyError:
                 raise KeyError('no local configuration for ' + repr(request))
         else:
@@ -272,7 +272,10 @@ class RequestServer(mKTL.Protocol.Request.Server):
         payload = dict()
 
         for name in names:
-            for block in mKTL.Config.Cache.get(name):
+            blocks = mKTL.Config.Cache.get(name)
+            uuids = blocks.keys()
+            for uuid in uuids:
+                block = blocks[uuid]
                 hash = dict()
                 hash['name'] = name
                 hash['hash'] = block['hash']
