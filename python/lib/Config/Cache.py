@@ -80,6 +80,8 @@ def get(store):
 
 
 
+### Not clear that this get_block() method gets us close enough to a final
+### configuration to be useful.
 def get_block(store, key):
     ''' Return the configuration block containing a specific *key* from a
         specific *store*. A KeyError exception is raised if there are no
