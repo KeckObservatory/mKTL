@@ -16,5 +16,6 @@ get = Get.get
 ### debugging at the moment.
 
 from .Item import Item
+from .Store import Store
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
