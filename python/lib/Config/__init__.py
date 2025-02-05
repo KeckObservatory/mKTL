@@ -1,6 +1,7 @@
 
 from . import Cache
 from . import Hash
+from . import Items
 from . import Provenance
 
 from . import Get
