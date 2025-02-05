@@ -12,9 +12,25 @@ class Store:
 
     def __init__(self, name):
 
-        config = Config.get(name)
-        self.config = config
+        self.config = None
         self._items = dict()
+
+        config = Config.Items.get(name)
+        self._update_config(config)
+
+
+    def _update_config(self, config):
+
+        self.config = config
+        keys = config.keys()
+        keys = list(keys)
+        keys = keys.sort()
+
+        for key in keys:
+            try:
+                self._items[key]
+            except KeyError:
+                self._items[key] = None
 
 
     def __setitem__(self, name, value):
