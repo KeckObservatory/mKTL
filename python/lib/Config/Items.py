@@ -32,11 +32,13 @@ def get(store):
     for uuid in config.keys():
         block = config[uuid]
 
-        for item in block['keys']:
-            key = item['name']
+        items = block['keys']
+        for key in items.keys():
+            item = items[key]
 
-            # Making a fresh dictionary here so we don't modify what's
-            # stored in the Cache.
+            # Making a fresh dictionary here so we don't modify what's stored
+            # in the Cache, which is supposed to be representative of the
+            # on-the-wire representation.
 
             copied = dict(item)
             copied['uuid'] = uuid

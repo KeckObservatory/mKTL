@@ -128,8 +128,7 @@ def remap(store):
 
     for uuid in blocks.keys():
         block = blocks[uuid]
-        for key in block['keys']:
-            key = key['name']
+        for key in block['keys'].keys():
             mapping[key] = block
 
     lookup[store] = mapping
