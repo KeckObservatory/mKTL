@@ -110,17 +110,19 @@ class KTL(Subprocess.Base):
 def describeService(name):
     service = ktl.cache(name)
 
-    keywords = list()
+    keywords = dict()
     for keyword in service:
+        # The KTL.Service iterates in alphabetical order, there is no need
+        # for additional sorting in order for it to be predictable and/or
+        # repeatable.
         keyword_dict = describeKeyword(keyword)
-        keywords.append(keyword_dict)
+        keywords[keyword.name] = keyword_dict
 
     return keywords
 
 
 def describeKeyword(keyword):
     keyword_dict = dict()
-    keyword_dict['name'] = keyword.name
 
     type = keyword['type']
     type = type_mapping[type]
