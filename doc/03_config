@@ -6,17 +6,18 @@ data.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-Refer to the protocol document for the expected format of a CONFIG request and
-response. Only one aspect of the response is addressed here: the 'data' value
-included in the response, which is a sequence of dictionaries, each dictionary
-representing a configuration 'block', providing a complete description of a
-single daemon's keys; the sequence is intended to represent the full namespace
-of a store, spanning the full set of daemons composing that store.
+Refer to the protocol document for the expected format of a CONFIG request
+and response. Only one aspect of the response is addressed here: the 'data'
+value included in the response, which is a dictionary of dictionaries, each
+dictionary representing a configuration 'block', keyed by the unique
+identifier (UUID) associated with that block, providing a complete description
+of a single daemon's keys; the sequence is intended to represent the full
+namespace of a store, spanning the full set of daemons composing that store.
 
 For example, the 'kpfguide' store may contain multiple daemons:
 
-	[{'name': 'kpfguide', 'time': 1724892333.924, ...},
-	 {'name': 'kpfguide', 'time': 1725892343.567, ...}]
+	{'uuid1': {'name': 'kpfguide', 'time': 1724892333.924, ...},
+	 'uuid2': {'name': 'kpfguide', 'time': 1725892343.567, ...}}
 
 A configuration block will contain the following fields:
 
@@ -52,10 +53,10 @@ A configuration block will contain the following fields:
 		contents have changed, and any/all clients relying on
 		the contents should update their cached data.
 
-	'keys': a sequence of dictionaries, with one dictionary
-		containing the full description of a single key.
-		The description of an key is discussed in its own
-		section below.
+	'keys': a dictionary of dictionaries, keyed by the key name,
+		with one dictionary containing the full description
+		of a single key. The description of an key is discussed
+		in its own section below.
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -165,9 +166,8 @@ in its JSON format:
             "port": 10112
           }
         ]
-        "keys": [
-          {
-            "name": "ANGLE",
+        "keys": {
+          "ANGLE": {
             "type": "double",
             "units": {
               "asc": "h",
@@ -175,8 +175,7 @@ in its JSON format:
             },
             "description": "Writable angle keyword."
           },
-          {
-            "name": "DISPSTOP",
+          "DISPSTOP": {
             "type": "boolean",
             "description": "Dispatcher shutdown command. Tells dispatcher to exe
 cute a clean shutdown.",
@@ -186,6 +185,7 @@ cute a clean shutdown.",
             }
           }
 	}
+      }
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
