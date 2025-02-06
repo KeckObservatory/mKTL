@@ -8,6 +8,7 @@ except ImportError:
 
 from .Protocol import Publish
 from .Protocol import Request
+from . import Config
 from . import WeakRef
 
 
@@ -20,9 +21,10 @@ class Item:
         with any new value(s).
     '''
 
-    def __init__(self, name, store):
+    def __init__(self, store, name):
 
         self.name = name
+        self.full_name = store.name + '.' + name
         self.store = store
 
         self.callbacks = list()
@@ -35,8 +37,14 @@ class Item:
         ## There are two pieces to it: the metadata associated with the daemon,
         ## in particular the provenance, and the key-specific configuration.
 
-        self.pub = Publish.client()
-        self.req = Request.client()
+        key_config = store.config[name]
+        provenance = key_config['provenance']
+        stratum_0 = provenance[0]
+        hostname = stratum_0['hostname']
+        port = stratum_0['port']
+
+        self.pub = Publish.client(hostname)
+        self.req = Request.client(hostname, port)
 
 
     def get(self, refresh=False):
@@ -50,7 +58,7 @@ class Item:
 
         request = dict()
         request['request'] = 'GET'
-        request['name'] = self.name
+        request['name'] = self.full_name
 
         if refresh == True:
             request['refresh'] = True
@@ -121,7 +129,7 @@ class Item:
 
         request = dict()
         request['request'] = 'SET'
-        request['name'] = self.name
+        request['name'] = self.full_name
         request['data'] = new_value
 
         if bulk is not None:
@@ -169,7 +177,7 @@ class Item:
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our name.
 
-        self.pub.register(self._update, self.name)
+        self.pub.register(self._update, self.full_name)
         self.subscribed = True
 
 

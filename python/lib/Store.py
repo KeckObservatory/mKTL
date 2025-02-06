@@ -12,6 +12,7 @@ class Store:
 
     def __init__(self, name):
 
+        self.name = name
         self.config = None
         self._items = dict()
 
@@ -24,7 +25,7 @@ class Store:
         self.config = config
         keys = config.keys()
         keys = list(keys)
-        keys = keys.sort()
+        keys.sort()
 
         for key in keys:
             try:
@@ -41,7 +42,7 @@ class Store:
         item = self._items[key]
 
         if item is None:
-            item = Item.Item(self, store)
+            item = Item.Item(self, key)
             self._items[key] = item
 
         return item
