@@ -32,7 +32,7 @@ A configuration block will contain the following fields:
 		associate a specific daemon with its configuration
 		block, as might be necessary when a client needs
 		to apply continuity (such as clearing local cache)
-		when a configuration block changes.
+		when a remotely-served configuration block changes.
 
 	'provenance': the chain of handling for this configuration
 		block. The provenance is a sequence, listing every
@@ -189,52 +189,37 @@ cute a clean shutdown.",
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-Filesystem locations
+Configuration files are stored on-disk as part of a bootstrapping mechanism
+to prevent transmission of configuration blocks for every new connection.
+Two directory trees have been established; one, an automatic cache for any
+received configuration blocks, and two, a tree for configuration data used
+by 'stratum 0' daemons providing authoritative access to a set of keys.
 
-        $HOME/
-        $HOME/.mKTL/
-        $HOME/.mKTL/client/cache/
-        $HOME/.mKTL/client/cache/pie/
-        $HOME/.mKTL/client/cache/pie/foo_uuid.json
+The MKTL_HOME environment variable, if set, determines the top-level directory
+used for these on-disk locations. Absent that variable being set, the default
+location is '$HOME/.mKTL'.
 
-        $HOME/.mKTL/daemon/store/
-        $HOME/.mKTL/daemon/store/pie/
-        $HOME/.mKTL/daemon/store/pie/config
-        $HOME/.mKTL/daemon/store/pie/foo.json
-        $HOME/.mKTL/daemon/store/pie/foo.uuid
+The cache directory structure is as follows:
 
+        $MKTL_HOME/
+        $MKTL_HOME/client/cache/
+        $MKTL_HOME/client/cache/some_store_name/
+        $MKTL_HOME/client/cache/some_store_name/some_uuid.json
+        $MKTL_HOME/client/cache/some_store_name/some_other_uuid.json
 
+For each store name, each configuration block within a store is written to a
+separate file, where each file is named for the UUID associated with that
+configuration block.
 
-Uniqueness constraint
+The daemon directory structure is as follows:
 
-When a daemon provides authoritative access to a set of keys, the daemon must be provide unique identification so that clients and other intermediaries can associate a configuration block with a specific daemon. A daemon may be listening on any port; it may be running on any host; there may be multiple daemons composing a single store running on a single host. The host address and port number are sufficient to locate the daemon, but they are not adequate to uniquely identify the configuration block it provides; the hash of the configuration contents is sufficient to highlight changes in configuration data, but cannot be used to track configuration blocks across changes. This motivates the need for a persistent unique identifier associated with the running daemon.
+        $MKTL_HOME/daemon/store/
+        $MKTL_HOME/daemon/store/some_store_name/
+        $MKTL_HOME/daemon/store/some_store_name/some_keys.json
+        $MKTL_HOME/daemon/store/some_store_name/some_keys.uuid
 
-To facilitate ease-of-use, the unique identifier does not need to be specified in advance. The first time a daemon runs it will generate a UUID that will be cached and reused for future restarts. This UUID must be stored alongside the runtime configuration data; it must not be stored in the configuration data, to avoid it being overwritten by any preprocessing tools used to generate configuration blocks.
-
-In circumstances where a daemon with an established UUID is being replaced, the path of least resistance is to copy that UUID into the privileged location. A new UUID can also be tagged as superceding a previous UUID, which is the indication to a client that they should forget the configuration block associated with the old UUID.
-
-
-On-disk layout
-
-The default location for any stored configuration data is $HOME/.mKTL. The subdirectory structure from that point is:
-
-	cache/
-	    store1/
-	        6a7904d6-7587-4b77-976d-1e63760090d4.json
-		91ffb810-44d6-439b-907e-30212a9961c6.json
-	    store2/
-	        58a474c5-6b71-424a-ada6-1fdc2eb1ed56.json
-	    store3/
-	        59f68c12-fbd0-415a-ace7-7d7d25e3d9f2.json
-
-	local/
-	    store1/
-	        any_custom_string.json
-		any_custom_string.uuid
-	        other_custom_string.json
-		other_custom_string.uuid
-	    store3/
-	        a_third_custom_string.json
-		a_third_custom_string.uuid
-
-The contents of the cache/ subdirectory are programmatically populated and shouldn't need to be manipulated directly by servers or clients. The local/ subdirectory contains data for stores served by daemons running on that computer, from that account; if, on first startup, the .uuid file is missing or empty, it will be generated at runtime. The .json file for that arbitrary filename contains the full description of the keys handled by that specific daemon, the 'data' component of the response to a CONFIG request.
+The .json file located here is where a daemon is expected to establish the
+keys it provides. The adjacent .uuid file is auto-generated; the only content
+of the file is a single UUID. If the .uuid file exists it will be used,
+regardless of its origins, but there is no need for the developer to establish
+it as part of the daemon's initial configuration.
