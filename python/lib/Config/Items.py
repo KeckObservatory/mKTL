@@ -3,6 +3,7 @@
 '''
 
 from . import Cache
+from . import Hash
 
 cache = dict()
 hashes = dict()
@@ -14,8 +15,6 @@ def get(store):
         definitions.
     '''
 
-    config = Cache.get(store)
-
     # Return a cached version if the contents stored by the Cache haven't
     # been modified.
 
@@ -24,9 +23,10 @@ def get(store):
     except KeyError:
         pass
     else:
-        if hashes[store] == config['hash']:
+        if hashes[store] == Hash.get(store):
             return cached
 
+    config = Cache.get(store)
     by_key = dict()
 
     for uuid in config.keys():
@@ -46,8 +46,8 @@ def get(store):
 
             by_key[key] = copied
 
-    hashes[store] = config['hash']
-    cached[store] = by_key
+    hashes[store] = Hash.get(store)
+    cache[store] = by_key
 
     return by_key
 
