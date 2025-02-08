@@ -546,22 +546,8 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             name = None
 
-
         cached = mKTL.Config.Hash.get(name)
-
-        if name is None:
-            cached = list(cached)
-        else:
-            cached = [(name, cached),]
-
-        hashes = list()
-        for name,hash in cached:
-            payload = dict()
-            payload['name'] = name
-            payload['hash'] = hash
-            hashes.append(payload)
-
-        return hashes
+        return cached
 
 
     def req_relay(self, ident, request):

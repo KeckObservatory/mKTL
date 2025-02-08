@@ -52,9 +52,8 @@ def main():
             hashes = mKTL.Protocol.Request.send(hash_request, address, port)
             hashes = hashes['data']
 
-            for hash in hashes:
-                name = hash['name']
-                config_request['name'] = name
+            for store in hashes.keys():
+                config_request['name'] = store
                 config = mKTL.Protocol.Request.send(config_request, address, port)
 
                 try:
@@ -64,7 +63,7 @@ def main():
                     ## and log here.
                     pass
                 else:
-                    mKTL.Config.Cache.add(name, blocks)
+                    mKTL.Config.Cache.add(store, blocks)
 
             known.add(seen)
 
@@ -257,32 +256,12 @@ class RequestServer(mKTL.Protocol.Request.Server):
         except KeyError:
             request = None
 
-        names = list()
+        try:
+            hashes = mKTL.Config.Hash.get(request)
+        except KeyError:
+            raise KeyError('no local configuration for ' + repr(request))
 
-        if request is not None:
-            names.append(request)
-            try:
-                mKTL.Config.Hash.get(name)
-            except KeyError:
-                raise KeyError('no local configuration for ' + repr(request))
-        else:
-            names.extend(mKTL.Config.Cache.list())
-
-        hashes = list()
-        payload = dict()
-
-        for name in names:
-            blocks = mKTL.Config.Cache.get(name)
-            uuids = blocks.keys()
-            for uuid in uuids:
-                block = blocks[uuid]
-                hash = dict()
-                hash['name'] = name
-                hash['hash'] = block['hash']
-                hashes.append(hash)
-
-        payload['data'] = hashes
-        return payload
+        return hashes
 
 
 # end of class RequestServer
