@@ -153,9 +153,9 @@ daemon via the request/response socket.
 							  'text': 'bad input'}}
 
 
-	'HASH': request the current hash identifier for the configuration
-		of a single mKTL store. If no store name is specified, all
-		available hash identifiers will be returned, for all known
+	'HASH': request the current hash identifiers for any known configuration
+		blocks of a single mKTL store. If no store name is specified,
+		all available hash identifiers will be returned, for all known
 		stores. An error will be returned if a store is requested
 		and the contacted daemon does not have a cached configuration
 		describing it.
@@ -165,9 +165,8 @@ daemon via the request/response socket.
 		authority is consistent about which hash format it uses--
 		and it can be bounded to 32 hexadecimal integers.
 
-		To unify processing the response is always a sequence of
-		individual identifiers, even if the sequence is only one
-		element long.
+		To unify processing the response is always a dictionary of
+		dictionaries, even if only one hash is available.
 
 		Example request: bJSON: '{'request': 'HASH', 'id': 234}
 
@@ -175,10 +174,14 @@ daemon via the request/response socket.
 
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 234,
-					  'data': [{'name': kpfguide,
-							'hash': 0x84a30b35...},
-						   {'name': kpfmet,
-							'hash': 0x983ae10f...}]}'
+					  'data': {'kpfguide':
+					  	   {'uuid1': 0x84a30b35...,
+						    'uuid2': 0x983ae10f...},
+						   'kpfmet':
+					  	   {'uuid6': 0xe0377e7d...,
+						    'uuid7': 0x7735a20a...,
+						    'uuid8': 0x88645dab...,
+						    'uuid9': 0x531c14fd...}}}'
 
 		Example request: bJSON: '{'request': 'HASH',
 					  'id': 236,
@@ -188,8 +191,9 @@ daemon via the request/response socket.
 
 		Example REP:	 bJSON: '{'message': 'REP',
 					  'id': 236,
-					  'data': [{'name': kpfguide,
-							'hash': 0x84a30b35}]}'
+					  'data': {'kpfguide':
+					  	   {'uuid1': 0x84a30b35...,
+						    'uuid2': 0x983ae10f...}}'
 
 	'CONFIG': request the full configuration contents for a single mKTL
 		store. There is no option to dump the configuration data for
@@ -199,42 +203,13 @@ daemon via the request/response socket.
 		the local cache.
 
 		The configuration contents are not fully described here,
-		this is just a representation of the format.
+		this is just a representation of the request. See the
+		dedicated 03_config documentation file for a full
+		description.
 
 		Example request: bJSON: '{'request': 'CONFIG',
 					  'id': 563,
 					  'name': 'kpfguide'}
-
-		Example ACK as above...
-
-		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 563,
-					  'data': [{'name': kpfguide,
-						    'hash': 0x84a30b35...,
-						    'provenance':
-						    	[{'stratum': 0,
-						   	  'address': '192.1...',
-							  'port': 10111},
-						         {'stratum': 1,
-						   	  'address': '128.1...',
-							  'port': 10111}]
-						   'time': 1724892333.924,
-						   'keys': [{...},
-							    {...},
-							    ...]},
-					           {'name': kpfguide,
-						    'hash': 0x84fe97a3...,
-						    'provenance':
-						    	[{'stratum': 0,
-						   	  'address': '10.1...',
-							  'port': 10111},
-						         {'stratum': 1,
-						   	  'address': '172.1...',
-							  'port': 10111}]
-						   'time': 1724892345.924,
-						   'keys': [{...},
-							    {...},
-							    ...]}]}'
 
 	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
