@@ -6,7 +6,6 @@ from . import Hash
 from . import Provenance
 
 cache = dict()
-lookup = dict()
 
 
 def add(store, data, save=True):
@@ -57,7 +56,6 @@ def add(store, data, save=True):
     Hash.rehash(store)
     if save == True:
         File.save(store, blocks)
-    remap(store)
 
 
 
@@ -80,28 +78,6 @@ def get(store):
 
 
 
-### Not clear that this get_block() method gets us close enough to a final
-### configuration to be useful.
-def get_block(store, key):
-    ''' Return the configuration block containing a specific *key* from a
-        specific *store*. A KeyError exception is raised if there are no
-        locally stored configuration blocks for that store.
-    '''
-
-    try:
-        mapping = lookup[store]
-    except KeyError:
-        raise KeyError('no local configuration for ' + repr(store))
-
-    try:
-        block = mapping[key]
-    except KeyError:
-        raise KeyError("configuration for %s does not contain key %s" % (repr(store), repr(key)))
-
-    return block
-
-
-
 def list():
     ''' Return a list of known store names currently in the local cache.
     '''
@@ -115,23 +91,6 @@ def list():
             results.append(name)
 
     return results
-
-
-
-def remap(store):
-    ''' Remap the locally maintained lookup map for key names to configuration
-        blocks.
-    '''
-
-    blocks = cache[store]
-    mapping = dict()
-
-    for uuid in blocks.keys():
-        block = blocks[uuid]
-        for key in block['keys'].keys():
-            mapping[key] = block
-
-    lookup[store] = mapping
 
 
 
@@ -155,7 +114,6 @@ def remove(store, data, cleanup=True):
     if cleanup == True:
         File.remove(store, target_uuid)
         Hash.rehash(store)
-        remap(store)
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
