@@ -10,20 +10,22 @@ cache = dict()
 
 
 def get(name=None):
-    ''' Retrieve a hash for a store's configuration. Return the full contents
-        of the cache (as an iterable key/value pair sequence) if no *name* is
-        specified.
+    ''' Retrieve known hashes for a store's cached configuration blocks. Return
+        all known hashes if no *name* is specified. The hashes are always
+        returned as a dictionary, keyed first by store name, then by UUID for
+        the associated configuration block.
     '''
 
     if name is None:
-        return cache.items()
+        return dict(cache)
 
     try:
-        hash = cache[name]
+        hashes = cache[name]
     except KeyError:
         raise KeyError('no local configuration for ' + repr(name))
 
-    return hash
+    return dict(hashes)
+
 
 
 def hash(dumpable):
@@ -41,29 +43,26 @@ def hash(dumpable):
     return hash
 
 
-def rehash(name):
-    ''' Compute the hash for the locally cached data associated with a given
-        store.
+
+def rehash(store):
+    ''' Extract and cache the hash values associated with any configuration
+        blocks for the specified *store*.
     '''
 
-    config = Cache.get(name)
-    hashable = list()
-
-    # Sorting the UUIDs is important to ensure we're concatenating the blocks
-    # in the same order each time.
-
-    uuids = list(config.keys())
-    uuids.sort()
+    config = Cache.get(store)
+    uuids = config.keys()
 
     for uuid in uuids:
         block = config[uuid]
-        hashable.append(block['keys'])
+        hash = block['hash']
 
-    if len(hashable) == 0:
-        return
+        try:
+            cached = cache[store]
+        except KeyError:
+            cached = dict()
+            cache[store] = cached
 
-    cache[name] = hash(hashable)
-
+        cached[uuid] = hash
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
