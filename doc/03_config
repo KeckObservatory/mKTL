@@ -38,9 +38,13 @@ A configuration block will contain the following fields:
 		block. The provenance is a sequence, listing every
 		daemon between the client and the original source
 		of authority for the block. Each element in the
-		sequence contains a stratum, hostname, and port;
-		clients want to connect to the stratum zero entry
-		to handle any requests.
+		sequence contains a stratum, hostname, and req port
+		number; the 'pub' port is optional, and will only
+		be present for daemons that can handle subscribe
+		requests. Clients will connect to the stratum zero
+		entry to handle any requests; this may change in
+		the future to allow identification of full proxies
+		for all req+pub traffic for a daemon.
 
 	'time': daemon-provided timestamp for the contents of this
 		block. The timestamp may change even if the contents
@@ -163,7 +167,8 @@ in its JSON format:
           {
             "stratum": 0,
             "hostname": "chonk",
-            "port": 10112
+            "req": 10112,
+            "pub": 10139
           }
         ]
         "keys": {
