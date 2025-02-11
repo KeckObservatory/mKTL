@@ -41,10 +41,11 @@ class Item:
         provenance = key_config['provenance']
         stratum_0 = provenance[0]
         hostname = stratum_0['hostname']
-        port = stratum_0['port']
+        req = stratum_0['req']
+        pub = stratum_0['pub']
 
-        self.pub = Publish.client(hostname)
-        self.req = Request.client(hostname, port)
+        self.pub = Publish.client(hostname, pub)
+        self.req = Request.client(hostname, req)
 
 
     def get(self, refresh=False):

@@ -1,15 +1,15 @@
 ''' Routines to handle provenance information.
 '''
 
-def add(block, hostname, port):
+def add(block, hostname, req, pub=None):
     ''' Add the provenance of this daemon to the supplied configuration
         block. The block is provided as a Python dictionary; the hostname
-        and port combine to provide a unique location identifier that
-        clients can use to track the chain of handling for this
-        configuration data.
+        and port definitions provide potential clients with enough information
+        to initiate connections with further requests.
 
-        The newly added provenance block is returned for convenient access,
-        though it is already included in the configuration block.
+        The newly added provenance stratum is returned for convenient access,
+        though the provided configuration block has already been modified to
+        include the new stratum.
     '''
 
     try:
@@ -23,7 +23,7 @@ def add(block, hostname, port):
         if provenance['stratum'] > stratum:
             stratum = provenance['stratum']
 
-    provenance = create(stratum + 1, hostname, port)
+    provenance = create(stratum + 1, hostname, req, pub)
 
     block['provenance'].append(provenance)
     return provenance
@@ -45,17 +45,17 @@ def contains(block, provenance):
     # the stratum may not be set in the provided provenance.
 
     hostname = provenance['hostname']
-    port = provenance['port']
+    req = provenance['req']
 
     for known in full_provenance:
-        if known['hostname'] == hostname and known['port'] == port:
+        if known['hostname'] == hostname and known['req'] == req:
             return True
 
     return False
 
 
 
-def create(stratum, hostname, port):
+def create(stratum, hostname, req, pub=None):
     ''' Create a provenance dictionary.
     '''
 
@@ -67,7 +67,9 @@ def create(stratum, hostname, port):
         provenance['stratum'] = stratum
 
     provenance['hostname'] = str(hostname)
-    provenance['port'] = int(port)
+    provenance['req'] = int(req)
+    if pub is not None:
+        provenance['pub'] = int(pub)
 
     return provenance
 
@@ -101,7 +103,7 @@ def match(full_provenance1, full_provenance2):
             return matched
 
         # This next dictionary comparison requires all fields to match:
-        # stratum, hostname, and port.
+        # stratum, hostname, req, and pub (if present).
 
         if provenance1 != provenance2:
             return False

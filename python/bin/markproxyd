@@ -209,7 +209,8 @@ class ProxySubprocess:
         local_provenance = dict()
         local_provenance['stratum'] = 0
         local_provenance['hostname'] = self.req.external.hostname
-        local_provenance['port'] = self.req.external.port
+        local_provenance['req'] = self.req.external.port
+        local_provenance['pub'] = self.pub.external.port
 
         provenance = list()
         provenance.append(local_provenance)

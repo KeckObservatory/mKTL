@@ -129,9 +129,9 @@ def refresh(store, config):
 
         for stratum in provenance:
             hostname = stratum['hostname']
-            port = stratum['port']
+            req = stratum['req']
 
-            client = Protocol.Request.client(hostname, port)
+            client = Protocol.Request.client(hostname, req)
 
             request = dict()
             request['request'] = 'HASH'

@@ -147,7 +147,7 @@ class RequestServer(mKTL.Protocol.Request.Server):
 
         local_provenance = dict()
         local_provenance['hostname'] = self.hostname
-        local_provenance['port'] = self.port
+        local_provenance['req'] = self.port
 
         if mKTL.Config.Provenance.contains(new, local_provenance):
             raise ProvenanceLoopError('circular provenance detected')
