@@ -33,16 +33,28 @@ class Item:
         self.subscribed = False
         self.timeout = 120
 
-        ## Determine the location we need to connect to from store.config.
-        ## There are two pieces to it: the metadata associated with the daemon,
-        ## in particular the provenance, and the key-specific configuration.
-
         key_config = store.config[name]
         provenance = key_config['provenance']
-        stratum_0 = provenance[0]
-        hostname = stratum_0['hostname']
-        req = stratum_0['req']
-        pub = stratum_0['pub']
+
+        # Use the highest-numbered stratum that will handle a full range of
+        # queries. This capability is implied by the presence of the 'pub'
+        # field in the provenance; this may be made more declarative in the
+        # future, instead of the implied role being assumed here.
+
+        hostname = None
+
+        for stratum in provenance:
+            try:
+                pub = stratum['pub']
+            except KeyError:
+                continue
+            else:
+                hostname = stratum['hostname']
+                req = stratum['req']
+                break
+
+        if hostname is None:
+            raise RuntimeError('cannot find daemon for ' + self.full_name)
 
         self.pub = Publish.client(hostname, pub)
         self.req = Request.client(hostname, req)
