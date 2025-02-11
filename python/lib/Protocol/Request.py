@@ -439,6 +439,7 @@ class Server:
             except (KeyError, TypeError):
                 pass
             else:
+                del payload['bulk']
                 response['bulk'] = True
                 name = request['name']
                 id = str(response['id'])
