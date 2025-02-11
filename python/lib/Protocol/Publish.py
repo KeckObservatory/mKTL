@@ -31,8 +31,9 @@ class Client:
         if port is None:
             port = self.port
 
-        port = str(port)
-        server = "tcp://%s:%s" % (address, port)
+        port = int(port)
+        self.port = port
+        server = "tcp://%s:%d" % (address, port)
 
         self.socket = zmq_context.socket(zmq.SUB)
         self.socket.connect(server)
