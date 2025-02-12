@@ -12,8 +12,6 @@ import socket
 import threading
 import time
 
-from . import Request
-
 query = 'I heard it'
 query = query.encode()
 
@@ -36,27 +34,28 @@ direct_port = 10111
 
 
 class Server:
-    ''' Respond to any queries, acknowledging that we're running. That's it.
-        Up to the application to decide where to go from there.
+    ''' Listen for any queries on the *listen* port; respond to any queries
+        with our current IP address and the *request* port we were provided.
+        This allows clients to discover a valid location where they can issue
+        real requests.
     '''
 
-    def __init__(self, port=default_port, request_port=Request.default_port):
+    def __init__(self, listen, request):
         self.delay = 1
-        self.listening = False
         self.seen = dict()
         self.socket = None
         self.thread = None
 
-        request_port = int(request_port)
-        request_port = str(request_port)
-        request_port = request_port.encode()
-        self.response = response + request_port
+        request = int(request)
+        request = str(request)
+        request = request.encode()
+        self.response = response + request
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         try:
-            sock.bind(('', port))
+            sock.bind(('', listen))
         except OSError:
             return
 
@@ -72,7 +71,6 @@ class Server:
         except:
             pass
 
-        self.listening = False
         self.socket = None
         self.seen = dict()
         self.thread = None
@@ -117,8 +115,8 @@ class DirectServer(Server):
         any other sources.
     '''
 
-    def __init__(self, port=direct_port, request_port=Request.default_port):
-        return Server.__init__(self, port, request_port)
+    def __init__(self, listen, request):
+        return Server.__init__(self, listen, request)
 
 
 # end of class DirectServer
@@ -164,9 +162,9 @@ def search(port=default_port, wait=False):
 
         data = data.strip()
         if response in data:
-            request_port = data[len(response):]
-            request_port = int(request_port)
-            found.append((server[0], request_port))
+            request = data[len(response):]
+            request = int(request)
+            found.append((server[0], request))
 
             if wait == True:
                 sock.settimeout(expiration - elapsed)
