@@ -184,14 +184,26 @@ class Item:
         if self.subscribed == True:
             return
 
-        ### If this Item has a bulk component this also needs to subscribe
-        ### to the bulk topic
+        config = self.store.config[self.name]
 
-        ### If this Item is a leaf of a structured Item we may need to register
-        ### a callback on a topic substring of our name.
+        try:
+            type = config['type']
+        except KeyError:
+            bulk = False
+        else:
+            if type == 'bulk':
+                bulk = True
+            else:
+                bulk = False
+
+        if bulk == True:
+            self.pub.subscribe('bulk:' + self.full_name)
 
         self.pub.register(self._update, self.full_name)
         self.subscribed = True
+
+        ### If this Item is a leaf of a structured Item we may need to register
+        ### a callback on a topic substring of our name.
 
 
     def _interpret_bulk(self, new_message):
