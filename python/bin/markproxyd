@@ -34,10 +34,10 @@ def main():
     names = sys.argv[1:]
 
     pub = mKTL.Protocol.Publish.Server()
-    req = RequestServer(port=10112)
-    ##req = RequestServer(port=10111)
+    req = RequestServer()
 
-    discovery = mKTL.Protocol.Discover.DirectServer(request_port=req.port)
+    listen = mKTL.Protocol.Discover.direct_port
+    discovery = mKTL.Protocol.Discover.DirectServer(listen, req.port)
 
     # Try once to locate any running guide processes and notify them about
     # our unique local configuration. Further discovery of running daemons,
