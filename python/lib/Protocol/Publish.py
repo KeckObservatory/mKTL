@@ -11,7 +11,8 @@ import zmq
 from . import Json
 from .. import WeakRef
 
-default_port = 10139
+minimum_port = 10139
+maximum_port = 12379
 zmq_context = zmq.Context()
 
 
@@ -20,8 +21,6 @@ class Client:
         broadcasts; the default behavior is to connect to localhost on the
         default port.
     '''
-
-    port = default_port
 
     def __init__(self, address=None, port=None):
 
@@ -254,22 +253,47 @@ class Server:
         port.
     '''
 
-    port = default_port
     pub_id_min = 0
     pub_id_max = 0xFFFFFFFF
 
     def __init__(self, port=None):
 
-        if port is None:
-            port = self.port
-
-        port = 'tcp://*:' + str(port)
-
-        self.socket = zmq_context.socket(zmq.PUB)
-        self.socket.bind(port)
-
         self.pub_id_lock = threading.Lock()
         self.pub_id_reset()
+
+        # If the port is set, use it; otherwise, look for the first available
+        # port within the default range.
+
+        if port is None:
+            minimum = minimum_port
+            maximum = maximum_port
+        else:
+            port = int(port)
+            minimum = port
+            maximum = port
+            port = self.port
+
+        self.socket = zmq_context.socket(zmq.PUB)
+
+        port = minimum
+        while port <= maximum:
+            listen_address = 'tcp://*:' + str(port)
+            try:
+                self.socket.bind(listen_address)
+            except zmq.error.ZMQError:
+                # Assume this port is in use.
+                port += 1
+            else:
+                break
+
+        if port > maximum:
+            if minimum == minimum_port and maximum == maximum_port:
+                error = "no ports available in range %d:%d" % (minimum, maximum)
+            else:
+                error = 'port already in use: ' + str(port)
+            raise zmq.error.ZMQError(error)
+
+        self.port = port
 
 
     def pub_id_next(self):
@@ -341,7 +365,7 @@ class Server:
 
 client_connections = dict()
 
-def client(address=None, port=None):
+def client(address, port):
     ''' Factory function for a :class:`Client` instance.
     '''
 

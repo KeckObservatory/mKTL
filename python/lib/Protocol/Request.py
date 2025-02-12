@@ -15,40 +15,33 @@ import zmq
 from . import Json
 
 
-default_port = 10133
+minimum_port = 10079
+maximum_port = 13679
 zmq_context = zmq.Context()
 
 
 class Client:
     ''' Issue requests via a ZeroMQ DEALER socket and receive responses.
-        Maintains a persistent connection to a single server; the default
-        behavior is to connect to localhost on the default port.
+        Maintains a persistent connection to a single server; the *address*
+        and *port* number must be specified.
     '''
 
-    port = default_port
     timeout = 0.05
 
     req_id_min = 0
     req_id_max = 0xFFFFFFFF
 
-    def __init__(self, address=None, port=None):
+    def __init__(self, address, port):
 
         self.req_id_lock = threading.Lock()
         self.req_id_reset()
 
-        if address is None:
-            address = 'localhost'
-
-        if port is None:
-            port = self.port
-
         port = int(port)
+        self.port = port
+        self.address = address
+
         server = "tcp://%s:%d" % (address, port)
         identity = "Request.Client.%d" % (id(self))
-        self.address = address
-        self.port = port
-
-        self.pending = dict()
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -56,6 +49,7 @@ class Client:
         self.socket.connect(server)
         self.socket_lock = threading.Lock()
 
+        self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
         self.pending_thread.daemon = True
         self.pending_thread.start()
@@ -298,27 +292,51 @@ class Server:
         addresses on the default port.
     '''
 
-    port = default_port
     worker_count = 10
 
     def __init__(self, hostname=None, port=None):
+
+        # The hostname is set and stored, but not used, as we are going to
+        # listen on every available interface.
 
         if hostname is None:
             hostname = socket.getfqdn()
 
         self.hostname = hostname
-
-        if port is None:
-            port = self.port
-
-        self.port = port
-
-        listen_address = 'tcp://*:' + str(port)
-
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.bind(listen_address)
         self.socket_lock = threading.Lock()
+
+        # If the port is set, use it; otherwise, look for the first available
+        # port within the default range.
+
+        if port is None:
+            minimum = minimum_port
+            maximum = maximum_port
+        else:
+            port = int(port)
+            minimum = port
+            maximum = port
+
+        port = minimum
+        while port <= maximum:
+            listen_address = 'tcp://*:' + str(port)
+            try:
+                self.socket.bind(listen_address)
+            except zmq.error.ZMQError:
+                # Assume this port is in use.
+                port += 1
+            else:
+                break
+
+        if port > maximum:
+            if minimum == minimum_port and maximum == maximum_port:
+                error = "no ports available in range %d:%d" % (minimum, maximum)
+            else:
+                error = 'port already in use: ' + str(port)
+            raise zmq.error.ZMQError(error)
+
+        self.port = port
 
         # The use of worker threads and a synchronization primitive is something
         # like a 10-20% hit in performance compared to using a single thread.
@@ -524,7 +542,7 @@ class Server:
 
 client_connections = dict()
 
-def client(address=None, port=None):
+def client(address, port):
     ''' Factory function for a :class:`Client` instance.
     '''
 
@@ -538,7 +556,7 @@ def client(address=None, port=None):
 
 
 
-def send(request, address=None, port=None):
+def send(request, address, port):
     ''' Creates a :class:`Client` instance and invokes the :func:`Client.send`
         method. This method blocks until the completion of the request.
     '''
