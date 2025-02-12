@@ -34,13 +34,15 @@ direct_port = 10111
 
 
 class Server:
-    ''' Listen for any queries on the *listen* port; respond to any queries
+    ''' Listen for any queries on the default port; respond to any queries
         with our current IP address and the *request* port we were provided.
         This allows clients to discover a valid location where they can issue
         real requests.
     '''
 
-    def __init__(self, listen, request):
+    port = default_port
+
+    def __init__(self, request):
         self.delay = 1
         self.seen = dict()
         self.socket = None
@@ -55,7 +57,7 @@ class Server:
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         try:
-            sock.bind(('', listen))
+            sock.bind(('', self.port))
         except OSError:
             return
 
@@ -115,8 +117,10 @@ class DirectServer(Server):
         any other sources.
     '''
 
-    def __init__(self, listen, request):
-        return Server.__init__(self, listen, request)
+    port = direct_port
+
+    def __init__(self, request):
+        return Server.__init__(self, request)
 
 
 # end of class DirectServer

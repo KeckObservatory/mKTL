@@ -21,8 +21,7 @@ def main():
 
     main.req = RequestServer()
 
-    beacon_port = mKTL.Protocol.Discover.default_port
-    main.beacon = mKTL.Protocol.Discover.Server(beacon_port, main.req.port)
+    main.beacon = mKTL.Protocol.Discover.Server(main.req.port)
 
     delay = 30
     ### It needs to be possible to manipulate this set from the
