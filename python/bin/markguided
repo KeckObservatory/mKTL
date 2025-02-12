@@ -1,4 +1,4 @@
-#! /usr/bin/env kpython3
+#! /usr/bin/env python3
 
 # The guide daemon acts as a broker for configuration requests; when daemons
 # first start running they will seek out any guides on their local network
@@ -19,10 +19,10 @@ def main():
 
     ## The hostname and port should come from a configuration file.
 
-    port = mKTL.Protocol.Request.default_port
+    main.req = RequestServer()
 
-    main.beacon = mKTL.Protocol.Discover.Server(request_port=port)
-    main.req = RequestServer(port=port)
+    beacon_port = mKTL.Protocol.Discover.default_port
+    main.beacon = mKTL.Protocol.Discover.Server(beacon_port, main.req.port)
 
     delay = 30
     ### It needs to be possible to manipulate this set from the
