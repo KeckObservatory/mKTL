@@ -12,7 +12,7 @@ from . import Json
 from .. import WeakRef
 
 minimum_port = 10139
-maximum_port = 12379
+maximum_port = 13679
 zmq_context = zmq.Context()
 
 
