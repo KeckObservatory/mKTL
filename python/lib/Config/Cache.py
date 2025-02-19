@@ -3,7 +3,6 @@
 
 from . import File
 from . import Hash
-from . import Provenance
 
 cache = dict()
 
