@@ -17,9 +17,10 @@ class WeakRef:
         try:
             self.method = weakref.ref(thing.__func__)
             self.instance = weakref.ref(thing.__self__)
-            self.reference = None
         except AttributeError:
             self.reference = weakref.ref(thing)
+        else:
+            self.reference = None
 
 
     def __call__(self):
