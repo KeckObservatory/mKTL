@@ -8,14 +8,10 @@ from . import WeakRef
 from . import Protocol
 from . import Proxy
 from . import Config
+from . import Client
 
 from . import Get
 get = Get.get
 
-### Not sure whether Item needs to be exposed at the top level. Useful for
-### debugging at the moment.
-
-from .Item import Item
-from .Store import Store
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
