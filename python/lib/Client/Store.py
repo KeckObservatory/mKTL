@@ -1,5 +1,5 @@
 
-from . import Config
+from .. import Config
 from . import Item
 
 

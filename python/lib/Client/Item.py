@@ -6,10 +6,9 @@ try:
 except ImportError:
     numpy = None
 
-from .Protocol import Publish
-from .Protocol import Request
-from . import Config
-from . import WeakRef
+from .. import Config
+from .. import Protocol
+from .. import WeakRef
 
 
 class Item:
@@ -56,8 +55,8 @@ class Item:
         if hostname is None:
             raise RuntimeError('cannot find daemon for ' + self.full_name)
 
-        self.pub = Publish.client(hostname, pub)
-        self.req = Request.client(hostname, req)
+        self.pub = Protocol.Publish.client(hostname, pub)
+        self.req = Protocol.Request.client(hostname, req)
 
 
     def get(self, refresh=False):
