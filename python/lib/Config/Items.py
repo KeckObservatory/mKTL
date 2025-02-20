@@ -42,7 +42,11 @@ def get(store):
 
             copied = dict(item)
             copied['uuid'] = uuid
-            copied['provenance'] = block['provenance']
+
+            try:
+                copied['provenance'] = block['provenance']
+            except KeyError:
+                pass
 
             by_key[key] = copied
 
