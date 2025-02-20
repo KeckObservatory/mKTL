@@ -57,7 +57,7 @@ class Poller:
         self.method_id = id(method)
         active[self.method_id] = self
 
-        self.interval = 30
+        self.interval = None
         self.reference = WeakRef.ref(method)
         self.shutdown = False
 
@@ -81,6 +81,11 @@ class Poller:
         interval = 30
         next = time.time()
 
+        # Initial wait for someone to call self.period().
+
+        while self.interval is None:
+            self.alarm.wait(1)
+
         while True:
             now = time.time()
 
@@ -88,6 +93,7 @@ class Poller:
                 break
 
             if self.alarm.is_set() == True:
+                self.alarm.clear()
                 interval = self.interval
                 next = now + interval
             else:
