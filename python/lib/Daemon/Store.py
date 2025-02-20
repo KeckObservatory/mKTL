@@ -30,14 +30,8 @@ class Store(Client.Store):
         self.daemon_config = None
         self._daemon_items = set()
 
-        daemon_config = Config.load(name, config)
-        self._update_config(daemon_config, daemon=True)
-
-        config = Config.Items.get(name)
-        self._update_config(config)
-
         self.pub = Protocol.Publish.Server()
-        self.req = RequestServer()
+        self.req = RequestServer(self)
 
         provenance = dict()
         provenance['stratum'] = 0
@@ -47,6 +41,12 @@ class Store(Client.Store):
 
         self.provenance = list()
         self.provenance.append(provenance)
+
+        daemon_config = Config.load(name, config)
+        self._update_daemon_config(daemon_config)
+
+        config = Config.Items.get(name)
+        self._update_config(config)
 
         # Local machinery is intact. Invoke the setup() method, which is the
         # hook for the developer to establish their own custom Item classes
@@ -65,13 +65,9 @@ class Store(Client.Store):
         self.publish_config(guides)
 
 
-    def _update_config(self, config, daemon=False):
+    def _update_config(self, config):
 
-        if daemon == True:
-            self.daemon_config = config
-            self._daemon_items.update(config)
-        else:
-            self.config = config
+        self.config = config
 
         keys = config.keys()
         keys = list(keys)
@@ -83,7 +79,17 @@ class Store(Client.Store):
             except KeyError:
                 self._items[key] = None
 
+
+    def _update_daemon_config(self, config):
+
+        uuid = list(config.keys())[0]
+        self.daemon_config = config
+        config[uuid]['provenance'] = self.provenance
         Config.add(self.name, config)
+
+        config = Config.Items.get(self.name)
+        self._daemon_items.update(config)
+        self._update_config(config)
 
 
     def publish_config(self, targets=tuple()):
@@ -119,7 +125,7 @@ class Store(Client.Store):
             implementations.
         '''
 
-        local = list(self._daemon_keys)
+        local = list(self._daemon_items)
 
         for key in local:
             item = self._items[key]
@@ -188,7 +194,7 @@ class RequestServer(Protocol.Request.Server):
     def req_get(self, request):
 
         key = request['name']
-        store, key = name.split('.', 1)
+        store, key = key.split('.', 1)
 
         if key in self.store._daemon_items:
             pass
@@ -202,7 +208,7 @@ class RequestServer(Protocol.Request.Server):
     def req_set(self, request):
 
         key = request['name']
-        store, key = name.split('.', 1)
+        store, key = key.split('.', 1)
 
         if key in self.store._daemon_items:
             pass
@@ -216,11 +222,11 @@ class RequestServer(Protocol.Request.Server):
     def req_hash(self, request):
 
         try:
-            name = request['name']
+            store = request['name']
         except KeyError:
-            name = None
+            store = None
 
-        cached = Config.Hash.get(name)
+        cached = Config.Hash.get(store)
         return cached
 
 
