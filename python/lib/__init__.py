@@ -9,6 +9,7 @@ from . import Protocol
 from . import Proxy
 from . import Config
 from . import Client
+from . import Daemon
 
 from . import Get
 get = Get.get
