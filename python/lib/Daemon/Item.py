@@ -17,6 +17,10 @@ class Daemon:
         simple key/value cache.
     '''
 
+    def __init__(self, *args, **kwargs):
+        pass
+
+
     def poll(self, period):
         ''' Poll for a new value every *period* seconds. Polling will be
             discontinued if *period* is set to None or zero.
