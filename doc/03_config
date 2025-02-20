@@ -227,4 +227,27 @@ The .json file located here is where a daemon is expected to establish the
 keys it provides. The adjacent .uuid file is auto-generated; the only content
 of the file is a single UUID. If the .uuid file exists it will be used,
 regardless of its origins, but there is no need for the developer to establish
-it as part of the daemon's initial configuration.
+it as part of the daemon's initial configuration. Unlike the cached client
+side configuration file, the daemon configuration file only includes the
+'keys' component, the structure above that is missing. This would be the
+daemon-side .json file for the above two-key example:
+
+	{
+          "ANGLE": {
+            "type": "double",
+            "units": {
+              "asc": "h",
+              "bin": "rad"
+            },
+            "description": "Writable angle keyword."
+          },
+          "DISPSTOP": {
+            "type": "boolean",
+            "description": "Dispatcher shutdown command. Tells dispatcher to exe
+cute a clean shutdown.",
+            "enumerators": {
+                "0": "no",
+                "1": "yes"
+            }
+          }
+	}
