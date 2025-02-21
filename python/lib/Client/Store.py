@@ -43,7 +43,9 @@ class Store:
 
         if item is None:
             item = Item.Item(self, key)
-            self._items[key] = item
+
+            # The Item assigns itself to our self._items dictionary as the last
+            # step in its initialization process.
 
         return item
 

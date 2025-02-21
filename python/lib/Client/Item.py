@@ -20,10 +20,10 @@ class Item:
         with any new value(s).
     '''
 
-    def __init__(self, store, name):
+    def __init__(self, store, key):
 
-        self.name = name
-        self.full_name = store.name + '.' + name
+        self.key = key
+        self.full_key = store.name + '.' + key
         self.store = store
 
         self.callbacks = list()
@@ -32,7 +32,7 @@ class Item:
         self.subscribed = False
         self.timeout = 120
 
-        key_config = store.config[name]
+        key_config = store.config[key]
         provenance = key_config['provenance']
 
         # Use the highest-numbered stratum that will handle a full range of
@@ -53,10 +53,22 @@ class Item:
                 break
 
         if hostname is None:
-            raise RuntimeError('cannot find daemon for ' + self.full_name)
+            raise RuntimeError('cannot find daemon for ' + self.full_key)
 
         self.pub = Protocol.Publish.client(hostname, pub)
         self.req = Protocol.Request.client(hostname, req)
+
+        # An Item is a singleton in practice; enforce that constraint here.
+
+        try:
+            old = self.store._items[key]
+        except KeyError:
+            old = None
+
+        if old is not None:
+            raise RuntimeError('duplicate item not allowed: ' + self.full_key)
+
+        self.store._items[key] = self
 
 
     def get(self, refresh=False):
@@ -70,7 +82,7 @@ class Item:
 
         request = dict()
         request['request'] = 'GET'
-        request['name'] = self.full_name
+        request['name'] = self.full_key
 
         if refresh == True:
             request['refresh'] = True
@@ -141,7 +153,7 @@ class Item:
 
         request = dict()
         request['request'] = 'SET'
-        request['name'] = self.full_name
+        request['name'] = self.full_key
         request['data'] = new_value
 
         if bulk is not None:
@@ -183,7 +195,7 @@ class Item:
         if self.subscribed == True:
             return
 
-        config = self.store.config[self.name]
+        config = self.store.config[self.key]
 
         try:
             type = config['type']
@@ -196,13 +208,13 @@ class Item:
                 bulk = False
 
         if bulk == True:
-            self.pub.subscribe('bulk:' + self.full_name)
+            self.pub.subscribe('bulk:' + self.full_key)
 
-        self.pub.register(self._update, self.full_name)
+        self.pub.register(self._update, self.full_key)
         self.subscribed = True
 
         ### If this Item is a leaf of a structured Item we may need to register
-        ### a callback on a topic substring of our name.
+        ### a callback on a topic substring of our key name.
 
 
     def _interpret_bulk(self, new_message):
