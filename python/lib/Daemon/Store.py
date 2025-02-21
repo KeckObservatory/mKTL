@@ -84,6 +84,7 @@ class Store(Client.Store):
 
         uuid = list(config.keys())[0]
         self.daemon_config = config
+        self.daemon_uuid = uuid
         config[uuid]['provenance'] = self.provenance
         Config.add(self.name, config)
 
