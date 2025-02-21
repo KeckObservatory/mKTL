@@ -35,7 +35,7 @@ class Daemon:
 
         message = dict()
         message['message'] = 'PUB'
-        message['name'] = self.full_name
+        message['name'] = self.full_key
         message['time'] = time.time()
         message['data'] = new_value
 
