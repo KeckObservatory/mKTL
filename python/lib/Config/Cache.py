@@ -3,6 +3,7 @@
 
 from . import File
 from . import Hash
+from . import Items
 
 cache = dict()
 
@@ -53,6 +54,7 @@ def add(store, data, save=True):
     ## handling chain handling that before this method gets called?
 
     Hash.rehash(store)
+    Items.clear(store)
     if save == True:
         File.save(store, blocks)
 
@@ -113,6 +115,7 @@ def remove(store, data, cleanup=True):
     if cleanup == True:
         File.remove(store, target_uuid)
         Hash.rehash(store)
+        Items.clear(store)
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
