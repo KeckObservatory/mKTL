@@ -246,7 +246,9 @@ class Client:
 class Server:
     ''' Send broadcasts via a ZeroMQ PUB socket. The default behavior is to
         set up a listener on all available network interfaces on the first
-        available automatically assigned port.
+        available automatically assigned port. The *avoid* set enumerates port
+        numbers that should not be automatically assigned; this is ignored if a
+        fixed *port* is specified.
     '''
 
     pub_id_min = 0

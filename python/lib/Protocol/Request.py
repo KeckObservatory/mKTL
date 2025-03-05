@@ -290,7 +290,9 @@ class Server:
     ''' Receive requests via a ZeroMQ ROUTER socket, and respond to them. The
         default behavior is to listen for incoming requests on our locally
         known fully qualified domain name, on the first available automatically
-        assigned port.
+        assigned port. The *avoid* set enumerates port numbers that should
+        not be automatically assigned; this is ignored if a fixed *port* is
+        specified.
     '''
 
     worker_count = 10
