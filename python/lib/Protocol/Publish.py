@@ -18,17 +18,10 @@ zmq_context = zmq.Context()
 
 class Client:
     ''' Establish a ZeroMQ SUB connection to a ZeroMQ PUB socket and receive
-        broadcasts; the default behavior is to connect to localhost on the
-        default port.
+        broadcasts.
     '''
 
-    def __init__(self, address=None, port=None):
-
-        if address is None:
-            address = 'localhost'
-
-        if port is None:
-            port = self.port
+    def __init__(self, address, port):
 
         port = int(port)
         self.port = port
@@ -240,7 +233,10 @@ class Client:
         # do it here, for every subscribed channel regardless of whether it
         # actually has a bulk component, but that seems inefficient.
 
-        ### self.socket.setsockopt(zmq.SUBSCRIBE, b'bulk:' + topic)
+        # self.socket.setsockopt(zmq.SUBSCRIBE, b'bulk:' + topic)
+
+        # The conditional need for this additional subscribtion is handled
+        # in the Item class, specifically, Item.subscribe().
 
 
 # end of class Client
@@ -249,14 +245,14 @@ class Client:
 
 class Server:
     ''' Send broadcasts via a ZeroMQ PUB socket. The default behavior is to
-        set up a listener on all available network interfaces on the default
-        port.
+        set up a listener on all available network interfaces on the first
+        available automatically assigned port.
     '''
 
     pub_id_min = 0
     pub_id_max = 0xFFFFFFFF
 
-    def __init__(self, port=None):
+    def __init__(self, port=None, avoid=set()):
 
         self.pub_id_lock = threading.Lock()
         self.pub_id_reset()
@@ -271,29 +267,32 @@ class Server:
             port = int(port)
             minimum = port
             maximum = port
-            port = self.port
 
         self.socket = zmq_context.socket(zmq.PUB)
 
-        port = minimum
-        while port <= maximum:
-            listen_address = 'tcp://*:' + str(port)
+        trial = minimum
+        while trial <= maximum:
+            if port is None and trial in avoid:
+                trial += 1
+                continue
+
+            listen_address = 'tcp://*:' + str(trial)
             try:
                 self.socket.bind(listen_address)
             except zmq.error.ZMQError:
                 # Assume this port is in use.
-                port += 1
+                trial += 1
             else:
                 break
 
-        if port > maximum:
-            if minimum == minimum_port and maximum == maximum_port:
+        if trial > maximum:
+            if port is None:
                 error = "no ports available in range %d:%d" % (minimum, maximum)
             else:
                 error = 'port already in use: ' + str(port)
             raise zmq.error.ZMQError(error)
 
-        self.port = port
+        self.port = trial
 
 
     def pub_id_next(self):

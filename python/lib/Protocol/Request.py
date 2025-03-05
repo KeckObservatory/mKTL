@@ -288,13 +288,14 @@ class Pending:
 
 class Server:
     ''' Receive requests via a ZeroMQ ROUTER socket, and respond to them. The
-        default behavior is to listen for incoming requests on all available
-        addresses on the default port.
+        default behavior is to listen for incoming requests on our locally
+        known fully qualified domain name, on the first available automatically
+        assigned port.
     '''
 
     worker_count = 10
 
-    def __init__(self, hostname=None, port=None):
+    def __init__(self, hostname=None, port=None, avoid=set()):
 
         # The hostname is set and stored, but not used, as we are going to
         # listen on every available interface.
@@ -318,25 +319,29 @@ class Server:
             minimum = port
             maximum = port
 
-        port = minimum
-        while port <= maximum:
-            listen_address = 'tcp://*:' + str(port)
+        trial = minimum
+        while trial <= maximum:
+            if port is None and trial in avoid:
+                trial += 1
+                continue
+
+            listen_address = 'tcp://*:' + str(trial)
             try:
                 self.socket.bind(listen_address)
             except zmq.error.ZMQError:
                 # Assume this port is in use.
-                port += 1
+                trial += 1
             else:
                 break
 
-        if port > maximum:
-            if minimum == minimum_port and maximum == maximum_port:
+        if trial > maximum:
+            if port is None:
                 error = "no ports available in range %d:%d" % (minimum, maximum)
             else:
                 error = 'port already in use: ' + str(port)
             raise zmq.error.ZMQError(error)
 
-        self.port = port
+        self.port = trial
 
         # The use of worker threads and a synchronization primitive is something
         # like a 10-20% hit in performance compared to using a single thread.
