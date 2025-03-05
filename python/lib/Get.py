@@ -137,9 +137,14 @@ def refresh(store, config):
             request['request'] = 'HASH'
             request['name'] = store
 
-            pending = client.send(request)
-            ### This next call probably needs exception handling in the event
-            ### that the host/port combo is not online.
+            try:
+                pending = client.send(request)
+            except zmq.ZMQError:
+                # No response from this daemon; move on to the next entry in
+                # the provenance. If no daemons respond the client will have
+                # to rely on the local disk cache.
+                continue
+
             response = pending.wait()
 
             try:
