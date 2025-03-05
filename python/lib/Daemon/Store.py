@@ -4,6 +4,7 @@ from .. import Config
 from .. import Protocol
 
 from . import Item
+from . import Port
 
 
 class Store(Client.Store):
@@ -28,10 +29,18 @@ class Store(Client.Store):
         self.config = None
         self._items = dict()
         self.daemon_config = None
+        self.daemon_uuid = None
         self._daemon_items = set()
 
-        self.pub = Protocol.Publish.Server()
-        self.req = RequestServer(self)
+        daemon_config = Config.load(name, config)
+        self._update_daemon_config(daemon_config)
+
+        # Use cached port numbers when possible.
+
+        req, pub = Port.load(self.name, self.daemon_uuid)
+        self.pub = Protocol.Publish.Server(pub)
+        self.req = RequestServer(self, req)
+        Port.save(self.name, self.daemon_uuid, self.req.port, self.pub.port)
 
         provenance = dict()
         provenance['stratum'] = 0
@@ -42,8 +51,15 @@ class Store(Client.Store):
         self.provenance = list()
         self.provenance.append(provenance)
 
-        daemon_config = Config.load(name, config)
-        self._update_daemon_config(daemon_config)
+        # A bit of a chicken and egg problem with the provenance. It can't be
+        # established until the listener ports are known; we can't establish
+        # the listener ports without knowing our UUID; we don't know the UUID
+        # until the configuration is loaded. We're doctoring the configuration
+        # after-the-fact, and thus need to refresh the local cache to ensure
+        # consistency.
+
+        self.daemon_config[self.daemon_uuid]['provenance'] = self.provenance
+        Config.add(self.name, self.daemon_config)
 
         config = Config.Items.get(name)
         self._update_config(config)
@@ -85,7 +101,6 @@ class Store(Client.Store):
         uuid = list(config.keys())[0]
         self.daemon_config = config
         self.daemon_uuid = uuid
-        config[uuid]['provenance'] = self.provenance
         Config.add(self.name, config)
 
         config = Config.Items.get(self.name)
