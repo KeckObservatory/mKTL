@@ -38,8 +38,10 @@ class Store(Client.Store):
         # Use cached port numbers when possible.
 
         req, pub = Port.load(self.name, self.daemon_uuid)
-        self.pub = Protocol.Publish.Server(pub)
-        self.req = RequestServer(self, req)
+
+        self.pub = Protocol.Publish.Server(pub, avoid=Port.used())
+        self.req = RequestServer(self, req, avoid=Port.used())
+
         Port.save(self.name, self.daemon_uuid, self.req.port, self.pub.port)
 
         provenance = dict()
