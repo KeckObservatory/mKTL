@@ -98,7 +98,6 @@ class Store(Client.Store):
         '''
 
         config = dict(self.daemon_config)
-        config['provenance'] = self.provenance
 
         request = dict()
         request['request'] = 'CONFIG'
@@ -153,7 +152,6 @@ class RequestServer(Protocol.Request.Server):
 
         if store == self.store.name:
             config = dict(self.store.daemon_config)
-            config['provenance'] = self.store.provenance
         else:
             config = Config.get(store)
 
