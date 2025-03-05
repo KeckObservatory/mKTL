@@ -87,6 +87,7 @@ class Daemon:
             bulk = True
             new_value = self._interpret_bulk(request)
 
+        new_value = self.validate(new_value)
         self.cached = new_value
 
         publish = dict()
@@ -105,6 +106,19 @@ class Daemon:
         payload = dict()
         payload['data'] = True
         return payload
+
+
+    def validate(self, value):
+        ''' A hook for a daemon to validate a new value. The default behavior
+            is a no-op; any checks should raise exceptions if they encounter
+            a problem with the incoming value. The 'validated' value should
+            be returned by this method; this allows for the possibility that
+            the incoming value has been translated to a more acceptable format,
+            for example, converting '123' to the bare number 123 for a numeric
+            item type.
+        '''
+
+        return value
 
 
 # end of class Daemon
