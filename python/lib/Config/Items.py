@@ -57,4 +57,18 @@ def get(store):
 
 
 
+def clear(store):
+    ''' Clear the cached by-item configuration for the specified store.
+    '''
+
+    try:
+        del cache[store]
+    except KeyError:
+        pass
+
+    try:
+        del hashes[store]
+    except KeyError:
+        pass
+
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
