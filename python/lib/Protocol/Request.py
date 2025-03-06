@@ -321,9 +321,11 @@ class Server:
             minimum = port
             maximum = port
 
+        avoided = list()
         trial = minimum
         while trial <= maximum:
             if port is None and trial in avoid:
+                avoided.append(trial)
                 trial += 1
                 continue
 
@@ -335,6 +337,27 @@ class Server:
                 trial += 1
             else:
                 break
+
+        if trial > maximum and len(avoided) > 0:
+            # There are a lot of ports in the default range; surely one of
+            # them is available? Re-take something if it is not in use.
+
+            reuse = False
+            for trial in avoided:
+                listen_address = 'tcp://*:' + str(trial)
+                try:
+                    self.socket.bind(listen_address)
+                except zmq.error.ZMQError:
+                    # Assume this port is in use.
+                    continue
+                else:
+                    reuse = True
+                    break
+
+            if reuse == False:
+                # No luck. Reassert the failure condition checked below.
+                trial = maximum + 1
+
 
         if trial > maximum:
             if port is None:
