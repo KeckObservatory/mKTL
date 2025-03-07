@@ -62,7 +62,9 @@ class Daemon:
 
 
     def req_refresh(self):
-        ''' Refresh the current value and publish it.
+        ''' Refresh the current value and publish it. This is where a daemon
+            would communicate with a controller or other source-of-authority
+            to retrieve the current value.
         '''
 
         # This implementation is strictly caching, there is nothing to refresh.
