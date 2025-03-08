@@ -12,7 +12,7 @@ queues = dict()
 
 
 def load(store, uuid):
-    ''' Load any/all cached values for the specified *store* name and *uuid*.
+    ''' Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
         dictionary key, and the value appropriate for the Item.cached attribute
         as the value.
@@ -21,7 +21,7 @@ def load(store, uuid):
     values = dict()
 
     base_directory = Config.File.directory()
-    uuid_directory = os.path.join(base_directory, 'cache', uuid)
+    uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
     try:
         files = os.listdir(uuid_directory)
@@ -66,7 +66,7 @@ def save(item):
     ## it for bulk data, but otherwise will throw whatever's at the .cached
     ## attribute at the JSON translator directly.
 
-    cached = dict()
+    saved = dict()
 
     try:
         bytes = item.cached.tobytes()
@@ -77,12 +77,12 @@ def save(item):
         payload['shape'] = item.cached.shape
         payload['dtype'] = str(item.cached.dtype)
 
-        cached['bulk'] = bytes
+        saved['bulk'] = bytes
 
     payload = Json.dumps(payload)
-    cached[''] = payload
+    saved[''] = payload
 
-    pending.add(item.key, cached)
+    pending.add(item.key, saved)
 
 
 
@@ -102,7 +102,7 @@ atexit.register(flush)
 
 
 class Pending:
-    ''' This is a helper class to accumulate cached values, and periodically
+    ''' This is a helper class to accumulate saved values, and periodically
         write them out to disk.
     '''
 
@@ -112,11 +112,11 @@ class Pending:
         queues[uuid] = self
 
         base_directory = Config.File.directory()
-        uuid_directory = os.path.join(base_directory, 'cache', uuid)
+        uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
         if os.path.exists(uuid_directory):
             if os.access(uuid_directory, os.W_OK) != True:
-                raise OSError('cannot write to cache directory: ' + uuid_directory)
+                raise OSError('cannot write to persistent directory: ' + uuid_directory)
         else:
             os.makedirs(uuid_directory, mode=0o775)
 
