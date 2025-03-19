@@ -102,7 +102,7 @@ class Iterator:
 
     def __init__(self, store):
         self.store = store
-        self.keys = store.keys()
+        self.keys = list(store.keys())
         self.keys.reverse()
 
 
