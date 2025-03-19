@@ -1,5 +1,6 @@
 
 import atexit
+import os
 import queue
 import time
 
@@ -14,11 +15,13 @@ queues = dict()
 def load(store, uuid):
     ''' Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
-        dictionary key, and the value appropriate for the Item.cached attribute
-        as the value.
+        dictionary key, and the value will mimic the structure of a message,
+        being returned as a dictionary with a 'data' key and an optional 'bulk'
+        key as appropriate, so that the handling of any interpretation can be
+        unified within the Item code.
     '''
 
-    values = dict()
+    loaded = dict()
 
     base_directory = Config.File.directory()
     uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
@@ -26,34 +29,41 @@ def load(store, uuid):
     try:
         files = os.listdir(uuid_directory)
     except FileNotFoundError:
-        return values
+        return loaded
 
     for key in files:
         if key[:5] == 'bulk:':
             continue
 
+        message = dict()
+
         filename = os.path.join(uuid_directory, key)
         bulk_filename = os.path.join(uuid_directory, 'bulk:' + key)
 
         json = open(filename, 'r').read()
-        value = Protocol.Json.loads(json)
+        data = Protocol.Json.loads(json)
+        message['data'] = data
 
         try:
             bulk = open(bulk_filename, 'r').read()
         except FileNotFoundError:
-            bulk = None
+            pass
+        else:
+            message['bulk'] = bulk
 
-        values[key] = (value, bulk)
+        loaded[key] = message
 
-    return values
+    return loaded
 
 
 
-def save(item):
-    ''' Queue the Item.cached attribute to be written out to disk.
+def save(item, *args, **kwargs):
+    ''' Queue the Item.cached attribute to be written out to disk. Additional
+        arguments are ignored so that this method can be registered as a
+        callback for a mKTL.Client.Item instance.
     '''
 
-    uuid = item.store.daemon_uuid
+    uuid = item.config['uuid']
 
     try:
         pending = queues[uuid]
@@ -79,10 +89,10 @@ def save(item):
 
         saved['bulk'] = bytes
 
-    payload = Json.dumps(payload)
+    payload = Protocol.Json.dumps(payload)
     saved[''] = payload
 
-    pending.add(item.key, saved)
+    pending.put((item.key, saved))
 
 
 
@@ -122,7 +132,7 @@ class Pending:
 
         self.directory = uuid_directory
         self.queue = queue.SimpleQueue()
-        self.add = self.queue.add
+        self.put = self.queue.put
 
         # Use a background poller to flush events to disk every five seconds.
         Poll.start(self.flush, 5)
