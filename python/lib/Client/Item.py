@@ -25,6 +25,7 @@ class Item:
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
+        self.config = store.config[key]
 
         self.callbacks = list()
         self.cached = None
