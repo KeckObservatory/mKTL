@@ -92,6 +92,12 @@ def save(item, *args, **kwargs):
     ## it for bulk data, but otherwise will throw whatever's at the .cached
     ## attribute at the JSON translator directly.
 
+    ## Likewise, for normal values, this is taking the client perception of
+    ## a value and saving it-- where the server side may only have the 'binary'
+    ## value cached. We only "need" to save the binary value, but the asc/bin
+    ## representation on the client side is not necessarily established as a
+    ## desirable practice.
+
     saved = dict()
 
     try:
