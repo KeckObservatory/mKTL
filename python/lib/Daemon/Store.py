@@ -1,9 +1,13 @@
 
+import subprocess
+import sys
+
 from .. import Client
 from .. import Config
 from .. import Protocol
 
 from . import Item
+from . import Persist
 from . import Port
 
 
@@ -73,14 +77,65 @@ class Store(Client.Store):
         self.setup()
         self.setupRemaining()
 
-        ### This is where loading values from a cache should occur.
+        # Restore any persistent values, and enable the retention of future
+        # persistent values.
+
+        self._restore()
+        self._begin_persistence()
 
         # Ready to go on the air.
 
         discovery = Protocol.Discover.DirectServer(self.req.port)
 
         guides = Protocol.Discover.search(wait=True)
-        self.publish_config(guides)
+        self._publish_config(guides)
+
+
+    def _begin_persistence(self):
+        ''' Start the background process responsible for updating the
+            persistent value cache.
+        '''
+
+        ### This is not a valid way to find the markpersistd executable.
+
+        arguments = list()
+        arguments.append('/home/lanclos/git/mKTL/python/bin/markpersistd')
+        arguments.append(self.name)
+        arguments.append(self.daemon_uuid)
+
+        pipe = subprocess.PIPE
+        self.persistence = subprocess.Popen(arguments)
+
+
+    def _publish_config(self, targets=tuple()):
+        ''' Put our local configuration out on the wire.
+        '''
+
+        config = dict(self.daemon_config)
+
+        request = dict()
+        request['request'] = 'CONFIG'
+        request['name'] = self.name
+        request['data'] = config
+
+        for address,port in targets:
+            try:
+                Protocol.Request.send(request, address, port)
+            except zmq.error.ZMQError:
+                pass
+
+
+    def _restore(self):
+        ''' Bring back any values in the local persistent cache, and push them
+            through to affected Items for handling.
+        '''
+
+        loaded = Persist.load(self.name, self.daemon_uuid)
+
+        for key in loaded.keys():
+            faux_message = loaded[key]
+            item = self[key]
+            item.req_set(faux_message)
 
 
     def _update_config(self, config):
@@ -108,24 +163,6 @@ class Store(Client.Store):
         config = Config.Items.get(self.name)
         self._daemon_items.update(config)
         self._update_config(config)
-
-
-    def publish_config(self, targets=tuple()):
-        ''' Put our local configuration out on the wire.
-        '''
-
-        config = dict(self.daemon_config)
-
-        request = dict()
-        request['request'] = 'CONFIG'
-        request['name'] = self.name
-        request['data'] = config
-
-        for address,port in targets:
-            try:
-                Protocol.Request.send(request, address, port)
-            except zmq.error.ZMQError:
-                pass
 
 
     def setup(self):
