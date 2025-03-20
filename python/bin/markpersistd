@@ -1,0 +1,56 @@
+#! /usr/bin/env kpython3
+
+# This is a subprocess invoked by an authoritative daemon to save item values
+# in a persistent disk cache, so that item values can remain consistent across
+# restarts of a daemon when desired.
+
+import sys
+import mKTL
+import time
+
+
+def main():
+
+    if len(sys.argv) != 3:
+        raise ValueError('command line arguments are a store and uuid')
+
+    store = sys.argv[1]
+    uuid = sys.argv[2]
+
+    store = mKTL.get(store)
+    matches = 0
+
+    for item in store:
+        key = item.key
+        config = store.config[key]
+        item_uuid = config['uuid']
+
+        if item_uuid != uuid:
+            continue
+
+        matches += 1
+
+        try:
+            persist = config['persist']
+        except KeyError:
+            continue
+
+        if persist == True:
+            item.register(mKTL.Daemon.Persist.save)
+
+
+    if matches == 0:
+        raise RuntimeError("no items found in '%s' for UUID %s" % (store, uuid))
+
+
+    while True:
+        try:
+            time.sleep(30)
+        except (KeyboardInterrupt, SystemExit):
+            break
+
+
+if __name__ == '__main__':
+    main()
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
