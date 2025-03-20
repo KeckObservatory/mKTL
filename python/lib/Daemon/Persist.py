@@ -40,12 +40,28 @@ def load(store, uuid):
         filename = os.path.join(uuid_directory, key)
         bulk_filename = os.path.join(uuid_directory, 'bulk:' + key)
 
-        json = open(filename, 'r').read()
+        json = open(filename, 'rb').read()
+
+        if len(json) == 0:
+            continue
+
+        # The data on-disk is expected to be an {asc:, bin:} dictionary
+        # for a simple value, or the description of a bulk message. For
+        # the fake messages being reassembled here, only include the 'bin'
+        # portion of a simple value-- that's what the format of a set request
+        # would look like on the wire.
+
         data = Protocol.Json.loads(json)
+
+        try:
+            data = data['bin']
+        except KeyError:
+            pass
+
         message['data'] = data
 
         try:
-            bulk = open(bulk_filename, 'r').read()
+            bulk = open(bulk_filename, 'rb').read()
         except FileNotFoundError:
             pass
         else:
@@ -164,8 +180,8 @@ class Pending:
                     filename = os.path.join(self.directory, prefix + ':' + key)
 
                 bytes = value[prefix]
-                file = open(filename, 'w')
-                file.write(repr(bytes))
+                file = open(filename, 'wb')
+                file.write(bytes)
                 file.close()
 
 
