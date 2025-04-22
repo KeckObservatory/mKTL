@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "mKTL"
+version = "0.1.0"
+description = ""
+authors = ["Kyle Lanclos <klanclos@keck.hawaii.edu>",]
+readme = "README.md"
+packages = [{include = "mKTL", from = "python/lib"},]
+
+[tool.poetry.dependencies]
+python = ">=3.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
+dependencies = ["zmq >= 4.0"]
+
+[project.optional-dependencies]
+msgspec = ["msgspec >= 0.18"]
+numpy = ["numpy >= 1.6"]
+orjson = ["orjson >= 3.0"]
+
+[project.urls]
+#homepage = "..."
+repository = "https://github.com/KeckObservatory/mKTL"
+#documentation = "..."
+"Bug Tracker" = "https://github.com/KeckObservatory/mKTL/issues"
+
+[tool.poetry.scripts]
+markguided = {reference = "python/bin/markguided", type = "file"}
+markpersistd = {reference = "python/bin/markpersistd", type = "file"}
+markproxyd = {reference = "python/bin/markproxyd", type = "file"}
+marksub = {reference = "python/bin/marksub", type = "file"}
