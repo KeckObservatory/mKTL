@@ -1,5 +1,3 @@
-# Overview
-
 mKTL is intended to be the successor to the Keck Task Library (KTL)
 applications programming interface (API) at W. M. Keck Observatory (WMKO).
 The goal of KTL is to standardize interprocess communications, providing a
