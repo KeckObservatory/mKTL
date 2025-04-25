@@ -2,10 +2,10 @@ Configuration syntax
 ====================
 
 The configuration syntax describes what it means to be a mKTL store,
-enumerating the available keys and all their intrinsic metadata. This
+enumerating the available items and all their intrinsic metadata. This
 document lays out the configuration syntax, as might be returned from
-a CONFIG request, and additional conventions applied to configuration
-data.
+a CONFIG request or loaded from a local cache on disk, and additional
+conventions applied to configuration data.
 
 Daemons
 -------
@@ -15,8 +15,9 @@ and response. Only one aspect of the response is addressed here: the 'data'
 value included in the response, which is a dictionary of dictionaries, each
 dictionary representing a configuration 'block', keyed by the unique
 identifier (UUID) associated with that block, providing a complete description
-of a single daemon's keys; the sequence is intended to represent the full
-namespace of a store, spanning the full set of daemons composing that store.
+of a single daemon's items; the sum of the per-UUID blocks is intended to
+represent the full namespace of a store, spanning the full set of daemons
+composing that store.
 
 For example, the 'kpfguide' store may contain multiple daemons, and therefore
 multiple configuration blocks::
@@ -29,10 +30,10 @@ A per-daemon configuration block will contain the following fields:
 =============== ===============================================================
 *Field*         *Description*
 =============== ===============================================================
-**name**	The name of the store. This is perhaps redundant
-		with other aspects of how the configuration block
-		is stored and transmitted, but the extra assertion
-		is inexpensive and convenient.
+**name**	The name of the store. This is perhaps redundant,
+		being implied by the structure of the configuration
+		block, but the extra assertion is inexpensive and
+		convenient.
 
 **uid**		The unique identifier associated with this block.
 		The UUID is generated internally and does not need
@@ -58,19 +59,21 @@ A per-daemon configuration block will contain the following fields:
 		block. The timestamp may change even if the contents
 		(and hash) do not.
 
-**hash**	A hash value for the 'keys' component of this block.
+**hash**	A hash value for the 'items' component of this block.
 		The hash is arbitrary and clients should not concern
 		themselves validating the contents of the block with
 		the hash; a change in the hash is used to signify the
 		contents have changed, and any/all clients relying on
 		the contents should update their cached data.
 
-**keys**	A dictionary of dictionaries, keyed by the key name,
+**items**	A dictionary of dictionaries, organized by item name (key),
 		with one dictionary containing the full description
-		of a single key. The description of an key is discussed
-		in its own section below.
+		of a single item. The description of an item is discussed
+		in its :ref:`own section <items>`.
 =============== ===============================================================
 
+
+.. _items:
 
 Items
 -----
@@ -114,13 +117,13 @@ item.
 		values.
 
 **gettable**	Generally not specified unless set to 'false',
-		which indicates this key will reject any attempts
+		which indicates this item will reject any attempts
 		to get its value. The use of this property is highly
-		discouraged, any key should have a meaningful value;
+		discouraged, any item should have a meaningful value;
 		this property only exists for backwards compatibility.
 
 **settable**	Generally not specified unless set to 'false',
-		which indicates this key will reject any attempts
+		which indicates this item will reject any attempts
 		to set a new value. Read-only items are fairly common,
 		for example it may not make sense for a temperature
 		probe to be settable.
@@ -128,7 +131,7 @@ item.
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
 		meaningful for boolean, enumerated, and mask types.
-		An example set of enumerators for a boolean key
+		An example set of enumerators for a boolean item
 		might be ``{'0': 'False', '1': 'True'}``. Note that
 		in JSON a dictionary key must be a string, these
 		values can and should be cast back to integers
@@ -204,7 +207,7 @@ like for a store named 'pie'::
             "pub": 10139
           }
         ]
-        "keys": {
+        "items": {
           "ANGLE": {
             "type": "double",
             "units": {
@@ -233,7 +236,7 @@ Configuration files are stored on-disk as part of a bootstrapping mechanism
 to prevent transmission of configuration blocks for every new connection.
 Two directory trees have been established; one, an automatic cache for any
 received configuration blocks, and two, a tree for configuration data used
-by 'stratum 0' daemons providing authoritative access to a set of keys.
+by 'stratum 0' daemons providing authoritative access to a set of items.
 
 The MKTL_HOME environment variable, if set, determines the top-level directory
 used for these on-disk locations. Absent that variable being set, the default
@@ -255,17 +258,17 @@ The daemon directory structure is as follows::
 
         $MKTL_HOME/daemon/store/
         $MKTL_HOME/daemon/store/some_store_name/
-        $MKTL_HOME/daemon/store/some_store_name/some_keys.json
-        $MKTL_HOME/daemon/store/some_store_name/some_keys.uuid
+        $MKTL_HOME/daemon/store/some_store_name/some_items.json
+        $MKTL_HOME/daemon/store/some_store_name/some_items.uuid
 
 The .json file located here is where a daemon is expected to establish the
-keys it provides. The adjacent .uuid file is auto-generated; the only content
+items it provides. The adjacent .uuid file is auto-generated; the only content
 of the file is a single UUID. If the .uuid file exists it will be used,
 regardless of its origins, but there is no need for the developer to establish
 it as part of the daemon's initial configuration. Unlike the cached client
 side configuration file, the daemon configuration file only includes the
-'keys' component, the structure above that is missing. This would be the
-daemon-side .json file for the above two-key example::
+'items' component, the structure above that is missing. This would be the
+daemon-side .json file for the above two-item example::
 
 	{
           "ANGLE": {
