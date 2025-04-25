@@ -227,8 +227,9 @@ daemon via the request/response socket.
       the daemon to update the local cache.
 
       The configuration contents are not fully described here, this is just
-      a representation of the request. See the configuration documentation
-      file for a full description of the data format.
+      a representation of the request. See the
+      :ref:`configuration documentation <configuration>` for a full description
+      of the data format.
 
       Example request::
 
