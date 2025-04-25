@@ -129,14 +129,14 @@ def load_daemon(store, filename):
 
     raw_json = open(filename, 'r').read()
     try:
-        keys = Json.loads(raw_json)
+        items = Json.loads(raw_json)
     except:
         print(repr(raw_json))
         raise
 
     configuration['name'] = store
     configuration['uuid'] = target_uuid
-    configuration['keys'] = keys
+    configuration['items'] = items
 
     results = dict()
     results[target_uuid] = configuration

@@ -42,7 +42,7 @@ def add(store, data, save=True):
         try:
             block['hash']
         except KeyError:
-            block['hash'] = Hash.hash(block['keys'])
+            block['hash'] = Hash.hash(block['items'])
 
 
     # The update() call will replace any matching UUID keys with new blocks,

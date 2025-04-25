@@ -32,7 +32,7 @@ def get(store):
     for uuid in config.keys():
         block = config[uuid]
 
-        items = block['keys']
+        items = block['items']
         for key in items.keys():
             item = items[key]
 

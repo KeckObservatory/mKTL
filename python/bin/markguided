@@ -94,11 +94,11 @@ class RequestServer(mKTL.Protocol.Request.Server):
         ## The configuration format isn't yet set. This will need to be
         ## revisited to have more accurate names and use the right fields.
 
-        new_items = new['keys']
+        new_items = new['items']
         new_keys = set()
 
         for item in new_items:
-            key = item['name']
+            key = item['key']
 
             if key in new_keys:
                 raise KeyError('redundant key in configuration block: ' + key)
@@ -123,9 +123,9 @@ class RequestServer(mKTL.Protocol.Request.Server):
             known = known_blocks[known_uuid]
             ## Similar caveats about nomenclature here as above.
 
-            old_items = known['keys']
+            old_items = known['items']
             for item in old_items:
-                key = item['name']
+                key = item['key']
 
                 if key in new_keys:
                     raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
