@@ -1,3 +1,6 @@
+
+.. _protocol:
+
 Protocol
 ========
 
@@ -8,6 +11,8 @@ and daemons communicate using ZeroMQ sockets. This document describes the
 socket types used, the formatting of the messages, and the types of requests
 that can be made.
 
+
+.. _request:
 
 Request/response
 ----------------

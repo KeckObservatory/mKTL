@@ -12,14 +12,14 @@ conventions applied to configuration data.
 Daemons
 -------
 
-Refer to the protocol document for the expected format of a CONFIG request
-and response. Only one aspect of the response is addressed here: the 'data'
-value included in the response, which is a dictionary of dictionaries, each
-dictionary representing a configuration 'block', keyed by the unique
-identifier (UUID) associated with that block, providing a complete description
-of a single daemon's items; the sum of the per-UUID blocks is intended to
-represent the full namespace of a store, spanning the full set of daemons
-composing that store.
+Refer to the :ref:`protocol document <protocol>` for the expected format
+of a :ref:`CONFIG request and response <request>`. Only one aspect of the
+response is addressed here: the 'data' value included in the response, which
+is a dictionary of dictionaries, each dictionary representing a configuration
+'block', keyed by the unique identifier (UUID) associated with that block,
+providing a complete description of a single daemon's items; the sum of the
+per-UUID blocks is intended to represent the full namespace of a store,
+spanning the full set of daemons composing that store.
 
 For example, the 'kpfguide' store may contain multiple daemons, and therefore
 multiple configuration blocks::
