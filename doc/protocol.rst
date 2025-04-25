@@ -1,8 +1,16 @@
-mKTL clients and daemons communicate using ZeroMQ sockets. This document
-describes the socket types used, the formatting of the messages, and the
-types of requests that can be made.
+Protocol
+========
 
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+The mKTL protocol is the primary interface layer for mKTL as a whole;
+associated Python code can be considered a reference implementation,
+but the intent is for the protocol to be language agnostic. mKTL clients
+and daemons communicate using ZeroMQ sockets. This document describes the
+socket types used, the formatting of the messages, and the types of requests
+that can be made.
+
+
+Request/response
+----------------
 
 The first socket type implements a request/response pattern. This represents
 the majority of the interactive traffic between a mKTL client and daemon.
@@ -11,13 +19,13 @@ implementation in ZeroMQ, which enforces a strict one request, one response
 pattern; instead, we use DEALER/ROUTER, which allows any amount of messages
 in any order, in any direction.
 
-The request/response interaction between the client and daemon is of this form:
+The request/response interaction between the client and daemon is of this form::
 
-	Client says:	b'{'request': 'REQ', 'id': some integer, ...}
+	b"{'request': 'REQ', 'id': some integer, ...}"
 
-	Daemon says:	bJSON: {'message': 'ACK',
-				'id': matching the original request,
-				'time': timestamp for this acknowledgement}
+	b"{'message': 'ACK',
+	   'id': matching the original request,
+	   'time': timestamp for this acknowledgement}"
 
 All messages on ZeroMQ sockets are formatted as raw bytes. JSON is used
 as a convenient and portable way to encapsulate both the request and the
@@ -26,12 +34,12 @@ response.
 The daemon immediately issues the ACK response upon receipt of the request.
 The absence of a quick response indicates that the daemon is not available,
 and the client should immediately raise an error. After the client receives
-the initial ACK it should then look for the full response:
+the initial ACK it should then look for the full response::
 
-	Daemon says:	bJSON: {'message': 'REP',
-				'id': matching the original request,
-				'time': timestamp for this response,
-				'data': response payload}
+	b"{'message': 'REP',
+	   'id': matching the original request,
+	   'time': timestamp for this response,
+	   'data': response payload}"
 
 After receiving the REP message the request is complete and the daemon will
 issue no further messages with this request ID. All requests are handled
@@ -41,7 +49,7 @@ is not guaranteed. Synchronous behavior is implemented on the client side,
 not in the protocol itself.
 
 Here is an example of what the full exchange on the client side might look
-like, in this case handling the exchange as a synchronous request:
+like, in this case handling the exchange as a synchronous request::
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -57,16 +65,16 @@ like, in this case handling the exchange as a synchronous request:
 	response = self.socket.recv()
 
 Some responses may include a bulk data component. These will be distinguished
-by having a 'bulk' attribute set in the response. Here is an example response:
+by having a 'bulk' attribute set in the response. Here is an example response::
 
-			{'message': 'REP',
-			 'id': 0xdeadbeef,
-			 'time': 1715738507.234,
-			 'data': JSON description of bulk data,
-			 'bulk': True}
+	b"{'message': 'REP',
+	   'id': 0xdeadbeef,
+	   'time': 1715738507.234,
+	   'data': JSON description of bulk data,
+	   'bulk': True}"
 
 The 'bulk' setting in the message contents indicates that a binary data blob
-will be sent in a separate message. The message format would look like:
+will be sent in a separate message. The message format would look like::
 
 	b'bulk:kpfguide.LASTIMAGE deadbeef 6712437631249763124962431...'
 
@@ -92,126 +100,143 @@ The combination of these additional processing steps is adequate to prevent
 a simple client from saturating a basic gigabit network link with continuous
 bulk data requests, whereas saturating the link is trivial with raw bytes.
 
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Request types
+-------------
 
 This section describes the various requests a client can make of the mKTL
 daemon via the request/response socket.
 
-	'GET': request the current value for a single key. The key is always
-		the name of the store, and the name of the item, concatenated
-		with a period. The data field will be as in the description of
-		the REQ/REP behavior; the data field will be the telemetry
-		value, whether it is an integer, floating point number, string,
-		boolean value, etc. Bulk data, as described above, is sent as
-		raw bytes in a second message.
+.. list-table::
 
-		The default behavior for a GET request is for a cached value
-		to be allowed as the returned response. A client can explicitly
-		request an up-to-date value by setting the 'refresh' field to
-		'True'; in that case, the daemon should provide the most
-		up-to-date value available, even if that means communicating
-		with a hardware controller to satisfy the request.
+  * - *Request type*
+    - *Description*
 
-		Example request:	bJSON: '{'request': 'GET',
-						   'name': 'kpfpower.OUTLET_1A',
-						   'refresh': True,
-						   'id': 5742}
+  * - **GET**
+    - Request the current value for a single key. The key is always the name of
+      the store, and the name of the item, concatenated with a period. The data
+      field will be as in the description of the REQ/REP behavior; bulk data,
+      as described above, is sent as raw bytes in a second message.
 
-		Example ACK:		bJSON: {'message': 'ACK',
-						'id': 5742,
-						'time': 1723668130.123456}
+      The default behavior for a GET request is for a cached value to be
+      allowed as the returned response. A client can explicitly request an
+      up-to-date value by setting the 'refresh' field to 'True'; in that case,
+      the daemon should provide the most up-to-date value available, even if
+      that means communicating with a hardware controller to satisfy the
+      request.
 
-		Example REP:		bJSON: {'message': 'REP',
-						'id': 5742,
-						'time': 1723668130.124,
-						'data': {'bin': 0,
-							 'asc': 'Off'}}
+      Example request/response exchange::
 
-	'SET': request a change to the value of a single key. Depending on
-		the daemon, this could result in a variety of behavior, from
-		simply caching the value to slewing a telescope, and anything
-		in-between. The final response indicates the request is
-		complete but does not indicate what the new item value is.
+        b"{'request': 'GET',
+	   'name': 'kpfpower.OUTLET_1A',
+	   'refresh': True,
+	   'id': 5742}"
 
-		Example request:	bJSON: '{'request': 'SET',
-						   'name': 'kpfpower.OUTLET_1A',
-						   'id': 5744,
-						   'data': 'On'}
+	 b"{'message': 'ACK',
+	    'id': 5742,
+	    'time': 1723668130.123456}"
 
-		Example ACK:		bJSON: {'message': 'ACK',
-						'id': 5744,
-						'time': 1723668131.214123}
+	 b"{'message': 'REP',
+	    'id': 5742,
+	    'time': 1723668130.124,
+	    'data': {'bin': 0, 'asc': 'Off'}}"
 
-		Example REP:		bJSON: {'message': 'REP',
-						'id': 5744,
-						'time': 1723668134.12549}
+  * - **SET**
+    - Request a change to the value of a single key. Depending on the daemon,
+      this could result in a variety of behavior, from simply caching the value
+      to slewing a telescope, and anything in-between. The final response
+      indicates the request is complete but does not indicate what the new
+      item value is.
 
-		Alternate REP:		bJSON: {'message': 'REP',
-						'id': 5744,
-						'time': 1723668132.12549,
-						'error': {'type': 'ValueError',
-							  'text': 'bad input'}}
+      Example request/response exchange::
+
+        b"{'request': 'SET',
+	   'name': 'kpfpower.OUTLET_1A',
+	   'id': 5744,
+	   'data': 'On'}"
+
+	b"{'message': 'ACK',
+	   'id': 5744,
+	   'time': 1723668131.214123}"
+
+	b"{'message': 'REP',
+	   'id': 5744,
+	   'time': 1723668134.12549}"
+
+      If the SET request results in an error, the response might instead be::
+
+	b"{'message': 'REP',
+	   'id': 5744,
+	   'time': 1723668132.12549,
+	   'error': {'type': 'ValueError', 'text': 'bad input'}}"
+
+  * - **HASH**
+    - Request the current hash identifiers for any known configuration blocks
+      of a single mKTL store. If no store name is specified, all available hash
+      identifiers will be returned, for all known stores. An error will be
+      returned if a store is requested and the responding daemon does not have
+      a cached configuration for that store.
+
+      The hash is 32 hexadecimal integers. The actual hash format is not
+      significant, as long as the source of authority is consistent about
+      which hash format it uses, and the format can be bounded to 32
+      hexadecimal integers.
+
+      To unify processing the response is always a dictionary of dictionaries,
+      even if only one hash is available.
+
+      Example request/response exchange for all hashes::
+
+	b"{'request': 'HASH', 'id': 234}"
+
+	b"{'message': 'ACK',
+	   'id': 234,
+	   'time': 1723634131.214123}"
+
+	b"{'message': 'REP',
+	   'id': 234,
+	   'data': {'kpfguide': {'uuid1': 0x84a30b35...,
+				 'uuid2': 0x983ae10f...},
+		    'kpfmet': {'uuid6': 0xe0377e7d...,
+			       'uuid7': 0x7735a20a...,
+			       'uuid8': 0x88645dab...,
+			       'uuid9': 0x531c14fd...}}}"
+
+      Example request/response exchange for one store::
+
+	b"{'request': 'HASH',
+	   'id': 236,
+	   'data': 'kpfguide'}"
+
+	b"{'message': 'ACK',
+	   'id': 236,
+	   'time': 1723634182.214123}"
+
+	b"{'message': 'REP',
+	   'id': 236,
+	   'data': {'kpfguide': {'uuid1': 0x84a30b35...,
+				 'uuid2': 0x983ae10f...}}"
+
+  * - **CONFIG**
+    - Request the full configuration contents for a single mKTL store.
+      There is no option to dump the configuration data for all known stores.
+      A typical client interaction will request the configuration hash first,
+      and if the local copy is not a match, request the full contents from
+      the daemon to update the local cache.
+
+      The configuration contents are not fully described here, this is just
+      a representation of the request. See the configuration documentation
+      file for a full description of the data format.
+
+      Example request::
+
+	b"{'request': 'CONFIG',
+	   'id': 563,
+	   'name': 'kpfguide'}"
 
 
-	'HASH': request the current hash identifiers for any known configuration
-		blocks of a single mKTL store. If no store name is specified,
-		all available hash identifiers will be returned, for all known
-		stores. An error will be returned if a store is requested
-		and the contacted daemon does not have a cached configuration
-		describing it.
-
-		The hash is 32 hexadecimal integers. The actual hash format
-		is not particularly important, as long as the source of
-		authority is consistent about which hash format it uses--
-		and it can be bounded to 32 hexadecimal integers.
-
-		To unify processing the response is always a dictionary of
-		dictionaries, even if only one hash is available.
-
-		Example request: bJSON: '{'request': 'HASH', 'id': 234}
-
-		Example ACK as above...
-
-		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 234,
-					  'data': {'kpfguide':
-					  	   {'uuid1': 0x84a30b35...,
-						    'uuid2': 0x983ae10f...},
-						   'kpfmet':
-					  	   {'uuid6': 0xe0377e7d...,
-						    'uuid7': 0x7735a20a...,
-						    'uuid8': 0x88645dab...,
-						    'uuid9': 0x531c14fd...}}}'
-
-		Example request: bJSON: '{'request': 'HASH',
-					  'id': 236,
-					  'data': 'kpfguide'}
-
-		Example ACK as above...
-
-		Example REP:	 bJSON: '{'message': 'REP',
-					  'id': 236,
-					  'data': {'kpfguide':
-					  	   {'uuid1': 0x84a30b35...,
-						    'uuid2': 0x983ae10f...}}'
-
-	'CONFIG': request the full configuration contents for a single mKTL
-		store. There is no option to dump the configuration data for
-		all known stores. A typical client interaction will request
-		the configuration hash first, and if the local copy is not a
-		match, request the full contents from the daemon to update
-		the local cache.
-
-		The configuration contents are not fully described here,
-		this is just a representation of the request. See the
-		dedicated 03_config documentation file for a full
-		description.
-
-		Example request: bJSON: '{'request': 'CONFIG',
-					  'id': 563,
-					  'name': 'kpfguide'}
-
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+Publish/subscribe
+-----------------
 
 The second socket type implements a publish/subscribe socket pattern. The
 desired functionality in mKTL is a neat match for the PUB/SUB socket pattern
@@ -233,15 +258,13 @@ offered by ZeroMQ:
 The ZeroMQ messages received by the client include the full topic as the
 leading element in the message-as-bytes, followed by a space, followed by
 the remainder of the message contents. The structure of a simple broadcast
-mimics the form of the request/response exchange described above:
+mimics the form of the request/response exchange described above::
 
-	Daemon says:	b'unique_topic_string JSON...'
-
-	JSON expanded:	{'message': 'PUB',
-			 'id': eight hexadecimal digits,
-			 'time': timestamp for this broadcast,
-			 'name': unique mKTL item name,
-			 'data': current item value}
+        b"unique_topic_string {'message': 'PUB',
+			       'id': eight hexadecimal digits,
+			       'time': timestamp for this broadcast,
+			       'name': unique mKTL item name,
+			       'data': current item value}"
 
 There are two special types of broadcast messages. These are distinguished
 by a modifier on the topic string. The first type is the bulk/binary data
@@ -258,23 +281,23 @@ this offers clients the option of treating the entire bundle as an atomic
 entity. Each bundle is a sequence of simple JSON messages as described above.
 
 If, for example, there was a bundle of telemetry messages relating to a filter
-wheel, the individual items might have keys like:
+wheel, the individual items might have keys like::
 
 	deimot.FILTERNAM
 	deimot.FILTERORD
 	deimot.FILTERRAW
 
 The mKTL daemon could elect to broadcast a single bundle containing all of those
-values. The bundle message would have a topic identifier of:
+values. The bundle message would have a topic identifier of::
 
 	deimot.FILTER;bundle
 
-The formatting of the on-the-wire message would be:
+The formatting of the on-the-wire message would be::
 
 	b'deimot.FILTER;bundle JSON...'
 
 ...where the JSON would be a sequence of individual PUB elements as described
-above:
+above::
 
 	[{'message': 'PUB', 'id': 0x0123abcd, 'name': deimot.FILTERNAM, ...},
 	 {'message': 'PUB', 'id': 0x0123abcd, 'name': deimot.FILTERORD, ...},
@@ -283,30 +306,41 @@ above:
 The 'id' field would be identical for all messages in the bundle, but all
 remaining fields would vary according to the message contents.
 
-	- - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+Response fields
+---------------
 
 This section is a description of the various fields used in the JSON messaging
 described above.
 
-	'message': a one-word assertion of the type of content represented
-		by this JSON. It is one of a few values:
+===============	===============================================================
+*Field*		*Description*
+===============	===============================================================
+**request**	Only issued by a client, making a request of a server.
 
-		'ACK': immediate acknowledgement of a request. If this
+**message**	Only issued by a server, to be interpreted by the client.
+		This is a one-word assertion of the type of content
+		represented by this message. It is one of the following
+		values:
+
+                =======	==================================================
+		**ACK**	Immediate acknowledgement of a request. If this
 			response is not received with a very small time
 			window after the initial request, the client can
 			and should assume the daemon handling that request
 			is offline.
 
-		'REP': a response to a direct request. This will contain
+		**REP**	A response to a direct request. This will contain
 			the full data responding to a request to get a
 			value, or the completion status of setting a value.
 
-		'PUB': an asynchronous broadcast of an event. There aren't
+		**PUB**	An asynchronous broadcast of an event. There aren't
 			any other types of message that will arrive on a
 			SUB socket, the inclusion of this field is strictly
 			for symmetry's sake.
+                =======	==================================================
 
-	'id': an eight character hexadecimal value reasonably unique to
+**id**		An eight character hexadecimal value reasonably unique to
 		this specific transaction. The 'unique' constraint doesn't
 		need to extend beyond a few minutes, at most, for any
 		transaction; the id allows the client to tie together
@@ -320,7 +354,7 @@ described above.
 		should only be applied for a given key, as opposed to
 		being unique across an entire store or daemon.
 
-	'time': a UNIX epoch timestamp associated with the generation of
+**time**	A UNIX epoch timestamp associated with the generation of
 		the event. This is not intended to represent any time
 		prior to the actual broadcast or response, it is intended
 		to represent the time at which that message was created,
@@ -330,7 +364,7 @@ described above.
 		last known change of the value in question, though in some
 		(if not most) cases it will be a reasonable approximation.
 
-	'name': the unique mKTL key, or the unique mKTL store name for some
+**name**	The unique mKTL key, or the unique mKTL store name for some
 		of the metadata queries. The mKTL key, at the protocol level,
 		is a concatenation of the mKTL store name and the item name
 		within that store. In KTL parlance, this would be the
@@ -338,32 +372,37 @@ described above.
 		IOC+channel name, as one might use with caput or caget on the
 		command line.
 
-	'data': the real payload of the message. For a read operation, this
+**data**	The real payload of the message. For a read operation, this
 		will be the telemetry requested, whether it be a string,
 		integer, floating point number, or short sequence. For a
 		response with no data this field will either not be present
 		or it will be the JSON null value.
 
-	'bulk': a boolean flag indicating there is a separate bulk-formatted
+**bulk**	A boolean flag indicating there is a separate bulk-formatted
 		message that will contain the bulk data associated with
 		the message. If the value is not present, or is the JSON
 		null value, or is the JSON False value, there is no bulk
 		message.
 
-	'error': a JSON dictionary with information about any error that
+**error**	A JSON dictionary with information about any error that
 		occurred while processing the request. If the value is
 		not present or is the JSON null value, no error occurred.
 		If it is present, it will have these values:
 
-		'type': analagous to the Python exception type (ValueError,
-			TypeError, etc.).
+                =========	============================================
+		**type**	Analagous to the Python exception type
+				(ValueError, TypeError, etc.).
 
-		'text': descriptive text of the error.
+		**text**	Descriptive text of the error.
 
-		'debug': optional additional information about the error,
-			 such as a Python traceback
+		**debug**	Optional additional information about the
+				error, such as a Python traceback.
+                =========	============================================
 
 		The intent of this error field is not to provide enough
 		information for debugging of code, it is intended to
-		provide enough information to the client for it to perform
+		provide enough information for the client to perform
 		meaningful error handling.
+
+===============	===============================================================
+
