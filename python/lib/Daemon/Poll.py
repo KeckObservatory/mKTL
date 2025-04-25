@@ -21,13 +21,13 @@ def start(method, period):
         stop(method)
         return
 
-    key = id(method)
+    method_id = id(method)
 
     try:
-        poller = active[key]
+        poller = active[method_id]
     except KeyError:
         poller = Poller(method)
-        active[key] = poller
+        active[method_id] = poller
 
     poller.period(period)
 
@@ -37,10 +37,10 @@ def stop(method):
     ''' Discontinue calling the provided *method*.
     '''
 
-    key = id(method)
+    method_id = id(method)
 
     try:
-        poller = active[key]
+        poller = active[method_id]
     except KeyError:
         return
 
