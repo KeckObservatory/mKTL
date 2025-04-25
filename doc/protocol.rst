@@ -101,6 +101,8 @@ a simple client from saturating a basic gigabit network link with continuous
 bulk data requests, whereas saturating the link is trivial with raw bytes.
 
 
+.. _request_types:
+
 Request types
 -------------
 
@@ -307,8 +309,8 @@ The 'id' field would be identical for all messages in the bundle, but all
 remaining fields would vary according to the message contents.
 
 
-Response fields
----------------
+Message fields
+--------------
 
 This section is a description of the various fields used in the JSON messaging
 described above.
@@ -317,6 +319,8 @@ described above.
 *Field*		*Description*
 ===============	===============================================================
 **request**	Only issued by a client, making a request of a server.
+		The potential values for the request field are all described
+		in the :ref:`request_types` section.
 
 **message**	Only issued by a server, to be interpreted by the client.
 		This is a one-word assertion of the type of content
