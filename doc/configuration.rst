@@ -35,7 +35,7 @@ A per-daemon configuration block will contain the following fields:
 		block, but the extra assertion is inexpensive and
 		convenient.
 
-**uid**		The unique identifier associated with this block.
+**uuid**	The unique identifier associated with this block.
 		The UUID is generated internally and does not need
 		to be manipulated directly; it is used to uniquely
 		associate a specific daemon with its configuration
