@@ -34,7 +34,7 @@ class Store(Client.Store):
         self._items = dict()
         self.daemon_config = None
         self.daemon_uuid = None
-        self._daemon_items = set()
+        self._daemon_keys = set()
 
         daemon_config = Config.load(name, config)
         self._update_daemon_config(daemon_config)
@@ -161,7 +161,7 @@ class Store(Client.Store):
         Config.add(self.name, config)
 
         config = Config.Items.get(self.name)
-        self._daemon_items.update(config)
+        self._daemon_keys.update(config)
         self._update_config(config)
 
 
@@ -179,7 +179,7 @@ class Store(Client.Store):
             implementations.
         '''
 
-        local = list(self._daemon_items)
+        local = list(self._daemon_keys)
 
         for key in local:
             item = self._items[key]
@@ -249,7 +249,7 @@ class RequestServer(Protocol.Request.Server):
         key = request['name']
         store, key = key.split('.', 1)
 
-        if key in self.store._daemon_items:
+        if key in self.store._daemon_keys:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -263,7 +263,7 @@ class RequestServer(Protocol.Request.Server):
         key = request['name']
         store, key = key.split('.', 1)
 
-        if key in self.store._daemon_items:
+        if key in self.store._daemon_keys:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
