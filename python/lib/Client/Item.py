@@ -188,10 +188,12 @@ class Item:
                 raise RuntimeError("SET failed: %s: %s" % (e_type, e_text))
 
 
-    def subscribe(self):
+    def subscribe(self, prime=True):
         ''' Subscribe to all future broadcast events. Doing so ensures that
             locally cached values will always be current, regardless of whether
-            :func:`get` has been invoked recently.
+            :func:`get` has been invoked recently. If *prime* is True a call
+            will be made to :func:`get` to refresh the locally cached value
+            before returning.
         '''
 
         if self.subscribed == True:
@@ -214,6 +216,9 @@ class Item:
 
         self.pub.register(self._update, self.full_key)
         self.subscribed = True
+
+        if prime == True:
+            self.get(refresh=True)
 
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our key name.
