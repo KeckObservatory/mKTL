@@ -10,7 +10,6 @@ from .. import Config
 from .. import Protocol
 from .. import WeakRef
 
-
 class Item:
     ''' An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the daemon, according to
@@ -19,6 +18,8 @@ class Item:
         daemon; it is the daemon's responsibility to issue a post-set update
         with any new value(s).
     '''
+
+    untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
 
     def __init__(self, store, key):
 
@@ -293,6 +294,339 @@ class Item:
         self.cached_timestamp = new_timestamp
         self._propagate(new_data, new_timestamp)
 
+
+    def __bool__(self):
+        if self.cached is None:
+            return False
+
+        try:
+            current = self.cached['bin']
+        except:
+            # Something other than an asc/bin dictionary. Not sure what it is,
+            # but it's _something_, so...
+            return True
+
+        if current in self.untruths:
+            return False
+        else:
+            try:
+                lower = current.lower()
+            except AttributeError:
+                return True
+
+            if lower in self.untruths:
+                return False
+
+        return True
+
+
+    def __bytes__(self):
+
+        try:
+            bytes = self.cached.tobytes()
+        except AttributeError:
+            bytes = bytes(str(self))
+
+        return bytes
+
+
+    # __hash__() is not defined, because it would be tied to the key, and would
+    # clash with the use of __eq__() defined above, which is not tied to the
+    # key. This was a point of some confusion for comparison operations in
+    # KTL Python, and the inability to use Item instances as keys in a
+    # dictionary seems like a lesser price to pay.
+
+
+    def __str__(self):
+        if self.cached is None:
+            return ''
+
+        return str(self.cached['asc'])
+
+
+    def __lt__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current < other
+
+    def __le__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current <= other
+
+    def __eq__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current == other
+
+    def __ne__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current != other
+
+    def __gt__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current > other
+
+    def __ge__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current >= other
+
+    def __add__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current + other
+
+    def __radd__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other + current
+
+    def __sub__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current - other
+
+    def __rsub__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other - current
+
+    def __mul__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current * other
+
+    def __rmul__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other * current
+
+    def __div__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current / other
+
+    def __rdiv__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other / current
+
+    def __truediv__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        current = float(current)
+        return current / other
+
+    def __rtruediv__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        current = float(current)
+        return other / current
+
+    def __mod__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current % other
+
+    def __rmod__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other % current
+
+    def __floordiv__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current // other
+
+    def __rfloordiv__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other // current
+
+    def __divmod__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return (current // other, self % other)
+
+    def __rdivmod__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return (other // current, other % self)
+
+    def __pow__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current ** other
+
+    def __rpow__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other ** current
+
+    def __neg__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return -current
+
+    def __pos__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return +current
+
+    def __abs__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return abs(current)
+
+    def __invert__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return ~current
+
+    def __and__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current & other
+
+    def __rand__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other & current
+
+    def __or__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current | other
+
+    def __ror__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other | current
+
+    def __xor__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return current ^ other
+
+    def __rxor__(self, other):
+        if self.cached is None:
+            current = None
+        else:
+            current = self.cached['bin']
+        return other ^ current
+
+
+    def __inplace(self, method, value):
+
+        if self.subscribed == False:
+            self.subscribe()
+
+        modified = method(value)
+        self.set(modified)
+
+        return self
+
+    def __iadd__(self, value):
+        return self.__inplace(self.__add__, value)
+
+    def __isub__(self, value):
+        return self.__inplace(self.__sub__, value)
+
+    def __imul__(self, value):
+        return self.__inplace(self.__mul__, value)
+
+    def __idiv__(self, value):
+        return self.__inplace(self.__div__, value)
+
+    def __itruediv__(self, value):
+        return self.__inplace(self.__truediv__, value)
+
+    def __ifloordiv__(self, value):
+        return self.__inplace(self.__floordiv__, value)
+
+    def __imod__(self, value):
+        return self.__inplace(self.__mod__, value)
+
+    def __ipow__(self, value):
+        return self.__inplace(self.__pow__, value)
+
+    def __iand__(self, value):
+        return self.__inplace(self.__and__, value)
+
+    def __ixor__(self, value):
+        return self.__inplace(self.__xor__, value)
+
+    def __ior__(self, value):
+        return self.__inplace(self.__or__, value)
 
 # end of class Item
 
