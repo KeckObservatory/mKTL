@@ -88,11 +88,9 @@ class Store(Client.Store):
         self.setupRemaining()
 
         # Restore any persistent values, and enable the retention of future
-        # persistent values.
-
-        ### This should be gated by a configuration option to elect whether
-        ### this functionality is used. Rather: check the per-item config,
-        ### and if persistence is not present, don't bother.
+        # persistent values. If there are no persistent items present in this
+        # store the call to _restore() is a no-op, and the persistence
+        # subprocess will exit.
 
         self._restore()
         self._begin_persistence()
