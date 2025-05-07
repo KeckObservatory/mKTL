@@ -80,8 +80,17 @@ class Store(Client.Store):
         # Restore any persistent values, and enable the retention of future
         # persistent values.
 
+        ### This should be gated by a configuration option to elect whether
+        ### this functionality is used. Rather: check the per-item config,
+        ### and if persistence is not present, don't bother.
+
         self._restore()
         self._begin_persistence()
+
+        # The promise is that setupLast() gets invoked after everything else
+        # is ready, but before we go on the air.
+
+        self.setupLast()
 
         # Ready to go on the air.
 
@@ -187,6 +196,17 @@ class Store(Client.Store):
             if item is None:
                 item = Item.Item(self, key)
                 self._items[key] = item
+
+
+    def setupLast(self):
+        ''' This is intended as a hook for subclasses to use. Take any
+            additional actions that must occur after all Item instances
+            have been created, and all initial setup has otherwise occured,
+            including restoration of any cached values. This method will be
+            invoked right before we start broadcasting.
+        '''
+
+        pass
 
 
 # end of class Store
