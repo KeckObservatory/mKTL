@@ -138,12 +138,12 @@ class Item:
     def set(self, new_value, wait=True, bulk=None):
         ''' Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
-            the caller will be returned a :class:`Request.Pending` instance,
-            which has a :func:`Request.Pending.wait` method that can optionally
-            be invoked block until completion of the request; the wait will
-            return immediately once the request is satisfied. There is no
-            return value for a blocking request; failed requests will raise
-            exceptions.
+            the caller will be returned a :class:`Protocol.Request.Pending`
+            instance, which has a :func:`Protocol.Request.Pending.wait` method
+            that can optionally be invoked block until completion of the
+            request; the wait will return immediately once the request is
+            satisfied. There is no return value for a blocking request; failed
+            requests will raise exceptions.
 
             If *bulk* is set to anything it should be an as-bytes representation
             of the new value; the *new_value* component should be a dictionary
