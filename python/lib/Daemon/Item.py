@@ -43,7 +43,10 @@ class Daemon:
         message['data'] = new_value
 
         if cache == True:
-            self.cached = new_value
+            try:
+                self.cached = new_value['bin']
+            except (TypeError, KeyError):
+                self.cached = new_value
 
         self.store.pub.publish(message)
 
@@ -61,7 +64,7 @@ class Daemon:
             self.req_refresh()
 
         payload = dict()
-        payload['asc'] = self.cached
+        payload['asc'] = str(self.cached)
         payload['bin'] = self.cached
 
         return payload
@@ -76,7 +79,7 @@ class Daemon:
         # This implementation is strictly caching, there is nothing to refresh.
 
         payload = dict()
-        payload['asc'] = self.cached
+        payload['asc'] = str(self.cached)
         payload['bin'] = self.cached
 
         self.publish(payload)
