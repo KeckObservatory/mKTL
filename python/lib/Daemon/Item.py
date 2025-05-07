@@ -29,15 +29,21 @@ class Daemon:
         Poll.start(self.req_refresh, period)
 
 
-    def publish(self, new_value):
+    def publish(self, new_value, timestamp=None, cache=False):
         ''' Publish a new value.
         '''
+
+        if timestamp is None:
+            timestamp = time.time()
 
         message = dict()
         message['message'] = 'PUB'
         message['name'] = self.full_key
-        message['time'] = time.time()
+        message['time'] = timestamp
         message['data'] = new_value
+
+        if cache == True:
+            self.cached = new_value
 
         self.store.pub.publish(message)
 
@@ -98,7 +104,7 @@ class Daemon:
             publish['data'] = request['data']
             publish['bulk'] = request['bulk']
         else:
-            publish['asc'] = new_value
+            publish['asc'] = str(new_value)
             publish['bin'] = new_value
 
         self.publish(publish)
