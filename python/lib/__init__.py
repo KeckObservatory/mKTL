@@ -6,10 +6,10 @@
 from . import WeakRef
 
 from . import Protocol
-from . import Proxy
 from . import Config
 from . import Client
 from . import Daemon
+from . import BackEnd
 
 from . import Get
 get = Get.get
