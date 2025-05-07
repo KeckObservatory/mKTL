@@ -31,12 +31,13 @@ class Store(Daemon.Store):
 
 
     def setup(self):
-        ''' This is a no-op, there are no custom instantiations that need
-            to happen here, but the base Store class demands that we do
-            something.
-        '''
 
-        pass
+        config = self.daemon_config[self.daemon_uuid]
+        items = self.daemon_config[self.daemon_uuid]['items']
+        keys = items.keys()
+
+        for key in keys:
+            Item(self, key)
 
 
     def setupLast(self):
@@ -51,6 +52,32 @@ class Store(Daemon.Store):
             if keyword['broadcasts'] == True:
                 keyword.callback(self.relay)
                 keyword.monitor(wait=False)
+
+
+    def relay(self, keyword):
+
+        try:
+            slice = keyword.history[-1]
+        except IndexError:
+            return
+
+        timestamp = slice.time
+        ascii = slice.ascii
+        binary = slice.binary
+
+        payload = dict()
+        payload['asc'] = ascii
+        payload['bin'] = binary
+
+        key = keyword.name
+        item = self._items[key]
+        item.publish(payload, timestamp, cache=True)
+
+
+# end of class Store
+
+
+class Item(Daemon.Item):
 
 
     def req_get(self, request):
@@ -95,27 +122,7 @@ class Store(Daemon.Store):
         return payload
 
 
-    def relay(self, keyword):
-
-        try:
-            slice = keyword.history[-1]
-        except IndexError:
-            return
-
-        timestamp = slice.time
-        ascii = slice.ascii
-        binary = slice.binary
-
-        payload = dict()
-        payload['asc'] = ascii
-        payload['bin'] = binary
-
-        key = keyword.name
-        item = self._items[key]
-        item.publish(payload, timestamp, cache=True)
-
-
-# end of class KTL
+# end of class Item
 
 
 
