@@ -77,8 +77,8 @@ class Store(Daemon.Store):
 # end of class Store
 
 
-class Item(Daemon.Item):
 
+class Item(Daemon.Item):
 
     def req_get(self, request):
         name = request['name']
