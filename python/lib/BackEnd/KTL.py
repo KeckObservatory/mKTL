@@ -110,9 +110,6 @@ class Store(Daemon.Store):
         payload['asc'] = ascii
         payload['bin'] = binary
 
-        if keyword.name == 'INTEGER':
-            print('%s: %s' % (keyword.name, ascii))
-
         key = keyword.name
         item = self._items[key]
         item.publish(payload, timestamp, cache=True)
