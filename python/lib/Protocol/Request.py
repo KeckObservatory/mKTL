@@ -195,8 +195,8 @@ class Client:
         if ack_type == 'REP':
             # We were expecting an ACK, but we got the full response instead.
             # We could be hard-nosed about it and throw an exception, but the
-            # intent of requiring the ACK (is the server alive?) is moot if we
-            # have a proper full response.
+            # intent of looking for the ACK (is the server alive?) is moot if
+            # we have a proper full response.
             pending.complete(ack)
 
         elif ack_type != 'ACK':
@@ -211,9 +211,9 @@ class Client:
 
 class Pending:
     ''' The :class:`Pending` provides a very thin wrapper around a
-        :class:`threading.Event` that can be used to signal the internal
-        caller that the request has been handled. It also provides a vehicle
-        for the response to be passed to the caller.
+        :class:`threading.Event` that can be used to signal the caller that the
+        request has been handled. It also provides a vehicle to pass the
+        response to the caller.
     '''
 
     def __init__(self):
@@ -226,6 +226,10 @@ class Pending:
 
 
     def complete_ack(self, ack):
+        ''' Record the ACK response and signal any callers blocking on
+            :func:`wait_ack` to proceed.
+        '''
+
         self.ack = ack
         self.event_ack.set()
 
@@ -268,14 +272,23 @@ class Pending:
             return True
 
 
+    def poll(self):
+        ''' Return True if the request is complete, otherwise return False.
+        '''
+
+        return self.event_rep.is_set()
+
+
     def wait_ack(self, timeout):
+        ''' Block until the request has been acknowledged.
+        '''
+
         self.event_ack.wait(timeout)
         return self.ack
 
 
     def wait(self, timeout=60):
-        ''' The invoker of the :class:`Pending` will call :func:`wait`
-            to block until the request has been handled.
+        ''' Block until the request has been handled.
         '''
 
         self.event_rep.wait(timeout)
