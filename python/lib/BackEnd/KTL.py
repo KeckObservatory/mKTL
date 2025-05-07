@@ -2,45 +2,55 @@
 import threading
 import time
 
-from . import Subprocess
+from .. import Config
+from .. import Daemon
 
 try:
     import ktl
 except ModuleNotFoundError:
     ktl = None
 
-class KTL(Subprocess.Base):
 
-    def __init__(self, req, pub, name):
+class Store(Daemon.Store):
+
+    def __init__(self, name):
 
         if ktl is None:
             raise ModuleNotFoundError("cannot import the 'ktl' module")
 
-        self.name = name
-        Subprocess.Base.__init__(self, req, pub)
+        # Generate the configuration matching this KTL service. The base
+        # Daemon.Store will want to know where it can be loaded from, and
+        # it is always loading from a location on disk-- so we need to save
+        # it first. This bit of indirection is only necessary because we
+        # are generating the configuration at runtime.
 
-        service = ktl.cache(name)
+        items = describeService(name)
+        Config.File.save_daemon(name, name, items)
 
-        for name in service:
-            keyword = service[name]
+        Daemon.Store.__init__(self, name, name)
+
+
+    def setup(self):
+        ''' This is a no-op, there are no custom instantiations that need
+            to happen here, but the base Store class demands that we do
+            something.
+        '''
+
+        pass
+
+
+    def setupLast(self):
+        ''' This is the last step before broadcasts go out. This is the
+            right time to fire up monitoring of all KTL keywords.
+        '''
+
+        service = ktl.cache(self.name)
+
+        for keyword in service:
 
             if keyword['broadcasts'] == True:
                 keyword.callback(self.relay)
                 keyword.monitor(wait=False)
-
-
-    def req_config(self, request):
-        uuid = self.uuid('ktl.' + self.name)
-
-        configuration = dict()
-        configuration['name'] = self.name
-        configuration['uuid'] = uuid
-        configuration['time'] = time.time()
-        configuration['keys'] = describeService(self.name)
-        hash = self.hash(configuration['keys'])
-        configuration['hash'] = hash
-
-        return configuration
 
 
     def req_get(self, request):
@@ -78,6 +88,12 @@ class KTL(Subprocess.Base):
         new_value = request['data']
         keyword.write(new_value)
 
+        # Returning True here acknowledges that the request is complete.
+
+        payload = dict()
+        payload['data'] = True
+        return payload
+
 
     def relay(self, keyword):
 
@@ -94,13 +110,12 @@ class KTL(Subprocess.Base):
         payload['asc'] = ascii
         payload['bin'] = binary
 
-        broadcast = dict()
-        broadcast['message'] = 'PUB'
-        broadcast['time'] = timestamp
-        broadcast['name'] = keyword.full_name
-        broadcast['data'] = payload
+        if keyword.name == 'INTEGER':
+            print('%s: %s' % (keyword.name, ascii))
 
-        self.publish(broadcast)
+        key = keyword.name
+        item = self._items[key]
+        item.publish(payload, timestamp, cache=True)
 
 
 # end of class KTL
