@@ -18,7 +18,7 @@ class Daemon:
     '''
 
     def __init__(self, *args, **kwargs):
-        pass
+        self.subscribe(prime=False)
 
 
     def poll(self, period):
@@ -44,9 +44,9 @@ class Daemon:
 
         if cache == True:
             try:
-                self.cached = new_value['bin']
+                self._daemon_cached = new_value['bin']
             except (TypeError, KeyError):
-                self.cached = new_value
+                self._daemon_cached = new_value
 
         self.store.pub.publish(message)
 
@@ -64,8 +64,8 @@ class Daemon:
             self.req_refresh()
 
         payload = dict()
-        payload['asc'] = str(self.cached)
-        payload['bin'] = self.cached
+        payload['asc'] = str(self._daemon_cached)
+        payload['bin'] = self._daemon_cached
 
         return payload
 
@@ -79,8 +79,8 @@ class Daemon:
         # This implementation is strictly caching, there is nothing to refresh.
 
         payload = dict()
-        payload['asc'] = str(self.cached)
-        payload['bin'] = self.cached
+        payload['asc'] = str(self._daemon_cached)
+        payload['bin'] = self._daemon_cached
 
         self.publish(payload)
 
@@ -99,7 +99,7 @@ class Daemon:
             new_value = self._interpret_bulk(request)
 
         new_value = self.validate(new_value)
-        self.cached = new_value
+        self._daemon_cached = new_value
 
         publish = dict()
 
