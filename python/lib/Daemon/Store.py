@@ -1,6 +1,7 @@
 
 import subprocess
 import sys
+import zmq
 
 from .. import Client
 from .. import Config
@@ -39,12 +40,21 @@ class Store(Client.Store):
         daemon_config = Config.load(name, config)
         self._update_daemon_config(daemon_config)
 
-        # Use cached port numbers when possible.
+        # Use cached port numbers when possible. The ZMQError is thrown
+        # when the requested port is not available; let a new one be
+        # auto-assigned when that happens.
 
         req, pub = Port.load(self.name, self.daemon_uuid)
 
-        self.pub = Protocol.Publish.Server(port=pub, avoid=Port.used())
-        self.req = RequestServer(self, port=req, avoid=Port.used())
+        try:
+            self.pub = Protocol.Publish.Server(port=pub, avoid=Port.used())
+        except zmq.error.ZMQError:
+            self.pub = Protocol.Publish.Server(port=None, avoid=Port.used())
+
+        try:
+            self.req = RequestServer(self, port=req, avoid=Port.used())
+        except zmq.error.ZMQError:
+            self.req = RequestServer(self, port=None, avoid=Port.used())
 
         Port.save(self.name, self.daemon_uuid, self.req.port, self.pub.port)
 
