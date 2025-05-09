@@ -185,7 +185,8 @@ class Item:
 
                 ### The exception type here should be something unique
                 ### instead of a RuntimeError.
-                raise RuntimeError("SET failed: %s: %s" % (e_type, e_text))
+                error = "SET of %s failed: %s: %s" % (self.key, e_type, e_text)
+                raise RuntimeError(error)
 
 
     def subscribe(self, prime=True):
