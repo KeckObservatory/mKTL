@@ -91,6 +91,11 @@ def used():
     targets = list()
     targets.append(port_directory)
 
+    if os.path.exists(port_directory):
+        pass
+    else:
+        return ports
+
     for target in targets:
         if os.path.isdir(target):
             contents = os.listdir(target)
