@@ -32,6 +32,14 @@ def get(store, key=None):
     if key is None and '.' in store:
         store, key = store.split('.', 1)
 
+    # Case-insensitivity is enforced:
+
+    store = store.lower()
+
+    if key is not None:
+        key = str(key)
+        key = key.upper()
+
     # Work from the local cache of Store instances first. This sequence
     # of checks is replicated at the end of the routine, after all the
     # handling of configuration data.

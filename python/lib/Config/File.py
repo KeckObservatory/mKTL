@@ -47,6 +47,8 @@ def load(store, specific=None):
         are fully parsed from their on-disk JSON format.
     '''
 
+    store = store.lower()
+
     if specific is not None:
         return load_one(store, specific)
 
@@ -151,6 +153,8 @@ def load_one(store, specific):
         it is assumed the caller knows exactly which file they want, and have
         provided the full and correct path.
     '''
+
+    store = store.lower()
 
     # Some of these checks are redundant if we got here via the load() method,
     # but it's unavoidable that we need the information in both places.
