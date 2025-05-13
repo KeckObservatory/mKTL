@@ -6,7 +6,7 @@ import hashlib
 from ..Protocol import Json
 from . import Cache
 
-cache = dict()
+_cache = dict()
 
 
 def get(name=None):
@@ -17,10 +17,10 @@ def get(name=None):
     """
 
     if name is None:
-        return dict(cache)
+        return dict(_cache)
 
     try:
-        hashes = cache[name]
+        hashes = _cache[name]
     except KeyError:
         raise KeyError('no local configuration for ' + repr(name))
 
@@ -57,10 +57,10 @@ def rehash(store):
         hash = block['hash']
 
         try:
-            cached = cache[store]
+            cached = _cache[store]
         except KeyError:
             cached = dict()
-            cache[store] = cached
+            _cache[store] = cached
 
         cached[uuid] = hash
 

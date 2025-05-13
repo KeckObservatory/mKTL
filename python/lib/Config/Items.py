@@ -5,8 +5,8 @@
 from . import Cache
 from . import Hash
 
-cache = dict()
-hashes = dict()
+_cache = dict()
+_hashes = dict()
 
 
 def get(store):
@@ -19,11 +19,11 @@ def get(store):
     # been modified.
 
     try:
-        cached = cache[store]
+        cached = _cache[store]
     except KeyError:
         pass
     else:
-        if hashes[store] == Hash.get(store):
+        if _hashes[store] == Hash.get(store):
             return cached
 
     config = Cache.get(store)
@@ -50,8 +50,8 @@ def get(store):
 
             by_key[key] = copied
 
-    hashes[store] = Hash.get(store)
-    cache[store] = by_key
+    _hashes[store] = Hash.get(store)
+    _cache[store] = by_key
 
     return by_key
 
@@ -62,12 +62,12 @@ def clear(store):
     """
 
     try:
-        del cache[store]
+        del _cache[store]
     except KeyError:
         pass
 
     try:
-        del hashes[store]
+        del _hashes[store]
     except KeyError:
         pass
 

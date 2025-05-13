@@ -5,7 +5,7 @@ from . import File
 from . import Hash
 from . import Items
 
-cache = dict()
+_cache = dict()
 
 
 def add(store, data, save=True):
@@ -17,10 +17,10 @@ def add(store, data, save=True):
     """
 
     try:
-        blocks = cache[store]
+        blocks = _cache[store]
     except KeyError:
         blocks = dict()
-        cache[store] = blocks
+        _cache[store] = blocks
 
     try:
         data['uuid']
@@ -67,10 +67,10 @@ def get(store):
     """
 
     try:
-        blocks = cache[store]
+        blocks = _cache[store]
     except KeyError:
         blocks = dict()
-        cache[store] = blocks
+        _cache[store] = blocks
 
     if len(blocks) == 0:
         raise KeyError('no local configuration for ' + repr(store))
@@ -83,11 +83,11 @@ def list():
     """ Return a list of known store names currently in the local cache.
     """
 
-    names = cache.keys()
+    names = _cache.keys()
     results = []                # list() was redefined locally
 
     for name in names:
-        blocks = cache[name]
+        blocks = _cache[name]
         if len(blocks) > 0:
             results.append(name)
 
@@ -101,7 +101,7 @@ def remove(store, data, cleanup=True):
     """
 
     try:
-        blocks = cache[store]
+        blocks = _cache[store]
     except KeyError:
         raise KeyError('no local configuration for ' + repr(store))
 

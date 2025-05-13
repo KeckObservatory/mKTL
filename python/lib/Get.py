@@ -9,7 +9,7 @@ from . import Config
 from . import Protocol
 
 
-cache = dict()
+_cache = dict()
 
 def get(store, key=None):
     """ Return a cached :class:`Store` or :class:`Item` instance. If both a
@@ -45,7 +45,7 @@ def get(store, key=None):
     # handling of configuration data.
 
     try:
-        store = cache[store]
+        store = _cache[store]
     except KeyError:
         pass
     else:
@@ -107,7 +107,7 @@ def get(store, key=None):
     # in Config.Cache.
 
     store = Client.Store(store)
-    cache[store.name] = store
+    _cache[store.name] = store
 
     if key is None:
         return store
