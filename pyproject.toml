@@ -6,23 +6,23 @@ authors = ["Kyle Lanclos <klanclos@keck.hawaii.edu>",]
 readme = "README.md"
 packages = [{include = "mKTL", from = "python/lib"},]
 
+[tool.poetry.dependencies]
+python = ">=3.4"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[tool.poetry.dependencies]
-python = ">=3.4"
-pyzmq = ">=4.0"
-msgspec = { version = ">=0.18", optional = true }
-numpy = { version = ">=1.6", optional = true }
-orjson = { version = ">=3.0", optional = true }
+[project]
+requires-python = ">=3.4"
+dependencies = ["zmq >= 4.0"]
 
-[tool.poetry.extras]
-msgspec = ["msgspec"]
-numpy = ["numpy"]
-orjson = ["orjson"]
+[project.optional-dependencies]
+msgspec = ["msgspec >= 0.18"]
+numpy = ["numpy >= 1.6"]
+orjson = ["orjson >= 3.0"]
 
-[tool.poetry.urls]
+[project.urls]
 #homepage = "..."
 repository = "https://github.com/KeckObservatory/mKTL"
 #documentation = "..."
