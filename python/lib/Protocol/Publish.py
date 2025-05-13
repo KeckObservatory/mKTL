@@ -1,6 +1,6 @@
-''' Classes and methods implemented here implement the publish/subscribe
+""" Classes and methods implemented here implement the publish/subscribe
     aspects of the client/server API.
-'''
+"""
 
 import atexit
 import itertools
@@ -17,9 +17,9 @@ zmq_context = zmq.Context()
 
 
 class Client:
-    ''' Establish a ZeroMQ SUB connection to a ZeroMQ PUB socket and receive
+    """ Establish a ZeroMQ SUB connection to a ZeroMQ PUB socket and receive
         broadcasts.
-    '''
+    """
 
     def __init__(self, address, port):
 
@@ -40,9 +40,9 @@ class Client:
 
 
     def propagate(self, topic, message):
-        ''' Invoke any/all callbacks registered via :func:`register` for
+        """ Invoke any/all callbacks registered via :func:`register` for
             a newly arrived message.
-        '''
+        """
 
         # Do nothing if nobody is listening.
 
@@ -109,14 +109,14 @@ class Client:
 
 
     def register(self, callback, topic=None):
-        ''' Register a callback that will be invoked every time a new broadcast
+        """ Register a callback that will be invoked every time a new broadcast
             message arrives. If no topic is specified the callback will be
             invoked for all broadcast messages. The topic is case-sensitive and
             must be an exact match.
 
             :func:`subscribe` will be invoked for any/all topics registered
             with a callback.
-        '''
+        """
 
         if callable(callback):
             pass
@@ -214,11 +214,11 @@ class Client:
 
 
     def subscribe(self, topic):
-        ''' ZeroMQ subscriptions are based on a topic. Filtering of messages
+        """ ZeroMQ subscriptions are based on a topic. Filtering of messages
             happens on the server side, depending on what a client is subscribed
             to. A client can subscribe to all messages by providing the empty
             string as the topic.
-        '''
+        """
 
         try:
             topic.decode
@@ -244,12 +244,12 @@ class Client:
 
 
 class Server:
-    ''' Send broadcasts via a ZeroMQ PUB socket. The default behavior is to
+    """ Send broadcasts via a ZeroMQ PUB socket. The default behavior is to
         set up a listener on all available network interfaces on the first
         available automatically assigned port. The *avoid* set enumerates port
         numbers that should not be automatically assigned; this is ignored if a
         fixed *port* is specified.
-    '''
+    """
 
     pub_id_min = 0
     pub_id_max = 0xFFFFFFFF
@@ -321,9 +321,9 @@ class Server:
 
 
     def pub_id_next(self):
-        ''' Return the next publication identification number for subroutines to
+        """ Return the next publication identification number for subroutines to
             use when constructing a broadcast message.
-        '''
+        """
 
         self.pub_id_lock.acquire()
         pub_id = next(self.pub_id)
@@ -341,21 +341,21 @@ class Server:
 
 
     def pub_id_reset(self):
-        ''' Reset the publication identification number to the minimum value.
-        '''
+        """ Reset the publication identification number to the minimum value.
+        """
 
         self.pub_id = itertools.count(self.pub_id_min)
 
 
     def publish(self, message):
-        ''' A *message* is a Python dictionary ready to be converted to a
+        """ A *message* is a Python dictionary ready to be converted to a
             JSON byte string and broadcast.
 
             The 'id' field in the *message*, if specified, will be overwritten.
 
             If the 'bulk' field is present in the *message* it must be a byte
             sequence, and will be sent as a separate message to any listeners.
-        '''
+        """
 
         pub_id = self.pub_id_next()
         topic = message['name']
@@ -390,8 +390,8 @@ class Server:
 client_connections = dict()
 
 def client(address, port):
-    ''' Factory function for a :class:`Client` instance.
-    '''
+    """ Factory function for a :class:`Client` instance.
+    """
 
     try:
         instance = client_connections[(address, port)]

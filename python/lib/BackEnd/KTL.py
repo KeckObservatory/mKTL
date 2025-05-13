@@ -41,9 +41,9 @@ class Store(Daemon.Store):
 
 
     def setupLast(self):
-        ''' This is the last step before broadcasts go out. This is the
+        """ This is the last step before broadcasts go out. This is the
             right time to fire up monitoring of all KTL keywords.
-        '''
+        """
 
         service = ktl.cache(self.name)
 

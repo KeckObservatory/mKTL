@@ -1,5 +1,5 @@
-''' Port numbers are cached for listeners.
-'''
+""" Port numbers are cached for listeners.
+"""
 
 import os
 
@@ -7,11 +7,11 @@ from .. import Config
 
 
 def load(store, uuid):
-    ''' Return the REQ and PUB port numbers, if any, that were last used
+    """ Return the REQ and PUB port numbers, if any, that were last used
         for the specified *store* and *uuid*. The numbers are returned as
         a two-item tuple (REQ, PUB). None will be returned if a specific
         value cannot be retrieved.
-    '''
+    """
 
     base_directory = Config.File.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
@@ -39,9 +39,9 @@ def load(store, uuid):
 
 
 def save(store, uuid, req=None, pub=None):
-    ''' Save a REQ or PUB port number to the local disk cache for future
+    """ Save a REQ or PUB port number to the local disk cache for future
         restarts of a persistent daemon.
-    '''
+    """
 
     base_directory = Config.File.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
@@ -81,8 +81,8 @@ def save(store, uuid, req=None, pub=None):
 
 
 def used():
-    ''' Return a set of port numbers that were previously in use on this host.
-    '''
+    """ Return a set of port numbers that were previously in use on this host.
+    """
 
     base_directory = Config.File.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port')

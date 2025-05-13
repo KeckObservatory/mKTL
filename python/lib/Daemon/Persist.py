@@ -13,13 +13,13 @@ queues = dict()
 
 
 def load(store, uuid):
-    ''' Load any/all saved values for the specified *store* name and *uuid*.
+    """ Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
         dictionary key, and the value will mimic the structure of a message,
         being returned as a dictionary with a 'data' key and an optional 'bulk'
         key as appropriate, so that the handling of any interpretation can be
         unified within the Item code.
-    '''
+    """
 
     loaded = dict()
 
@@ -74,10 +74,10 @@ def load(store, uuid):
 
 
 def save(item, *args, **kwargs):
-    ''' Queue the Item.cached attribute to be written out to disk. Additional
+    """ Queue the Item.cached attribute to be written out to disk. Additional
         arguments are ignored so that this method can be registered as a
         callback for a mKTL.Client.Item instance.
-    '''
+    """
 
     uuid = item.config['uuid']
 
@@ -119,10 +119,10 @@ def save(item, *args, **kwargs):
 
 
 def flush():
-    ''' Request that any/all background threads with queued :func:`save` calls
+    """ Request that any/all background threads with queued :func:`save` calls
         flush their queue out to disk. This call will block until the flush is
         complete.
-    '''
+    """
 
     for uuid in queues.keys():
         pending = queues[uuid]
@@ -134,9 +134,9 @@ atexit.register(flush)
 
 
 class Pending:
-    ''' This is a helper class to accumulate saved values, and periodically
+    """ This is a helper class to accumulate saved values, and periodically
         write them out to disk.
-    '''
+    """
 
     def __init__(self, uuid):
 

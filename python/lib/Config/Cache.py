@@ -1,5 +1,5 @@
-''' Local storage for configuration data.
-'''
+""" Local storage for configuration data.
+"""
 
 from . import File
 from . import Hash
@@ -9,12 +9,12 @@ cache = dict()
 
 
 def add(store, data, save=True):
-    ''' Add a configuration block to the local cache. The *store* name is
+    """ Add a configuration block to the local cache. The *store* name is
         a simple string; *data* can either be a bare configuration block,
         or a dictionary of uuid-keyed configuration blocks. If *save* is
         set to True any additions will be written back out to the local
         cache on disk.
-    '''
+    """
 
     try:
         blocks = cache[store]
@@ -61,10 +61,10 @@ def add(store, data, save=True):
 
 
 def get(store):
-    ''' Retrieve the locally stored configuration for a given *store*.
+    """ Retrieve the locally stored configuration for a given *store*.
         A KeyError exception is raised if there are no locally stored
         configuration blocks for that store.
-    '''
+    """
 
     try:
         blocks = cache[store]
@@ -80,8 +80,8 @@ def get(store):
 
 
 def list():
-    ''' Return a list of known store names currently in the local cache.
-    '''
+    """ Return a list of known store names currently in the local cache.
+    """
 
     names = cache.keys()
     results = []                # list() was redefined locally
@@ -96,9 +96,9 @@ def list():
 
 
 def remove(store, data, cleanup=True):
-    ''' Remove a configuration block from the local cache. Matches are
+    """ Remove a configuration block from the local cache. Matches are
         determined via UUID.
-    '''
+    """
 
     try:
         blocks = cache[store]

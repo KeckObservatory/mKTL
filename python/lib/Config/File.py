@@ -6,9 +6,9 @@ from ..Protocol import Json
 
 
 def directory():
-    ''' Return the directory location where we should be loading and/or saving
+    """ Return the directory location where we should be loading and/or saving
         configuration files.
-    '''
+    """
 
     found = directory.found
 
@@ -38,14 +38,14 @@ directory.found = None
 
 
 def load(store, specific=None):
-    ''' Load the configuration for the specified store name. If *specific* is
+    """ Load the configuration for the specified store name. If *specific* is
         not None, it is expected to be the unique string corresponding to a
         single configuration file, either a unique string of the caller's
         choice for a locally authoritative configuration, or the UUID for a
         cached file. Results are returned as a dictionary, keyed by the UUID,
         and the configuration contents as the value. The configuration contents
         are fully parsed from their on-disk JSON format.
-    '''
+    """
 
     store = store.lower()
 
@@ -92,9 +92,9 @@ def load(store, specific=None):
 
 
 def load_client(store, filename):
-    ''' Load a single client configuration file; this method is called by
+    """ Load a single client configuration file; this method is called by
         :func:`load_one` as a final processing step.
-    '''
+    """
 
     base_filename = filename[:-5]
     target_uuid = os.path.basename(base_filename)
@@ -111,9 +111,9 @@ def load_client(store, filename):
 
 
 def load_daemon(store, filename):
-    ''' Load a single daemon configuration file; this method is called by
+    """ Load a single daemon configuration file; this method is called by
         :func:`load_one` as a final processing step.
-    '''
+    """
 
     base_filename = filename[:-5]
     uuid_filename = base_filename + '.uuid'
@@ -148,11 +148,11 @@ def load_daemon(store, filename):
 
 
 def load_one(store, specific):
-    ''' Similar to :func:`load`, except only ingesting a single file. A lot of
+    """ Similar to :func:`load`, except only ingesting a single file. A lot of
         checks will be bypassed if *specific* is provided as an absolute path;
         it is assumed the caller knows exactly which file they want, and have
         provided the full and correct path.
-    '''
+    """
 
     store = store.lower()
 
@@ -200,9 +200,9 @@ def load_one(store, specific):
 
 
 def remove(store, uuid):
-    ''' Remove the cache file associated with this store name and UUID.
+    """ Remove the cache file associated with this store name and UUID.
         Takes no action and throws no errors if the file does not exist.
-    '''
+    """
 
     base_directory = directory()
     json_filename = uuid + '.json'
@@ -218,10 +218,10 @@ def remove(store, uuid):
 
 
 def save(store, configuration):
-    ''' Save a configuration block to the cache directory. There are no
+    """ Save a configuration block to the cache directory. There are no
         provisions here for saving to the daemon directory, which is where
         configuration contents would be populated for an authoritative daemon.
-    '''
+    """
 
     try:
         configuration['name']
@@ -270,14 +270,14 @@ def save(store, configuration):
 
 
 def save_daemon(store, specific, configuration):
-    ''' Save a configuration block to the daemon directory. This is only
+    """ Save a configuration block to the daemon directory. This is only
         relevant if a daemon is generating its configuration at runtime,
         or as an entry point for external tools that generate the configuration
         contents and want it stored in the correct location.
 
         The *configuration* should be a dictionary of items, matching the
         expected structure of the daemon-side configuration contents.
-    '''
+    """
 
     base_directory = directory()
     json_filename = specific + '.json'

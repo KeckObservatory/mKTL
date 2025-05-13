@@ -1,6 +1,6 @@
-''' Classes and methods implemented here implement the request/response
+""" Classes and methods implemented here implement the request/response
     aspects of the client/server API.
-'''
+"""
 
 import atexit
 import itertools
@@ -21,10 +21,10 @@ zmq_context = zmq.Context()
 
 
 class Client:
-    ''' Issue requests via a ZeroMQ DEALER socket and receive responses.
+    """ Issue requests via a ZeroMQ DEALER socket and receive responses.
         Maintains a persistent connection to a single server; the *address*
         and *port* number must be specified.
-    '''
+    """
 
     timeout = 0.05
 
@@ -56,9 +56,9 @@ class Client:
 
 
     def req_id_next(self):
-        ''' Return the next request identification number for subroutines to
+        """ Return the next request identification number for subroutines to
             use when constructing a request.
-        '''
+        """
 
         self.req_id_lock.acquire()
         req_id = next(self.req_id)
@@ -76,8 +76,8 @@ class Client:
 
 
     def req_id_reset(self):
-        ''' Reset the request identification number to the minimum value.
-        '''
+        """ Reset the request identification number to the minimum value.
+        """
 
         self.req_id = itertools.count(self.req_id_min)
 
@@ -140,7 +140,7 @@ class Client:
 
 
     def send(self, request, response=True):
-        ''' A *request* is a Python dictionary ready to be converted to a JSON
+        """ A *request* is a Python dictionary ready to be converted to a JSON
             byte string and sent to the connected server. If *response* is True
             a :class:`Pending` instance will be returned that a client can use
             to wait on for further notification. Set *response* to any other
@@ -151,7 +151,7 @@ class Client:
             If the 'bulk' field is present in the *request* it must be a byte
             sequence, and will be sent as a separate message to the connected
             daemon.
-        '''
+        """
 
         req_id = self.req_id_next()
 
@@ -210,11 +210,11 @@ class Client:
 
 
 class Pending:
-    ''' The :class:`Pending` provides a very thin wrapper around a
+    """ The :class:`Pending` provides a very thin wrapper around a
         :class:`threading.Event` that can be used to signal the caller that the
         request has been handled. It also provides a vehicle to pass the
         response to the caller.
-    '''
+    """
 
     def __init__(self):
         self.ack = None
@@ -226,19 +226,19 @@ class Pending:
 
 
     def complete_ack(self, ack):
-        ''' Record the ACK response and signal any callers blocking on
+        """ Record the ACK response and signal any callers blocking on
             :func:`wait_ack` to proceed.
-        '''
+        """
 
         self.ack = ack
         self.event_ack.set()
 
 
     def complete(self, response):
-        ''' If a response to a pending request arrives the :class:`Client`
+        """ If a response to a pending request arrives the :class:`Client`
             instance will check whether the response is of interest, and if
             it is, call :func:`complete` to indicate the response has arrived.
-        '''
+        """
 
         self.rep = response
 
@@ -250,11 +250,11 @@ class Pending:
 
 
     def partial(self, response=None, bulk=None):
-        ''' A response may come in two pieces. This is effectively a two-step
+        """ A response may come in two pieces. This is effectively a two-step
             version of :func:`complete`, where there should be two calls to
             :func:`partial` before a request is complete. This method will
             return True when both responses have been received.
-        '''
+        """
 
         if response is not None:
             self.rep = response
@@ -273,23 +273,23 @@ class Pending:
 
 
     def poll(self):
-        ''' Return True if the request is complete, otherwise return False.
-        '''
+        """ Return True if the request is complete, otherwise return False.
+        """
 
         return self.event_rep.is_set()
 
 
     def wait_ack(self, timeout):
-        ''' Block until the request has been acknowledged.
-        '''
+        """ Block until the request has been acknowledged.
+        """
 
         self.event_ack.wait(timeout)
         return self.ack
 
 
     def wait(self, timeout=60):
-        ''' Block until the request has been handled.
-        '''
+        """ Block until the request has been handled.
+        """
 
         self.event_rep.wait(timeout)
         return self.rep
@@ -300,13 +300,13 @@ class Pending:
 
 
 class Server:
-    ''' Receive requests via a ZeroMQ ROUTER socket, and respond to them. The
+    """ Receive requests via a ZeroMQ ROUTER socket, and respond to them. The
         default behavior is to listen for incoming requests on our locally
         known fully qualified domain name, on the first available automatically
         assigned port. The *avoid* set enumerates port numbers that should
         not be automatically assigned; this is ignored if a fixed *port* is
         specified.
-    '''
+    """
 
     worker_count = 10
 
@@ -411,11 +411,11 @@ class Server:
 
 
     def req_ack(self, socket, lock, ident, request):
-        ''' Acknowledge the incoming request. The client is expecting an
+        """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
             request.
-        '''
+        """
 
         id = request['id']
 
@@ -431,9 +431,9 @@ class Server:
 
 
     def req_handler(self, socket, lock, ident, request):
-        ''' The default request handler is for debug purposes only, and is
+        """ The default request handler is for debug purposes only, and is
             effectively a no-op.
-        '''
+        """
 
         self.req_ack(socket, lock, ident, request)
 
@@ -452,7 +452,7 @@ class Server:
 
 
     def req_incoming(self, socket, lock, ident, request):
-        ''' All inbound requests are filtered through this method. It will
+        """ All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
             is managed here; if :func:`req_handler` raises an exception it
@@ -464,7 +464,7 @@ class Server:
             the payload is always a dictionary, containing at minimum a 'data'
             value, and an optional 'bulk' value. No response will be issued if
             :func:`req_handler` returns None.
-        '''
+        """
 
         error = None
         payload = None
@@ -533,13 +533,13 @@ class Server:
 
 
     def send(self, ident, response):
-        ''' Convenience method for subclasses to fire off a message response.
+        """ Convenience method for subclasses to fire off a message response.
             Any such subclasses are not using the background threads to handle
             requests, and are handling asynchronous responses that need to be
             relayed back to the original caller. Otherwise, they would have a
             reference to the lock and the socket, and would be making these
             calls directly.
-        '''
+        """
 
         self.socket_lock.acquire()
         self.socket.send_multipart((ident, response))
@@ -547,7 +547,7 @@ class Server:
 
 
     def worker_main(self):
-        ''' This is the 'main' method for the worker threads responsible for
+        """ This is the 'main' method for the worker threads responsible for
             handling incoming requests. The task of a worker thread is limited:
             receive a request, and feed it to :func:`req_incoming` for
             processing. Multiple threads are allocated to this function to
@@ -556,7 +556,7 @@ class Server:
             allocation of threads, as done by ROUTER/DEALER and PUSH/PULL, do
             not alter their allocation of inbound messages if a thread is
             already busy.
-        '''
+        """
 
         while self.shutdown == False:
             try:
@@ -586,8 +586,8 @@ class Server:
 client_connections = dict()
 
 def client(address, port):
-    ''' Factory function for a :class:`Client` instance.
-    '''
+    """ Factory function for a :class:`Client` instance.
+    """
 
     try:
         instance = client_connections[(address, port)]
@@ -600,9 +600,9 @@ def client(address, port):
 
 
 def send(request, address, port):
-    ''' Creates a :class:`Client` instance and invokes the :func:`Client.send`
+    """ Creates a :class:`Client` instance and invokes the :func:`Client.send`
         method. This method blocks until the completion of the request.
-    '''
+    """
 
     connection = client(address, port)
     pending = connection.send(request)

@@ -1,8 +1,8 @@
-''' Routines to handle provenance information.
-'''
+""" Routines to handle provenance information.
+"""
 
 def add(block, hostname, req, pub=None):
-    ''' Add the provenance of this daemon to the supplied configuration
+    """ Add the provenance of this daemon to the supplied configuration
         block. The block is provided as a Python dictionary; the hostname
         and port definitions provide potential clients with enough information
         to initiate connections with further requests.
@@ -10,7 +10,7 @@ def add(block, hostname, req, pub=None):
         The newly added provenance stratum is returned for convenient access,
         though the provided configuration block has already been modified to
         include the new stratum.
-    '''
+    """
 
     try:
         full_provenance = block['provenance']
@@ -31,9 +31,9 @@ def add(block, hostname, req, pub=None):
 
 
 def contains(block, provenance):
-    ''' Does this configuration block contain this provenance? The stratum
+    """ Does this configuration block contain this provenance? The stratum
         field of the provenance is ignored for this check.
-    '''
+    """
 
     try:
         full_provenance = block['provenance']
@@ -56,8 +56,8 @@ def contains(block, provenance):
 
 
 def create(stratum, hostname, req, pub=None):
-    ''' Create a provenance dictionary.
-    '''
+    """ Create a provenance dictionary.
+    """
 
     provenance = dict()
 
@@ -75,11 +75,11 @@ def create(stratum, hostname, req, pub=None):
 
 
 def match(full_provenance1, full_provenance2):
-    ''' Check the two provided provenance lists, and return True if they match.
+    """ Check the two provided provenance lists, and return True if they match.
         This check allows for one provenance to be longer than the other; if
         they are aligned from stratum 0 up to the full length of the shorter
         provenance, that is considered a match.
-    '''
+    """
 
     # There has to be at least one matching stratum in the provenance
     # in order for it to be a match. Two empty provenances compared

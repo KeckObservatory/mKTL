@@ -1,6 +1,6 @@
-''' Decompose a standard configuration into a by-key dictionary for use by
+""" Decompose a standard configuration into a by-key dictionary for use by
     other classes internal to the mKTL Python module.
-'''
+"""
 
 from . import Cache
 from . import Hash
@@ -10,10 +10,10 @@ hashes = dict()
 
 
 def get(store):
-    ''' Parse the cached configuration for the specified *store* into a
+    """ Parse the cached configuration for the specified *store* into a
         by-key dictionary, with additional fields populated from block-wide
         definitions.
-    '''
+    """
 
     # Return a cached version if the contents stored by the Cache haven't
     # been modified.
@@ -58,8 +58,8 @@ def get(store):
 
 
 def clear(store):
-    ''' Clear the cached by-item configuration for the specified store.
-    '''
+    """ Clear the cached by-item configuration for the specified store.
+    """
 
     try:
         del cache[store]

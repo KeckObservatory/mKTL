@@ -1,6 +1,6 @@
-''' Implmentation of the top-level :func:`get` method. This is intended to be
+""" Implmentation of the top-level :func:`get` method. This is intended to be
     the principal entry point for users interacting with a key/value store.
-'''
+"""
 
 import zmq
 
@@ -12,7 +12,7 @@ from . import Protocol
 cache = dict()
 
 def get(store, key=None):
-    ''' Return a cached :class:`Store` or :class:`Item` instance. If both a
+    """ Return a cached :class:`Store` or :class:`Item` instance. If both a
         *store* and a *key* are specified, the requested *key* will be returned
         from the requested *store*. The same will occur if the sole argument is
         a store and key name concatenated with a dot (store.KEY). If only a
@@ -25,7 +25,7 @@ def get(store, key=None):
         The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store, acting like a factory method
         without enforcing strict singleton behavior.
-    '''
+    """
 
     store = str(store)
 
@@ -118,11 +118,11 @@ def get(store, key=None):
 
 
 def refresh(store, config):
-    ''' This is a helper method for :func:`get` defined in this file. The
+    """ This is a helper method for :func:`get` defined in this file. The
         *config* passed in here was loaded from a file. Inspect the provenance
         for each block and attempt to refresh the local contents. Save any
         changes back to disk for future clients.
-    '''
+    """
 
     for uuid in config.keys():
         block = config[uuid]

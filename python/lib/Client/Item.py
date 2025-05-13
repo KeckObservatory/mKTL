@@ -11,13 +11,13 @@ from .. import Protocol
 from .. import WeakRef
 
 class Item:
-    ''' An Item represents a key/value pair, where the key is the name of the
+    """ An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the daemon, according to
         :func:`get` and :func:`subscribe` requests. A :func:`set` request does
         not update the local value, it only issues a request to the remote
         daemon; it is the daemon's responsibility to issue a post-set update
         with any new value(s).
-    '''
+    """
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
 
@@ -74,10 +74,10 @@ class Item:
 
 
     def get(self, refresh=False):
-        ''' Retrieve the current value. Set *refresh* to True to prompt
+        """ Retrieve the current value. Set *refresh* to True to prompt
             the daemon handling the request to provide the most up-to-date
             value available, potentially bypassing any local cache.
-        '''
+        """
 
         if refresh == False and self.subscribed == True:
             return self.cached
@@ -117,11 +117,11 @@ class Item:
 
 
     def register(self, method):
-        ''' Register a callback to be invoked whenever a new value is received,
+        """ Register a callback to be invoked whenever a new value is received,
             either by a direct :func:`get` request or the arrival of an
             asynchronous broadcast. :func:`subscribe` will be invoked if
             a subscription has not already occurred.
-        '''
+        """
 
         if callable(method):
             pass
@@ -136,7 +136,7 @@ class Item:
 
 
     def set(self, new_value, wait=True, bulk=None):
-        ''' Set a new value. Set *wait* to True to block until the request
+        """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`Protocol.Request.Pending`
             instance, which has a :func:`Protocol.Request.Pending.wait` method
@@ -151,7 +151,7 @@ class Item:
             the as-bytes representation; for example, if a numpy array is being
             transmitted, the *new_value* dictionary will need to include the
             dimensions of the array as well as its data type.
-        '''
+        """
 
         request = dict()
         request['request'] = 'SET'
@@ -190,12 +190,12 @@ class Item:
 
 
     def subscribe(self, prime=True):
-        ''' Subscribe to all future broadcast events. Doing so ensures that
+        """ Subscribe to all future broadcast events. Doing so ensures that
             locally cached values will always be current, regardless of whether
             :func:`get` has been invoked recently. If *prime* is True a call
             will be made to :func:`get` to refresh the locally cached value
             before returning.
-        '''
+        """
 
         if self.subscribed == True:
             return
@@ -226,12 +226,12 @@ class Item:
 
 
     def _interpret_bulk(self, new_message):
-        ''' Interpret a new bulk value, returning the new rich data construct
+        """ Interpret a new bulk value, returning the new rich data construct
             for further handling by methods like :func:`_update`. The default
             handling here treats the bulk message as if it is an N-dimensional
             numpy array; breaking out the interpretation allows future handlers
             to change this behavior for different types of bulk data.
-        '''
+        """
 
         if numpy is None:
             raise ImportError('numpy module not available')
@@ -250,8 +250,8 @@ class Item:
 
 
     def _propagate(self, new_data, new_timestamp):
-        ''' Invoke any registered callbacks upon receipt of a new value.
-        '''
+        """ Invoke any registered callbacks upon receipt of a new value.
+        """
 
         if self.callbacks:
             pass
@@ -278,9 +278,9 @@ class Item:
 
 
     def _update(self, new_message):
-        ''' The caller received a new data segment either from a directed
+        """ The caller received a new data segment either from a directed
             GET request or from a PUB subscription.
-        '''
+        """
 
         try:
             new_data = new_message['data']

@@ -1,4 +1,4 @@
-''' A simple broadcast UDP discovery method. A persistent server would fire up a
+""" A simple broadcast UDP discovery method. A persistent server would fire up a
     :class:`Server` instance, and clients would use the func:`search` method
     to find any available listeners.
 
@@ -6,7 +6,7 @@
     :class:`Server` is running on a specific address. Clients can then attempt
     more interesting questions once they know which addresses might participate
     in answering those questions.
-'''
+"""
 
 import socket
 import threading
@@ -34,11 +34,11 @@ direct_port = 10111
 
 
 class Server:
-    ''' Listen for any queries on the default port; respond to any queries
+    """ Listen for any queries on the default port; respond to any queries
         with our current IP address and the *request* port we were provided.
         This allows clients to discover a valid location where they can issue
         real requests.
-    '''
+    """
 
     port = default_port
 
@@ -112,10 +112,10 @@ class Server:
 
 
 class DirectServer(Server):
-    ''' Same as the :class:`Server`, but intended for use by authoritative
+    """ Same as the :class:`Server`, but intended for use by authoritative
         daemons answering only for themselves, not aggregating content from
         any other sources.
-    '''
+    """
 
     port = direct_port
 
@@ -128,11 +128,11 @@ class DirectServer(Server):
 
 
 def search(port=default_port, wait=False):
-    ''' Find locally available :class:`Server` instances. If *wait* is True, the
+    """ Find locally available :class:`Server` instances. If *wait* is True, the
         search will delay returning until multiple instances have an opportunity
         to respond; otherwise, the fastest responding instance will be included
         in the returned list and there will be no additional delay.
-    '''
+    """
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -188,9 +188,9 @@ def search(port=default_port, wait=False):
 
 
 def search_direct(port=direct_port, wait=True):
-    ''' The same as :func:`search`, but looking for :class:`DirectServer`
+    """ The same as :func:`search`, but looking for :class:`DirectServer`
         instances listening on the alternate port.
-    '''
+    """
 
     return search(port, wait)
 

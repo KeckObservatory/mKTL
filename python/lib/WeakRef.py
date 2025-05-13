@@ -3,10 +3,10 @@ import weakref
 
 
 class WeakRef:
-    ''' A faithful implementation of weak references that works not only for
+    """ A faithful implementation of weak references that works not only for
     	static functions and objects, but also bound methods of instances.
         Patterned after the weakref.WeakMethod subclass available in Python 3.4.
-    '''
+    """
 
     def __init__(self, thing):
 

@@ -13,7 +13,7 @@ from . import Port
 
 
 class Store(Client.Store):
-    ''' The daemon version of a Store is based on the client version; the
+    """ The daemon version of a Store is based on the client version; the
         behavior defaults to the client approach, but for items specified in
         the daemon *config* file a daemon-specific variant of the item will
         be loaded that supplements the client behavior with daemon-specific
@@ -26,7 +26,7 @@ class Store(Client.Store):
         have been instantiated. :func:`setup` is a hook allowing the subclass
         to instantiate custom Item classes, and make any other custom supporting
         calls as part of the initialization.
-    '''
+    """
 
     def __init__(self, name, config):
 
@@ -109,9 +109,9 @@ class Store(Client.Store):
 
 
     def _begin_persistence(self):
-        ''' Start the background process responsible for updating the
+        """ Start the background process responsible for updating the
             persistent value cache.
-        '''
+        """
 
         ### This is not a valid way to find the markpersistd executable.
 
@@ -125,8 +125,8 @@ class Store(Client.Store):
 
 
     def _publish_config(self, targets=tuple()):
-        ''' Put our local configuration out on the wire.
-        '''
+        """ Put our local configuration out on the wire.
+        """
 
         config = dict(self.daemon_config)
 
@@ -143,9 +143,9 @@ class Store(Client.Store):
 
 
     def _restore(self):
-        ''' Bring back any values in the local persistent cache, and push them
+        """ Bring back any values in the local persistent cache, and push them
             through to affected Items for handling.
-        '''
+        """
 
         loaded = Persist.load(self.name, self.daemon_uuid)
 
@@ -183,18 +183,18 @@ class Store(Client.Store):
 
 
     def setup(self):
-        ''' Subclasses should override the :func:`setup` method to instantiate
+        """ Subclasses should override the :func:`setup` method to instantiate
             any local Item classes or otherwise execute custom code that needs
             to occur as part of establishing this Store instance.
-        '''
+        """
 
         raise NotImplementedError('subclass must define a setup() method')
 
 
     def setupRemaining(self):
-        ''' Provision any unset local Item instances with caching
+        """ Provision any unset local Item instances with caching
             implementations.
-        '''
+        """
 
         local = list(self._daemon_keys)
 
@@ -207,12 +207,12 @@ class Store(Client.Store):
 
 
     def setupLast(self):
-        ''' This is intended as a hook for subclasses to use. Take any
+        """ This is intended as a hook for subclasses to use. Take any
             additional actions that must occur after all Item instances
             have been created, and all initial setup has otherwise occured,
             including restoration of any cached values. This method will be
             invoked right before we start broadcasting.
-        '''
+        """
 
         pass
 
@@ -241,9 +241,9 @@ class RequestServer(Protocol.Request.Server):
 
 
     def req_handler(self, socket, lock, ident, request):
-        ''' Inspect the incoming request type and decide how a response
+        """ Inspect the incoming request type and decide how a response
             will be generated.
-        '''
+        """
 
         self.req_ack(socket, lock, ident, request)
 

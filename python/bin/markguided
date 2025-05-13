@@ -82,14 +82,14 @@ main.req = None
 
 
 class RequestServer(mKTL.Protocol.Request.Server):
-    ''' Subclass the generic :class:mKTL.Protocol.Request.Server`, adding
+    """ Subclass the generic :class:mKTL.Protocol.Request.Server`, adding
         additional logic to locally handle requests.
-    '''
+    """
 
     def checkKeys(self, new):
-        ''' Confirm that any keys unique to this new configuration block are
+        """ Confirm that any keys unique to this new configuration block are
             not present in any other blocks.
-        '''
+        """
 
         ## The configuration format isn't yet set. This will need to be
         ## revisited to have more accurate names and use the right fields.
@@ -187,13 +187,13 @@ class RequestServer(mKTL.Protocol.Request.Server):
 
 
     def req_config(self, request):
-        ''' When a daemon sets a configuration block it will include a 'data'
+        """ When a daemon sets a configuration block it will include a 'data'
             segment in the request; an empty response is expected upon receipt
             of the configuration block. That 'data' segment is not present in a
             client request; a client expects a sequence of configuration blobs
             representing the full configuration of the store, one blob per
             daemon in the store.
-        '''
+        """
 
         if 'data' in request:
             payload = list()
@@ -218,9 +218,9 @@ class RequestServer(mKTL.Protocol.Request.Server):
 
 
     def req_handler(self, socket, lock, ident, request):
-        ''' Inspect the incoming request type and decide how a response
+        """ Inspect the incoming request type and decide how a response
             will be generated.
-        '''
+        """
 
         self.req_ack(socket, lock, ident, request)
 
@@ -246,9 +246,9 @@ class RequestServer(mKTL.Protocol.Request.Server):
 
 
     def req_hash(self, request):
-        ''' Return the hash of a configuration block for a requested store name,
+        """ Return the hash of a configuration block for a requested store name,
             or all hashes for all locally known stores.
-        '''
+        """
 
         try:
             request = request['name']

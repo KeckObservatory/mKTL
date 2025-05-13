@@ -4,11 +4,11 @@ from . import Item
 
 
 class Store:
-    ''' The :class:`Store` implements a key/value store, effectively a Python
+    """ The :class:`Store` implements a key/value store, effectively a Python
         dictionary with some additional context. A store has a unique *name*
         within the local mKTL context; which daemons will be contacted to handle
         further requests is determined by the per-Item configuration.
-    '''
+    """
 
     def __init__(self, name):
 
@@ -95,10 +95,10 @@ class Store:
 
 
 class Iterator:
-    ''' Internal class for iteration over a :class:`Store` instance. The custom
+    """ Internal class for iteration over a :class:`Store` instance. The custom
         iterator allows easier just-in-time instantiation of any missing Item
         instances.
-    '''
+    """
 
     def __init__(self, store):
         self.store = store

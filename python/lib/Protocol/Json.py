@@ -1,6 +1,6 @@
-''' Wrapper module to select the most performant available library to handle
+""" Wrapper module to select the most performant available library to handle
     the equivalent of :func:`json.loads` and :func:`json.dumps`.
-'''
+"""
 
 # The business about conditionally importing the libraries is intended to
 # avoid importing less efficient libraries if they are not available. With

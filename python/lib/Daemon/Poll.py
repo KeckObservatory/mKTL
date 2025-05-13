@@ -8,14 +8,14 @@ active = dict()
 
 
 def start(method, period):
-    ''' Call the provided *method* on an interval of *period* seconds.
+    """ Call the provided *method* on an interval of *period* seconds.
         A dedicated background thread is used for each method; it is possible
         to exhaust the available system resources with a high enough quantity
         of background threads.
 
         If a background poller is already active for the specified method, the
         poller will be updated to use the newly requested period.
-    '''
+    """
 
     if period is None or period == 0:
         stop(method)
@@ -34,8 +34,8 @@ def start(method, period):
 
 
 def stop(method):
-    ''' Discontinue calling the provided *method*.
-    '''
+    """ Discontinue calling the provided *method*.
+    """
 
     method_id = id(method)
 
@@ -49,8 +49,8 @@ def stop(method):
 
 
 class Poller:
-    ''' Background thread to invoke any polling requests.
-    '''
+    """ Background thread to invoke any polling requests.
+    """
 
     def __init__(self, method):
 
@@ -68,8 +68,8 @@ class Poller:
 
 
     def period(self, period):
-        ''' Update the polling interval to *period* seconds.
-        '''
+        """ Update the polling interval to *period* seconds.
+        """
 
         period = float(period)
         self.interval = period
