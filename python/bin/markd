@@ -1,0 +1,87 @@
+#! /usr/bin/env python3
+
+description = '''
+This is a generic mKTL daemon. The real work is done in the subclass of
+Daemon.Store (if any); this body of code parses command line flags and a
+configuration file (if any), and listens for any subsequent requests.
+
+The store name and configuration identifier must be specified in order
+for this daemon to function correctly; all other arguments are optional.
+'''
+
+epilog = '''
+For example, to run markd for the store 'rosebud', using the on-disk
+configuration identified as 'innocence', one might invoke:
+
+    markd rosebud innocence
+    markd rosebud innocence --module Kane --subclass Sled
+'''
+
+import argparse
+import importlib
+import threading
+
+import mKTL
+
+
+def main():
+
+    config = parse_command_line()
+    store = start_store(config)
+
+    while True:
+        try:
+            main.shutdown.wait(30)
+        except (KeyboardInterrupt, SystemExit):
+            break
+
+
+main.shutdown = threading.Event()
+
+
+
+def parse_command_line():
+
+    # Start with command-line arguments.
+
+    arguments = dict()
+    arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
+    arguments['description'] = description
+    arguments['epilog'] = epilog
+
+    parser = argparse.ArgumentParser(**arguments)
+
+    parser.add_argument('store', help='Name of the mKTL store')
+    parser.add_argument('identifier', help='Unique identifier for mKTL configuration')
+
+    parser.add_argument('-m', '--module', help='Module that must be imported to support --subclass option', default='mKTL.Daemon')
+    parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke', default='Store')
+
+
+    parsed = parser.parse_args()
+    return parsed
+
+
+def start_store(config):
+    store = config.store
+    specific = config.identifier
+
+    custom_module = None
+    custom_store = None
+
+    if config.module == 'mKTL.Daemon':
+        store_module = mKTL.Daemon
+    else:
+        store_module = importlib.import_module(config.module)
+
+    store_subclass = getattr(store_module, config.subclass)
+    started = store_subclass(store, specific)
+
+    return started
+
+
+if __name__ == '__main__':
+    main()
+
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
