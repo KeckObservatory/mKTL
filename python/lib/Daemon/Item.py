@@ -18,6 +18,7 @@ class Daemon:
     """
 
     def __init__(self, *args, **kwargs):
+        self._daemon_cached = None
         self.subscribe(prime=False)
 
 
