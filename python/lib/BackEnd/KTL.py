@@ -13,7 +13,7 @@ except ModuleNotFoundError:
 
 class Store(Daemon.Store):
 
-    def __init__(self, name):
+    def __init__(self, name, *args, **kwargs):
 
         if ktl is None:
             raise ModuleNotFoundError("cannot import the 'ktl' module")
