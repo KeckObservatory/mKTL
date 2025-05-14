@@ -188,7 +188,7 @@ class Store(Client.Store):
             to occur as part of establishing this Store instance.
         """
 
-        raise NotImplementedError('subclass must define a setup() method')
+        pass
 
 
     def setupRemaining(self):
