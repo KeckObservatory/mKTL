@@ -26,9 +26,17 @@ class Store(Client.Store):
         have been instantiated. :func:`setup` is a hook allowing the subclass
         to instantiate custom Item classes, and make any other custom supporting
         calls as part of the initialization.
+
+        The *store* argument is the name of this store; *config* is the base
+        name of the mKTL configuration file that defines the items in this
+        store. *arguments* is expected to be an :class:`argparse.ArgumentParser`
+        instance, though in practice it can be any Python object with specific
+        named attributes of interest to a :class:`Store` subclass; it is not
+        required. This is intended to be a vehicle for subclasses to receive
+        key information from command-line arguments.
     """
 
-    def __init__(self, name, config):
+    def __init__(self, name, config, arguments=None):
 
         self.name = name
         self.config = None

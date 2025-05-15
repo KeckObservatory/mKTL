@@ -56,6 +56,7 @@ def parse_command_line():
 
     parser.add_argument('-m', '--module', help='Module that must be imported to support --subclass option', default='mKTL.Daemon')
     parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke', default='Store')
+    parser.add_argument('-c', '--config', help='Custom configuration file (not used directly by mKTL)')
 
 
     parsed = parser.parse_args()
@@ -64,7 +65,7 @@ def parse_command_line():
 
 def start_store(config):
     store = config.store
-    specific = config.identifier
+    config_id = config.identifier
 
     custom_module = None
     custom_store = None
@@ -75,7 +76,7 @@ def start_store(config):
         store_module = importlib.import_module(config.module)
 
     store_subclass = getattr(store_module, config.subclass)
-    started = store_subclass(store, specific)
+    started = store_subclass(store, config_id, config)
 
     return started
 
