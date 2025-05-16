@@ -21,8 +21,6 @@ import argparse
 import importlib
 import threading
 
-import mKTL
-
 
 def main():
 
@@ -71,6 +69,7 @@ def start_store(config):
     custom_store = None
 
     if config.module == 'mKTL.Daemon':
+        import mKTL
         store_module = mKTL.Daemon
     else:
         store_module = importlib.import_module(config.module)
