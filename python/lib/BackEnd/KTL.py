@@ -71,7 +71,7 @@ class Store(Daemon.Store):
 
         key = keyword.name
         item = self._items[key]
-        item.publish(payload, timestamp, cache=True)
+        item.publish(payload, timestamp=timestamp, cache=True)
 
 
 # end of class Store
@@ -80,20 +80,11 @@ class Store(Daemon.Store):
 
 class Item(Daemon.Item):
 
-    def req_get(self, request):
-        name = request['name']
-        keyword = ktl.cache(name)
 
-        try:
-            refresh = request['refresh']
-        except KeyError:
-            refresh = False
-        else:
-            if refresh == None or refresh == '':
-                refresh = False
+    def req_refresh(self):
 
-        if keyword['monitored'] != True or refresh == True:
-            keyword.read()
+        keyword = ktl.cache(self.key)
+        keyword.read()
 
         slice = keyword.history[-1]
         timestamp = slice.time
