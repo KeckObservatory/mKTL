@@ -192,16 +192,18 @@ class Store(Client.Store):
 
     def setup(self):
         """ Subclasses should override the :func:`setup` method to instantiate
-            any local Item classes or otherwise execute custom code that needs
-            to occur as part of establishing this Store instance.
+            any custom :class:`Item` subclasses or otherwise execute custom
+            code prior to any default setup actions taking place. The default
+            implementation of this method takes no actions.
         """
 
         pass
 
 
     def _setup_missing(self):
-        """ Provision any unset local Item instances with caching
-            implementations.
+        """ Inspect the locally known list of :class:`Item` instances; create
+            default, caching instances for any that were not previously
+            populated by the call to :func:`setup`.
         """
 
         local = list(self._daemon_keys)
@@ -215,10 +217,11 @@ class Store(Client.Store):
 
 
     def setup_final(self):
-        """ Take any additional actions that must occur after all Item instances
-            have been created, and all initial setup has otherwise occured,
-            including restoration of any cached values. This method will be
-            invoked right before this Store commences broadcasting.
+        """ Subclasses should override the :func:`setup_final` method to
+            execute any/all code that should occur after all :class:`Item`
+            instances have been created, but before this :class:`Store` begins
+            broadcasting values. The default implementation of this method takes
+            no actions.
         """
 
         pass
