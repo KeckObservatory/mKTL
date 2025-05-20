@@ -24,24 +24,45 @@ class Daemon:
 
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero.
+            discontinued if *period* is set to None or zero. Requesting a
+            new value is accomplished via the :func:`req_refresh` method.
         """
 
         Poll.start(self.req_refresh, period)
 
 
-    def publish(self, new_value, timestamp=None, cache=False):
-        """ Publish a new value.
+    def publish(self, new_value, bulk=None, timestamp=None, cache=False):
+        """ Publish a new value, which is expected to be a dictionary minimally
+            containing 'asc' and 'bin' keys rerepsenting different views of the
+            new value; bulk values are not represented as a dictionary, they are
+            passed in directly as the *bulk* argument, and the *new_value*
+            argument will be ignored. If *timestamp* is set it is expected to be
+            a UNIX epoch timestamp; the current time will be used if it is not
+            set. If *cache* is set to True the published value will be cached
+            locally for any future requests.
         """
 
         if timestamp is None:
             timestamp = time.time()
+        else:
+            timestamp = float(timestamp)
 
         message = dict()
         message['message'] = 'PUB'
         message['name'] = self.full_key
         message['time'] = timestamp
-        message['data'] = new_value
+
+        if bulk is None:
+            message['data'] = new_value
+        else:
+            bytes = bulk.tobytes()
+            description = dict()
+            description['shape'] = bulk.shape
+            description['dtype'] = str(bulk.dtype)
+            message['data'] = description
+            message['bulk'] = bytes
+
+            new_value = bulk
 
         if cache == True:
             try:
@@ -53,7 +74,9 @@ class Daemon:
 
 
     def req_get(self, request):
-        """ Handle a GET request.
+        """ Handle a GET request. A typical subclass should not need to
+            re-implement this method, implementing :func:`req_refresh`
+            would normally be sufficient.
         """
 
         try:
@@ -64,6 +87,8 @@ class Daemon:
         if refresh == True:
             self.req_refresh()
 
+        ### This needs to properly handle bulk data types.
+
         payload = dict()
         payload['asc'] = str(self._daemon_cached)
         payload['bin'] = self._daemon_cached
@@ -72,9 +97,12 @@ class Daemon:
 
 
     def req_refresh(self):
-        """ Refresh the current value and publish it. This is where a daemon
-            would communicate with a controller or other source-of-authority
-            to retrieve the current value.
+        """ Refresh the current value and publish it. This is the entry point
+            for any calls made via the :func:`poll` machinery, or for any GET
+            requests explicitly requesting a refresh of the current value.
+            Subclasses do not need to call this parent method, they can call
+            :func:`publish` directly with or without the *cache* argument set
+            to True.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
@@ -87,7 +115,8 @@ class Daemon:
 
 
     def req_set(self, request):
-        """ Handle a SET request.
+        """ Handle a client-initiated SET request. Any calls to :func:`req_set`
+            are expected to block until completion of the request.
         """
 
         try:
@@ -138,9 +167,11 @@ class Daemon:
 
 
 class Item(Client.Item, Daemon):
-    """ The daemon version of a `class:Client.Item` is based on the client
-        version, implementing additional methods that are relevant in a daemon
-        context, but with all other client behavior left unchanged.
+    """ This daemon-specific subclass of a :class:`mKTL.Client.Item` implements
+        additional methods that are relevant in a daemon context, but with all
+        client behavior left unchanged. For example, if a callback is registered
+        with this :class:`Item` instance, it is handled precisely the same way
+        as if this were a regular :class:`mKTL.Client.Item` instance.
     """
 
     def __init__(self, *args, **kwargs):
