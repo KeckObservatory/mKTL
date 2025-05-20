@@ -19,13 +19,9 @@ class Store(Client.Store):
         be loaded that supplements the client behavior with daemon-specific
         functionality.
 
-        The developer is expected to subclass this :class:`Store` class and
-        implement a :func:`setup` method. :func:`setup` will be called near
-        the end of the initialization process, once most of the local
-        infrastructure has been established, but before all of the local Items
-        have been instantiated. :func:`setup` is a hook allowing the subclass
-        to instantiate custom Item classes, and make any other custom supporting
-        calls as part of the initialization.
+        The developer is expected to subclass :class:`Store` class and
+        implement a :func:`setup` method, and/or a :func:`setup_final`
+        method.
 
         The *store* argument is the name of this store; *config* is the base
         name of the mKTL configuration file that defines the items in this
@@ -193,7 +189,9 @@ class Store(Client.Store):
     def setup(self):
         """ Subclasses should override the :func:`setup` method to instantiate
             any custom :class:`Item` subclasses or otherwise execute custom
-            code prior to any default setup actions taking place. The default
+            code. When :func:`setup` is called the bulk of the :class:`Store`
+            machinery is in place, but cached values have not been loaded, nor
+            has the presence of this daemon been announced. The default
             implementation of this method takes no actions.
         """
 
@@ -219,9 +217,10 @@ class Store(Client.Store):
     def setup_final(self):
         """ Subclasses should override the :func:`setup_final` method to
             execute any/all code that should occur after all :class:`Item`
-            instances have been created, but before this :class:`Store` begins
-            broadcasting values. The default implementation of this method takes
-            no actions.
+            instances have been created, including any non-custom :class:`Item`
+            instances, but before this :class:`Store` announces its availability
+            on the local network. The default implementation of this method
+            takes no actions.
         """
 
         pass
