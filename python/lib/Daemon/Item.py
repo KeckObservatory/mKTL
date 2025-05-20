@@ -87,11 +87,17 @@ class Daemon:
         if refresh == True:
             self.req_refresh()
 
-        ### This needs to properly handle bulk data types.
-
         payload = dict()
-        payload['asc'] = str(self._daemon_cached)
-        payload['bin'] = self._daemon_cached
+
+        try:
+            bytes = self._daemon_cached.tobytes()
+        except AttributeError:
+            payload['asc'] = str(self._daemon_cached)
+            payload['bin'] = self._daemon_cached
+        else:
+            payload['shape'] = self._daemon_cached.shape
+            payload['dtype'] = str(self._daemon_cached.dtype)
+            payload['bulk'] = bytes
 
         return payload
 
