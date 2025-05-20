@@ -67,7 +67,7 @@ class Daemon:
         if cache == True:
             try:
                 self._daemon_cached = new_value['bin']
-            except (TypeError, KeyError):
+            except (TypeError, KeyError, IndexError):
                 self._daemon_cached = new_value
 
         self.store.pub.publish(message)
