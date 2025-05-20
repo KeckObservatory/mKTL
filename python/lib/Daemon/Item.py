@@ -11,10 +11,11 @@ class Daemon:
         This supplemental class is intended to be strictly additive to a
         client-side Item class; multiple inheritance is leveraged to allow
         cleaner addition of these methods to not just the base client Item
-        class, but potentially any subclasses as well.
-
-        The default behavior of the daemon-specific methods is to act as a
-        simple key/value cache.
+        class, but potentially any subclasses as well-- for example, a
+        Daemon.Item.Numeric class may benefit from subclassing both this
+        Daemon class as well as Client.Item.Numeric, whereas if Daemon.Item
+        were a simple subclass of Client.Item it would be more challenging
+        to include the additional behavior.
     """
 
     def __init__(self, *args, **kwargs):
@@ -172,7 +173,15 @@ class Daemon:
 
 
 
-class Item(Client.Item, Daemon):
+# For the final Item class, the Daemon class is inheritedfirst because we want
+# it to override some behavior of the Client.Item class. Subclasses should be
+# careful to continue this pattern; the initialization, however, invokes the
+# Client.Item code first, and then the Daemon code; this is likewise deliberate,
+# so that the Daemon initialization can override steps taken during the
+# Client.Item intialization.
+
+
+class Item(Daemon, Client.Item):
     """ This daemon-specific subclass of a :class:`mKTL.Client.Item` implements
         additional methods that are relevant in a daemon context, but with all
         client behavior left unchanged. For example, if a callback is registered
