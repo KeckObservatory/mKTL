@@ -215,8 +215,7 @@ class Store(Client.Store):
 
 
     def setup_final(self):
-        """ This is intended as a hook for subclasses to use. Take any
-            additional actions that must occur after all Item instances
+        """ Take any additional actions that must occur after all Item instances
             have been created, and all initial setup has otherwise occured,
             including restoration of any cached values. This method will be
             invoked right before this Store commences broadcasting.
