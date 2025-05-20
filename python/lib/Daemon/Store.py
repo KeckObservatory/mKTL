@@ -20,7 +20,7 @@ class Store(Client.Store):
         functionality.
 
         The developer is expected to subclass this :class:`Store` class and
-        implement a :func:`setup` method. :func:`setup`* will be called near
+        implement a :func:`setup` method. :func:`setup` will be called near
         the end of the initialization process, once most of the local
         infrastructure has been established, but before all of the local Items
         have been instantiated. :func:`setup` is a hook allowing the subclass
@@ -93,7 +93,7 @@ class Store(Client.Store):
         # before filling in with empty caching Item classes.
 
         self.setup()
-        self.setupRemaining()
+        self._setup_missing()
 
         # Restore any persistent values, and enable the retention of future
         # persistent values. If there are no persistent items present in this
@@ -103,10 +103,10 @@ class Store(Client.Store):
         self._restore()
         self._begin_persistence()
 
-        # The promise is that setupLast() gets invoked after everything else
+        # The promise is that setup_final() gets invoked after everything else
         # is ready, but before we go on the air.
 
-        self.setupLast()
+        self.setup_final()
 
         # Ready to go on the air.
 
@@ -199,7 +199,7 @@ class Store(Client.Store):
         pass
 
 
-    def setupRemaining(self):
+    def _setup_missing(self):
         """ Provision any unset local Item instances with caching
             implementations.
         """
@@ -214,12 +214,12 @@ class Store(Client.Store):
                 self._items[key] = item
 
 
-    def setupLast(self):
+    def setup_final(self):
         """ This is intended as a hook for subclasses to use. Take any
             additional actions that must occur after all Item instances
             have been created, and all initial setup has otherwise occured,
             including restoration of any cached values. This method will be
-            invoked right before we start broadcasting.
+            invoked right before this Store commences broadcasting.
         """
 
         pass
