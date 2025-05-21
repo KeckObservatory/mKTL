@@ -1,9 +1,10 @@
 
+import queue
 import time
 
 from . import Poll
+from . import Updater
 from .. import Client
-
 
 
 class Daemon:
@@ -20,7 +21,15 @@ class Daemon:
 
     def __init__(self, *args, **kwargs):
         self._daemon_cached = None
-        self.subscribe(prime=False)
+
+        # The _update_* components are a workaround for using the Client
+        # PUB/SUB machinery to trigger local callbacks. Instead, whenever
+        # an item is published a duplicate of the already-formatted message
+        # is put into this simple queue, and a background thread triggers
+        # a call to self._update().
+
+        self._update_queue = queue.SimpleQueue()
+        self._update_thread = Updater.Updater(self._update, self._update_queue)
 
 
     def poll(self, period):
@@ -71,6 +80,11 @@ class Daemon:
             except (TypeError, KeyError, IndexError):
                 self._daemon_cached = new_value
 
+        # The internal update needs a separate copy of the message dictionary,
+        # as its contents relating to bulk messages are manipulated as part of
+        # putting the message out "on the wire". A deep copy is not necessary.
+
+        self._update_queue.put(dict(message))
         self.store.pub.publish(message)
 
 

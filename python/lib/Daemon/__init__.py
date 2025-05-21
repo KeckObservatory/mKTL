@@ -2,6 +2,7 @@
 from . import Persist
 from . import Poll
 from . import Port
+from . import Updater
 
 from . import Item
 from . import Store
