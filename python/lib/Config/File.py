@@ -130,11 +130,7 @@ def load_daemon(store, filename):
     configuration = dict()
 
     raw_json = open(filename, 'r').read()
-    try:
-        items = Json.loads(raw_json)
-    except:
-        print(repr(raw_json))
-        raise
+    items = Json.loads(raw_json)
 
     configuration['name'] = store
     configuration['uuid'] = target_uuid
