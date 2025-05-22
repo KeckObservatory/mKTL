@@ -112,7 +112,9 @@ class Client:
         """ Register a callback that will be invoked every time a new broadcast
             message arrives. If no topic is specified the callback will be
             invoked for all broadcast messages. The topic is case-sensitive and
-            must be an exact match.
+            must be an exact match. Any callbacks registered in this fashion
+            should be as lightweight as possible, as there is a single thread
+            processing all arriving broadcast messages.
 
             :func:`subscribe` will be invoked for any/all topics registered
             with a callback.
@@ -144,9 +146,6 @@ class Client:
 
 
     def run(self):
-
-        ### Does this need to be fed into a pool of threads?
-        ### So that one bad propagation doesn't slow everything?
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
