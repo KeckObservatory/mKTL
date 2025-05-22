@@ -34,8 +34,9 @@ class Daemon:
 
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero. Requesting a
-            new value is accomplished via the :func:`req_refresh` method.
+            discontinued if *period* is set to None or zero. The actual
+            acquisition of a new value is accomplished via the
+            :func:`req_refresh` method.
         """
 
         Poll.start(self.req_refresh, period)
@@ -196,11 +197,11 @@ class Daemon:
 
 
 class Item(Daemon, Client.Item):
-    """ This daemon-specific subclass of a :class:`mKTL.Client.Item` implements
+    """ This daemon-specific subclass of a :class:`Client.Item` implements
         additional methods that are relevant in a daemon context, but with all
         client behavior left unchanged. For example, if a callback is registered
         with this :class:`Item` instance, it is handled precisely the same way
-        as if this were a regular :class:`mKTL.Client.Item` instance.
+        as if this were a regular :class:`Client.Item` instance.
     """
 
     def __init__(self, *args, **kwargs):
