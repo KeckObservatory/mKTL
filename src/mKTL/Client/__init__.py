@@ -1,4 +1,6 @@
 
+from . import Updater
+
 from . import Item
 from . import Store
 

@@ -3,7 +3,6 @@ import queue
 import time
 
 from . import Poll
-from . import Updater
 from .. import Client
 
 
@@ -21,15 +20,7 @@ class Daemon:
 
     def __init__(self, *args, **kwargs):
         self._daemon_cached = None
-
-        # The _update_* components are a workaround for using the Client
-        # PUB/SUB machinery to trigger local callbacks. Instead, whenever
-        # an item is published a duplicate of the already-formatted message
-        # is put into this simple queue, and a background thread triggers
-        # a call to self._update().
-
-        self._update_queue = queue.SimpleQueue()
-        self._update_thread = Updater.Updater(self._update, self._update_queue)
+        self.subscribe()
 
 
     def poll(self, period):
@@ -87,6 +78,28 @@ class Daemon:
 
         self._update_queue.put(dict(message))
         self.store.pub.publish(message)
+
+
+    def subscribe(self, *args, **kwargs):
+        ''' This is a stripped-down version of the :func:`Client.Item.subscribe`
+            method, as part of allowing a :class:`Item` to avoid the overhead of
+            the full publish/subscribe machinery for updates that are strictly
+            internal; this is primarily motivated by efficiency, where for bulk
+            data transmission the additional overhead reduces the overall
+            throughput (in terms of broadcasts per second) by roughly 30%.
+
+            The daemon variant of an Item is always subscribed to itself; the
+            :func:`publish` method bypasses the normal publish/subscribe
+            handling by directly manipulating the :class:`queue.SimpleQueue`
+            established here.
+        '''
+
+        if self.subscribed == True:
+            return
+
+        self._update_queue = queue.SimpleQueue()
+        self._update_thread = Client.Updater.Updater(self._update, self._update_queue)
+        self.subscribed = True
 
 
     def req_get(self, request):
