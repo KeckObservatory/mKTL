@@ -1,4 +1,5 @@
 
+import os
 import subprocess
 import sys
 import zmq
@@ -117,10 +118,13 @@ class Store(Client.Store):
             persistent value cache.
         """
 
-        ### This is not a valid way to find the markpersistd executable.
+        daemon = sys.argv[0]
+        dirname = os.path.dirname(daemon)
+        markpersistd = os.path.join(dirname, 'markpersistd')
 
         arguments = list()
-        arguments.append('/home/lanclos/git/mKTL/python/bin/markpersistd')
+        arguments.append(sys.executable)
+        arguments.append(markpersistd)
         arguments.append(self.name)
         arguments.append(self.daemon_uuid)
 
