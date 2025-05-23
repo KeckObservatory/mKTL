@@ -26,22 +26,23 @@ class Daemon:
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
             discontinued if *period* is set to None or zero. The actual
-            acquisition of a new value is accomplished via the
-            :func:`req_refresh` method.
+            acquisition of a new value is accomplished via the :func:`req_poll`
+            method, which in turn leans heavily on :func:`req_refresh` to do
+            the actual work.
         """
 
-        Poll.start(self.req_refresh, period)
+        Poll.start(self.req_poll, period)
 
 
-    def publish(self, new_value, bulk=None, timestamp=None, cache=False):
+    def publish(self, new_value, bulk=None, timestamp=None):
         """ Publish a new value, which is expected to be a dictionary minimally
             containing 'asc' and 'bin' keys rerepsenting different views of the
             new value; bulk values are not represented as a dictionary, they are
             passed in directly as the *bulk* argument, and the *new_value*
             argument will be ignored. If *timestamp* is set it is expected to be
             a UNIX epoch timestamp; the current time will be used if it is not
-            set. If *cache* is set to True the published value will be cached
-            locally for any future requests.
+            set. Any published values are always cached locally for future
+            requests.
         """
 
         if timestamp is None:
@@ -56,6 +57,7 @@ class Daemon:
 
         if bulk is None:
             message['data'] = new_value
+            self._daemon_cached = new_value['bin']
         else:
             bytes = bulk.tobytes()
             description = dict()
@@ -65,12 +67,7 @@ class Daemon:
             message['bulk'] = bytes
 
             new_value = bulk
-
-        if cache == True:
-            try:
-                self._daemon_cached = new_value['bin']
-            except (TypeError, KeyError, IndexError):
-                self._daemon_cached = new_value
+            self._daemon_cached = new_value
 
         # The internal update needs a separate copy of the message dictionary,
         # as its contents relating to bulk messages are manipulated as part of
@@ -114,39 +111,78 @@ class Daemon:
             refresh = False
 
         if refresh == True:
-            self.req_refresh()
-
-        payload = dict()
+            payload = self.req_poll()
+        else:
+            try:
+                self._daemon_cached.tobytes
+            except AttributeError:
+                payload = dict()
+                ### This translation to a string representation needs to be
+                ### generalized to allow more meaningful behavior.
+                payload['asc'] = str(self._daemon_cached)
+                payload['bin'] = self._daemon_cached
+            else:
+                payload = self._daemon_cached
 
         try:
-            bytes = self._daemon_cached.tobytes()
+            bytes = payload.tobytes()
         except AttributeError:
-            payload['asc'] = str(self._daemon_cached)
-            payload['bin'] = self._daemon_cached
+            pass
         else:
-            payload['shape'] = self._daemon_cached.shape
-            payload['dtype'] = str(self._daemon_cached.dtype)
+            bulk = payload
+            payload = dict()
+            payload['shape'] = bulk.shape
+            payload['dtype'] = str(bulk.dtype)
             payload['bulk'] = bytes
 
         return payload
 
 
+    def req_poll(self):
+        """ Entry point for calls originating from :func:`poll`. The only reason
+            this method exists is to streamline the expected behavior of
+            :func:`req_refresh`; a typical subclass would not need to
+            reimplement this method.
+        """
+
+        payload = self.req_refresh()
+
+        # Perhaps there is a more declarative way to know whether a given
+        # payload is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
+
+        try:
+            payload.tobytes
+        except AttributeError:
+            self.publish(payload)
+        else:
+            self.publish(None, bulk=payload)
+
+        return payload
+
+
     def req_refresh(self):
-        """ Refresh the current value and publish it. This is the entry point
-            for any calls made via the :func:`poll` machinery, or for any GET
-            requests explicitly requesting a refresh of the current value.
-            Subclasses do not need to call this parent method, they can call
-            :func:`publish` directly with or without the *cache* argument set
-            to True.
+        """ Acquire the most up-to-date value available for this :class:`Item`
+            and return it to the caller. The return value is a dictionary,
+            nominally with 'asc' and 'bin' keys, representing a human-readable
+            format ('asc') format, and a Python binary representation of the
+            same value. For example, {'asc': 'On', 'bin': True}.
+
+            Bulk values are returned solely as a numpy array. Other return
+            values are in theory possible, as long as the request and publish
+            handling code are prepared to accept them.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
 
         payload = dict()
+        ### This translation to a string representation needs to be
+        ### generalized to allow more meaningful behavior.
         payload['asc'] = str(self._daemon_cached)
         payload['bin'] = self._daemon_cached
 
-        self.publish(payload)
+        return payload
 
 
     def req_set(self, request):
@@ -164,14 +200,14 @@ class Daemon:
             new_value = self._interpret_bulk(request)
 
         new_value = self.validate(new_value)
-        self._daemon_cached = new_value
-
         publish = dict()
 
         if bulk == True:
             publish['data'] = request['data']
             publish['bulk'] = request['bulk']
         else:
+            ### This translation to a string representation needs to be
+            ### generalized to allow more meaningful behavior.
             publish['asc'] = str(new_value)
             publish['bin'] = new_value
 
