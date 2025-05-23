@@ -36,6 +36,9 @@ class Item:
         self.req = None
         self.subscribed = False
         self.timeout = 120
+        self._update_queue = None
+        self._update_queue_put = None
+        self._update_thread = None
 
         key_config = store.config[key]
         provenance = key_config['provenance']
@@ -224,15 +227,21 @@ class Item:
         # memory in the system.
 
         # A thread pool might be just as performant for this purpose, but the
-        # control flow in that thread would be a lot more complex.
+        # control flow in that thread would be a lot more complex. Having a
+        # dedicated Updater background thread for each Item with an active
+        # subscription makes the processing straightforward.
+
+        # The reference to SimpleQueue.put() gets deallocated immediately if we
+        # don't keep a local reference.
 
         self._update_queue = queue.SimpleQueue()
+        self._update_queue_put = self._update_queue.put
         self._update_thread = Updater.Updater(self._update, self._update_queue)
 
         if bulk == True:
             self.pub.subscribe('bulk:' + self.full_key)
 
-        self.pub.register(self._update_queue.put, self.full_key)
+        self.pub.register(self._update_queue_put, self.full_key)
         self.subscribed = True
 
         if prime == True:
