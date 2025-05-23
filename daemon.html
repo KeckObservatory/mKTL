@@ -1,0 +1,170 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daemon interface &mdash; mKTL 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=4bba6b87" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=2709fde1"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Examples" href="examples.html" />
+    <link rel="prev" title="Client interface" href="client.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            mKTL
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="nomenclature.html">Nomenclature</a></li>
+<li class="toctree-l1"><a class="reference internal" href="protocol.html">Protocol</a></li>
+<li class="toctree-l1"><a class="reference internal" href="configuration.html">Configuration syntax</a></li>
+<li class="toctree-l1"><a class="reference internal" href="executables.html">Executables</a></li>
+<li class="toctree-l1"><a class="reference internal" href="client.html">Client interface</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Daemon interface</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#daemon-store-class">Daemon.Store class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#daemon-item-class">Daemon.Item class</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#markd-executable">markd executable</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">mKTL</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Daemon interface</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/daemon.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-mKTL.Daemon">
+<span id="daemon-interface"></span><h1>Daemon interface<a class="headerlink" href="#module-mKTL.Daemon" title="Link to this heading"></a></h1>
+<p>A daemon is the source of authority for one or more mKTL items; when a client
+gets or sets an item value, that request is handled by the daemon. Exactly
+how that request gets handled is entirely up to the daemon code; there are no
+restrictions imposed by the mKTL protocol itself, it is up to the daemon to
+resolve any consistency issues or conflicting requests.</p>
+<p>The default behavior of the <code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> is to act as a caching
+key/value store: values come in, values go out, they may or may not persist
+across restarts depending on the configuration. This behavior is rarely
+sufficient for an application; a typical daemon will implement custom code
+behind the getting and setting of individual items. The reference implementation
+in Python expects the user to create custom subclasses of
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code>, which in turn may instantiate custom subclasses of
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code>.</p>
+<section id="daemon-store-class">
+<h2>Daemon.Store class<a class="headerlink" href="#daemon-store-class" title="Link to this heading"></a></h2>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> class is the entry point and overall organization
+for the daemon; while it provides a common storage location for daemon-wide
+functions, such as handling requests and publishing broadcasts, from the
+perspective of the developer the <code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> is a container for
+the <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> instances that define the actual behavior of the
+system. A request, for example, is not handled by the
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code>, it is passed to the appropriate
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> instance for proper handling.</p>
+<p>The <code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> also defines the initialization sequence, if any,
+for the daemon: which steps to take upon startup, which
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> subclasses to invoke for specific items, whether other
+initialization steps must occur such as defining a common communication point
+to access a hardware controller, or whether the initial state of a set of items
+needs to be manipulated before proceeding with routine operations.</p>
+<p>In nearly all cases the developer will need to create a custom
+<code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> subclass to satisfy the operational goals of an
+individual daemon.</p>
+</section>
+<section id="daemon-item-class">
+<h2>Daemon.Item class<a class="headerlink" href="#daemon-item-class" title="Link to this heading"></a></h2>
+<p>The bulk of any daemon-specific logic will occur in <code class="xref py py-class docutils literal notranslate"><span class="pre">Item</span></code> subclasses.
+This is where requests get handled, where data gets interpreted, where logic
+is defined that could span items within and without the boundaries of the
+containing <code class="xref py py-class docutils literal notranslate"><span class="pre">Store</span></code> instance.</p>
+<p>Subclass definitions of the <code class="xref py py-func docutils literal notranslate"><span class="pre">Item.req_refresh()</span></code>, <code class="xref py py-func docutils literal notranslate"><span class="pre">Item.req_set()</span></code>, and
+<code class="xref py py-func docutils literal notranslate"><span class="pre">Item.validate()</span></code> methods are especially important for defining any custom
+behavior. Any method with a <cite>req_</cite> prefix is part of the handling chain
+for an inbound request, though of the ones defined here ony :func`Item.req_get`
+and <code class="xref py py-func docutils literal notranslate"><span class="pre">Item.req_set()</span></code> are called directly, though if necessary
+<code class="xref py py-func docutils literal notranslate"><span class="pre">Item.req_get()</span></code> calls <code class="xref py py-func docutils literal notranslate"><span class="pre">Item.req_refresh()</span></code> in order to acquire the
+most recent value.</p>
+</section>
+<section id="markd-executable">
+<h2>markd executable<a class="headerlink" href="#markd-executable" title="Link to this heading"></a></h2>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="client.html" class="btn btn-neutral float-left" title="Client interface" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="examples.html" class="btn btn-neutral float-right" title="Examples" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright W. M. Keck Observatory.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
