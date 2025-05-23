@@ -62,6 +62,7 @@ class Client:
 
             if callback is None:
                 invalid.append(reference)
+                continue
 
             try:
                 callback(message)
@@ -94,6 +95,7 @@ class Client:
 
             if callback is None:
                 invalid.append(reference)
+                continue
 
             try:
                 callback(message)
