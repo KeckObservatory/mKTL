@@ -2,34 +2,32 @@
 name = "mKTL"
 version = "0.1.0"
 description = ""
-authors = ["Kyle Lanclos <klanclos@keck.hawaii.edu>",]
+authors = ["Kyle Lanclos <klanclos@keck.hawaii.edu>"]
 readme = "README.md"
-packages = [{include = "mKTL", from = "python/lib"},]
+packages = [{ include = "mKTL", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.4"
+pyzmq = ">=4.0"
+msgspec = { version = ">=0.18", optional = true }
+numpy = { version = ">=1.6", optional = true }
+orjson = { version = ">=3.0", optional = true }
+
+[tool.poetry.extras]
+msgspec = ["msgspec"]
+numpy = ["numpy"]
+orjson = ["orjson"]
+
+[tool.poetry.urls]
+repository = "https://github.com/KeckObservatory/mKTL"
+"Bug Tracker" = "https://github.com/KeckObservatory/mKTL/issues"
+
+[tool.poetry.scripts]
+markguided = { reference = "sbin/markguided", type = "file" }
+markpersistd = { reference = "sbin/markpersistd", type = "file" }
+marksub = { reference = "sbin/markd", type = "file" }
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
-[project]
-requires-python = ">=3.4"
-dependencies = ["zmq >= 4.0"]
-
-[project.optional-dependencies]
-msgspec = ["msgspec >= 0.18"]
-numpy = ["numpy >= 1.6"]
-orjson = ["orjson >= 3.0"]
-
-[project.urls]
-#homepage = "..."
-repository = "https://github.com/KeckObservatory/mKTL"
-#documentation = "..."
-"Bug Tracker" = "https://github.com/KeckObservatory/mKTL/issues"
-
-[tool.poetry.scripts]
-markguided = {reference = "python/bin/markguided", type = "file"}
-markpersistd = {reference = "python/bin/markpersistd", type = "file"}
-markproxyd = {reference = "python/bin/markproxyd", type = "file"}
-marksub = {reference = "python/bin/marksub", type = "file"}
