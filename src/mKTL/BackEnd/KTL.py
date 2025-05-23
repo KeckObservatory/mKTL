@@ -71,7 +71,7 @@ class Store(Daemon.Store):
 
         key = keyword.name
         item = self._items[key]
-        item.publish(payload, timestamp=timestamp, cache=True)
+        item.publish(payload, timestamp=timestamp)
 
 
 # end of class Store
