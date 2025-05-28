@@ -68,3 +68,14 @@ most recent value.
 
 markd executable
 ----------------
+
+The `markd` executable provides a command-line interface to invoke a persistent
+daemon executing a :class:`Store` subclass to implement its core functionality.
+The `markd` executable is positioned to be the common point of entry for any
+Python-based mKTL daemon.
+
+The command line arguments describe the intended usage:
+
+.. include:: ./markd.txt
+   :literal:
+
