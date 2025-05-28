@@ -1,0 +1,26 @@
+usage: markd [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIG] store identifier
+
+This is a generic mKTL daemon. The real work is done in the subclass of
+Daemon.Store (if any); this body of code parses command line flags and a
+configuration file (if any), and listens for any subsequent requests.
+
+The store name and configuration identifier must be specified in order
+for this daemon to function correctly; all other arguments are optional.
+
+positional arguments:
+  store                 Name of the mKTL store
+  identifier            Unique identifier for mKTL configuration
+
+options:
+  -h, --help            show this help message and exit
+  -m, --module MODULE   Module that must be imported to support --subclass
+                        option
+  -s, --subclass SUBCLASS
+                        Specific Daemon.Store subclass to invoke
+  -c, --config CONFIG   Custom configuration file (not used directly by mKTL)
+
+For example, to run markd for the store 'rosebud', using the on-disk
+configuration identified as 'innocence', one might invoke:
+
+    markd rosebud innocence
+    markd rosebud innocence --module Kane --subclass Sled
