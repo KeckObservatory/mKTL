@@ -76,6 +76,6 @@ Python-based mKTL daemon.
 
 The command line arguments describe the intended usage:
 
-.. include:: ./markd.txt
-   :literal:
+.. literalinclude:: ./markd.txt
+   :language: none
 
