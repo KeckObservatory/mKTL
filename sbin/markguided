@@ -1,26 +1,30 @@
 #! /usr/bin/env python3
 
-# The guide daemon acts as a broker for configuration requests; when daemons
-# first start running they will seek out any guides on their local network
-# and provide configuration updates; any clients broadcasting will discover
-# a local guide, and ask for any available configuration information.
+description = '''
+The guide daemon acts as a broker for configuration requests; when daemons
+first start running they will seek out any guides on their local network
+and provide configuration updates; any clients broadcasting will discover
+a local guide, and ask for any available configuration information.
 
-# Daemons and clients can both bypass broadcast discovery for a local guide
-# if they already know where to find a guide.
+Daemons and clients can both bypass broadcast discovery for a local guide
+if they already know where to find a guide.
+'''
 
+import argparse
 import threading
-import socket
-import time
 
 import mKTL
 
 
 def main():
 
-    ## The hostname and port should come from a configuration file.
+    # We don't use command line options here, but if we did, they would be
+    # parsed out in the following call. At the very least, it handles the
+    # case where the caller specifies -h on the command line.
+
+    config = parse_command_line()
 
     main.req = RequestServer()
-
     main.beacon = mKTL.Protocol.Discover.Server(main.req.port)
 
     delay = 30
@@ -76,8 +80,21 @@ def main():
 
 
 main.shutdown = threading.Event()
-main.pub = None
 main.req = None
+
+
+
+def parse_command_line():
+
+    arguments = dict()
+    arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
+    arguments['description'] = description
+    ##arguments['epilog'] = epilog
+
+    parser = argparse.ArgumentParser(**arguments)
+
+    parsed = parser.parse_args()
+    return parsed
 
 
 
@@ -90,9 +107,6 @@ class RequestServer(mKTL.Protocol.Request.Server):
         """ Confirm that any keys unique to this new configuration block are
             not present in any other blocks.
         """
-
-        ## The configuration format isn't yet set. This will need to be
-        ## revisited to have more accurate names and use the right fields.
 
         new_items = new['items']
         new_keys = set()
