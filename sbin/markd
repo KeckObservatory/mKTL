@@ -40,8 +40,6 @@ main.shutdown = threading.Event()
 
 def parse_command_line():
 
-    # Start with command-line arguments.
-
     arguments = dict()
     arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
     arguments['description'] = description
