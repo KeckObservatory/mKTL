@@ -63,17 +63,44 @@ def parse_command_line():
     return parsed
 
 
+def load_configuration(store, identifier, filename):
+    """ Pre-load the user-specified mKTL configuration; this is expected to
+        be a JSON-formatted description of a sequence of items, as defined
+        in the configuration syntax section of the mKTL documentation:
+
+        https://keckobservatory.github.io/mKTL/configuration.html#storage
+
+        Allowing the caller to specify the location of this file prevents
+        the need for tight coupling between mKTL's configuration storage
+        scheme and any external configuration management scheme employed
+        by the caller.
+    """
+
+    # The mKTL import is here (as opposed to the top of the script) to allow
+    # running this executable in contexts where the mKTL module may not be
+    # on the default search path.
+    import mKTL
+
+    contents = open(filename, 'r').read()
+    items = mKTL.Protocol.Json.loads(contents)
+    mKTL.Config.File.save_daemon(store, identifier, items)
+
+
+
 def start_store(config):
     store = config.store
     config_id = config.identifier
+
+    if config.configuration is not None:
+        load_configuration(store, config_id, config.configuration)
 
     custom_module = None
     custom_store = None
 
     if config.module == 'mKTL.Daemon':
-        # The mKTL import is here to allow running this executable in contexts
-        # where the mKTL module may not be on the default search path. Only in
-        # this condition is it specifically required.
+        # The mKTL import is here (as opposed to the top of the script) to allow
+        # running this executable in contexts where the mKTL module may not be
+        # on the default search path.
         import mKTL
         store_module = mKTL.Daemon
     else:
