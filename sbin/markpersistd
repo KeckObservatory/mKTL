@@ -1,8 +1,15 @@
 #! /usr/bin/env kpython3
 
-# This is a subprocess invoked by an authoritative daemon to save item values
-# in a persistent disk cache, so that item values can remain consistent across
-# restarts of a daemon when desired.
+description = '''
+This is a subprocess invoked by a mKTL.Daemon.Store instance; its sole purpose
+is to receive broadcasts of any 'persistent' items and queue any/all incoming
+updates for persistent storage to disk. Where and how the value is stored is
+governed entirely by the Daemon/Persist.py code.
+
+The motivation for using a subprocess comes from two sources: one is the
+simplicity of using the existing mKTL publish/subscribe machinery, the other
+is to lighten the resource load on the 'main' daemon process.
+'''
 
 import sys
 import mKTL
@@ -11,11 +18,10 @@ import time
 
 def main():
 
-    if len(sys.argv) != 3:
-        raise ValueError('command line arguments are a store and uuid')
+    config = parse_command_line()
 
-    store = sys.argv[1]
-    uuid = sys.argv[2]
+    store = config.store
+    uuid = config.uuid
 
     store = mKTL.get(store)
     matches = 0
@@ -53,6 +59,23 @@ def main():
             time.sleep(30)
         except (KeyboardInterrupt, SystemExit):
             break
+
+
+def parse_command_line():
+
+    arguments = dict()
+    arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
+    arguments['description'] = description
+    ##arguments['epilog'] = epilog
+
+    parser = argparse.ArgumentParser(**arguments)
+
+    parser.add_argument('store', help='Name of the mKTL store')
+    parser.add_argument('uuid', help='Unique identifier for the mKTL daemon')
+
+    parsed = parser.parse_args()
+    return parsed
+
 
 
 if __name__ == '__main__':
