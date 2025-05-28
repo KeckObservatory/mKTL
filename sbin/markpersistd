@@ -11,6 +11,7 @@ simplicity of using the existing mKTL publish/subscribe machinery, the other
 is to lighten the resource load on the 'main' daemon process.
 '''
 
+import argparse
 import sys
 import mKTL
 import time
