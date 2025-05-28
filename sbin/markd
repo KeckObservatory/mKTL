@@ -2,16 +2,19 @@
 
 description = '''
 This is a generic mKTL daemon. The real work is done in the subclass of
-Daemon.Store (if any); this body of code parses command line flags and a
-configuration file (if any), and listens for any subsequent requests.
+Daemon.Store (if any); this executable parses command-line flags, invokes
+a Daemon.Store instance to handle any/all requests, and otherwise waits
+until the program is terminated.
 
 The store name and configuration identifier must be specified in order
 for this daemon to function correctly; all other arguments are optional.
 '''
 
 epilog = '''
-For example, to run markd for the store 'rosebud', using the on-disk
-configuration identified as 'innocence', one might invoke:
+For example, to run markd for the store 'rosebud', using the existing
+on-disk configuration identified as 'innocence', first using the default
+caching implementation, and then with a custom Kane.Sled subclass of
+Daemon.Store, one might invoke:
 
     markd rosebud innocence
     markd rosebud innocence --module Kane --subclass Sled
@@ -47,12 +50,13 @@ def parse_command_line():
 
     parser = argparse.ArgumentParser(**arguments)
 
-    parser.add_argument('store', help='Name of the mKTL store')
-    parser.add_argument('identifier', help='Unique identifier for mKTL configuration')
+    parser.add_argument('store', help='Name of this mKTL store.')
+    parser.add_argument('identifier', help='Unique identifier for the mKTL configuration associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
 
-    parser.add_argument('-m', '--module', help='Module that must be imported to support --subclass option', default='mKTL.Daemon')
-    parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke', default='Store')
-    parser.add_argument('-c', '--config', help='Custom configuration file (not used directly by mKTL)')
+    parser.add_argument('-m', '--module', help='Module to import which contains the Daemon.Store subclass to invoke.', default='mKTL.Daemon')
+    parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke; this is the bare class name (Store), not a fully qualified class name (mKTL.Daemon.Store).', default='Store')
+    parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this identifier.')
+    parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the Daemon.Store subclass. How this directive is used is entirely up to the application-specific subclass code.')
 
 
     parsed = parser.parse_args()
