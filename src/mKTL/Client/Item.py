@@ -157,7 +157,9 @@ class Item:
             providing whatever metadata is required to appropriately handle
             the as-bytes representation; for example, if a numpy array is being
             transmitted, the *new_value* dictionary will need to include the
-            dimensions of the array as well as its data type.
+            dimensions of the array as well as its data type; in that specific
+            case, the expected keys in the dictionary are the 'shape' of the
+            numpy array, and the string representation of the dtype attribute.
         """
 
         request = dict()
