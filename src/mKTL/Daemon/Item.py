@@ -102,7 +102,10 @@ class Daemon:
     def req_get(self, request):
         """ Handle a GET request. A typical subclass should not need to
             re-implement this method, implementing :func:`req_refresh`
-            would normally be sufficient.
+            would normally be sufficient. The *request* argument is a
+            Python dictionary, parsed from the inbound JSON-formatted
+            request. The value returned from :func:`req_get` is identical
+            to the value returned by :func:`req_refresh`.
         """
 
         try:
@@ -142,7 +145,8 @@ class Daemon:
         """ Entry point for calls originating from :func:`poll`. The only reason
             this method exists is to streamline the expected behavior of
             :func:`req_refresh`; a typical subclass would not need to
-            reimplement this method.
+            reimplement this method. The value returned from :func:`req_poll`
+            is identical to the value returned by :func:`req_refresh`.
         """
 
         payload = self.req_refresh()
@@ -187,7 +191,9 @@ class Daemon:
 
     def req_set(self, request):
         """ Handle a client-initiated SET request. Any calls to :func:`req_set`
-            are expected to block until completion of the request.
+            are expected to block until completion of the request; upon
+            completion a simple dictionary should be returned to acknowledge
+            that the request is complete: ``{'data': True}``.
         """
 
         try:

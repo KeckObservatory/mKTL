@@ -125,8 +125,9 @@ class Item:
     def register(self, method):
         """ Register a callback to be invoked whenever a new value is received,
             either by a direct :func:`get` request or the arrival of an
-            asynchronous broadcast. :func:`subscribe` will be invoked if
-            a subscription has not already occurred.
+            asynchronous broadcast. :func:`subscribe` will automatically be
+            invoked as necessary, the client does not need to call it
+            separately.
         """
 
         if callable(method):

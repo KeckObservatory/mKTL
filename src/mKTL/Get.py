@@ -12,20 +12,24 @@ from . import Protocol
 _cache = dict()
 
 def get(store, key=None):
-    """ Return a cached :class:`Store` or :class:`Item` instance. If both a
-        *store* and a *key* are specified, the requested *key* will be returned
-        from the requested *store*. The same will occur if the sole argument is
-        a store and key name concatenated with a dot (store.KEY). If only a
-        *store* name is provided, a matching :class:`Store` instance will be
-        returned.
+    """ The :func:`get` method is intended to be the primary entry point for
+        all interactions with a key/value store.
+
+        The return value is either a cached :class:`Store` or :class:`Item`
+        instance. If both a *store* and a *key* are specified, the requested
+        item will be returned from the specified *store*. The same will occur
+        if the sole argument is a store and key name concatenated with a dot
+        (store.KEY). A :class:`Store` instance will be returned if the sole
+        argument provided is a *store* name.
 
         If the caller always uses :func:`get` to retrieve a :class:`Store` or
         :class:`Item` they will always receive the same instance of that class.
-
-        The :func:`get` method is intended to be the primary entry point for
-        all interactions with a key/value store, acting like a factory method
-        without enforcing strict singleton behavior.
+        In that sense, :func:`get` is a factory method enforcing a singleton
+        pattern.
     """
+
+    if store is None:
+        raise ValueError('the store name must be specified')
 
     store = str(store)
 
