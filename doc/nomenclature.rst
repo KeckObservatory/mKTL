@@ -85,8 +85,8 @@ mKTL-specific terms
  * **Publish**:
 		Broadcast a new value for an individual key in a store.
                 The store name combined with the key makes up the bulk of
-		the topic, as understood for a typical publish-subscribe
-		design pattern.
+		the topic, which in turn has specific meaning in a typical
+		publish-subscribe design pattern.
 
 		https://en.wikipedia.org/wiki/Publish%E2%80%93subscribe_pattern
 
