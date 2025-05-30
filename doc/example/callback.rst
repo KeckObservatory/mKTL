@@ -1,0 +1,3 @@
+Client: register a callback
+===========================
+
