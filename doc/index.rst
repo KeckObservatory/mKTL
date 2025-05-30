@@ -19,3 +19,9 @@ Documentation contents
    client
    daemon
    examples
+
+Indices and tables
+------------------
+
+* :ref:`genindex`
+* :ref:`search`
