@@ -12,13 +12,13 @@ Documentation contents
 .. toctree::
    :maxdepth: 2
 
-   nomenclature
    protocol
    configuration
    executables
    client
    daemon
    examples
+   glossary
 
 Indices and tables
 ------------------

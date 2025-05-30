@@ -1,5 +1,5 @@
-Nomenclature
-============
+Glossary
+========
 
 This document defines the common nomenclature used within mKTL. Some of the
 terms are inherited from KTL; some are inherited from common design patterns
@@ -24,10 +24,9 @@ External definitions
 
  * **EPICS**:
 	      Experimental Physics and Industrial Control System, another
-              key-value API that WMKO adopted for its telescope control
-	      system and adaptive optics control system. EPICS is one of
-	      the interprocess communication APIs for which KTL provides a
-	      common abstraction.
+              key-value API that WMKO adopted for its telescope and
+	      adaptive optics control systems. EPICS is one of the interprocess
+	      communication APIs for which KTL provides a common abstraction.
 
 
 mKTL-specific terms
@@ -43,7 +42,7 @@ mKTL-specific terms
 		the key-value pairs in a given store. When client
 		requests are initiated it is the daemon that will be
 		contacted to satisfy the request. This is analagous
-		to a KTL dispatcher, or an EPICS IOC.
+		to a KTL dispatcher or an EPICS IOC.
 
  * **Store**:
 	      A store is an aggregation of individual key-value pairs.
