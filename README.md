@@ -14,8 +14,8 @@ mKTL, as compared to KTL, focus on usability.
    minimal dependencies.
 
  * Where KTL requires the client to have local support for a specific
-   communication method, mKTL clients will use a single communication method
-   for all services.
+   communication method, mKTL clients will use a universal protocal for
+   every client/daemon interaction.
 
  * Where KTL requires the installation of local configuration data for a
    client to access a service, mKTL will discover any/all service metadata
