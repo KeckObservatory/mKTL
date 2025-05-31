@@ -40,7 +40,11 @@ class Store:
 
 
     def __getitem__(self, key):
-        item = self._items[key]
+        try:
+            item = self._items[key]
+        except KeyError:
+            error = "'%s' does not contain the key '%s'" % (self.name, key)
+            raise KeyError(error)
 
         if item is None:
             item = Item.Item(self, key)
