@@ -51,11 +51,15 @@ mKTL-specific terms
 	      EPICS database, and is effectively an associative array,
 	      or a Python dictionary. "Database" is another term used
 	      in similar contexts, but that term is more commonly used
-	      in reference to a relational database.
+	      in reference to a relational database. mKTL treats the
+	      store name as case-insensitive, any actual usage will
+	      render it as all lower-case.
 
  * **Key**:
 	    A unique name within a store, identifying a single key-value
             pair. This is analagous to a KTL keyword, or an EPICS channel.
+	    mKTL treats the key as case-insensitive, any actual usage will
+	    render it as all upper-case.
 
  * **Value**:
               The other half of the key-value pair. Like a KTL keyword,
