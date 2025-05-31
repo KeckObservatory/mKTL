@@ -20,7 +20,8 @@ def get(store, key=None):
         item will be returned from the specified *store*. The same will occur
         if the sole argument is a store and key name concatenated with a dot
         (store.KEY). A :class:`Store` instance will be returned if the sole
-        argument provided is a *store* name.
+        argument provided is a *store* name. Both the *store* and the *key*
+        are case-insensitive.
 
         If the caller always uses :func:`get` to retrieve a :class:`Store` or
         :class:`Item` they will always receive the same instance of that class.
