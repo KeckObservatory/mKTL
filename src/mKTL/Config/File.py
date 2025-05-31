@@ -37,6 +37,18 @@ directory.found = None
 
 
 
+def home(path):
+    ''' Set the value of the MKTL_HOME environment variable to match the
+        specified *path*. This path will also be returned for all
+        subsequent calls to :func:`directory`.
+    '''
+
+    path = str(path)
+    os.environ['MKTL_HOME'] = path
+    directory.found = path
+
+
+
 def load(store, specific=None):
     """ Load the configuration for the specified store name. If *specific* is
         not None, it is expected to be the unique string corresponding to a

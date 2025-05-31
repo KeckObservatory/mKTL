@@ -13,6 +13,7 @@ from . import BackEnd
 
 from . import Get
 get = Get.get
+home = Config.home
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
