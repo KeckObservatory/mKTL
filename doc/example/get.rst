@@ -45,7 +45,7 @@ handling for completeness's sake::
 	# type should likewise be fast.
 	raise
 
-With no arguments the call to :func:`Item.get`` will return the locally
+With no arguments the call to :func:`Item.get` will return the locally
 cached value if the item is subscribed to broadcasts, or request the value
 from the authoritative daemon if it is not. The caller can bypass the local
 cache if it is relevant for their application, explicitly requesting that
@@ -92,4 +92,21 @@ Requesting a value, without the discussion of the various options::
             print('The population is crazy.')
         else:
             print('The population is sane.')
+
+It's worth mentioning that the above comparison can be further simplified,
+if one were not writing an example specifically to describe the behavior of
+:func:`Item.get`. An :class:`Item` instance can be used directly in comparison
+operations, and will behave as if the 'bin' representation is being used
+directly::
+
+    import mKTL
+    crazy = mKTL.get('population.CRAZY')
+    crazy.subscribe()	# For this example calling crazy.get() would also work
+
+    if crazy == None:
+        print('The population craziness is unknown.')
+    elif craziness == True:
+        print('The population is crazy.')
+    else:
+        print('The population is sane.')
 
