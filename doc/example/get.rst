@@ -80,7 +80,7 @@ could simply be ``None``.
 Full example
 ------------
 
-Requesting a value, without the discussion of the various options::
+Putting it all together::
 
     import mKTL
     crazy = mKTL.get('population.CRAZY')
