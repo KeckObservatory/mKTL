@@ -1,3 +1,5 @@
+.. _example_get:
+
 Client: get a value
 ===================
 
