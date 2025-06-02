@@ -32,7 +32,7 @@ raised if the key does not exist.
 Calling :func:`Item.get`
 ------------------------
 
-Most exceptions do not need to be caught if you are calling :func:`mKTL.get`
+Most exceptions do not need to be caught if you are calling :func:`Item.get`
 directly; an exception here is unexpected, and likely violates any reasonable
 attempts at error recovery that might be performed. This section shows exception
 handling for completeness's sake::
@@ -41,9 +41,9 @@ handling for completeness's sake::
         current = crazy.get()
     except zmq.ZMQError:
         # The answering daemon could not be contacted. The timeout for the
-	# initial request is short, just 0.05 seconds, so a failure of this
-	# type should likewise be fast.
-	raise
+        # initial request is short, just 0.05 seconds, so a failure of this
+        # type should likewise be fast.
+        raise
 
 With no arguments the call to :func:`Item.get` will return the locally
 cached value if the item is subscribed to broadcasts, or request the value
@@ -87,7 +87,7 @@ Requesting a value, without the discussion of the various options::
     if current is None:
         print('The population craziness is unknown.')
     else:
-    	craziness = current['bin']
+        craziness = current['bin']
         if craziness == True:
             print('The population is crazy.')
         else:
