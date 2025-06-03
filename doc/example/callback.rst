@@ -77,6 +77,11 @@ The second approach, relying on :func:`mKTL.get`, becomes appealing
 when multiple items need to be inspected in a given callback; for example,
 if the current temperature were being compared to the current setpoint.
 
+It is possible to block up a queue of events if the events arrive more
+rapidly than their callbacks can be processed. Each different :class:`Item`
+has its own processing queue, and events are processed sequentially on
+a per-item basis.
+
 
 Calling :func:`Item.register`
 -----------------------------
