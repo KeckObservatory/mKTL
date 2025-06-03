@@ -92,12 +92,11 @@ item.
 		just within this configuration block.
 
 **type**	The data type for the value associated with this
-		item. The type is one of: boolean, bulk, double,
-		double array, enumerated, integer, integer array,
-		mask, or string. The type is not strictly required,
-		but it is a useful hint for what the value is expected
-		to be. A more complete description of item types is
-		below.
+		item. The type is one of: boolean, bulk, enumerated,
+		mask, numeric, numeric array, or string. The type is
+		not strictly required, but it is a useful hint for
+		what the value is expected to be. A more complete
+		description of item types is below.
 
 **description**	A human-readable description of what this item
 		represents. Could be one sentence, could be several;
@@ -211,7 +210,7 @@ like for a store named 'pie'::
         ]
         "items": {
           "ANGLE": {
-            "type": "double",
+            "type": "numeric",
             "units": {
               "asc": "h",
               "bin": "rad"
@@ -274,7 +273,7 @@ daemon-side .json file for the above two-item example::
 
 	{
           "ANGLE": {
-            "type": "double",
+            "type": "numeric",
             "units": {
               "asc": "h",
               "bin": "rad"
