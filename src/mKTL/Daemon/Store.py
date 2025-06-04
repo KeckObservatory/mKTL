@@ -275,6 +275,9 @@ class RequestServer(Protocol.Request.Server):
             payload = self.req_hash(request)
         elif type == 'SET':
             payload = self.req_set(request)
+            if payload is None:
+                payload = dict()
+                payload['data'] = True
         elif type == 'GET':
             payload = self.req_get(request)
         elif type == 'CONFIG':

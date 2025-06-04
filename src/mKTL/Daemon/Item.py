@@ -198,9 +198,9 @@ class Daemon:
 
     def req_set(self, request):
         """ Handle a client-initiated SET request. Any calls to :func:`req_set`
-            are expected to block until completion of the request; upon
-            completion a simple dictionary should be returned to acknowledge
-            that the request is complete: ``{'data': True}``.
+            are expected to block until completion of the request; no return
+            value of significance is expected, though one can be provided if
+            desired. Any errors should be indicated by raising an exception.
         """
 
         try:
@@ -226,11 +226,9 @@ class Daemon:
 
         self.publish(publish)
 
-        # Returning True here acknowledges that the request is complete.
-
-        payload = dict()
-        payload['data'] = True
-        return payload
+        # If req_set() returns a payload it will be returned to the caller;
+        # absent any explicit response (not required, nor expected), a default
+        # response will be provided.
 
 
     def validate(self, value):
