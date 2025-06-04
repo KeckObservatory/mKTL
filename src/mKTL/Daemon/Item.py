@@ -142,11 +142,18 @@ class Daemon:
 
 
     def req_poll(self):
-        """ Entry point for calls originating from :func:`poll`. The only reason
-            this method exists is to streamline the expected behavior of
-            :func:`req_refresh`; a typical subclass would not need to
-            reimplement this method. The value returned from :func:`req_poll`
-            is identical to the value returned by :func:`req_refresh`.
+        """ Entry point for calls originating from :func:`poll`; a typical
+            subclass should not need to reimplement this method. The main reason
+            :func:`req_poll` exists is to streamline the expected behavior of
+            :func:`req_refresh`, allowing it to focus entirely on what it means
+            to acquire a new value; after receiving the refreshed value,
+            :func:`req_poll` will additionally publish the new value. A common
+            pattern for custom subclasses involves registering :func:`req_poll`
+            as a callback on other items, so that the local value of this item
+            can be refreshed when events occur elsewhere within a daemon.
+
+            For convenience, the value returned from :func:`req_poll` is
+            identical to the value returned by :func:`req_refresh`.
         """
 
         payload = self.req_refresh()
@@ -171,7 +178,7 @@ class Daemon:
             and return it to the caller. The return value is a dictionary,
             nominally with 'asc' and 'bin' keys, representing a human-readable
             format ('asc') format, and a Python binary representation of the
-            same value. For example, {'asc': 'On', 'bin': True}.
+            same value. For example, ``{'asc': 'On', 'bin': True}``.
 
             Bulk values are returned solely as a numpy array. Other return
             values are in theory possible, as long as the request and publish
