@@ -70,7 +70,7 @@ necessary :func:`Item.req_get` calls :func:`Item.req_refresh` in order to
 acquire the most recent value.
 
 .. autoclass:: Item
-   :members: poll, publish, req_get, req_refresh, req_set, validate
+   :members: poll, publish, req_get, req_poll, req_refresh, req_set, validate
 
 
 .. _markd:
