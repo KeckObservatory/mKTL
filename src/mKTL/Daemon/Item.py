@@ -199,8 +199,13 @@ class Daemon:
     def req_set(self, request):
         """ Handle a client-initiated SET request. Any calls to :func:`req_set`
             are expected to block until completion of the request; no return
-            value of significance is expected, though one can be provided if
-            desired. Any errors should be indicated by raising an exception.
+            value of significance is expected, though one can be provided (in
+            dictionary form, with the response in the 'data' field) if desired.
+            Any errors should be indicated by raising an exception.
+
+            The *request* is passed in as a dictionary; the only two fields of
+            immediate relevance are the 'data' and optionally the 'bulk' fields,
+            which indicate the new value the client would like to set.
         """
 
         try:
