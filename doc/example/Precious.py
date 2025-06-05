@@ -1,0 +1,55 @@
+import mKTL
+
+class Store(mKTL.Daemon.Store):
+
+    def setup(self):
+
+        Gold(self, 'GOLD')
+        Silver(self, 'SILVER')
+        Platinum(self, 'PLATINUM')
+
+
+class MarketPriced(mKTL.Daemon.Item):
+
+    def __init__(self, *args, **kwargs):
+        mKTL.Daemon.Item.__init__(self, *args, **kwargs)
+        self.poll(86400)    # Update once per day.
+
+
+class Gold(MarketPriced)
+
+    def req_refresh(self):
+        return get_spot_value('gold', 'usd', 'grams')
+
+
+class Platinum(MarketPriced)
+
+    def req_refresh(self):
+        return get_spot_value('platinum', 'usd', 'grams')
+
+
+class Silver(MarketPriced)
+
+    def req_refresh(self):
+        return get_spot_value('silver', 'usd', 'grams')
+
+
+def get_spot_value(metal, currency, units):
+
+    # Presumably this involves something like a curl/wget call to an
+    # external website. Assume that is exactly what would occur in this
+    # space, and we retrieved a bare number for the metal, currency,
+    # and units of interest.
+    #
+    # current_price = some magical invocation of external resources
+
+    current_price = float(current_price)
+
+    payload = dict()
+    payload['asc'] = "%.2f" % (current_price)
+    payload['bin'] = current_price
+
+    return payload
+
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

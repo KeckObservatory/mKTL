@@ -1,0 +1,29 @@
+{
+ "GOLD": {
+   "type": "numeric",
+   "units": {
+     "asc": "USD/gram",
+     "bin": "USD/gram"
+   },
+   "description": "Current spot price for pure gold.",
+   "settable": false
+ },
+ "PLATINUM": {
+   "type": "numeric",
+   "units": {
+     "asc": "USD/gram",
+     "bin": "USD/gram"
+   },
+   "description": "Current spot price for pure platinum.",
+   "settable": false
+ },
+ "SILVER": {
+   "type": "numeric",
+   "units": {
+     "asc": "USD/gram",
+     "bin": "USD/gram"
+   },
+   "description": "Current spot price for pure silver.",
+   "settable": false
+ }
+}
