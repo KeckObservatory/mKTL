@@ -21,4 +21,4 @@ words, that ``import mKTL`` will succeed.
    example/set
    example/callback
    example/daemon
-   example/daemon_items
+   example/daemon_unabridged
