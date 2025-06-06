@@ -66,7 +66,7 @@ that ignores the arguments provided, an approach made easier by the use of
         else:
             average.computed = new_weight * temp + old_weight * average.computed
 
-	timestamp = temp.cached_timestamp
+        timestamp = temp.cached_timestamp
         print("%.3f %s average: %.1f" % (timestamp, temp.key, average.computed)
 
     average.computed = None
@@ -107,8 +107,8 @@ Putting it all together::
     def callback(*args, **kwargs):
         temp = mKTL.get('oven.TEMP')
         value = float(temp)
-	time = temp.cached_timestamp
-	print ("%.3f oven.TEMP: %.1f" % (time, value))
+        time = temp.cached_timestamp
+        print ("%.3f oven.TEMP: %.1f" % (time, value))
 
-     temp.register(callback)
+    temp.register(callback)
 
