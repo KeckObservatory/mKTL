@@ -73,18 +73,14 @@ acquire the most recent value.
    :members: poll, publish, req_get, req_poll, req_refresh, req_set, validate
 
 
-.. _markd:
-
 markd executable
 ----------------
 
 The `markd` executable provides a command-line interface to invoke a
-persistent daemon executing a :class:`Store` subclass to implement its core
-functionality. The `markd` executable is positioned to be the common point
-of entry for any Python-based mKTL daemon.
+persistent daemon executing a :class:`Store` subclass as described above.
+It is the natural starting point for any persistent daemon implementing
+the scheme described in this document, since that is the precise purpose
+it is written for.
 
-The command line arguments describe the intended usage:
-
-.. literalinclude:: ./markd.txt
-   :language: none
-
+Refer to the section covering :ref:`markd` in the :ref:`executables`
+documentation for additional details.

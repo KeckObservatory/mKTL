@@ -1,3 +1,5 @@
+.. _executables:
+
 Executables
 ===========
 
@@ -15,11 +17,20 @@ command set is expected to be something akin to::
     mark set key1=foo key2=bar key3=baz
 
 
+.. _markd:
+
 markd
 -----
 
-Refer to the section covering the :ref:`markd` in the :ref:`daemon`
-documentation.
+The `markd` executable provides a command-line interface to invoke a
+persistent daemon executing a :class:`Store` subclass to implement its core
+functionality. The `markd` executable is positioned to be the common point
+of entry for any Python-based mKTL daemon.
+
+The command line arguments describe the intended usage:
+
+.. literalinclude:: ./markd.txt
+   :language: none
 
 
 .. _markguided:
