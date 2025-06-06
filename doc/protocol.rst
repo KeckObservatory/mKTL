@@ -12,6 +12,33 @@ socket types used, the formatting of the messages, and the types of requests
 that can be made.
 
 
+Principles of operation
+-----------------------
+
+Unique addressing of daemons within a store is accomplished by the use of
+a unique port number to connect to that daemon; messages arriving on a
+specific port are thus guaranteed, by construction, to only need decoding
+exactly once; there is no envelope for the message contents, such that the
+message contents may need to be rerouted to a new location. Each
+:ref:`publish <publish>` and :ref:`request <request>` listener will use
+a separate, unique port for each daemon.
+
+A given host providing connectivity for mKTL could have thousands of daemons
+running locally, each listening on a unique port number. Each daemon deploys
+a UDP listener on a predetermined port number (10111) to enable discovery of
+daemons on that host; a :ref:`dedicated "guide" process <markguided>` also
+listens on a predetermined port number (10103) to streamline discovery from
+the client side. This usage pattern expects there to be a single
+:ref:`markguided` process running on every host running one or more mKTL
+daemons. The discovery exchange is :ref:`described below <discovery>`
+in more detail.
+
+An mKTL proxy, were such a thing to exist, would follow the same principle:
+a unique port for each daemon, which allows the use of the ``zmq.proxy()``
+method to cleanly bridge between endpoints at the protocol level without
+any inspection of message contents.
+
+
 .. _request:
 
 Request/response
@@ -243,6 +270,8 @@ daemon via the request/response socket.
 	   'name': 'kpfguide'}"
 
 
+.. _publish:
+
 Publish/subscribe
 -----------------
 
@@ -415,4 +444,62 @@ described above.
 		meaningful error handling.
 
 ===============	===============================================================
+
+
+.. _discovery:
+
+Discovery
+---------
+
+The UDP discovery layer takes advantage of a feature of UDP listeners: not only
+are you allowed to have multiple listeners on the same port, but they will all
+respond to an incoming broadcast message. Some care thus needs to be taken to
+make sure these responses do not lend themselves to a denial of service attack.
+Regardless, this feature allows every daemon to create a listener on the same
+port, which greatly simplfies periodic discovery.
+
+The discovery of daemons is a two-part process; rather than ask every daemon
+to cache the configuration for every other daemon on its local network, the
+caching of configuration data is handled by :ref:`markguided`; when a client
+issues a discovery broadcast, it is not looking for responses from individual
+daemons, it is looking for responses from a :ref:`markguided` process.
+
+This two-step approach, of contacting the guide process, and subsequently
+contacting the authoritative daemon, could be avoided if every local daemon
+caching the configuration of every other local daemon; however, a typical
+client will cache the response, and discovery is only invoked if the cached
+daemon cannot be reached, so the impact of the additional inefficiency is
+low. The upside of splitting the discovery into two steps is that reduces
+the need for consistent chatter between daemons, which would otherwise grow
+exponentially with the number of locally reachable daemons.
+
+There are four shared secrets used in the discovery exchange:
+
+===============	===============================================================
+*Secret*	*Description*
+===============	===============================================================
+**guide port**	The UDP port used to discover locally accessible
+		:ref:`markguided` processes. Clients use this port to find
+		all such processes. The port number is 10103.
+
+**daemon port**	The UDP port used to discover locally accessible mKTL daemons.
+		:ref:`markguided` uses this port to find all such daemons.
+		The port number is 10111.
+
+**call**	An arbitrary string used by the discoverer to trigger a
+		response from the listener. The string value is ``I heard it``.
+
+**response**	An arbitrary string used by the listener to respond to any
+		received calls. The string value is ``on the X:``.
+
+===============	===============================================================
+
+The purpose of discovery is to convey a single piece of information: what is
+the port number of an actual mKTL request handler on this host? That port
+number, encoded as a string representation of an integer, is the sole additional
+component of the response after the colon. For example, if a daemon has a
+request port listening on port 10079, the full response from its discovery
+listener would be::
+
+    b'on the X:10079'
 
