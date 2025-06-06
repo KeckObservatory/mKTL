@@ -12,8 +12,8 @@ import socket
 import threading
 import time
 
-query = 'I heard it'
-query = query.encode()
+call = 'I heard it'
+call = call.encode()
 
 response = 'on the X:'
 response = response.encode()
@@ -99,7 +99,7 @@ class Server:
                 continue
 
             data = data.strip()
-            if data == query:
+            if data == call:
                 self.socket.sendto(self.response, address)
                 self.seen[address] = now
 
@@ -141,7 +141,7 @@ def search(port=default_port, wait=False):
 
     broadcast_address = ('255.255.255.255', port)
 
-    sock.sendto(query, broadcast_address)
+    sock.sendto(call, broadcast_address)
     start = time.time()
     expiration = 1
     elapsed = 0
