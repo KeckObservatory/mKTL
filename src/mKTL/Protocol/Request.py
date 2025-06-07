@@ -408,7 +408,7 @@ class Server:
 
         self.workers = list()
         for thread_number in range(self.worker_count):
-            thread = threading.Thread(target=self.worker_main)
+            thread = threading.Thread(target=self._worker_main)
             thread.daemon = True
             thread.start()
             self.workers.append(thread)
@@ -436,7 +436,10 @@ class Server:
 
     def req_handler(self, socket, lock, ident, request):
         """ The default request handler is for debug purposes only, and is
-            effectively a no-op.
+            effectively a no-op. :class:`mKTL.Daemon.Store` leverages a
+            custom subclass of :class:`Server` that properly handles specific
+            types of requests, since it needs to be aware of the actual
+            structure of what's happening in the daemon code.
         """
 
         self.req_ack(socket, lock, ident, request)
@@ -538,11 +541,10 @@ class Server:
 
     def send(self, ident, response):
         """ Convenience method for subclasses to fire off a message response.
-            Any such subclasses are not using the background threads to handle
-            requests, and are handling asynchronous responses that need to be
-            relayed back to the original caller. Otherwise, they would have a
-            reference to the lock and the socket, and would be making these
-            calls directly.
+            Any such subclasses are not using just the :func:`req_incoming`
+            and :func:`req_handler` background thread machinery defined
+            here to handle requests, and are handling asynchronous responses
+            that need to be relayed back to the original caller.
         """
 
         self.socket_lock.acquire()
@@ -550,19 +552,19 @@ class Server:
         self.socket_lock.release()
 
 
-    def worker_main(self):
+    def _worker_main(self):
         """ This is the 'main' method for the worker threads responsible for
             handling incoming requests. The task of a worker thread is limited:
             receive a request, and feed it to :func:`req_incoming` for
             processing. Multiple threads are allocated to this function to
             allow for long-duration requests to be handled gracefully without
-            jamming up the processing of subsequent requests; simple round-robin
-            allocation of threads, as done by ROUTER/DEALER and PUSH/PULL, do
-            not alter their allocation of inbound messages if a thread is
-            already busy.
+            jamming up the processing of subsequent requests.
         """
 
         while self.shutdown == False:
+            # The distribution of jobs is handled via a simple queue rather
+            # than a ZeroMQ construct, as the overall throughput was higher.
+
             try:
                 dequeued = self.queue.get(timeout=300)
             except queue.Empty:
@@ -577,8 +579,9 @@ class Server:
                 ### Proper error handling needs to go here.
                 print(traceback.format_exc())
 
-        # Make sure the queue has something in it to wake up the other
-        # worker threads if we're doing a controlled shutdown.
+        # self.shutdown is True. Ensure the queue has something in it to wake
+        # up the other worker threads, having None in the queue too many times
+        # is better than not having it there enough times.
 
         self.queue.put(None)
 
