@@ -34,7 +34,7 @@ class Client:
     def __init__(self, address, port):
 
         self.req_id_lock = threading.Lock()
-        self.req_id_reset()
+        self._req_id_reset()
 
         port = int(port)
         self.port = port
@@ -55,7 +55,7 @@ class Client:
         self.pending_thread.start()
 
 
-    def req_id_next(self):
+    def _req_id_next(self):
         """ Return the next request identification number for subroutines to
             use when constructing a request.
         """
@@ -64,7 +64,7 @@ class Client:
         req_id = next(self.req_id)
 
         if req_id >= self.req_id_max:
-            self.req_id_reset()
+            self._req_id_reset()
 
             if req_id > self.req_id_max:
                 # This shouldn't happen, but here we are...
@@ -75,7 +75,7 @@ class Client:
         return req_id
 
 
-    def req_id_reset(self):
+    def _req_id_reset(self):
         """ Reset the request identification number to the minimum value.
         """
 
@@ -141,7 +141,7 @@ class Client:
 
     def send(self, request, response=True):
         """ A *request* is a Python dictionary ready to be converted to a JSON
-            byte string and sent to the connected server. If *response* is True
+            byte string and sent to the receiving server. If *response* is True
             a :class:`Pending` instance will be returned that a client can use
             to wait on for further notification. Set *response* to any other
             value to indicate a return response is not of interest.
@@ -149,11 +149,10 @@ class Client:
             The 'id' field in the *request*, if specified, will be overwritten.
 
             If the 'bulk' field is present in the *request* it must be a byte
-            sequence, and will be sent as a separate message to the connected
-            daemon.
+            sequence, and will be sent as a separate message.
         """
 
-        req_id = self.req_id_next()
+        req_id = self._req_id_next()
 
         if response == True:
             pending = Pending()
