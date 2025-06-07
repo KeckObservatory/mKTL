@@ -106,7 +106,7 @@ class Client:
                             # No further processing required.
                             continue
 
-                        pending.partial(bulk=bulk)
+                        pending._partial(bulk=bulk)
                         continue
 
 
@@ -123,7 +123,7 @@ class Client:
 
                     response_type = response_dict['message']
                     if response_type == 'ACK':
-                        pending.complete_ack(response_dict)
+                        pending._complete_ack(response_dict)
                     else:
                         try:
                             bulk = response_dict['bulk']
@@ -131,11 +131,11 @@ class Client:
                             bulk = False
 
                         if bulk == True:
-                            done = pending.partial(response=response_dict)
+                            done = pending._partial(response=response_dict)
                             if done == True:
                                 del self.pending[response_id]
                         else:
-                            pending.complete(response_dict)
+                            pending._complete(response_dict)
                             del self.pending[response_id]
 
 
@@ -197,7 +197,7 @@ class Client:
             # We could be hard-nosed about it and throw an exception, but the
             # intent of looking for the ACK (is the server alive?) is moot if
             # we have a proper full response.
-            pending.complete(ack)
+            pending._complete(ack)
 
         elif ack_type != 'ACK':
             raise ValueError('expected an ACK response, got ' + ack_type)
@@ -225,7 +225,7 @@ class Pending:
         self.event_rep = threading.Event()
 
 
-    def complete_ack(self, ack):
+    def _complete_ack(self, ack):
         """ Record the ACK response and signal any callers blocking on
             :func:`wait_ack` to proceed.
         """
@@ -234,7 +234,7 @@ class Pending:
         self.event_ack.set()
 
 
-    def complete(self, response):
+    def _complete(self, response):
         """ If a response to a pending request arrives the :class:`Client`
             instance will check whether the response is of interest, and if
             it is, call :func:`complete` to indicate the response has arrived.
@@ -249,7 +249,7 @@ class Pending:
         self.event_rep.set()
 
 
-    def partial(self, response=None, bulk=None):
+    def _partial(self, response=None, bulk=None):
         """ A response may come in two pieces. This is effectively a two-step
             version of :func:`complete`, where there should be two calls to
             :func:`partial` before a request is complete. This method will
@@ -280,7 +280,9 @@ class Pending:
 
 
     def wait_ack(self, timeout):
-        """ Block until the request has been acknowledged.
+        """ Block until the request has been acknowledged. The acknowledgement
+            is always returned; the acknowledgement will be None if the original
+            request is still pending acknowledgement.
         """
 
         self.event_ack.wait(timeout)
@@ -288,7 +290,9 @@ class Pending:
 
 
     def wait(self, timeout=60):
-        """ Block until the request has been handled.
+        """ Block until the request has been handled. The response to the
+            request is always returned; the response will be None if the
+            original request is still pending.
         """
 
         self.event_rep.wait(timeout)
