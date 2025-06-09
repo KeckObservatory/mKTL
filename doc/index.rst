@@ -5,6 +5,10 @@ Introduction
 
 .. include:: ../README.md
 
+The source code for mKTL is maintained in GitHub:
+
+https://github.com/KeckObservatory/mKTL
+
 
 Documentation contents
 ----------------------
