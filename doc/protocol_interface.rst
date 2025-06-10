@@ -12,9 +12,6 @@ functionality exposed in the :ref:`client` and :ref:`daemon` code.
 Request client
 --------------
 
-The Request submodule defines a few convenience methods used internally by
-other submodules, in addition to the :class:`Client` class.
-
 .. autofunction:: client
 
 .. autofunction:: send
@@ -40,6 +37,8 @@ Request server
 
 Publish client
 --------------
+
+.. autofunction:: client
 
 .. autoclass:: Client
    :members:
