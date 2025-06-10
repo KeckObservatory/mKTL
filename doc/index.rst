@@ -5,7 +5,7 @@ Introduction
 
 .. include:: ../README.md
 
-The source code for mKTL is maintained in GitHub:
+The source code for mKTL is maintained in a GitHub repository:
 
 https://github.com/KeckObservatory/mKTL
 
