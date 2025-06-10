@@ -149,7 +149,8 @@ class Client:
             The 'id' field in the *request*, if specified, will be overwritten.
 
             If the 'bulk' field is present in the *request* it must be a byte
-            sequence, and will be sent as a separate message.
+            sequence; bulk data is transmitted as a separate message to minimize
+            additional encoding.
         """
 
         req_id = self._req_id_next()
@@ -210,9 +211,13 @@ class Client:
 
 class Pending:
     """ The :class:`Pending` provides a very thin wrapper around a
-        :class:`threading.Event` that can be used to signal the caller that the
-        request has been handled. It also provides a vehicle to pass the
-        response to the caller.
+        :class:`threading.Event`; it provides methods that allow a caller to
+        check whether a given request is complete, and to receive the result
+        of any such call.
+
+        :ivar ack: The acknowledgement that a request has been received.
+        :ivar bulk: The bulk data component, if any, of a response.
+        :ivar rep: The final response to a request.
     """
 
     def __init__(self):
@@ -592,7 +597,8 @@ class Server:
 client_connections = dict()
 
 def client(address, port):
-    """ Factory function for a :class:`Client` instance.
+    """ Factory function for a :class:`Client` instance. Use of this method is
+        encouraged to streamline re-use of established connections.
     """
 
     try:
@@ -606,8 +612,9 @@ def client(address, port):
 
 
 def send(request, address, port):
-    """ Creates a :class:`Client` instance and invokes the :func:`Client.send`
-        method. This method blocks until the completion of the request.
+    """ Use :func:`client` to connect to the specified *address* and *port*,
+        and issue the specified *request*. This method blocks until the
+        completion of the request.
     """
 
     connection = client(address, port)
