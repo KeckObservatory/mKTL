@@ -314,6 +314,12 @@ class Server:
         assigned port. The *avoid* set enumerates port numbers that should
         not be automatically assigned; this is ignored if a fixed *port* is
         specified.
+
+        The hostname and port variables associated with a :class:`Server`
+        instance are key pieces of the provenance for an mKTL daemon.
+
+        :ivar hostname: The hostname on which this server can be contacted.
+        :ivar port: The port on which this server is listening for connections.
     """
 
     worker_count = 10

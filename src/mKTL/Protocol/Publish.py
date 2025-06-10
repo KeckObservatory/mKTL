@@ -251,6 +251,11 @@ class Server:
         available automatically assigned port. The *avoid* set enumerates port
         numbers that should not be automatically assigned; this is ignored if a
         fixed *port* is specified.
+
+        The port variables associated with a :class:`Server` instance is a key
+        pieces of the provenance for an mKTL daemon.
+
+        :ivar port: The port on which this server is listening for connections.
     """
 
     pub_id_min = 0
@@ -399,7 +404,8 @@ class Server:
 client_connections = dict()
 
 def client(address, port):
-    """ Factory function for a :class:`Client` instance.
+    """ Factory function for a :class:`Client` instance. Use of this method is
+        encouraged to streamline re-use of established connections.
     """
 
     try:
