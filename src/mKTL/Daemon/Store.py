@@ -30,7 +30,9 @@ class Store(Client.Store):
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Store` subclass; it is not
         required. This is intended to be a vehicle for subclasses to receive
-        key information from command-line arguments.
+        key information from command-line arguments, such as the location of
+        an auxiliary configuration file containing information about a hardware
+        controller.
     """
 
     def __init__(self, name, config, arguments=None):
