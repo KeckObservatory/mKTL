@@ -76,7 +76,7 @@ def load(store, uuid):
 def save(item, *args, **kwargs):
     """ Queue the Item.cached attribute to be written out to disk. Additional
         arguments are ignored so that this method can be registered as a
-        callback for a mKTL.Client.Item instance.
+        callback for a :class:`mktl.Client.Item` instance.
     """
 
     uuid = item.config['uuid']

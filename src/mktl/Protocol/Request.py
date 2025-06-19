@@ -446,7 +446,7 @@ class Server:
 
     def req_handler(self, socket, lock, ident, request):
         """ The default request handler is for debug purposes only, and is
-            effectively a no-op. :class:`mKTL.Daemon.Store` leverages a
+            effectively a no-op. :class:`mktl.Daemon.Store` leverages a
             custom subclass of :class:`Server` that properly handles specific
             types of requests, since it needs to be aware of the actual
             structure of what's happening in the daemon code.

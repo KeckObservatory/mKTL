@@ -145,8 +145,8 @@ class Item:
     def set(self, new_value, wait=True, bulk=None):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
-            the caller will be returned a :class:`mKTL.Protocol.Request.Pending`
-            instance, which has a :func:`mKTL.Protocol.Request.Pending.wait`
+            the caller will be returned a :class:`mktl.Protocol.Request.Pending`
+            instance, which has a :func:`mktl.Protocol.Request.Pending.wait`
             method that can optionally be invoked block until completion of the
             request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed

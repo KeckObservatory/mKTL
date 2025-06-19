@@ -1,7 +1,7 @@
 #! /usr/bin/env kpython3
 
 description = '''
-This is a subprocess invoked by a mKTL.Daemon.Store instance; its sole purpose
+This is a subprocess invoked by a mktl.Daemon.Store instance; its sole purpose
 is to receive broadcasts of any 'persistent' items and queue any/all incoming
 updates for persistent storage to disk. Where and how the value is stored is
 governed entirely by the Daemon/Persist.py code.
@@ -13,7 +13,7 @@ is to lighten the resource load on the 'main' daemon process.
 
 import argparse
 import sys
-import mKTL
+import mktl
 import time
 
 
@@ -24,7 +24,7 @@ def main():
     store = config.store
     uuid = config.uuid
 
-    store = mKTL.get(store)
+    store = mktl.get(store)
     matches = 0
     watched = 0
 
@@ -44,7 +44,7 @@ def main():
             continue
 
         if persist == True:
-            item.register(mKTL.Daemon.Persist.save)
+            item.register(mktl.Daemon.Persist.save)
             watched += 1
 
 

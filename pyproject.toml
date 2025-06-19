@@ -4,7 +4,7 @@ version = "0.1.0"
 description = ""
 authors = ["Kyle Lanclos <klanclos@keck.hawaii.edu>"]
 readme = "README.md"
-packages = [{ include = "mKTL", from = "src" }]
+packages = [{ include = "mktl", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.4"

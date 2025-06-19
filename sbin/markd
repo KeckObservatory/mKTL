@@ -53,8 +53,8 @@ def parse_command_line():
     parser.add_argument('store', help='Name of this mKTL store.')
     parser.add_argument('identifier', help='Unique identifier for the mKTL configuration associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
 
-    parser.add_argument('-m', '--module', help='Module to import which contains the Daemon.Store subclass to invoke.', default='mKTL.Daemon')
-    parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke; this is the bare class name (Store), not a fully qualified class name (mKTL.Daemon.Store).', default='Store')
+    parser.add_argument('-m', '--module', help='Module to import which contains the Daemon.Store subclass to invoke.', default='mktl.Daemon')
+    parser.add_argument('-s', '--subclass', help='Specific Daemon.Store subclass to invoke; this is the bare class name (Store), not a fully qualified class name (mktl.Daemon.Store).', default='Store')
     parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this identifier.')
     parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the Daemon.Store subclass. How this directive is used is entirely up to the application-specific subclass code.')
 
@@ -79,11 +79,11 @@ def load_configuration(store, identifier, filename):
     # The mKTL import is here (as opposed to the top of the script) to allow
     # running this executable in contexts where the mKTL module may not be
     # on the default search path.
-    import mKTL
+    import mktl
 
     contents = open(filename, 'r').read()
-    items = mKTL.Protocol.Json.loads(contents)
-    mKTL.Config.File.save_daemon(store, identifier, items)
+    items = mktl.Protocol.Json.loads(contents)
+    mktl.Config.File.save_daemon(store, identifier, items)
 
 
 
@@ -97,12 +97,12 @@ def start_store(config):
     custom_module = None
     custom_store = None
 
-    if config.module == 'mKTL.Daemon':
+    if config.module == 'mktl.Daemon':
         # The mKTL import is here (as opposed to the top of the script) to allow
         # running this executable in contexts where the mKTL module may not be
         # on the default search path.
-        import mKTL
-        store_module = mKTL.Daemon
+        import mktl
+        store_module = mktl.Daemon
     else:
         store_module = importlib.import_module(config.module)
 
