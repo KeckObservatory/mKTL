@@ -14,13 +14,13 @@ average.
 Getting started
 ---------------
 
-.. py:currentmodule:: mKTL.Client
+.. py:currentmodule:: mktl.Client
 
 See the :ref:`getting_started` section of the :ref:`example_get` example for
 more details. We'll get right to it::
 
-    import mKTL
-    temp = mKTL.get('oven.TEMP')
+    import mktl
+    temp = mktl.get('oven.TEMP')
 
 
 Defining a callback
@@ -33,7 +33,7 @@ The expected signature of a callback method is::
 These arguments are always passed to the callback; that doesn't necessarily
 mean the callback has to use them, a common pattern is to define a callback
 that ignores the arguments provided, an approach made easier by the use of
-:func:`mKTL.get`. First, a callback that uses the arguments::
+:func:`mktl.get`. First, a callback that uses the arguments::
 
     def average(item, temp, time):
 
@@ -51,11 +51,11 @@ that ignores the arguments provided, an approach made easier by the use of
     average.computed = None
 
 
-...and an alternate version, using :func:`mKTL.get`::
+...and an alternate version, using :func:`mktl.get`::
 
     def average(*args, **kwargs):
 
-        temp = mKTL.get('oven', 'TEMP')
+        temp = mktl.get('oven', 'TEMP')
 
         factor = 0.01
         new_weight = factor
@@ -73,7 +73,7 @@ that ignores the arguments provided, an approach made easier by the use of
 
 
 These two approaches are functionally identical for this simple example.
-The second approach, relying on :func:`mKTL.get`, becomes appealing
+The second approach, relying on :func:`mktl.get`, becomes appealing
 when multiple items need to be inspected in a given callback; for example,
 if the current temperature were being compared to the current setpoint.
 
@@ -101,11 +101,11 @@ Full example
 
 Putting it all together::
 
-    import mKTL
-    temp = mKTL.get('oven.TEMP')
+    import mktl
+    temp = mktl.get('oven.TEMP')
 
     def callback(*args, **kwargs):
-        temp = mKTL.get('oven.TEMP')
+        temp = mktl.get('oven.TEMP')
         value = float(temp)
         time = temp.cached_timestamp
         print ("%.3f oven.TEMP: %.1f" % (time, value))

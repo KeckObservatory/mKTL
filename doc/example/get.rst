@@ -12,17 +12,17 @@ objective is to retrieve the current value for 'population.CRAZY'.
 Getting started
 ---------------
 
-.. py:currentmodule:: mKTL.Client
+.. py:currentmodule:: mktl.Client
 
 An :class:`Item` instance is required to perform any client operations; the
-:func:`mKTL.get` method should be invoked to acquire a cached singleton for
+:func:`mktl.get` method should be invoked to acquire a cached singleton for
 any/all subsequent use. The required boilerplate is short::
 
-    import mKTL
-    crazy = mKTL.get('population.CRAZY')
-    crazy = mKTL.get('population', 'CRAZY')
-    crazy = mKTL.get('population', 'crazy')
-    crazy = mKTL.get('PoPuLaTiOn', 'crazy')
+    import mktl
+    crazy = mktl.get('population.CRAZY')
+    crazy = mktl.get('population', 'CRAZY')
+    crazy = mktl.get('population', 'crazy')
+    crazy = mktl.get('PoPuLaTiOn', 'crazy')
 
 The ``crazy`` reference here will be identical for each different invocation
 shown. The important part is that we now have a :class:`Item` that can be used
@@ -82,8 +82,8 @@ Full example
 
 Putting it all together::
 
-    import mKTL
-    crazy = mKTL.get('population.CRAZY')
+    import mktl
+    crazy = mktl.get('population.CRAZY')
     current = crazy.get()
 
     if current is None:
@@ -101,8 +101,8 @@ if one were not writing an example specifically to describe the behavior of
 operations, and will behave as if the 'bin' representation is being used
 directly::
 
-    import mKTL
-    crazy = mKTL.get('population.CRAZY')
+    import mktl
+    crazy = mktl.get('population.CRAZY')
     crazy.subscribe()	# For this example calling crazy.get() would also work
 
     if crazy == None:

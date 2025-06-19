@@ -11,7 +11,7 @@ with the design goals of mKTL.
 The examples provided here are intended to highlight fundamental use cases for
 mKTL in a production environment. All of the examples assume the mKTL module
 is installed and the correct Python interpreter is being invoked; in other
-words, that ``import mKTL`` will succeed.
+words, that ``import mktl`` will succeed.
 
 
 .. toctree::

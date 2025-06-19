@@ -4,7 +4,7 @@
 Client interface
 ================
 
-.. py:module:: mKTL.Client
+.. py:module:: mktl.Client
 
 A client is any software component interacting with a daemon, in the form of
 issuing requests, receiving responses to requests, and receiving asynchronous
@@ -21,7 +21,7 @@ of the classes defined here, they are expected to be used directly, as-is.
 Getting started
 ---------------
 
-The :func:`mKTL.get` method is the universal entry point to retrieve a
+The :func:`mktl.get` method is the universal entry point to retrieve a
 :class:`Store` or :class:`Item` instance; client configuration is automatically
 refreshed if necessary, and the remainder of the connection logic is handled
 by the :class:`Store`.
@@ -29,7 +29,7 @@ by the :class:`Store`.
 All other client operations, such as getting and setting item values, are
 handled via the :class:`Item` instance.
 
-.. autofunction:: mKTL.get
+.. autofunction:: mktl.get
 
 
 Client.Store class

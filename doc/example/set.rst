@@ -8,13 +8,13 @@ objective is to set a new value for 'team.SCORE'.
 Getting started
 ---------------
 
-.. py:currentmodule:: mKTL.Client
+.. py:currentmodule:: mktl.Client
 
 See the :ref:`getting_started` section of the :ref:`example_get` example for
 more details. We'll get right to it::
 
-    import mKTL
-    score = mKTL.get('team.SCORE')
+    import mktl
+    score = mktl.get('team.SCORE')
 
 
 Calling :func:`Item.set`
@@ -68,8 +68,8 @@ In-line modification
 The :class:`Item` class supports in-place modification of values. Incrementing
 the score can be done a few different ways::
 
-    import mKTL
-    score = mKTL.get('team.SCORE')
+    import mktl
+    score = mktl.get('team.SCORE')
 
     # Explicit get() and set():
     old_score = score.get()['bin']
@@ -92,7 +92,7 @@ Full example
 
 Putting it all together::
 
-    import mKTL
-    score = mKTL.get('team.SCORE')
+    import mktl
+    score = mktl.get('team.SCORE')
     score.set(44)
 

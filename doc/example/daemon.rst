@@ -10,7 +10,7 @@ market prices for various precious metals.
 Getting started
 ---------------
 
-.. py:currentmodule:: mKTL.Daemon
+.. py:currentmodule:: mktl.Daemon
 
 The canonical approach to establish an mKTL daemon involves creating a Python
 module to represent all of your custom logic. Each of the steps described here
@@ -34,9 +34,9 @@ Within the ``Precious`` submodule we define our subclass. For no reason other
 than convenience it is defined with the name ``Store``. The structure of the
 ``Precious.py`` file will be as follows::
 
-    import mKTL
+    import mktl
 
-    class Store(mKTL.Daemon.Store):
+    class Store(mktl.Daemon.Store):
 
         def setup(self):
 	    pass
@@ -55,10 +55,10 @@ subclasses.
 
 An example subclass would have a structure like the following::
 
-    class MarketPriced(mKTL.Daemon.Item):
+    class MarketPriced(mktl.Daemon.Item):
 
         def __init__(self, *args, **kwargs):
-            mKTL.Daemon.Item.__init__(self, *args, **kwargs)
+            mktl.Daemon.Item.__init__(self, *args, **kwargs)
 	    # Additional initialization steps would generally follow the
 	    # regular initialization from the base class. In this case,
 	    # our market-prices should update once per day:
@@ -147,8 +147,8 @@ lines like the following in its initialization method::
     def __init__(self, *args, **kwargs):
 
         items = generate_config()
-        mKTL.Config.File.save_daemon('metal', 'precious', items)
-        mKTL.Daemon.Store.__init__(self, *args, **kwargs)
+        mktl.Config.File.save_daemon('metal', 'precious', items)
+        mktl.Daemon.Store.__init__(self, *args, **kwargs)
 
 It's more likely that the JSON configuration is written out as a file, ready
 to be used by the daemon. The file can be anywhere, so long as it is accessible
