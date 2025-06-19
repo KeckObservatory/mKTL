@@ -27,3 +27,7 @@ latency and throughput of commands; early testing suggests that these
 improvements are within reach. Additional features, such as bulk data
 transmission and 'structured' key/value pairs, are also being considered
 as key improvements over the original capabilities of KTL.
+
+The documentation for mKTL is published here:
+
+https://keckobservatory.github.io/mKTL/
