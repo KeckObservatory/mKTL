@@ -1,0 +1,12 @@
+WARNING: autodoc: failed to import class 'Daemon.Store' from module 'mKTL'; the following exception was raised:
+['Traceback (most recent call last):\n', '  File "/home/runner/.local/lib/python3.12/site-packages/sphinx/ext/autodoc/importer.py", line 269, in import_object\n    module = import_module(modname, try_reload=True)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n', '  File "/home/runner/.local/lib/python3.12/site-packages/sphinx/ext/autodoc/importer.py", line 172, in import_module\n    raise ModuleNotFoundError(msg, name=modname)  # NoQA: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n', "ModuleNotFoundError: No module named 'mKTL'\n"] [autodoc.import_object]
+WARNING: autodoc: failed to import class 'Daemon.Item' from module 'mKTL'; the following exception was raised:
+['Traceback (most recent call last):\n', '  File "/home/runner/.local/lib/python3.12/site-packages/sphinx/ext/autodoc/importer.py", line 269, in import_object\n    module = import_module(modname, try_reload=True)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n', '  File "/home/runner/.local/lib/python3.12/site-packages/sphinx/ext/autodoc/importer.py", line 172, in import_module\n    raise ModuleNotFoundError(msg, name=modname)  # NoQA: TRY301\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n', "ModuleNotFoundError: No module named 'mKTL'\n"] [autodoc.import_object]
+/home/runner/work/mKTL/mKTL/doc/example/daemon.rst:123: WARNING: Title underline too short.
+
+:func:`Store.setup_final` method
+------------------------------- [docutils]
+/home/runner/work/mKTL/mKTL/doc/example/daemon.rst:123: WARNING: Title underline too short.
+
+:func:`Store.setup_final` method
+------------------------------- [docutils]
