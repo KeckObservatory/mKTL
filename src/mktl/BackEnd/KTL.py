@@ -4,6 +4,7 @@ import time
 
 from .. import Config
 from .. import Daemon
+from .. import item
 
 try:
     import ktl
@@ -78,7 +79,7 @@ class Store(Daemon.Store):
 
 
 
-class Item(Daemon.Item):
+class Item(item.Item):
 
 
     def req_refresh(self):

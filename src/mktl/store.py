@@ -1,6 +1,6 @@
 
-from .. import Config
-from . import Item
+from . import Config
+from .item import Item
 
 
 class Store:
@@ -47,7 +47,7 @@ class Store:
             raise KeyError(error)
 
         if item is None:
-            item = Item.Item(self, key)
+            item = Item(self, key)
 
             # The Item assigns itself to our self._items dictionary as the last
             # step in its initialization process.
@@ -56,7 +56,7 @@ class Store:
 
 
     def __iter__(self):
-        return Iterator(self)
+        return _Iterator(self)
 
 
     def __repr__(self):
@@ -99,7 +99,7 @@ class Store:
 
 
 
-class Iterator:
+class _Iterator:
     """ Internal class for iteration over a :class:`Store` instance. The custom
         iterator allows easier just-in-time instantiation of any missing Item
         instances.
@@ -131,7 +131,7 @@ class Iterator:
     next = __next__
 
 
-# end of class Iterator
+# end of class _Iterator
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

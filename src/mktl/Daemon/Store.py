@@ -4,16 +4,16 @@ import subprocess
 import sys
 import zmq
 
-from .. import Client
 from .. import Config
+from .. import item
 from .. import Protocol
+from .. import store
 
-from . import Item
 from . import Persist
 from . import Port
 
 
-class Store(Client.Store):
+class Store(store.Store):
     """ The daemon version of a Store is based on the client version; the
         behavior defaults to the client approach, but for items specified in
         the daemon *config* file a daemon-specific variant of the item will
@@ -194,7 +194,7 @@ class Store(Client.Store):
 
     def setup(self):
         """ Subclasses should override the :func:`setup` method to instantiate
-            any custom :class:`Item` subclasses or otherwise execute custom
+            any custom :class:`mktl.Item` subclasses or otherwise execute custom
             code. When :func:`setup` is called the bulk of the :class:`Store`
             machinery is in place, but cached values have not been loaded, nor
             has the presence of this daemon been announced. The default
@@ -205,28 +205,28 @@ class Store(Client.Store):
 
 
     def _setup_missing(self):
-        """ Inspect the locally known list of :class:`Item` instances; create
-            default, caching instances for any that were not previously
+        """ Inspect the locally known list of :class:`mktl.Item` instances;
+            create default, caching instances for any that were not previously
             populated by the call to :func:`setup`.
         """
 
         local = list(self._daemon_keys)
 
         for key in local:
-            item = self._items[key]
+            existing = self._items[key]
 
-            if item is None:
-                item = Item.Item(self, key)
-                self._items[key] = item
+            if existing is None:
+                new_item = item.Item(self, key)
+                self._items[key] = new_item
 
 
     def setup_final(self):
         """ Subclasses should override the :func:`setup_final` method to
-            execute any/all code that should occur after all :class:`Item`
-            instances have been created, including any non-custom :class:`Item`
-            instances, but before this :class:`Store` announces its availability
-            on the local network. The default implementation of this method
-            takes no actions.
+            execute any/all code that should occur after all :class:`mktl.Item`
+            instances have been created, including any non-custom
+            :class:`mktl.Item` instances, but before this :class:`Store`
+            announces its availability on the local network. The default
+            implementation of this method takes no actions.
         """
 
         pass

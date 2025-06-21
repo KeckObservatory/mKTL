@@ -4,9 +4,9 @@
 
 import zmq
 
-from . import Client
 from . import Config
 from . import Protocol
+from .store import Store
 
 
 _cache = dict()
@@ -111,7 +111,7 @@ def get(store, key=None):
     # instance initializes it will request the current configuration from what's
     # in Config.Cache.
 
-    store = Client.Store(store)
+    store = Store(store)
     _cache[store.name] = store
 
     if key is None:

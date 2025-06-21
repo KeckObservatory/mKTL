@@ -7,13 +7,15 @@ from . import WeakRef
 
 from . import Protocol
 from . import Config
-from . import Client
 from . import Daemon
 from . import BackEnd
 
 from . import Get
 get = Get.get
 home = Config.File.home
+
+from .item import Item
+from .store import Store
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

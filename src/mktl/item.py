@@ -1,5 +1,7 @@
 
 import queue
+import threading
+import time
 import traceback
 
 try:
@@ -7,10 +9,9 @@ try:
 except ImportError:
     numpy = None
 
-from . import Updater
-from .. import Config
-from .. import Protocol
-from .. import WeakRef
+from . import Config
+from . import Protocol
+from . import WeakRef
 
 
 class Item:
@@ -24,7 +25,7 @@ class Item:
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
 
-    def __init__(self, store, key):
+    def __init__(self, store, key, subscribe=True):
 
         self.key = key
         self.full_key = store.name + '.' + key
@@ -33,6 +34,7 @@ class Item:
 
         self.callbacks = list()
         self.cached = None
+        self._daemon_cached = None
         self.req = None
         self.subscribed = False
         self.timeout = 120
@@ -122,6 +124,64 @@ class Item:
         return self.cached
 
 
+    def poll(self, period):
+        """ Poll for a new value every *period* seconds. Polling will be
+            discontinued if *period* is set to None or zero. The actual
+            acquisition of a new value is accomplished via the :func:`req_poll`
+            method, which in turn leans heavily on :func:`req_refresh` to do
+            the actual work.
+        """
+
+        Poll.start(self.req_poll, period)
+
+
+    def publish(self, new_value, bulk=None, timestamp=None):
+        """ Publish a new value, which is expected to be a dictionary minimally
+            containing 'asc' and 'bin' keys rerepsenting different views of the
+            new value; bulk values are not represented as a dictionary, they are
+            passed in directly as the *bulk* argument, and the *new_value*
+            argument will be ignored. If *timestamp* is set it is expected to be
+            a UNIX epoch timestamp; the current time will be used if it is not
+            set. Any published values are always cached locally for future
+            requests.
+        """
+
+        if timestamp is None:
+            timestamp = time.time()
+        else:
+            timestamp = float(timestamp)
+
+        message = dict()
+        message['message'] = 'PUB'
+        message['name'] = self.full_key
+        message['time'] = timestamp
+
+        if bulk is None:
+            message['data'] = new_value
+            self._daemon_cached = new_value['bin']
+        else:
+            bytes = bulk.tobytes()
+            description = dict()
+            description['shape'] = bulk.shape
+            description['dtype'] = str(bulk.dtype)
+            message['data'] = description
+            message['bulk'] = bytes
+
+            new_value = bulk
+            self._daemon_cached = new_value
+
+        # The internal update needs a separate copy of the message dictionary,
+        # as its contents relating to bulk messages are manipulated as part of
+        # putting the message out "on the wire". A deep copy is not necessary.
+
+        # This is presently commented out because the daemon-aware handling
+        # in subscribe() is not enabled.
+
+        ### self._update_queue.put(dict(message))
+
+        self.store.pub.publish(message)
+
+
     def register(self, method):
         """ Register a callback to be invoked whenever a new value is received,
             either by a direct :func:`get` request or the arrival of an
@@ -140,6 +200,143 @@ class Item:
 
         if self.subscribed == False:
             self.subscribe()
+
+
+    def req_get(self, request):
+        """ Handle a GET request. A typical subclass should not need to
+            re-implement this method, implementing :func:`req_refresh`
+            would normally be sufficient. The *request* argument is a
+            Python dictionary, parsed from the inbound JSON-formatted
+            request. The value returned from :func:`req_get` is identical
+            to the value returned by :func:`req_refresh`.
+        """
+
+        try:
+            refresh = request['refresh']
+        except KeyError:
+            refresh = False
+
+        if refresh == True:
+            payload = self.req_poll()
+        else:
+            try:
+                self._daemon_cached.tobytes
+            except AttributeError:
+                payload = dict()
+                ### This translation to a string representation needs to be
+                ### generalized to allow more meaningful behavior.
+                payload['asc'] = str(self._daemon_cached)
+                payload['bin'] = self._daemon_cached
+            else:
+                payload = self._daemon_cached
+
+        try:
+            bytes = payload.tobytes()
+        except AttributeError:
+            pass
+        else:
+            bulk = payload
+            payload = dict()
+            payload['shape'] = bulk.shape
+            payload['dtype'] = str(bulk.dtype)
+            payload['bulk'] = bytes
+
+        return payload
+
+
+    def req_poll(self):
+        """ Entry point for calls established by :func:`poll`; a typical
+            subclass should not need to reimplement this method. The main reason
+            :func:`req_poll` exists is to streamline the expected behavior of
+            :func:`req_refresh`, allowing it to focus entirely on what it means
+            to acquire a new value; after receiving the refreshed value,
+            :func:`req_poll` will additionally publish the new value. A common
+            pattern for custom subclasses involves registering :func:`req_poll`
+            as a callback on other items, so that the local value of this item
+            can be refreshed when events occur elsewhere within a daemon.
+
+            For convenience, the value returned from :func:`req_poll` is
+            identical to the value returned by :func:`req_refresh`.
+        """
+
+        payload = self.req_refresh()
+
+        # Perhaps there is a more declarative way to know whether a given
+        # payload is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
+
+        try:
+            payload.tobytes
+        except AttributeError:
+            self.publish(payload)
+        else:
+            self.publish(None, bulk=payload)
+
+        return payload
+
+
+    def req_refresh(self):
+        """ Acquire the most up-to-date value available for this :class:`Item`
+            and return it to the caller. The return value is a dictionary,
+            nominally with 'asc' and 'bin' keys, representing a human-readable
+            format ('asc') format, and a Python binary representation of the
+            same value. For example, ``{'asc': 'On', 'bin': True}``.
+
+            Bulk values are returned solely as a numpy array. Other return
+            values are in theory possible, as long as the request and publish
+            handling code are prepared to accept them.
+        """
+
+        # This implementation is strictly caching, there is nothing to refresh.
+
+        payload = dict()
+        ### This translation to a string representation needs to be
+        ### generalized to allow more meaningful behavior.
+        payload['asc'] = str(self._daemon_cached)
+        payload['bin'] = self._daemon_cached
+
+        return payload
+
+
+    def req_set(self, request):
+        """ Handle a client-initiated SET request. Any calls to :func:`req_set`
+            are expected to block until completion of the request; no return
+            value of significance is expected, though one can be provided (in
+            dictionary form, with the response in the 'data' field) if desired.
+            Any errors should be indicated by raising an exception.
+
+            The *request* is passed in as a dictionary; the only two fields of
+            immediate relevance are the 'data' and optionally the 'bulk' fields,
+            which indicate the new value the client would like to set.
+        """
+
+        try:
+            request['bulk']
+        except KeyError:
+            bulk = False
+            new_value = request['data']
+        else:
+            bulk = True
+            new_value = self._interpret_bulk(request)
+
+        new_value = self.validate(new_value)
+        publish = dict()
+
+        if bulk == True:
+            publish['data'] = request['data']
+            publish['bulk'] = request['bulk']
+        else:
+            ### This translation to a string representation needs to be
+            ### generalized to allow more meaningful behavior.
+            publish['asc'] = str(new_value)
+            publish['bin'] = new_value
+
+        self.publish(publish)
+
+        # If req_set() returns a payload it will be returned to the caller;
+        # absent any explicit response (not required, nor expected), a default
+        # response will be provided.
 
 
     def set(self, new_value, wait=True, bulk=None):
@@ -231,7 +428,7 @@ class Item:
 
         # A thread pool might be just as performant for this purpose, but the
         # control flow in that thread would be a lot more complex. Having a
-        # dedicated Updater background thread for each Item with an active
+        # dedicated _Updater background thread for each Item with an active
         # subscription makes the processing straightforward.
 
         # The reference to SimpleQueue.put() gets deallocated immediately if we
@@ -239,7 +436,12 @@ class Item:
 
         self._update_queue = queue.SimpleQueue()
         self._update_queue_put = self._update_queue.put
-        self._update_thread = Updater.Updater(self._update, self._update_queue)
+        self._update_thread = _Updater(self._update, self._update_queue)
+
+        ### These two subscriptions against self.pub could be omitted if the
+        ### Item is in a Daemon context. See the publish() method for the extra
+        ### call to the _update_queue that needs to be enabled to bypass that
+        ### machinery.
 
         if bulk == True:
             self.pub.subscribe('bulk:' + self.full_key)
@@ -252,6 +454,20 @@ class Item:
 
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our key name.
+
+
+    def validate(self, value):
+        """ A hook for a daemon to validate a new value. The default behavior
+            is a no-op; any checks should raise exceptions if they encounter
+            a problem with the incoming value. The 'validated' value should
+            be returned by this method; this allows for the possibility that
+            the incoming value has been translated to a more acceptable format,
+            for example, converting '123' to the bare number 123 for a numeric
+            item type.
+        """
+
+        return value
+
 
 
     def _interpret_bulk(self, new_message):
@@ -664,6 +880,62 @@ class Item:
         return self.__inplace(self.__or__, value)
 
 # end of class Item
+
+
+
+class _UpdaterWake(RuntimeError):
+    pass
+
+
+class _Updater:
+    """ Background thread to invoke any per-Item callbacks. This allows the
+        event processing loop sitting on the ZeroMQ socket to be consistent
+        and tight, where a user-provided callback may require an unbounded
+        amount of time to process.
+    """
+
+    def __init__(self, method, queue):
+
+        self.method = method
+        self.queue = queue
+        self.shutdown = False
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+
+    def run(self):
+
+        while True:
+            if self.shutdown == True:
+                break
+
+            try:
+                dequeued = self.queue.get(timeout=300)
+            except queue.Empty:
+                continue
+
+            if isinstance(dequeued, _UpdaterWake):
+                continue
+
+            self.method(dequeued)
+
+
+    def stop(self):
+        self.shutdown = True
+        self.wake()
+
+
+    def wake(self):
+        self.queue.put(_UpdaterWake())
+
+
+# end of class Updater
+
+
+### Additional subclasses would go here, if they existed. Numeric types, bulk
+### keyword types, etc.
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
