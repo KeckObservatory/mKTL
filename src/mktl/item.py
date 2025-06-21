@@ -80,6 +80,9 @@ class Item:
 
         self.store._items[key] = self
 
+        if subscribe == True:
+            self.subscribe()
+
 
     def get(self, refresh=False):
         """ Retrieve the current value. Set *refresh* to True to prompt
@@ -135,7 +138,7 @@ class Item:
         Poll.start(self.req_poll, period)
 
 
-    def publish(self, new_value, bulk=None, timestamp=None):
+    def publish(self, new_value, bulk=None, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be a dictionary minimally
             containing 'asc' and 'bin' keys rerepsenting different views of the
             new value; bulk values are not represented as a dictionary, they are
@@ -156,9 +159,13 @@ class Item:
         message['name'] = self.full_key
         message['time'] = timestamp
 
+        changed = False
+
         if bulk is None:
             message['data'] = new_value
-            self._daemon_cached = new_value['bin']
+            if self._daemon_cached != new_value['bin']:
+                self._daemon_cached = new_value['bin']
+                changed = True
         else:
             bytes = bulk.tobytes()
             description = dict()
@@ -168,7 +175,10 @@ class Item:
             message['bulk'] = bytes
 
             new_value = bulk
-            self._daemon_cached = new_value
+
+            if self._daemon_cached != new_value:
+                self._daemon_cached = new_value
+                changed = True
 
         # The internal update needs a separate copy of the message dictionary,
         # as its contents relating to bulk messages are manipulated as part of
@@ -177,9 +187,9 @@ class Item:
         # This is presently commented out because the daemon-aware handling
         # in subscribe() is not enabled.
 
-        ### self._update_queue.put(dict(message))
-
-        self.store.pub.publish(message)
+        if changed == True or repeat == True:
+            ### self._update_queue.put(dict(message))
+            self.store.pub.publish(message)
 
 
     def register(self, method):
@@ -244,7 +254,7 @@ class Item:
         return payload
 
 
-    def req_poll(self):
+    def req_poll(self, repeat=False):
         """ Entry point for calls established by :func:`poll`; a typical
             subclass should not need to reimplement this method. The main reason
             :func:`req_poll` exists is to streamline the expected behavior of
@@ -266,12 +276,15 @@ class Item:
         # configuration? Or does an attribute need to be set to make the
         # expected behavior explicit?
 
+        # The default behavior is to only publish a value if the value has
+        # changed.
+
         try:
             payload.tobytes
         except AttributeError:
-            self.publish(payload)
+            self.publish(payload, repeat=repeat)
         else:
-            self.publish(None, bulk=payload)
+            self.publish(None, bulk=payload, repeat=repeat)
 
         return payload
 
