@@ -81,7 +81,9 @@ class Item:
         self.store._items[key] = self
 
         if subscribe == True:
-            self.subscribe()
+            ### This needs to not prime in the daemon case, but the client
+            ### case should still prime.
+            self.subscribe(prime=False)
 
 
     def get(self, refresh=False):
@@ -100,8 +102,13 @@ class Item:
         if refresh == True:
             request['refresh'] = True
 
-        pending = self.req.send(request)
-        response = pending.wait(self.timeout)
+        pending = self.req.send('GET', self.full_key)
+        success = pending.wait(self.timeout)
+
+        if success == False:
+            raise RuntimeError('GET failed: no response to request')
+
+        response = pending.rep
 
         try:
             error = response['error']
@@ -223,7 +230,7 @@ class Item:
 
         try:
             refresh = request['refresh']
-        except KeyError:
+        except (TypeError, KeyError):
             refresh = False
 
         if refresh == True:
@@ -373,19 +380,23 @@ class Item:
         """
 
         request = dict()
-        request['request'] = 'SET'
-        request['name'] = self.full_key
         request['data'] = new_value
 
-        if bulk is not None:
-            request['bulk'] = bulk
+        if bulk is None:
+            bulk = b''
 
         pending = self.req.send(request)
+        pending = self.req.send('SET', self.full_key, request, bulk)
 
         if wait == False:
             return pending
 
-        response = pending.wait(self.timeout)
+        success = pending.wait(self.timeout)
+
+        if success == False:
+            raise RuntimeError("SET of %s failed: no response to request" % (self.key))
+
+        response = pending.rep
 
         try:
             error = response['error']

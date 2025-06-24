@@ -141,13 +141,11 @@ class Store(store.Store):
         config = dict(self.daemon_config)
 
         request = dict()
-        request['request'] = 'CONFIG'
-        request['name'] = self.name
         request['data'] = config
 
         for address,port in targets:
             try:
-                Protocol.Request.send(request, address, port)
+                Protocol.Request.send(address, port, 'CONFIG', self.name, request)
             except zmq.error.ZMQError:
                 pass
 
@@ -243,9 +241,7 @@ class RequestServer(Protocol.Request.Server):
         self.store = store
 
 
-    def req_config(self, request):
-
-        store = request['name']
+    def req_config(self, store):
 
         if store == self.store.name:
             config = dict(self.store.daemon_config)
@@ -255,44 +251,44 @@ class RequestServer(Protocol.Request.Server):
         return config
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, socket, lock, ident, parts):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(socket, lock, ident, parts)
 
-        try:
-            type = request['request']
-        except KeyError:
-            raise KeyError("invalid request JSON, 'request' not set")
+        request_id = parts[0]
+        type = parts[1]
+        key = parts[2]
+        request = parts[3]
+        bulk = parts[4]
 
-        try:
-            name = request['name']
-        except KeyError:
-            if type != 'HASH':
-                raise KeyError("invalid request JSON, 'name' not set")
+        if key == '' and type != 'HASH' and type != 'CONFIG':
+            raise KeyError("invalid request JSON, 'key' not set")
+
+        if bulk != b'':
+            request['bulk'] = bulk
 
         if type == 'HASH':
-            payload = self.req_hash(request)
+            payload = self.req_hash(key)
         elif type == 'SET':
-            payload = self.req_set(request)
+            payload = self.req_set(key, request)
             if payload is None:
                 payload = dict()
                 payload['data'] = True
         elif type == 'GET':
-            payload = self.req_get(request)
+            payload = self.req_get(key, request)
         elif type == 'CONFIG':
-            payload = self.req_config(request)
+            payload = self.req_config(key)
         else:
             raise ValueError('unhandled request type: ' + type)
 
         return payload
 
 
-    def req_get(self, request):
+    def req_get(self, key, request):
 
-        key = request['name']
         store, key = key.split('.', 1)
 
         if key in self.store._daemon_keys:
@@ -304,9 +300,8 @@ class RequestServer(Protocol.Request.Server):
         return payload
 
 
-    def req_set(self, request):
+    def req_set(self, key, request):
 
-        key = request['name']
         store, key = key.split('.', 1)
 
         if key in self.store._daemon_keys:
@@ -318,11 +313,9 @@ class RequestServer(Protocol.Request.Server):
         return payload
 
 
-    def req_hash(self, request):
+    def req_hash(self, store):
 
-        try:
-            store = request['name']
-        except KeyError:
+        if store == '':
             store = None
 
         cached = Config.Hash.get(store)

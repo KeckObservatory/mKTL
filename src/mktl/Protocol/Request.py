@@ -14,6 +14,11 @@ import zmq
 
 from . import Json
 
+# This is the version of the mKTL on-the-wire protocol implemented here.
+# See the protocol specification for a full description; the version is
+# identified by a single byte.
+
+protocol_version = b'a'
 
 minimum_port = 10079
 maximum_port = 13679
@@ -55,6 +60,42 @@ class Client:
         self.pending_thread.start()
 
 
+    def _rep_incoming(self, parts):
+
+        their_version = parts[0]
+
+        if their_version != protocol_version:
+            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(protocol_version)))
+
+        response_id = parts[1]
+        response_type = parts[2]
+        key = parts[3]
+        response = parts[4]
+        bulk = parts[5]
+
+        try:
+            pending = self.pending[response_id]
+        except KeyError:
+            # No further processing required.
+            return
+
+        if response_type == b'ACK':
+            pending._complete_ack()
+            return
+
+        ### This might be a good place to log anything other than a REP
+        ### response type.
+
+        if bulk == b'':
+            bulk = None
+
+        # All other responses are expected to be JSON.
+
+        response_dict = Json.loads(response)
+        pending._complete(response_dict, bulk)
+        del self.pending[response_id]
+
+
     def _req_id_next(self):
         """ Return the next request identification number for subroutines to
             use when constructing a request.
@@ -72,6 +113,9 @@ class Client:
                 next(self.req_id)
 
         self.req_id_lock.release()
+
+        req_id = '%08x' % (req_id)
+        req_id = req_id.encode()
         return req_id
 
 
@@ -91,94 +135,55 @@ class Client:
             sockets = poller.poll(10000)
             for active, flag in sockets:
                 if self.socket == active:
-                    response = self.socket.recv()
-
-                    # Check for bulk data first, since it cannot be processed
-                    # as JSON.
-
-                    if response[:5] == b'bulk:':
-                        topic, response_id, bulk = response.split(maxsplit=2)
-                        response_id = int(response_id)
-
-                        try:
-                            pending = self.pending[response_id]
-                        except KeyError:
-                            # No further processing required.
-                            continue
-
-                        pending._partial(bulk=bulk)
-                        continue
+                    parts = self.socket.recv_multipart()
+                    self._rep_incoming(parts)
 
 
-                    # All other responses are expected to be JSON.
-
-                    response_dict = Json.loads(response)
-                    response_id = response_dict['id']
-
-                    try:
-                        pending = self.pending[response_id]
-                    except KeyError:
-                        # No further processing requested.
-                        continue
-
-                    response_type = response_dict['message']
-                    if response_type == 'ACK':
-                        pending._complete_ack(response_dict)
-                    else:
-                        try:
-                            bulk = response_dict['bulk']
-                        except KeyError:
-                            bulk = False
-
-                        if bulk == True:
-                            done = pending._partial(response=response_dict)
-                            if done == True:
-                                del self.pending[response_id]
-                        else:
-                            pending._complete(response_dict)
-                            del self.pending[response_id]
-
-
-    def send(self, request, response=True):
+    def send(self, type, key=b'', request=b'', bulk=b'', response=True):
         """ A *request* is a Python dictionary ready to be converted to a JSON
             byte string and sent to the receiving server. If *response* is True
             a :class:`Pending` instance will be returned that a client can use
             to wait on for further notification. Set *response* to any other
             value to indicate a return response is not of interest.
 
-            The 'id' field in the *request*, if specified, will be overwritten.
-
-            If the 'bulk' field is present in the *request* it must be a byte
-            sequence; bulk data is transmitted as a separate message to minimize
-            additional encoding.
+            If the *bulk* argument is provided it must be a byte sequence. The
+            request *type* and *key* can be specified either as bytes or as
+            regular strings; the *type* is required, and *key* may also be
+            as this functionality evolves, but presently there is one command
+            (CONFIG) that does not necessarily require a *key*.
         """
 
         req_id = self._req_id_next()
+
+        type = type.upper()
+        try:
+            type = type.encode()
+        except AttributeError:
+            pass
+
+        ### Can't trivially enforce case on the key-- should the convention
+        ### be changed such that both store and key names are strictly
+        ### lower case? All upper case would be too hard to read.
+
+        try:
+            key = key.encode()
+        except AttributeError:
+            pass
+
+        try:
+            request = Json.dumps(request)
+        except TypeError:
+            # Assuming the request is already bytes.
+            pass
+
+        parts = (protocol_version, req_id, type, key, request, bulk)
 
         if response == True:
             pending = Pending()
             self.pending[req_id] = pending
 
-        request['id'] = req_id
-
-        try:
-            bulk = request['bulk']
-        except KeyError:
-            bulk = None
-        else:
-            request['bulk'] = True
-
-        request = Json.dumps(request)
         self.socket_lock.acquire()
-        self.socket.send(request)
-
-        if bulk is not None:
-            name = request['name']
-            prefix = 'bulk:' + name + ' ' + str(req_id) + ' '
-            prefix = prefix.encode()
-
-            bulk_request = prefix + bulk
-            self.socket.send(bulk_request)
+        self.socket.send_multipart(parts)
         self.socket_lock.release()
 
 
@@ -187,20 +192,8 @@ class Client:
 
         ack = pending.wait_ack(self.timeout)
 
-        if ack is None:
+        if ack == False:
             raise zmq.ZMQError("no response received in %.2fs" % (self.timeout))
-
-        ack_type = ack['message']
-
-        if ack_type == 'REP':
-            # We were expecting an ACK, but we got the full response instead.
-            # We could be hard-nosed about it and throw an exception, but the
-            # intent of looking for the ACK (is the server alive?) is moot if
-            # we have a proper full response.
-            pending._complete(ack)
-
-        elif ack_type != 'ACK':
-            raise ValueError('expected an ACK response, got ' + ack_type)
 
         return pending
 
@@ -215,7 +208,6 @@ class Pending:
         check whether a given request is complete, and to receive the result
         of any such call.
 
-        :ivar ack: The acknowledgement that a request has been received.
         :ivar bulk: The bulk data component, if any, of a response.
         :ivar rep: The final response to a request.
     """
@@ -229,51 +221,24 @@ class Pending:
         self.event_rep = threading.Event()
 
 
-    def _complete_ack(self, ack):
-        """ Record the ACK response and signal any callers blocking on
-            :func:`wait_ack` to proceed.
+    def _complete_ack(self):
+        """ Signal any callers blocking on :func:`wait_ack` to proceed.
         """
 
-        self.ack = ack
         self.event_ack.set()
 
 
-    def _complete(self, response):
+    def _complete(self, response, bulk):
         """ If a response to a pending request arrives the :class:`Client`
             instance will check whether the response is of interest, and if
             it is, call :func:`complete` to indicate the response has arrived.
         """
 
         self.rep = response
+        self.bulk = bulk
 
-        if self.ack is None:
-            self.ack = response
-            self.event_ack.set()
-
+        self.event_ack.set()
         self.event_rep.set()
-
-
-    def _partial(self, response=None, bulk=None):
-        """ A response may come in two pieces. This is effectively a two-step
-            version of :func:`complete`, where there should be two calls to
-            :func:`partial` before a request is complete. This method will
-            return True when both responses have been received.
-        """
-
-        if response is not None:
-            self.rep = response
-
-            if self.ack is None:
-                self.ack = response
-                self.event_ack.set()
-
-        if bulk is not None:
-            self.bulk = bulk
-
-        if self.rep is not None and self.bulk is not None:
-            self.rep['bulk'] = self.bulk
-            self.event_rep.set()
-            return True
 
 
     def poll(self):
@@ -284,13 +249,14 @@ class Pending:
 
 
     def wait_ack(self, timeout):
-        """ Block until the request has been acknowledged. The acknowledgement
-            is always returned; the acknowledgement will be None if the original
-            request is still pending acknowledgement.
+        """ Block until the request has been acknowledged. This is a wrapper to
+            a class:`threading.Event` instance; if the event has occurred it
+            will return True, otherwise it returns False after the requested
+            *timeout*. If the *timeout* argument is None it will block
+            indefinitely.
         """
 
-        self.event_ack.wait(timeout)
-        return self.ack
+        return self.event_ack.wait(timeout)
 
 
     def wait(self, timeout=60):
@@ -424,27 +390,26 @@ class Server:
             self.workers.append(thread)
 
 
-    def req_ack(self, socket, lock, ident, request):
+    def req_ack(self, socket, lock, ident, parts):
         """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
             request.
         """
 
-        id = request['id']
+        request_id = parts[0]
 
         ack = dict()
-        ack['message'] = 'ACK'
-        ack['id'] = id
         ack['time'] = time.time()
         ack = Json.dumps(ack)
 
+        parts = (ident, protocol_version, request_id, b'ACK', ack, b'', b'')
         lock.acquire()
-        socket.send_multipart((ident, ack))
+        socket.send_multipart(parts)
         lock.release()
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, socket, lock, ident, parts):
         """ The default request handler is for debug purposes only, and is
             effectively a no-op. :class:`mktl.Daemon.Store` leverages a
             custom subclass of :class:`Server` that properly handles specific
@@ -452,23 +417,29 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(socket, lock, ident, parts)
+
+        request_id = parts[0]
+        request_type = parts[1]
+        key = parts[2]
+        request = parts[3]
+        bulk = parts[4]
 
         response = dict()
-        response['message'] = 'REP'
-        response['id'] = request['id']
         response['time'] = time.time()
         response = Json.dumps(response)
 
+        parts = (ident, protocol_version, request_id, b'REP', key, response, b'')
+
         lock.acquire()
-        socket.send_multipart((ident, response))
+        socket.send_multipart(parts)
         lock.release()
 
         # This default handler returns None, which indicates to req_incoming()
         # that it should not issue a response of its own.
 
 
-    def req_incoming(self, socket, lock, ident, request):
+    def req_incoming(self, socket, lock, parts):
         """ All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
@@ -486,9 +457,32 @@ class Server:
         error = None
         payload = None
 
+        ### This all needs to move into a try/except block so that any
+        ### exceptions are passed back to the originator of the request.
+        ### Presumably that means calling something like _req_incoming().
+
+        ident = parts[0]
+        their_version = parts[1]
+
+        if their_version != protocol_version:
+            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(protocol_version)))
+
+        request_id = parts[2]
+        request_type = parts[3]
+        key = parts[4]
+        request = parts[5]
+        bulk = parts[6]
+
+        request_type = request_type.decode()
+        request = Json.loads(request)
+
+        # We're going to use the key later on, otherwise it would be similarly
+        # decoded in advance.
+
+        handled_parts = (request_id, request_type, key.decode(), request, bulk)
+
         try:
-            request = Json.loads(request)
-            payload = self.req_handler(socket, lock, ident, request)
+            payload = self.req_handler(socket, lock, ident, handled_parts)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -502,10 +496,11 @@ class Server:
             # other processing chain that will issue a proper response.
             return
 
+        ### Does the req_handler return value need to be a special Python class?
+        ### Faking the fields for now via tight coupling.
+
         response = dict()
-        response['message'] = 'REP'
-        response['id'] = request['id']
-        response['time'] = time.time()
+        bulk = b''
 
         if error is not None:
             response['error'] = error
@@ -518,21 +513,12 @@ class Server:
                 pass
             else:
                 del payload['bulk']
-                response['bulk'] = True
-                name = request['name']
-                id = str(response['id'])
-                prefix = 'bulk:' + name + ' ' + id + ' '
-                prefix = prefix.encode()
-
-                bulk_response = prefix + bulk
-                lock.acquire()
-                self.socket.send_multipart((ident, bulk_response))
-                lock.release()
-
 
         response = Json.dumps(response)
+        parts = (ident, protocol_version, request_id, b'REP', key, response, bulk)
+
         lock.acquire()
-        self.socket.send_multipart((ident, response))
+        self.socket.send_multipart(parts)
         lock.release()
 
 
@@ -545,11 +531,11 @@ class Server:
             sockets = poller.poll(1000)
             for active,flag in sockets:
                 if self.socket == active:
-                    ident, request = self.socket.recv_multipart()
-                    self.queue.put((self.socket, self.socket_lock, ident, request))
+                    parts = self.socket.recv_multipart()
+                    self.queue.put((self.socket, self.socket_lock, parts))
 
 
-    def send(self, ident, response):
+    def send(self, ident, rep_id, type, key=b'', request=b'', bulk=b''):
         """ Convenience method for subclasses to fire off a message response.
             Any such subclasses are not using just the :func:`req_incoming`
             and :func:`req_handler` background thread machinery defined
@@ -557,8 +543,10 @@ class Server:
             that need to be relayed back to the original caller.
         """
 
+        parts = (ident, protocol_version, rep_id, type, key, request, bulk)
+
         self.socket_lock.acquire()
-        self.socket.send_multipart((ident, response))
+        self.socket.send_multipart(parts)
         self.socket_lock.release()
 
 
@@ -617,15 +605,22 @@ def client(address, port):
 
 
 
-def send(request, address, port):
+def send(address, port, type, key=b'', request=b'', bulk=b''):
     """ Use :func:`client` to connect to the specified *address* and *port*,
-        and issue the specified *request*. This method blocks until the
+        and issue the specified request; see :func:`Client.send` for a
+        description of the remaining arguments. This method blocks until the
         completion of the request.
     """
 
     connection = client(address, port)
-    pending = connection.send(request)
-    response = pending.wait()
+    pending = connection.send(type, key, request, bulk)
+    pending.wait()
+
+    response = pending.rep
+
+    if pending.bulk is not None:
+        response['bulk'] = pending.bulk
+
     return response
 
 

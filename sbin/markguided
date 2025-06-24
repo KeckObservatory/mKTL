@@ -32,12 +32,6 @@ def main():
     ### RequestServer on a CONFIG 'push' request.
     known = set()
 
-    hash_request = dict()
-    hash_request['request'] = 'HASH'
-
-    config_request = dict()
-    config_request['request'] = 'CONFIG'
-
     while True:
         not_seen = set(known)
         discovered = mktl.Protocol.Discover.search_direct()
@@ -52,12 +46,11 @@ def main():
             # configuration blocks discovered in this fashion.
 
             address,port = seen
-            hashes = mktl.Protocol.Request.send(hash_request, address, port)
+            hashes = mktl.Protocol.Request.send(address, port, 'HASH')
             hashes = hashes['data']
 
             for store in hashes.keys():
-                config_request['name'] = store
-                config = mktl.Protocol.Request.send(config_request, address, port)
+                config = mktl.Protocol.Request.send(address, port, 'CONFIG', store)
 
                 try:
                     blocks = config['data']
@@ -200,7 +193,7 @@ class RequestServer(mktl.Protocol.Request.Server):
             mktl.Config.Cache.add(name, new)
 
 
-    def req_config(self, request):
+    def req_config(self, store, request):
         """ When a daemon sets a configuration block it will include a 'data'
             segment in the request; an empty response is expected upon receipt
             of the configuration block. That 'data' segment is not present in a
@@ -209,11 +202,11 @@ class RequestServer(mktl.Protocol.Request.Server):
             daemon in the store.
         """
 
-        if 'data' in request:
+        if request != '':
             payload = list()
 
             new_blocks = request['data']
-            for new_block in new_blocks:
+            for uuid,new_block in new_blocks.items():
                 try:
                     self.processConfigurationBlock(new_block)
                 except ProvenanceLoopError:
@@ -221,56 +214,51 @@ class RequestServer(mktl.Protocol.Request.Server):
                     continue
 
         else:
-            name = request['name']
             try:
-                payload = mktl.Config.Cache.get(name)
+                payload = mktl.Config.Cache.get(store)
             except KeyError:
-                raise KeyError('no configuration available for ' + repr(name))
+                raise KeyError('no configuration available for ' + repr(store))
 
 
         return payload
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, socket, lock, ident, parts):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(socket, lock, ident, parts)
 
-        try:
-            type = request['request']
-        except KeyError:
-            raise KeyError("invalid request JSON, 'request' not set")
+        type = parts[1]
+        store = parts[2]
+        request = parts[3]
+        bulk = parts[4]
 
-        try:
-            name = request['name']
-        except KeyError:
-            if type != 'HASH':
-                raise KeyError("invalid request JSON, 'name' not set")
+        if type != 'HASH' and store == '':
+            raise KeyError('invalid request, no store/name specified')
 
         if type == 'HASH':
-            payload = self.req_hash(request)
+            if store == '':
+                store = None
+            payload = self.req_hash(store)
         elif type == 'CONFIG':
-            payload = self.req_config(request)
+            if store == '':
+                store = None
+            payload = self.req_config(store, request)
         else:
             raise ValueError('invalid request type: ' + type)
 
         return payload
 
 
-    def req_hash(self, request):
+    def req_hash(self, store):
         """ Return the hash of a configuration block for a requested store name,
             or all hashes for all locally known stores.
         """
 
         try:
-            request = request['name']
-        except KeyError:
-            request = None
-
-        try:
-            hashes = mktl.Config.Hash.get(request)
+            hashes = mktl.Config.Hash.get(store)
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request))
 

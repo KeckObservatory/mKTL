@@ -91,11 +91,7 @@ def get(store, key=None):
         hostname,port = guides[0]
         client = Protocol.Request.client(hostname, port)
 
-        request = dict()
-        request['request'] = 'CONFIG'
-        request['name'] = store
-
-        pending = client.send(request)
+        pending = client.send('CONFIG', store)
         response = pending.wait()
 
         try:
@@ -146,12 +142,8 @@ def refresh(store, config):
 
             client = Protocol.Request.client(hostname, req)
 
-            request = dict()
-            request['request'] = 'HASH'
-            request['name'] = store
-
             try:
-                pending = client.send(request)
+                pending = client.send('HASH', store)
             except zmq.ZMQError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
@@ -174,8 +166,7 @@ def refresh(store, config):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                request['request'] = 'CONFIG'
-                pending = client.send(request)
+                pending = client.send('CONFIG', store)
                 ### Again, exception handling may be required, though the
                 ### previous request went through, so there shouldn't be a
                 ### a fresh exception here unless the remote daemon just
