@@ -82,12 +82,10 @@ class Message:
                 except AttributeError:
                     print(repr(self))
 
-            try:
-                payload.decode
-            except AttributeError:
-                pass
-            else:
-                raise RuntimeError('payload is already bytes')
+            # Some JSON encoders will happily take a byte sequence and
+            # encode it. We may need to check here whether the payload
+            # is already bytes; it is expected to be a dictionary.
+
             if payload == None or payload == '':
                 payload = b''
             else:
