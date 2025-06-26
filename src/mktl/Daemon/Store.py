@@ -215,8 +215,7 @@ class Store(store.Store):
             existing = self._items[key]
 
             if existing is None:
-                new_item = item.Item(self, key)
-                self._items[key] = new_item
+                item.Item(self, key)
 
 
     def setup_final(self):
