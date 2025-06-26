@@ -50,18 +50,33 @@ class Client:
 
 
     def _rep_incoming(self, parts):
+        """ A client only receives two types of messages from the remote side:
+            an ACK, or a REP. The response payload, if any, is handed back to
+            the relevant :class:`Message.Request` instance for any further
+            handling by the original caller.
+        """
 
-        ### Maybe these routines should be passing around a Message instance?
         their_version = parts[0]
 
         if their_version != Message.version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(Message.version)))
+            payload = dict()
+            error = dict()
+            error['type'] = 'RuntimeError'
+            error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(Message.version))
+            payload['error'] = error
+            response_type = b'REP'
+            bulk = b''
+        else:
+            response_type = parts[2]
+            #target = parts[3]
+            payload = parts[4]
+            bulk = parts[5]
+
+        # This could still blow up if the version doesn't match-- the id may
+        # be in a different message part-- but we have to try, otherwise
+        # there's no way to pass the error back to the original caller.
 
         response_id = parts[1]
-        response_type = parts[2]
-        target = parts[3]
-        response = parts[4]
-        bulk = parts[5]
 
         try:
             pending = self.pending[response_id]
@@ -76,15 +91,15 @@ class Client:
         ### This might be a good place to log anything other than a REP
         ### response type.
 
-        if response == b'':
-            response_dict = None
+        if payload == b'':
+            payload = None
         else:
-            response_dict = Json.loads(response)
+            payload = Json.loads(payload)
 
         if bulk == b'':
             bulk = None
 
-        pending._complete(response_dict, bulk)
+        pending._complete(payload, bulk)
         del self.pending[response_id]
 
 
