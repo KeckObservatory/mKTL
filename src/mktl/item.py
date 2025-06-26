@@ -27,6 +27,7 @@ class Item:
 
     def __init__(self, store, key, subscribe=True):
 
+        self.authoritative = False
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
@@ -35,6 +36,7 @@ class Item:
         self.callbacks = list()
         self.cached = None
         self._daemon_cached = None
+        self._daemon_cached_timestamp = None
         self.req = None
         self.subscribed = False
         self.timeout = 120
@@ -42,8 +44,8 @@ class Item:
         self._update_queue_put = None
         self._update_thread = None
 
-        key_config = store.config[key]
-        provenance = key_config['provenance']
+        item_config = store.config[key]
+        provenance = item_config['provenance']
 
         # Use the highest-numbered stratum that will handle a full range of
         # queries. This capability is implied by the presence of the 'pub'
@@ -65,6 +67,17 @@ class Item:
         if hostname is None:
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
+        ### A bit of tight coupling here to try and determine if we're
+        ### the authoritative item. It'd be nice if this was more direct.
+
+        try:
+            store_provenance = store.provenance[0]
+        except AttributeError:
+            pass
+        else:
+            if store_provenance in provenance:
+                self.authoritative = True
+
         self.pub = Protocol.Publish.client(hostname, pub)
         self.req = Protocol.Request.client(hostname, req)
 
@@ -81,9 +94,12 @@ class Item:
         self.store._items[key] = self
 
         if subscribe == True:
-            ### This needs to not prime in the daemon case, but the client
-            ### case should still prime.
-            self.subscribe(prime=False)
+            if self.authoritative == True:
+                prime = False
+            else:
+                prime = True
+
+            self.subscribe(prime=prime)
 
 
     def get(self, refresh=False):
@@ -92,7 +108,7 @@ class Item:
             value available, potentially bypassing any local cache.
         """
 
-        if refresh == False and self.subscribed == True:
+        if refresh == False and self.subscribed == True and self.cached is not None:
             return self.cached
 
         request = dict()
@@ -174,6 +190,7 @@ class Item:
             message['data'] = new_value
             if self._daemon_cached != new_value['bin']:
                 self._daemon_cached = new_value['bin']
+                self._daemon_cached_timestamp = time.time()
                 changed = True
         else:
             bytes = bulk.tobytes()
@@ -187,6 +204,7 @@ class Item:
 
             if self._daemon_cached != new_value:
                 self._daemon_cached = new_value
+                self._daemon_cached_timestamp = time.time()
                 changed = True
 
         # The internal update needs a separate copy of the message dictionary,
@@ -246,6 +264,7 @@ class Item:
                 ### generalized to allow more meaningful behavior.
                 payload['asc'] = str(self._daemon_cached)
                 payload['bin'] = self._daemon_cached
+                payload['time'] = self._daemon_cached_timestamp
             else:
                 payload = self._daemon_cached
 
@@ -317,6 +336,7 @@ class Item:
         ### generalized to allow more meaningful behavior.
         payload['asc'] = str(self._daemon_cached)
         payload['bin'] = self._daemon_cached
+        payload['time'] = self._daemon_cached_timestamp
 
         return payload
 
@@ -565,7 +585,13 @@ class Item:
         else:
             new_data = self._interpret_bulk(new_message)
 
-        new_timestamp = new_message['time']
+        try:
+            new_timestamp = new_message['time']
+        except KeyError:
+            ### Catching this error may not be desirable-- if it's part of
+            ### the wire protocol, the payload should always have a timestamp
+            ### associated with it.
+            new_timestamp = time.time()
 
         self.cached = new_data
         self.cached_timestamp = new_timestamp
