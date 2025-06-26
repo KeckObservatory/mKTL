@@ -60,7 +60,7 @@ class Store:
 
 
     def __repr__(self):
-        return repr(self._items)
+        return 'store.Store: ' + repr(self._items)
 
 
     def __len__(self):
@@ -113,19 +113,12 @@ class _Iterator:
 
     def __next__(self):
 
-        item = None
+        try:
+            key = self.keys.pop()
+        except IndexError:
+            raise StopIteration
 
-        while item is None:
-            try:
-                key = self.keys.pop()
-            except IndexError:
-                raise StopIteration
-
-            try:
-                item = self.store[key]
-            except KeyError:
-                item = None
-
+        item = self.store[key]
         return item
 
     next = __next__
