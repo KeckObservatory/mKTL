@@ -13,12 +13,7 @@ import traceback
 import zmq
 
 from . import Json
-
-# This is the version of the mKTL on-the-wire protocol implemented here.
-# See the protocol specification for a full description; the version is
-# identified by a single byte.
-
-protocol_version = b'a'
+from . import Message
 
 minimum_port = 10079
 maximum_port = 13679
@@ -33,13 +28,7 @@ class Client:
 
     timeout = 0.05
 
-    req_id_min = 0
-    req_id_max = 0xFFFFFFFF
-
     def __init__(self, address, port):
-
-        self.req_id_lock = threading.Lock()
-        self._req_id_reset()
 
         port = int(port)
         self.port = port
@@ -62,14 +51,15 @@ class Client:
 
     def _rep_incoming(self, parts):
 
+        ### Maybe these routines should be passing around a Message instance?
         their_version = parts[0]
 
-        if their_version != protocol_version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(protocol_version)))
+        if their_version != Message.version:
+            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(Message.version)))
 
         response_id = parts[1]
         response_type = parts[2]
-        key = parts[3]
+        target = parts[3]
         response = parts[4]
         bulk = parts[5]
 
@@ -86,44 +76,16 @@ class Client:
         ### This might be a good place to log anything other than a REP
         ### response type.
 
+        if response == b'':
+            response_dict = None
+        else:
+            response_dict = Json.loads(response)
+
         if bulk == b'':
             bulk = None
 
-        # All other responses are expected to be JSON.
-
-        response_dict = Json.loads(response)
         pending._complete(response_dict, bulk)
         del self.pending[response_id]
-
-
-    def _req_id_next(self):
-        """ Return the next request identification number for subroutines to
-            use when constructing a request.
-        """
-
-        self.req_id_lock.acquire()
-        req_id = next(self.req_id)
-
-        if req_id >= self.req_id_max:
-            self._req_id_reset()
-
-            if req_id > self.req_id_max:
-                # This shouldn't happen, but here we are...
-                req_id = self.req_id_min
-                next(self.req_id)
-
-        self.req_id_lock.release()
-
-        req_id = '%08x' % (req_id)
-        req_id = req_id.encode()
-        return req_id
-
-
-    def _req_id_reset(self):
-        """ Reset the request identification number to the minimum value.
-        """
-
-        self.req_id = itertools.count(self.req_id_min)
 
 
     def run(self):
@@ -139,63 +101,26 @@ class Client:
                     self._rep_incoming(parts)
 
 
-    def send(self, type, key=b'', request=b'', bulk=b'', response=True):
-        """ A *request* is a Python dictionary ready to be converted to a JSON
-            byte string and sent to the receiving server. If *response* is True
-            a :class:`Pending` instance will be returned that a client can use
-            to wait on for further notification. Set *response* to any other
-            value to indicate a return response is not of interest.
-
-            If the *bulk* argument is provided it must be a byte sequence. The
-            request *type* and *key* can be specified either as bytes or as
-            regular strings; the *type* is required, and *key* may also be
-            as this functionality evolves, but presently there is one command
-            (CONFIG) that does not necessarily require a *key*.
+    def send(self, message):
+        """ A *message* is a fully populated class:`Message.Request` instance,
+            which normalizes the arguments that will be sent via this method
+            as a multi-part message. The message will also be used for
+            notification of any/all responses from the remote end; this method
+            will block while waiting for the ACK request, but the caller is
+            free to decide whether to block or wait for the full response.
         """
 
-        req_id = self._req_id_next()
-
-        type = type.upper()
-        try:
-            type = type.encode()
-        except AttributeError:
-            pass
-
-        ### Can't trivially enforce case on the key-- should the convention
-        ### be changed such that both store and key names are strictly
-        ### lower case? All upper case would be too hard to read.
-
-        try:
-            key = key.encode()
-        except AttributeError:
-            pass
-
-        try:
-            request = Json.dumps(request)
-        except TypeError:
-            # Assuming the request is already bytes.
-            pass
-
-        parts = (protocol_version, req_id, type, key, request, bulk)
-
-        if response == True:
-            pending = Pending()
-            self.pending[req_id] = pending
+        parts = message.to_parts()
+        self.pending[message.id] = message
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
         self.socket_lock.release()
 
-
-        if response != True:
-            return
-
-        ack = pending.wait_ack(self.timeout)
+        ack = message.wait_ack(self.timeout)
 
         if ack == False:
             raise zmq.ZMQError("no response received in %.2fs" % (self.timeout))
-
-        return pending
 
 
 # end of class Client
@@ -397,13 +322,14 @@ class Server:
             request.
         """
 
+        ### Maybe these routines should be passing around a Message instance?
         request_id = parts[0]
 
         ack = dict()
         ack['time'] = time.time()
-        ack = Json.dumps(ack)
 
-        parts = (ident, protocol_version, request_id, b'ACK', ack, b'', b'')
+        message = Message.Message(request_id, 'ACK', payload=ack)
+        parts = (ident,) + message.to_parts()
         lock.acquire()
         socket.send_multipart(parts)
         lock.release()
@@ -419,17 +345,18 @@ class Server:
 
         self.req_ack(socket, lock, ident, parts)
 
+        version = Message.version
         request_id = parts[0]
         request_type = parts[1]
-        key = parts[2]
+        target = parts[2]
         request = parts[3]
         bulk = parts[4]
 
         response = dict()
-        response['time'] = time.time()
-        response = Json.dumps(response)
+        response['time'] = time.time() ## This should be the value creation time
 
-        parts = (ident, protocol_version, request_id, b'REP', key, response, b'')
+        message = Message.Message(request_id, 'REP', target, response)
+        parts = (ident,) + message.to_parts()
 
         lock.acquire()
         socket.send_multipart(parts)
@@ -464,22 +391,24 @@ class Server:
         ident = parts[0]
         their_version = parts[1]
 
-        if their_version != protocol_version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(protocol_version)))
+        if their_version != Message.version:
+            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(Message.version)))
 
         request_id = parts[2]
         request_type = parts[3]
-        key = parts[4]
+        target = parts[4]
         request = parts[5]
         bulk = parts[6]
 
         request_type = request_type.decode()
-        request = Json.loads(request)
+        target = target.decode()
 
-        # We're going to use the key later on, otherwise it would be similarly
-        # decoded in advance.
+        if request == b'':
+            request = None
+        else:
+            request = Json.loads(request)
 
-        handled_parts = (request_id, request_type, key.decode(), request, bulk)
+        handled_parts = (request_id, request_type, target, request, bulk)
 
         try:
             payload = self.req_handler(socket, lock, ident, handled_parts)
@@ -514,8 +443,8 @@ class Server:
             else:
                 del payload['bulk']
 
-        response = Json.dumps(response)
-        parts = (ident, protocol_version, request_id, b'REP', key, response, bulk)
+        message = Message.Message(request_id, 'REP', target, response, bulk)
+        parts = (ident,) + message.to_parts()
 
         lock.acquire()
         self.socket.send_multipart(parts)
@@ -535,7 +464,7 @@ class Server:
                     self.queue.put((self.socket, self.socket_lock, parts))
 
 
-    def send(self, ident, rep_id, type, key=b'', request=b'', bulk=b''):
+    def send(self, ident, message):
         """ Convenience method for subclasses to fire off a message response.
             Any such subclasses are not using just the :func:`req_incoming`
             and :func:`req_handler` background thread machinery defined
@@ -543,7 +472,7 @@ class Server:
             that need to be relayed back to the original caller.
         """
 
-        parts = (ident, protocol_version, rep_id, type, key, request, bulk)
+        parts = (ident,) + message.to_parts()
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
@@ -605,21 +534,20 @@ def client(address, port):
 
 
 
-def send(address, port, type, key=b'', request=b'', bulk=b''):
+def send(address, port, message):
     """ Use :func:`client` to connect to the specified *address* and *port*,
-        and issue the specified request; see :func:`Client.send` for a
-        description of the remaining arguments. This method blocks until the
-        completion of the request.
+        and send the specified :class:`Message.Request` instance. This method
+        blocks until the completion of the request.
     """
 
     connection = client(address, port)
-    pending = connection.send(type, key, request, bulk)
-    pending.wait()
+    connection.send(message)
+    message.wait()
 
-    response = pending.rep
+    response = message.rep_payload
 
-    if pending.bulk is not None:
-        response['bulk'] = pending.bulk
+    if message.rep_bulk is not None:
+        response['bulk'] = message.rep_bulk
 
     return response
 

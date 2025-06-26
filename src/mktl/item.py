@@ -96,19 +96,21 @@ class Item:
             return self.cached
 
         request = dict()
-        request['request'] = 'GET'
-        request['name'] = self.full_key
 
         if refresh == True:
             request['refresh'] = True
 
-        pending = self.req.send('GET', self.full_key)
-        success = pending.wait(self.timeout)
+        message = Protocol.Message.Request('GET', self.full_key, request)
+        self.req.send(message)
+        success = message.wait(self.timeout)
 
         if success == False:
             raise RuntimeError('GET failed: no response to request')
 
-        response = pending.rep
+        response = message.rep_payload
+
+        if message.rep_bulk is not None:
+            response['bulk'] = message.rep_bulk
 
         try:
             error = response['error']
@@ -385,18 +387,18 @@ class Item:
         if bulk is None:
             bulk = b''
 
-        pending = self.req.send(request)
-        pending = self.req.send('SET', self.full_key, request, bulk)
+        message = Protocol.Message.Request('SET', self.full_key, request, bulk)
+        self.req.send(message)
 
         if wait == False:
-            return pending
+            return message
 
-        success = pending.wait(self.timeout)
+        success = message.wait(self.timeout)
 
         if success == False:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        response = pending.rep
+        response = message.rep_payload
 
         try:
             error = response['error']

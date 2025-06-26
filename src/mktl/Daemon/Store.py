@@ -140,12 +140,13 @@ class Store(store.Store):
 
         config = dict(self.daemon_config)
 
-        request = dict()
-        request['data'] = config
+        payload = dict()
+        payload['data'] = config
 
         for address,port in targets:
+            message = Protocol.Message.Request('CONFIG', self.name, payload)
             try:
-                Protocol.Request.send(address, port, 'CONFIG', self.name, request)
+                Protocol.Request.send(address, port, message)
             except zmq.error.ZMQError:
                 pass
 
@@ -260,27 +261,27 @@ class RequestServer(Protocol.Request.Server):
 
         request_id = parts[0]
         type = parts[1]
-        key = parts[2]
+        target = parts[2]
         request = parts[3]
         bulk = parts[4]
 
-        if key == '' and type != 'HASH' and type != 'CONFIG':
+        if target == '' and type != 'HASH' and type != 'CONFIG':
             raise KeyError("invalid request JSON, 'key' not set")
 
         if bulk != b'':
             request['bulk'] = bulk
 
         if type == 'HASH':
-            payload = self.req_hash(key)
+            payload = self.req_hash(target)
         elif type == 'SET':
-            payload = self.req_set(key, request)
+            payload = self.req_set(target, request)
             if payload is None:
                 payload = dict()
                 payload['data'] = True
         elif type == 'GET':
-            payload = self.req_get(key, request)
+            payload = self.req_get(target, request)
         elif type == 'CONFIG':
-            payload = self.req_config(key)
+            payload = self.req_config(target)
         else:
             raise ValueError('unhandled request type: ' + type)
 

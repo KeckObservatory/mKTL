@@ -89,10 +89,9 @@ def get(store, key=None):
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         hostname,port = guides[0]
-        client = Protocol.Request.client(hostname, port)
-
-        pending = client.send('CONFIG', store)
-        response = pending.wait()
+        message = Protocol.Message.Request('CONFIG', store)
+        Protocol.Request.send(hostname, port, message)
+        response = message.wait()
 
         try:
             config = response['data']
@@ -141,16 +140,17 @@ def refresh(store, config):
             req = stratum['req']
 
             client = Protocol.Request.client(hostname, req)
+            message = Protocol.Message.Request('HASH', store)
 
             try:
-                pending = client.send('HASH', store)
+                client.send(message)
             except zmq.ZMQError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
                 # to rely on the local disk cache.
                 continue
 
-            response = pending.wait()
+            response = message.wait()
 
             try:
                 hashes = response['data']
@@ -166,12 +166,13 @@ def refresh(store, config):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                pending = client.send('CONFIG', store)
+                message = Protocol.Message.Request('CONFIG', store)
+                client.send(message)
                 ### Again, exception handling may be required, though the
                 ### previous request went through, so there shouldn't be a
                 ### a fresh exception here unless the remote daemon just
                 ### went offline.
-                response = pending.wait()
+                response = message.wait()
 
                 try:
                     new_block = response['data']

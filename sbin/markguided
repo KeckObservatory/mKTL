@@ -46,11 +46,13 @@ def main():
             # configuration blocks discovered in this fashion.
 
             address,port = seen
-            hashes = mktl.Protocol.Request.send(address, port, 'HASH')
+            request = mktl.Protocol.Message.Request('HASH')
+            hashes = mktl.Protocol.Request.send(address, port, request)
             hashes = hashes['data']
 
             for store in hashes.keys():
-                config = mktl.Protocol.Request.send(address, port, 'CONFIG', store)
+                request = mktl.Protocol.Message.Request('CONFIG', store)
+                config = mktl.Protocol.Request.send(address, port, request)
 
                 try:
                     blocks = config['data']
@@ -104,18 +106,21 @@ class RequestServer(mktl.Protocol.Request.Server):
         new_items = new['items']
         new_keys = set()
 
-        for item in new_items:
-            key = item['key']
+        for key in new_items:
+            item = new_items[key]
 
             if key in new_keys:
                 raise KeyError('redundant key in configuration block: ' + key)
 
             new_keys.add(key)
 
-        name = new['name']
+        ### This really should be changed to be 'store' in the configuration
+        ### syntax.
+
+        store = new['name']
 
         try:
-            known_blocks = mktl.Config.Cache.get(name)
+            known_blocks = mktl.Config.Cache.get(store)
         except KeyError:
             # No previously stored blocks to check against. That's a pass.
             return
@@ -128,11 +133,10 @@ class RequestServer(mktl.Protocol.Request.Server):
                 continue
 
             known = known_blocks[known_uuid]
-            ## Similar caveats about nomenclature here as above.
 
             old_items = known['items']
-            for item in old_items:
-                key = item['key']
+            for key in old_items:
+                item = old_items[key]
 
                 if key in new_keys:
                     raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
