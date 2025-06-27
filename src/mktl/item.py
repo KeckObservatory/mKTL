@@ -148,6 +148,7 @@ class Item:
                 raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
 
+        ### This should pass a request.response directly to _update().
         self._update(response)
         return self.value
 
@@ -243,13 +244,15 @@ class Item:
         """ Handle a GET request. A typical subclass should not need to
             re-implement this method, implementing :func:`req_refresh`
             would normally be sufficient. The *request* argument is a
-            Python dictionary, parsed from the inbound JSON-formatted
+            class:`Message.Request` instance, parsed from the on-the-wire
             request. The value returned from :func:`req_get` is identical
             to the value returned by :func:`req_refresh`.
+
+            ### req_get should put the response in as request.response.
         """
 
         try:
-            refresh = request['refresh']
+            refresh = request.payload['refresh']
         except (TypeError, KeyError):
             refresh = False
 
@@ -348,16 +351,15 @@ class Item:
             dictionary form, with the response in the 'data' field) if desired.
             Any errors should be indicated by raising an exception.
 
-            The *request* is passed in as a dictionary; the only two fields of
-            immediate relevance are the 'data' and optionally the 'bulk' fields,
-            which indicate the new value the client would like to set.
+            The *request* is a :class:`Message.Request` instance.
+            ### req_set should put the response in as request.response.
         """
 
         try:
-            request['bulk']
+            request.payload['bulk']
         except KeyError:
             bulk = False
-            new_value = request['data']
+            new_value = request.payload['data']
         else:
             bulk = True
             new_value = self._interpret_bulk(request)
@@ -516,7 +518,7 @@ class Item:
 
 
 
-    def _interpret_bulk(self, new_message):
+    def _interpret_bulk(self, message):
         """ Interpret a new bulk value, returning the new rich data construct
             for further handling by methods like :func:`_update`. The default
             handling here treats the bulk message as if it is an N-dimensional
@@ -527,8 +529,14 @@ class Item:
         if numpy is None:
             raise ImportError('numpy module not available')
 
-        description = new_message['data']
-        bulk = new_message['bulk']
+        ### Between two worlds, this needs to be unified to act on a Message.
+
+        try:
+            description = message['data']
+            bulk = message['bulk']
+        except KeyError:
+            description = message.payload
+            bulk = message.bulk
 
         shape = description['shape']
         dtype = description['dtype']

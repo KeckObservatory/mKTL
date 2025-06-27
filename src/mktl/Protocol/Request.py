@@ -78,10 +78,16 @@ class Client:
 
         response_id = parts[1]
 
+        # We could turn the multipart sequence back into a Message instance,
+        # but we're about to attach the key components to the request that
+        # spawned the response in the first place. If the original request is
+        # gone there is nothing left to do.
+
         try:
             pending = self.pending[response_id]
         except KeyError:
-            # No further processing required.
+            # The original caller's request is gone, no further processing
+            # is possible.
             return
 
         if response_type == b'ACK':
@@ -89,7 +95,8 @@ class Client:
             return
 
         ### This might be a good place to log anything other than a REP
-        ### response type.
+        ### response type. ACK just got handled, REP should be the only
+        ### other option.
 
         if payload == b'':
             payload = None
@@ -259,27 +266,24 @@ class Server:
             self.workers.append(thread)
 
 
-    def req_ack(self, socket, lock, ident, parts):
+    def req_ack(self, socket, lock, ident, request):
         """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
             request.
         """
 
-        ### Maybe these routines should be passing around a Message instance?
-        request_id = parts[0]
-
         ack = dict()
         ack['time'] = time.time()
 
-        message = Message.Message(request_id, 'ACK', payload=ack)
-        parts = (ident,) + message.to_parts()
+        response = Message.Message(request.id, 'ACK', payload=ack)
+        parts = (ident,) + response.to_parts()
         lock.acquire()
         socket.send_multipart(parts)
         lock.release()
 
 
-    def req_handler(self, socket, lock, ident, parts):
+    def req_handler(self, socket, lock, ident, request):
         """ The default request handler is for debug purposes only, and is
             effectively a no-op. :class:`mktl.Daemon.Store` leverages a
             custom subclass of :class:`Server` that properly handles specific
@@ -287,20 +291,13 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(socket, lock, ident, parts)
-
-        version = Message.version
-        request_id = parts[0]
-        request_type = parts[1]
-        target = parts[2]
-        request = parts[3]
-        bulk = parts[4]
+        self.req_ack(socket, lock, ident, request)
 
         response = dict()
         response['time'] = time.time() ## This should be the value creation time
 
-        message = Message.Message(request_id, 'REP', target, response)
-        parts = (ident,) + message.to_parts()
+        response = Message.Message(request.id, 'REP', target, response)
+        parts = (ident,) + response.to_parts()
 
         lock.acquire()
         socket.send_multipart(parts)
@@ -341,21 +338,21 @@ class Server:
         request_id = parts[2]
         request_type = parts[3]
         target = parts[4]
-        request = parts[5]
+        payload = parts[5]
         bulk = parts[6]
 
         request_type = request_type.decode()
         target = target.decode()
 
-        if request == b'':
-            request = None
+        if payload == b'':
+            payload = None
         else:
-            request = Json.loads(request)
+            payload = Json.loads(payload)
 
-        handled_parts = (request_id, request_type, target, request, bulk)
+        request = Message.Request(request_type, target, payload, bulk, request_id)
 
         try:
-            payload = self.req_handler(socket, lock, ident, handled_parts)
+            payload = self.req_handler(socket, lock, ident, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()

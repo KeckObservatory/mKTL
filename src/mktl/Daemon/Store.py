@@ -251,44 +251,38 @@ class RequestServer(Protocol.Request.Server):
         return config
 
 
-    def req_handler(self, socket, lock, ident, parts):
+    def req_handler(self, socket, lock, ident, request):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, parts)
+        self.req_ack(socket, lock, ident, request)
 
-        request_id = parts[0]
-        type = parts[1]
-        target = parts[2]
-        request = parts[3]
-        bulk = parts[4]
+        type = request.type
+        target = request.target
 
         if target == '' and type != 'HASH' and type != 'CONFIG':
-            raise KeyError("invalid request JSON, 'key' not set")
-
-        if bulk != b'':
-            request['bulk'] = bulk
+            raise KeyError("invalid %s request, 'target' not set" % (type))
 
         if type == 'HASH':
-            payload = self.req_hash(target)
+            payload = self.req_hash(request)
         elif type == 'SET':
-            payload = self.req_set(target, request)
+            payload = self.req_set(request)
             if payload is None:
                 payload = True
         elif type == 'GET':
-            payload = self.req_get(target, request)
+            payload = self.req_get(request)
         elif type == 'CONFIG':
-            payload = self.req_config(target)
+            payload = self.req_config(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
         return payload
 
 
-    def req_get(self, key, request):
+    def req_get(self, request):
 
-        store, key = key.split('.', 1)
+        store, key = request.target.split('.', 1)
 
         if key in self.store._daemon_keys:
             pass
@@ -299,9 +293,9 @@ class RequestServer(Protocol.Request.Server):
         return payload
 
 
-    def req_set(self, key, request):
+    def req_set(self, request):
 
-        store, key = key.split('.', 1)
+        store, key = request.target.split('.', 1)
 
         if key in self.store._daemon_keys:
             pass
@@ -312,8 +306,9 @@ class RequestServer(Protocol.Request.Server):
         return payload
 
 
-    def req_hash(self, store):
+    def req_hash(self, request):
 
+        store = request.target
         if store == '':
             store = None
 
