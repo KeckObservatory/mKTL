@@ -26,7 +26,7 @@ class Message:
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
-    valid_types = set(('ACK', 'REP'))
+    valid_types = set(('ACK', 'PUB', 'REP'))
 
     def __init__(self, id, type, target=None, payload=None, bulk=None):
 
@@ -43,6 +43,7 @@ class Message:
         self.timestamp = time.time()
 
         self.parts = None
+        self.publish_parts = None
 
 
     def __repr__(self):
@@ -50,7 +51,7 @@ class Message:
         return repr(as_tuple)
 
 
-    def to_parts(self):
+    def multiparts(self):
         """ Convert this :class:`Message` to a tuple of parts appropriate
             for a call send_multipart(), where every part has been converted
             to bytes. The tuple is returned.
@@ -101,6 +102,45 @@ class Message:
         return parts
 
 
+    def publish_multiparts(self):
+        """ Convert this :class:`Message` to a tuple of parts appropriate
+            for a call send_multipart(), in a publish context, where every
+            part has been converted to bytes. The tuple is returned.
+        """
+
+        parts = self.publish_parts
+
+        if parts is None:
+
+            target = self.target
+            payload = self.payload
+            bulk = self.bulk
+
+            # The PUB/SUB topic has a trailing dot to prevent leading
+            # substring matches from picking up extra keys.
+
+            target = target + '.'
+            target = target.encode()
+
+            # Some JSON encoders will happily take a byte sequence and
+            # encode it. We may need to check here whether the payload
+            # is already bytes; it is expected to be a dictionary.
+
+            if payload == None or payload == '':
+                payload = b''
+            else:
+                payload = Json.dumps(payload)
+
+            if bulk is None or bulk == '':
+                bulk = b''
+
+            parts = (target, version, payload, bulk)
+            self.publish_parts = parts
+
+
+        return parts
+
+
 # end of class Message
 
 
@@ -110,10 +150,7 @@ class Request(Message):
         local caching of response values and signaling that a request is
         complete.
 
-        :ivar req_timestamp: A UNIX epoch timestamp corresponding to when the request is sent.
-        :ivar rep_payload: The final response to a request.
-        :ivar rep_bulk: The bulk data component, if any, of a response.
-        :ivar rep_timestamp: A UNIX epoch timestamp corresponding to when the response is received.
+        :ivar response: The final response to a request (also a Message).
     """
 
     valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
@@ -125,16 +162,19 @@ class Request(Message):
 
         Message.__init__(self, id, type, target, payload, bulk)
 
-        self.rep_bulk = None
-        self.rep_payload = None
-        self.rep_timestamp = None
+        self.response = None
 
         self.ack_event = threading.Event()
         self.rep_event = threading.Event()
 
 
     def __repr__(self):
-        as_tuple = (version, self.id, self.type, self.target, self.payload, self.bulk, self.rep_payload, self.rep_bulk)
+        as_tuple = (version, self.id, self.type, self.target, self.payload, self.bulk)
+        if self.response is None:
+            as_tuple = as_tuple + (None,)
+        else:
+            as_tuple = as_tuple + repr(self.response)
+
         return repr(as_tuple)
 
 
@@ -145,15 +185,12 @@ class Request(Message):
         self.ack_event.set()
 
 
-    def _complete(self, payload, bulk):
+    def _complete(self, response):
         """ Locally store the response and signal any callers blocking via
             :func:`wait` to proceed.
         """
 
-        self.rep_timestamp = time.time()
-        self.rep_payload = payload
-        self.rep_bulk = bulk
-
+        self.response = response
         self.ack_event.set()
         self.rep_event.set()
 
@@ -183,7 +220,7 @@ class Request(Message):
         """
 
         self.rep_event.wait(timeout)
-        return self.rep_payload
+        return self.response
 
 
 # end of class Request
