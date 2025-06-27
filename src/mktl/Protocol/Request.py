@@ -64,11 +64,12 @@ class Client:
             error['type'] = 'RuntimeError'
             error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(Message.version))
             payload['error'] = error
-            response_type = b'REP'
-            bulk = b''
+            response_type = 'REP'
+            target = '???'
+            bulk = None
         else:
             response_type = parts[2]
-            #target = parts[3]
+            target = parts[3]
             payload = parts[4]
             bulk = parts[5]
 
@@ -77,11 +78,6 @@ class Client:
         # there's no way to pass the error back to the original caller.
 
         response_id = parts[1]
-
-        # We could turn the multipart sequence back into a Message instance,
-        # but we're about to attach the key components to the request that
-        # spawned the response in the first place. If the original request is
-        # gone there is nothing left to do.
 
         try:
             pending = self.pending[response_id]
@@ -94,10 +90,6 @@ class Client:
             pending._complete_ack()
             return
 
-        ### This might be a good place to log anything other than a REP
-        ### response type. ACK just got handled, REP should be the only
-        ### other option.
-
         if payload == b'':
             payload = None
         else:
@@ -106,7 +98,8 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        pending._complete(payload, bulk)
+        response = Message.Message(response_id, 'REP', target, payload, bulk)
+        pending._complete(response)
         del self.pending[response_id]
 
 
@@ -132,7 +125,7 @@ class Client:
             free to decide whether to block or wait for the full response.
         """
 
-        parts = message.to_parts()
+        parts = message.multiparts()
         self.pending[message.id] = message
 
         self.socket_lock.acquire()
@@ -277,7 +270,7 @@ class Server:
         ack['time'] = time.time()
 
         response = Message.Message(request.id, 'ACK', payload=ack)
-        parts = (ident,) + response.to_parts()
+        parts = (ident,) + response.multiparts()
         lock.acquire()
         socket.send_multipart(parts)
         lock.release()
@@ -297,7 +290,7 @@ class Server:
         response['time'] = time.time() ## This should be the value creation time
 
         response = Message.Message(request.id, 'REP', target, response)
-        parts = (ident,) + response.to_parts()
+        parts = (ident,) + response.multiparts()
 
         lock.acquire()
         socket.send_multipart(parts)
@@ -385,7 +378,7 @@ class Server:
                 del payload['bulk']
 
         message = Message.Message(request_id, 'REP', target, response, bulk)
-        parts = (ident,) + message.to_parts()
+        parts = (ident,) + message.multiparts()
 
         lock.acquire()
         self.socket.send_multipart(parts)
@@ -413,7 +406,7 @@ class Server:
             that need to be relayed back to the original caller.
         """
 
-        parts = (ident,) + message.to_parts()
+        parts = (ident,) + message.multiparts()
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
@@ -485,12 +478,12 @@ def send(address, port, message):
     connection.send(message)
     message.wait()
 
-    response = message.rep_payload
+    payload = message.response.payload
 
-    if message.rep_bulk is not None:
-        response['bulk'] = message.rep_bulk
+    if message.response.bulk is not None:
+        payload['bulk'] = message.response.bulk
 
-    return response
+    return payload
 
 
 def shutdown():
