@@ -27,7 +27,8 @@ if msgspec is None and orjson is None:
 
 
 # The msgspec 'encode' operation returns bytes, as does orjson.dumps. To
-# maintain alignment all 'dumps' methods need to do so as well.
+# maintain alignment all 'dumps' methods need to do so as well. The 'loads'
+# methods all accept bytes as input.
 
 def json_dumps(*args, **kwargs):
     return json.dumps(*args, **kwargs).encode()
