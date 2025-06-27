@@ -118,18 +118,13 @@ class Item:
 
         message = Protocol.Message.Request('GET', self.full_key, request)
         self.req.send(message)
-        success = message.wait(self.timeout)
+        response = message.wait(self.timeout)
 
-        if success == False:
+        if response == None:
             raise RuntimeError('GET failed: no response to request')
 
-        response = message.rep_payload
-
-        if message.rep_bulk is not None:
-            response['bulk'] = message.rep_bulk
-
         try:
-            error = response['error']
+            error = response.payload['error']
         except KeyError:
             pass
         else:
@@ -147,8 +142,6 @@ class Item:
                 ### instead of a RuntimeError.
                 raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
-
-        ### This should pass a request.response directly to _update().
         self._update(response)
         return self.value
 
@@ -180,15 +173,14 @@ class Item:
         else:
             timestamp = float(timestamp)
 
-        message = dict()
-        message['message'] = 'PUB'
-        message['name'] = self.full_key
-        message['time'] = timestamp
+        payload = dict()
+        payload['time'] = timestamp
+        payload['data'] = new_value
 
         changed = False
 
         if bulk is None:
-            message['data'] = new_value
+            payload['data'] = new_value
             if self._daemon_value != new_value['bin']:
                 self._daemon_value = new_value['bin']
                 self._daemon_value_timestamp = time.time()
@@ -198,25 +190,26 @@ class Item:
             description = dict()
             description['shape'] = bulk.shape
             description['dtype'] = str(bulk.dtype)
-            message['data'] = description
-            message['bulk'] = bytes
+            payload['data'] = description
 
             new_value = bulk
+
+            ### This check could be expensive for large arrays.
 
             if self._daemon_value != new_value:
                 self._daemon_value = new_value
                 self._daemon_value_timestamp = time.time()
                 changed = True
 
-        # The internal update needs a separate copy of the message dictionary,
-        # as its contents relating to bulk messages are manipulated as part of
-        # putting the message out "on the wire". A deep copy is not necessary.
+        message = Protocol.Message.Message(None, 'PUB', self.full_key, payload, bulk)
 
-        # This is presently commented out because the daemon-aware handling
-        # in subscribe() is not enabled.
+        # The local call to manipulate the _update_queue is presently commented
+        # out because the daemon-aware handling in subscribe() is not enabled.
+        # This could be enabled if allowing client-facing updates to occur via
+        # the usual PUB/SUB machinery is too expensive.
 
         if changed == True or repeat == True:
-            ### self._update_queue.put(dict(message))
+            ### self._update_queue.put(message)
             self.store.pub.publish(message)
 
 
@@ -244,9 +237,9 @@ class Item:
         """ Handle a GET request. A typical subclass should not need to
             re-implement this method, implementing :func:`req_refresh`
             would normally be sufficient. The *request* argument is a
-            class:`Message.Request` instance, parsed from the on-the-wire
-            request. The value returned from :func:`req_get` is identical
-            to the value returned by :func:`req_refresh`.
+            class:`Protocol.Message.Request` instance, parsed from the
+            on-the-wire request. The value returned from :func:`req_get`
+            is identical to the value returned by :func:`req_refresh`.
 
             ### req_get should put the response in as request.response.
         """
@@ -351,7 +344,7 @@ class Item:
             dictionary form, with the response in the 'data' field) if desired.
             Any errors should be indicated by raising an exception.
 
-            The *request* is a :class:`Message.Request` instance.
+            The *request* is a :class:`Protocol.Message.Request` instance.
             ### req_set should put the response in as request.response.
         """
 
@@ -415,15 +408,13 @@ class Item:
         if wait == False:
             return message
 
-        success = message.wait(self.timeout)
+        response = message.wait(self.timeout)
 
-        if success == False:
+        if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        response = message.rep_payload
-
         try:
-            error = response['error']
+            error = response.payload['error']
         except KeyError:
             pass
         else:
@@ -454,18 +445,6 @@ class Item:
         if self.subscribed == True:
             return
 
-        config = self.store.config[self.key]
-
-        try:
-            type = config['type']
-        except KeyError:
-            bulk = False
-        else:
-            if type == 'bulk':
-                bulk = True
-            else:
-                bulk = False
-
         # A local thread is used to execute callbacks to ensure we don't tie
         # up the Protocol.Publish.Client from moving on to the next broadcast.
         # This does mean there's an extra background thread for every Item
@@ -486,13 +465,10 @@ class Item:
         self._update_queue_put = self._update_queue.put
         self._update_thread = _Updater(self._update, self._update_queue)
 
-        ### These two subscriptions against self.pub could be omitted if the
+        ### This subscription against self.pub could be omitted if the
         ### Item is in a Daemon context. See the publish() method for the extra
         ### call to the _update_queue that needs to be enabled to bypass that
         ### machinery.
-
-        if bulk == True:
-            self.pub.subscribe('bulk:' + self.full_key)
 
         self.pub.register(self._update_queue_put, self.full_key)
         self.subscribed = True
@@ -515,7 +491,6 @@ class Item:
         """
 
         return value
-
 
 
     def _interpret_bulk(self, message):
@@ -576,34 +551,30 @@ class Item:
             self.callbacks.remove(reference)
 
 
-    def _update(self, new_message):
+    def _update(self, message):
         """ The caller received a new data segment either from a directed
             GET request or from a PUB subscription.
         """
 
-        try:
-            new_data = new_message['data']
-        except KeyError:
-            return
-
-        try:
-            new_message['bulk']
-        except KeyError:
-            pass
+        if message.bulk is not None:
+            payload = self._interpret_bulk(message)
         else:
-            new_data = self._interpret_bulk(new_message)
+            try:
+                payload = message.payload['data']
+            except KeyError:
+                payload = None
 
         try:
-            new_timestamp = new_message['time']
+            timestamp = message.payload['time']
         except KeyError:
             ### Catching this error may not be desirable-- if it's part of
             ### the wire protocol, the payload should always have a timestamp
             ### associated with it.
-            new_timestamp = time.time()
+            timestamp = time.time()
 
-        self.value = new_data
-        self.value_timestamp = new_timestamp
-        self._propagate(new_data, new_timestamp)
+        self.value = payload
+        self.value_timestamp = timestamp
+        self._propagate(payload, timestamp)
 
 
     def __bool__(self):
