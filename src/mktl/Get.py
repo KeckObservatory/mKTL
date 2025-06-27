@@ -94,7 +94,7 @@ def get(store, key=None):
         response = message.wait()
 
         try:
-            config = response['data']
+            config = response.payload['data']
         except KeyError:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
@@ -153,7 +153,7 @@ def refresh(store, config):
             response = message.wait()
 
             try:
-                hashes = response['data']
+                hashes = response.payload['data']
             except KeyError:
                 # No response available.
                 continue
@@ -175,7 +175,7 @@ def refresh(store, config):
                 response = message.wait()
 
                 try:
-                    new_block = response['data']
+                    new_block = response.payload['data']
                 except KeyError:
                     # No response available.
                     continue
