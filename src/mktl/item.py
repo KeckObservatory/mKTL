@@ -34,9 +34,9 @@ class Item:
         self.config = store.config[key]
 
         self.callbacks = list()
-        self.cached = None
-        self._daemon_cached = None
-        self._daemon_cached_timestamp = None
+        self.value = None
+        self._daemon_value = None
+        self._daemon_value_timestamp = None
         self.req = None
         self.subscribed = False
         self.timeout = 120
@@ -108,8 +108,8 @@ class Item:
             value available, potentially bypassing any local cache.
         """
 
-        if refresh == False and self.subscribed == True and self.cached is not None:
-            return self.cached
+        if refresh == False and self.subscribed == True and self.value is not None:
+            return self.value
 
         request = dict()
 
@@ -149,7 +149,7 @@ class Item:
 
 
         self._update(response)
-        return self.cached
+        return self.value
 
 
     def poll(self, period):
@@ -188,9 +188,9 @@ class Item:
 
         if bulk is None:
             message['data'] = new_value
-            if self._daemon_cached != new_value['bin']:
-                self._daemon_cached = new_value['bin']
-                self._daemon_cached_timestamp = time.time()
+            if self._daemon_value != new_value['bin']:
+                self._daemon_value = new_value['bin']
+                self._daemon_value_timestamp = time.time()
                 changed = True
         else:
             bytes = bulk.tobytes()
@@ -202,9 +202,9 @@ class Item:
 
             new_value = bulk
 
-            if self._daemon_cached != new_value:
-                self._daemon_cached = new_value
-                self._daemon_cached_timestamp = time.time()
+            if self._daemon_value != new_value:
+                self._daemon_value = new_value
+                self._daemon_value_timestamp = time.time()
                 changed = True
 
         # The internal update needs a separate copy of the message dictionary,
@@ -257,16 +257,16 @@ class Item:
             payload = self.req_poll()
         else:
             try:
-                self._daemon_cached.tobytes
+                self._daemon_value.tobytes
             except AttributeError:
                 payload = dict()
                 ### This translation to a string representation needs to be
                 ### generalized to allow more meaningful behavior.
-                payload['asc'] = str(self._daemon_cached)
-                payload['bin'] = self._daemon_cached
-                payload['time'] = self._daemon_cached_timestamp
+                payload['asc'] = str(self._daemon_value)
+                payload['bin'] = self._daemon_value
+                payload['time'] = self._daemon_value_timestamp
             else:
-                payload = self._daemon_cached
+                payload = self._daemon_value
 
         try:
             bytes = payload.tobytes()
@@ -334,9 +334,9 @@ class Item:
         payload = dict()
         ### This translation to a string representation needs to be
         ### generalized to allow more meaningful behavior.
-        payload['asc'] = str(self._daemon_cached)
-        payload['bin'] = self._daemon_cached
-        payload['time'] = self._daemon_cached_timestamp
+        payload['asc'] = str(self._daemon_value)
+        payload['bin'] = self._daemon_value
+        payload['time'] = self._daemon_value_timestamp
 
         return payload
 
@@ -593,17 +593,17 @@ class Item:
             ### associated with it.
             new_timestamp = time.time()
 
-        self.cached = new_data
-        self.cached_timestamp = new_timestamp
+        self.value = new_data
+        self.value_timestamp = new_timestamp
         self._propagate(new_data, new_timestamp)
 
 
     def __bool__(self):
-        if self.cached is None:
+        if self.value is None:
             return False
 
         try:
-            current = self.cached['bin']
+            current = self.value['bin']
         except:
             # Something other than an asc/bin dictionary. Not sure what it is,
             # but it's _something_, so...
@@ -626,7 +626,7 @@ class Item:
     def __bytes__(self):
 
         try:
-            bytes = self.cached.tobytes()
+            bytes = self.value.tobytes()
         except AttributeError:
             bytes = bytes(str(self))
 
@@ -641,250 +641,250 @@ class Item:
 
 
     def __str__(self):
-        if self.cached is None:
+        if self.value is None:
             return ''
 
-        return str(self.cached['asc'])
+        return str(self.value['asc'])
 
 
     def __lt__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current < other
 
     def __le__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current <= other
 
     def __eq__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current == other
 
     def __ne__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current != other
 
     def __gt__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current > other
 
     def __ge__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current >= other
 
     def __add__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current + other
 
     def __radd__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other + current
 
     def __sub__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current - other
 
     def __rsub__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other - current
 
     def __mul__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current * other
 
     def __rmul__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other * current
 
     def __div__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current / other
 
     def __rdiv__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other / current
 
     def __truediv__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         current = float(current)
         return current / other
 
     def __rtruediv__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         current = float(current)
         return other / current
 
     def __mod__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current % other
 
     def __rmod__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other % current
 
     def __floordiv__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current // other
 
     def __rfloordiv__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other // current
 
     def __divmod__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return (current // other, self % other)
 
     def __rdivmod__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return (other // current, other % self)
 
     def __pow__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current ** other
 
     def __rpow__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other ** current
 
     def __neg__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return -current
 
     def __pos__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return +current
 
     def __abs__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return abs(current)
 
     def __invert__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return ~current
 
     def __and__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current & other
 
     def __rand__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other & current
 
     def __or__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current | other
 
     def __ror__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other | current
 
     def __xor__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return current ^ other
 
     def __rxor__(self, other):
-        if self.cached is None:
+        if self.value is None:
             current = None
         else:
-            current = self.cached['bin']
+            current = self.value['bin']
         return other ^ current
 
 
