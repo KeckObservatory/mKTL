@@ -9,6 +9,7 @@ import traceback
 import zmq
 
 from . import Json
+from . import Message
 from .. import WeakRef
 
 minimum_port = 10139
@@ -135,6 +136,7 @@ class Client:
         else:
             topic = str(topic)
             topic = topic.strip()
+            topic = topic + '.'
             topic = topic.encode()
 
             try:
@@ -152,66 +154,37 @@ class Client:
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
 
-        pending = dict()
-
         while self.shutdown == False:
             sockets = poller.poll(1000)
             for active,flag in sockets:
                 if self.socket == active:
-                    message = self.socket.recv()
+                    parts = self.socket.recv_multipart()
+                    self._pub_incoming(parts)
 
-                    # A message is either JSON-formatted or a binary blob.
-                    # Parse any JSON now so that it only has to happen once;
-                    # callbacks are expecting to receive a Python dictionary
-                    # representing the parsed JSON.
 
-                    # We could receive the two pieces of a bulk message in
-                    # either order; in either case the message needs to be
-                    # reconstructed from its two parts before being propagated
-                    # to any subscribed clients.
+    def _pub_incoming(self, parts):
 
-                    topic, message = message.split(maxsplit=1)
+        topic = parts[0]
+        their_version = parts[1]
 
-                    if topic[:5] == b'bulk:':
-                        message_id, bulk = message.split(maxsplit=1)
-                        message_id = int(message_id)
+        if their_version != Message.version:
+            ### Maybe we should occasionally log a version mismatch.
+            ### For now it's being dropped on the floor.
+            return
 
-                        topic = topic[5:]
-                        key = (topic, message_id)
+        payload = parts[2]
+        bulk = parts[3]
 
-                        try:
-                            previous = pending[key]
-                        except KeyError:
-                            pending[key] = bulk
-                            continue
-                        else:
-                            # Reconstitute the final message.
-                            message = previous
-                            message['bulk'] = bulk
-                            del pending[key]
+        if payload == b'':
+            payload = None
+        else:
+            payload = Json.loads(payload)
 
-                    else:
-                        message = message.decode()
-                        message = Json.loads(message)
+        if bulk == b'':
+            bulk = None
 
-                        try:
-                            bulk = message['bulk']
-                        except KeyError:
-                            bulk = False
-
-                        if bulk == True:
-                            key = (topic, message['id'])
-                            try:
-                                previous = pending[key]
-                            except KeyError:
-                                pending[key] = message
-                                continue
-                            else:
-                                # Reconstitute the final message.
-                                message['bulk'] = bulk
-                                del pending[key]
-
-                    self.propagate(topic, message)
+        broadcast = Message.Message(None, 'PUB', topic, payload, bulk)
+        self.propagate(topic, broadcast)
 
 
     def subscribe(self, topic):
@@ -228,17 +201,6 @@ class Client:
             topic = topic.encode()
 
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
-
-        # Someone that knows whether a given item has a bulk component should
-        # decide whether to subscribe to the bulk-specific topic. We could
-        # do it here, for every subscribed channel regardless of whether it
-        # actually has a bulk component, but that seems inefficient.
-
-        # self.socket.setsockopt(zmq.SUBSCRIBE, b'bulk:' + topic)
-
-        # The conditional need for this additional 'bulk' subscribtion is
-        # handled in the Item class, specifically, Item.subscribe(), since
-        # it knows whether the additional subscription is necessary.
 
 
 # end of class Client
@@ -258,13 +220,7 @@ class Server:
         :ivar port: The port on which this server is listening for connections.
     """
 
-    pub_id_min = 0
-    pub_id_max = 0xFFFFFFFF
-
     def __init__(self, port=None, avoid=set()):
-
-        self.pub_id_lock = threading.Lock()
-        self._pub_id_reset()
 
         self.socket = zmq_context.socket(zmq.PUB)
 
@@ -327,74 +283,13 @@ class Server:
         self.port = trial
 
 
-    def _pub_id_next(self):
-        """ Return the next publication identification number for subroutines to
-            use when constructing a broadcast message.
-        """
-
-        self.pub_id_lock.acquire()
-        pub_id = next(self.pub_id)
-
-        if pub_id >= self.pub_id_max:
-            self._pub_id_reset()
-
-            if pub_id > self.pub_id_max:
-                # This shouldn't happen, but here we are...
-                pub_id = self.pub_id_min
-                next(self.pub_id)
-
-        self.pub_id_lock.release()
-        return pub_id
-
-
-    def _pub_id_reset(self):
-        """ Reset the publication identification number to the minimum value.
-        """
-
-        self.pub_id = itertools.count(self.pub_id_min)
-
-
     def publish(self, message):
-        """ A *message* is a Python dictionary ready to be converted to a
-            JSON byte string and broadcast to any subscribers. The topic for
-            the encoded message will be the 'name' field of the dictionary.
-            The *message* dictionary will be modified by this method, callers
-            should not assume fields are unchanged.
-
-            The 'id' field in the *message*, if specified, will be overwritten.
-
-            If the 'bulk' field is present in the *message* it must be a byte
-            sequence, and will be sent as a separate message to any listeners.
-            The 'bulk' field will be removed and sent as a separate message,
-            with the reference inside the *message* replaced by True, as an
-            indicator to any recipients that they should look for the second
-            message containing the bulk data.
+        """ A *message* is a :class:`Message.Message` instance intended for
+            broadcast to any subscribers.
         """
 
-        pub_id = self._pub_id_next()
-        topic = message['name']
-
-        message['id'] = pub_id
-
-        try:
-            bulk = message['bulk']
-        except KeyError:
-            bulk = None
-        else:
-            message['bulk'] = True
-
-        prefix = topic + ' '
-        prefix = prefix.encode()
-
-        message = prefix + Json.dumps(message)
-        self.socket.send(message)
-
-        if bulk is not None:
-            prefix = 'bulk:' + topic + ' ' + str(pub_id) + ' '
-            prefix = prefix.encode()
-
-            bulk_payload = prefix + bulk
-            self.socket.send(bulk_payload)
+        parts = message.publish_multiparts()
+        self.socket.send_multipart(parts)
 
 
 # end of class Server
