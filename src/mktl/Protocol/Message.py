@@ -118,15 +118,12 @@ class Request(Message):
 
     valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
 
-    def __init__(self, type, target=None, payload=None, bulk=None):
+    def __init__(self, type, target=None, payload=None, bulk=None, id=None):
 
-        id = _id_next()
+        if id is None:
+            id = _id_next()
 
         Message.__init__(self, id, type, target, payload, bulk)
-        ###if type in self.valid_types:
-        ###    pass
-        ###else:
-        ###    raise ValueError('invalid request type: ' + type)
 
         self.rep_bulk = None
         self.rep_payload = None
