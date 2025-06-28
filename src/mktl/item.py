@@ -12,6 +12,7 @@ except ImportError:
 from . import Config
 from . import Protocol
 from . import WeakRef
+from .Daemon import Poll
 
 
 class Item:
@@ -196,7 +197,12 @@ class Item:
 
             ### This check could be expensive for large arrays.
 
-            if self._daemon_value != new_value:
+            if self._daemon_value is None:
+                match = False
+            else:
+                match = (self._daemon_value & new_value).all()
+
+            if match == False:
                 self._daemon_value = new_value
                 self._daemon_value_timestamp = time.time()
                 changed = True
@@ -504,14 +510,8 @@ class Item:
         if numpy is None:
             raise ImportError('numpy module not available')
 
-        ### Between two worlds, this needs to be unified to act on a Message.
-
-        try:
-            description = message['data']
-            bulk = message['bulk']
-        except KeyError:
-            description = message.payload
-            bulk = message.bulk
+        description = message.payload['data']
+        bulk = message.bulk
 
         shape = description['shape']
         dtype = description['dtype']

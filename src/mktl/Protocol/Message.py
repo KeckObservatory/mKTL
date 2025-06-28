@@ -92,7 +92,7 @@ class Message:
             else:
                 payload = Json.dumps(payload)
 
-            if bulk is None or bulk == '':
+            if bulk is None:
                 bulk = b''
 
             parts = (version, id, type, target, payload, bulk)
@@ -131,7 +131,7 @@ class Message:
             else:
                 payload = Json.dumps(payload)
 
-            if bulk is None or bulk == '':
+            if bulk is None:
                 bulk = b''
 
             parts = (target, version, payload, bulk)
