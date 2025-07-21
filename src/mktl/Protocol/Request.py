@@ -328,13 +328,13 @@ class Server:
         if their_version != Message.version:
             raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(Message.version)))
 
-        request_id = parts[2]
-        request_type = parts[3]
+        req_id = parts[2]
+        req_type = parts[3]
         target = parts[4]
         payload = parts[5]
         bulk = parts[6]
 
-        request_type = request_type.decode()
+        req_type = req_type.decode()
         target = target.decode()
 
         if payload == b'':
@@ -342,7 +342,7 @@ class Server:
         else:
             payload = Json.loads(payload)
 
-        request = Message.Request(request_type, target, payload, bulk, request_id)
+        request = Message.Request(req_type, target, payload, bulk, req_id)
 
         try:
             payload = self.req_handler(socket, lock, ident, request)
@@ -377,7 +377,7 @@ class Server:
             else:
                 del payload['bulk']
 
-        message = Message.Message(request_id, 'REP', target, response, bulk)
+        message = Message.Message(req_id, 'REP', target, response, bulk)
         parts = (ident,) + message.multiparts()
 
         lock.acquire()
