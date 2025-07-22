@@ -12,7 +12,7 @@ import time
 import traceback
 import zmq
 
-from . import Json
+from .. import json
 from . import Message
 
 minimum_port = 10079
@@ -93,7 +93,7 @@ class Client:
         if payload == b'':
             payload = None
         else:
-            payload = Json.loads(payload)
+            payload = json.loads(payload)
 
         if bulk == b'':
             bulk = None
@@ -340,7 +340,7 @@ class Server:
         if payload == b'':
             payload = None
         else:
-            payload = Json.loads(payload)
+            payload = json.loads(payload)
 
         request = Message.Request(req_type, target, payload, bulk, req_id)
 

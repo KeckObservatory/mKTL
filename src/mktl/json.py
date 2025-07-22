@@ -4,8 +4,8 @@
 
 # The business about conditionally importing the libraries is intended to
 # avoid importing less efficient libraries if they are not available. With
-# the right build process this could be determined at build time, instead
-# of at run time.
+# the right process this could be determined at build time instead of at
+# run time, but the conditional handling has a low overhead.
 
 msgspec = None
 orjson = None
@@ -26,9 +26,9 @@ if msgspec is None and orjson is None:
     import json
 
 
-# The msgspec 'encode' operation returns bytes, as does orjson.dumps. To
-# maintain alignment all 'dumps' methods need to do so as well. The 'loads'
-# methods all accept bytes as input.
+# The msgspec 'encode' operation returns bytes, as does orjson.dumps(). To
+# maintain alignment all dumps() methods need to do so as well. The loads()
+# methods across all three modules will accept bytes as input.
 
 def json_dumps(*args, **kwargs):
     return json.dumps(*args, **kwargs).encode()

@@ -6,7 +6,7 @@ import time
 
 from . import poll
 from . import Config
-from . import protocol
+from . import json
 
 
 queues = dict()
@@ -40,9 +40,9 @@ def load(store, uuid):
         filename = os.path.join(uuid_directory, key)
         bulk_filename = os.path.join(uuid_directory, 'bulk:' + key)
 
-        json = open(filename, 'rb').read()
+        raw_json = open(filename, 'rb').read()
 
-        if len(json) == 0:
+        if len(raw_json) == 0:
             continue
 
         # The data on-disk is expected to be an {asc:, bin:} dictionary
@@ -51,7 +51,7 @@ def load(store, uuid):
         # portion of a simple value-- that's what the format of a set request
         # would look like on the wire.
 
-        data = protocol.Json.loads(json)
+        data = json.loads(raw_json)
 
         try:
             data = data['bin']
@@ -111,7 +111,7 @@ def save(item, *args, **kwargs):
 
         saved['bulk'] = bytes
 
-    payload = protocol.Json.dumps(payload)
+    payload = json.dumps(payload)
     saved[''] = payload
 
     pending.put((item.key, saved))

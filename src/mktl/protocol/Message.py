@@ -6,7 +6,7 @@ import itertools
 import threading
 import time
 
-from . import Json
+from .. import json
 
 
 # This is the version of the mKTL on-the-wire protocol implemented here.
@@ -90,7 +90,7 @@ class Message:
             if payload == None or payload == '':
                 payload = b''
             else:
-                payload = Json.dumps(payload)
+                payload = json.dumps(payload)
 
             if bulk is None:
                 bulk = b''
@@ -129,7 +129,7 @@ class Message:
             if payload == None or payload == '':
                 payload = b''
             else:
-                payload = Json.dumps(payload)
+                payload = json.dumps(payload)
 
             if bulk is None:
                 bulk = b''

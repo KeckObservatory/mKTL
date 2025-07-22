@@ -8,9 +8,10 @@ import threading
 import traceback
 import zmq
 
-from . import Json
-from . import Message
+from .. import json
 from .. import WeakRef
+
+from . import Message
 
 minimum_port = 10139
 maximum_port = 13679
@@ -178,7 +179,7 @@ class Client:
         if payload == b'':
             payload = None
         else:
-            payload = Json.loads(payload)
+            payload = json.loads(payload)
 
         if bulk == b'':
             bulk = None

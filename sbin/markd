@@ -79,10 +79,11 @@ def load_configuration(store, identifier, filename):
     # The mKTL import is here (as opposed to the top of the script) to allow
     # running this executable in contexts where the mKTL module may not be
     # on the default search path.
+
     import mktl
 
     contents = open(filename, 'r').read()
-    items = mktl.protocol.Json.loads(contents)
+    items = mktl.json.loads(contents)
     mktl.Config.File.save_daemon(store, identifier, items)
 
 

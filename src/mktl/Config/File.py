@@ -2,7 +2,7 @@
 import os
 import uuid
 
-from ..protocol import Json
+from .. import json
 
 
 def directory():
@@ -112,7 +112,7 @@ def load_client(store, filename):
     target_uuid = os.path.basename(base_filename)
 
     raw_json = open(filename, 'r').read()
-    configuration = Json.loads(raw_json)
+    configuration = json.loads(raw_json)
     configuration['uuid'] = target_uuid
 
     results = dict()
@@ -142,7 +142,7 @@ def load_daemon(store, filename):
     configuration = dict()
 
     raw_json = open(filename, 'r').read()
-    items = Json.loads(raw_json)
+    items = json.loads(raw_json)
 
     configuration['name'] = store
     configuration['uuid'] = target_uuid
@@ -260,7 +260,7 @@ def save(store, configuration):
     if os.access(cache_directory, os.W_OK) != True:
         raise OSError('cannot write to cache directory: ' + cache_directory)
 
-    raw_json = Json.dumps(configuration)
+    raw_json = json.dumps(configuration)
 
     target_filename = os.path.join(cache_directory, json_filename)
 
@@ -300,7 +300,7 @@ def save_daemon(store, specific, configuration):
     if os.access(daemon_directory, os.W_OK) != True:
         raise OSError('cannot write to daemon directory: ' + daemon_directory)
 
-    raw_json = Json.dumps(configuration)
+    raw_json = json.dumps(configuration)
 
     target_filename = os.path.join(daemon_directory, json_filename)
 

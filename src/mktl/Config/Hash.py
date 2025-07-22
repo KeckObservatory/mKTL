@@ -3,7 +3,7 @@
 
 import hashlib
 
-from ..protocol import Json
+from .. import json
 from . import Cache
 
 _cache = dict()
@@ -36,9 +36,9 @@ def hash(dumpable):
         as it is consistent.
     """
 
-    json = Json.dumps(dumpable)
+    raw_json = json.dumps(dumpable)
 
-    hash = hashlib.shake_256(json)
+    hash = hashlib.shake_256(raw_json)
     hash = int(hash.hexdigest(16), 16)
     return hash
 

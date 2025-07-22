@@ -3,6 +3,7 @@
     key/value pairs and handling client requests.
 """
 
+from . import json
 from . import WeakRef
 
 from . import protocol
