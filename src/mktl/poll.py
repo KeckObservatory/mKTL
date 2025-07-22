@@ -2,7 +2,7 @@
 import threading
 import time
 
-from .. import WeakRef
+from . import WeakRef
 
 active = dict()
 

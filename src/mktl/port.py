@@ -3,7 +3,7 @@
 
 import os
 
-from .. import Config
+from . import Config
 
 
 def load(store, uuid):

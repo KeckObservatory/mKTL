@@ -4,9 +4,9 @@ import os
 import queue
 import time
 
-from . import Poll
-from .. import Config
-from .. import Protocol
+from . import poll
+from . import Config
+from . import Protocol
 
 
 queues = dict()
@@ -157,7 +157,7 @@ class Pending:
         self.put = self.queue.put
 
         # Use a background poller to flush events to disk every five seconds.
-        Poll.start(self.flush, 5)
+        poll.start(self.flush, 5)
 
 
     def flush(self):
