@@ -19,7 +19,6 @@ home = Config.File.home
 
 from . import persist
 from . import poll
-from . import port
 
 # These are the main public-facing classes.
 
