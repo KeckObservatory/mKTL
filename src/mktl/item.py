@@ -273,7 +273,6 @@ class Item:
             payload['dtype'] = str(bulk.dtype)
             payload['bulk'] = bytes
 
-        print('req_get(): returning: ' + repr(payload))
         return payload
 
 
