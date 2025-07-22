@@ -4,23 +4,23 @@ import subprocess
 import sys
 import zmq
 
-from .. import Config
-from .. import item
-from .. import Protocol
-from .. import store
+from . import Config
+from . import Get
+from . import item
+from . import Protocol
+from . import store
 
-from . import Persist
-from . import Port
+from . import persist
+from . import port
 
 
-class Store(store.Store):
-    """ The daemon version of a Store is based on the client version; the
-        behavior defaults to the client approach, but for items specified in
-        the daemon *config* file a daemon-specific variant of the item will
-        be loaded that supplements the client behavior with daemon-specific
-        functionality.
+class Daemon:
+    """ The mKTL :class:`Daemon` is little more than a facilitator for common
+        mKTL actions taken in a daemon context: loading a configuration file,
+        instantiating :class:`mktl.Item` instances, and commencing routine
+        operations.
 
-        The developer is expected to subclass :class:`Store` class and
+        The developer is expected to subclass the :class:`Daemon` class and
         implement a :func:`setup` method, and/or a :func:`setup_final`
         method.
 
@@ -28,47 +28,44 @@ class Store(store.Store):
         name of the mKTL configuration file that defines the items in this
         store. *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
-        named attributes of interest to a :class:`Store` subclass; it is not
+        named attributes of interest to a :class:`Daemon` subclass; it is not
         required. This is intended to be a vehicle for subclasses to receive
         key information from command-line arguments, such as the location of
         an auxiliary configuration file containing information about a hardware
         controller.
     """
 
-    def __init__(self, name, config, arguments=None):
+    def __init__(self, store, config, arguments=None):
 
-        self.name = name
-        self.config = None
         self._items = dict()
-        self.daemon_config = None
-        self.daemon_uuid = None
-        self._daemon_keys = set()
+        self.config = None
+        self.uuid = None
 
-        daemon_config = Config.load(name, config)
-        self._update_daemon_config(daemon_config)
+        config = Config.load(store, config)
+        self._update_config(store, config)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
 
-        req, pub = Port.load(self.name, self.daemon_uuid)
+        rep, pub = port.load(store, self.uuid)
 
         try:
-            self.pub = Protocol.Publish.Server(port=pub, avoid=Port.used())
+            self.pub = Protocol.Publish.Server(port=pub, avoid=port.used())
         except zmq.error.ZMQError:
-            self.pub = Protocol.Publish.Server(port=None, avoid=Port.used())
+            self.pub = Protocol.Publish.Server(port=None, avoid=port.used())
 
         try:
-            self.req = RequestServer(self, port=req, avoid=Port.used())
+            self.rep = RequestServer(self, port=rep, avoid=port.used())
         except zmq.error.ZMQError:
-            self.req = RequestServer(self, port=None, avoid=Port.used())
+            self.rep = RequestServer(self, port=None, avoid=port.used())
 
-        Port.save(self.name, self.daemon_uuid, self.req.port, self.pub.port)
+        port.save(store, self.uuid, self.rep.port, self.pub.port)
 
         provenance = dict()
         provenance['stratum'] = 0
-        provenance['hostname'] = self.req.hostname
-        provenance['req'] = self.req.port
+        provenance['hostname'] = self.rep.hostname
+        provenance['rep'] = self.rep.port
         provenance['pub'] = self.pub.port
 
         self.provenance = list()
@@ -81,11 +78,24 @@ class Store(store.Store):
         # after-the-fact, and thus need to refresh the local cache to ensure
         # consistency.
 
-        self.daemon_config[self.daemon_uuid]['provenance'] = self.provenance
-        Config.add(self.name, self.daemon_config)
+        self.config[self.uuid]['provenance'] = self.provenance
+        Config.add(store, self.config)
 
-        config = Config.Items.get(name)
-        self._update_config(config)
+        # The cached configuration managed by Config needs to be in its final
+        # form before creating a local Store instance. For the sake of future
+        # calls to get() we need to be sure that there are no existing instances
+        # in the cache, the daemon needs to always get back the instance
+        # containing authoritative items.
+
+        existing = Get.clear(store)
+
+        if existing is None:
+            pass
+        else:
+            # It's possible this should be a warning as opposed to a hard error.
+            raise RuntimeError('the Daemon needs to be started before any client requests against its store name')
+
+        self.store = Get.get(store)
 
         # Local machinery is intact. Invoke the setup() method, which is the
         # hook for the developer to establish their own custom Item classes
@@ -95,8 +105,8 @@ class Store(store.Store):
         self._setup_missing()
 
         # Restore any persistent values, and enable the retention of future
-        # persistent values. If there are no persistent items present in this
-        # store the call to _restore() is a no-op, and the persistence
+        # persistent values. If there are no persistent items present for this
+        # daemon the call to _restore() is a no-op, and the persistence
         # subprocess will exit.
 
         self._restore()
@@ -109,10 +119,32 @@ class Store(store.Store):
 
         # Ready to go on the air.
 
-        discovery = Protocol.Discover.DirectServer(self.req.port)
+        discovery = Protocol.Discover.DirectServer(self.rep.port)
 
         guides = Protocol.Discover.search(wait=True)
         self._publish_config(guides)
+
+
+    def add_item(self, item_class, key, **kwargs):
+        """ Add an :class:`mktl.Item` to this daemon instance; this is the entry
+            point for establishing an authoritative item, one that will handle
+            inbound get/set request and the like. The *kwargs* will be passed
+            directly to the *item_class* when it is called to be instantiated.
+        """
+
+        try:
+            self._items[key]
+        except KeyError:
+            raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
+
+        existing = self.store._items[key]
+
+        if existing is None:
+            kwargs['authoritative'] = True
+            kwargs['pub'] = self.pub
+            new_item = item_class(self.store, key, **kwargs)
+        else:
+            raise RuntimeError('duplicate item not allowed: ' + key)
 
 
     def _begin_persistence(self):
@@ -127,8 +159,8 @@ class Store(store.Store):
         arguments = list()
         arguments.append(sys.executable)
         arguments.append(markpersistd)
-        arguments.append(self.name)
-        arguments.append(self.daemon_uuid)
+        arguments.append(self.store.name)
+        arguments.append(self.uuid)
 
         pipe = subprocess.PIPE
         self.persistence = subprocess.Popen(arguments)
@@ -138,13 +170,12 @@ class Store(store.Store):
         """ Put our local configuration out on the wire.
         """
 
-        config = dict(self.daemon_config)
-
+        config = dict(self.config)
         payload = dict()
         payload['data'] = config
+        message = Protocol.Message.Request('CONFIG', self.store.name, payload)
 
         for address,port in targets:
-            message = Protocol.Message.Request('CONFIG', self.name, payload)
             try:
                 Protocol.Request.send(address, port, message)
             except zmq.error.ZMQError:
@@ -156,48 +187,33 @@ class Store(store.Store):
             through to affected Items for handling.
         """
 
-        loaded = Persist.load(self.name, self.daemon_uuid)
+        loaded = persist.load(self.store.name, self.uuid)
 
         for key in loaded.keys():
             faux_message = loaded[key]
-            item = self[key]
+            item = self.store[key]
             item.req_set(faux_message)
 
 
-    def _update_config(self, config):
-
-        self.config = config
-
-        keys = config.keys()
-        keys = list(keys)
-        keys.sort()
-
-        for key in keys:
-            try:
-                self._items[key]
-            except KeyError:
-                self._items[key] = None
-
-
-    def _update_daemon_config(self, config):
+    def _update_config(self, store, config):
 
         uuid = list(config.keys())[0]
-        self.daemon_config = config
-        self.daemon_uuid = uuid
-        Config.add(self.name, config)
+        self.config = config
+        self.uuid = uuid
+        Config.add(store, config)
 
-        config = Config.Items.get(self.name)
-        self._daemon_keys.update(config)
-        self._update_config(config)
+        config = Config.Items.get(store)
+        self._items.update(config)
 
 
     def setup(self):
-        """ Subclasses should override the :func:`setup` method to instantiate
-            any custom :class:`mktl.Item` subclasses or otherwise execute custom
-            code. When :func:`setup` is called the bulk of the :class:`Store`
-            machinery is in place, but cached values have not been loaded, nor
-            has the presence of this daemon been announced. The default
-            implementation of this method takes no actions.
+        """ Subclasses should override the :func:`setup` method to invoke
+            :func:`add_item` for any custom :class:`mktl.Item` subclasses
+            or otherwise execute custom code. When :func:`setup` is called
+            the bulk of the :class:`Store` machinery is in place, but cached
+            values have not been loaded, nor has the presence of this daemon
+            been announced. The default implementation of this method takes
+            no actions.
         """
 
         pass
@@ -209,13 +225,14 @@ class Store(store.Store):
             populated by the call to :func:`setup`.
         """
 
-        local = list(self._daemon_keys)
+        local = self._items.keys()
+        local = list(local)
 
         for key in local:
-            existing = self._items[key]
+            existing = self.store._items[key]
 
             if existing is None:
-                item.Item(self, key)
+                self.add_item(item.Item, key)
 
 
     def setup_final(self):
@@ -236,17 +253,19 @@ class Store(store.Store):
 
 class RequestServer(Protocol.Request.Server):
 
-    def __init__(self, store, *args, **kwargs):
+    def __init__(self, daemon, *args, **kwargs):
         Protocol.Request.Server.__init__(self, *args, **kwargs)
-        self.store = store
+        self.daemon = daemon
 
 
-    def req_config(self, store):
+    def req_config(self, request):
 
-        if store == self.store.name:
-            config = dict(self.store.daemon_config)
+        target = request.target
+
+        if target == self.daemon.store.name:
+            config = dict(self.daemon.config)
         else:
-            config = Config.get(store)
+            config = Config.get(target)
 
         return config
 
@@ -284,12 +303,15 @@ class RequestServer(Protocol.Request.Server):
 
         store, key = request.target.split('.', 1)
 
-        if key in self.store._daemon_keys:
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        if key in self.daemon._items:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        payload = self.store[key].req_get(request)
+        payload = self.daemon.store[key].req_get(request)
         return payload
 
 
@@ -297,12 +319,15 @@ class RequestServer(Protocol.Request.Server):
 
         store, key = request.target.split('.', 1)
 
-        if key in self.store._daemon_keys:
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        if key in self.daemon._items:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        payload = self.store[key].req_set(request)
+        payload = self.daemon.store[key].req_set(request)
         return payload
 
 
