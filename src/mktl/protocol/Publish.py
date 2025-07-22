@@ -9,7 +9,7 @@ import traceback
 import zmq
 
 from .. import json
-from .. import WeakRef
+from .. import weakref
 
 from . import Message
 
@@ -129,7 +129,7 @@ class Client:
         else:
             raise TypeError('callback must be callable')
 
-        reference = WeakRef.ref(callback)
+        reference = weakref.ref(callback)
 
         if topic is None:
             self.callback_all.append(reference)

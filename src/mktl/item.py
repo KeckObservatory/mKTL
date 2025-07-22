@@ -11,8 +11,8 @@ except ImportError:
 
 from . import Config
 from . import protocol
-from . import WeakRef
 from . import poll
+from . import weakref
 
 
 class Item:
@@ -224,7 +224,7 @@ class Item:
         else:
             raise TypeError('the registered method must be callable')
 
-        reference = WeakRef.ref(method)
+        reference = weakref.ref(method)
         self.callbacks.append(reference)
 
         if self.subscribed == False:

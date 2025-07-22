@@ -4,7 +4,7 @@
 """
 
 from . import json
-from . import WeakRef
+from . import weakref
 
 from . import protocol
 from . import Config

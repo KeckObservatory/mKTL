@@ -2,7 +2,7 @@
 import threading
 import time
 
-from . import WeakRef
+from . import weakref
 
 active = dict()
 
@@ -58,7 +58,7 @@ class Poller:
         active[self.method_id] = self
 
         self.interval = None
-        self.reference = WeakRef.ref(method)
+        self.reference = weakref.ref(method)
         self.shutdown = False
 
         self.alarm = threading.Event()
