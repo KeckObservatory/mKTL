@@ -173,7 +173,7 @@ class Request(Message):
         if self.response is None:
             as_tuple = as_tuple + (None,)
         else:
-            as_tuple = as_tuple + repr(self.response)
+            as_tuple = as_tuple + (repr(self.response),)
 
         return repr(as_tuple)
 
