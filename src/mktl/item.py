@@ -12,7 +12,7 @@ except ImportError:
 from . import Config
 from . import Protocol
 from . import WeakRef
-from .Daemon import Poll
+from . import poll
 
 
 class Item:
@@ -26,9 +26,9 @@ class Item:
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
 
-    def __init__(self, store, key, subscribe=True):
+    def __init__(self, store, key, subscribe=True, authoritative=False, pub=None):
 
-        self.authoritative = False
+        self.authoritative = authoritative
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
@@ -38,7 +38,10 @@ class Item:
         self.value = None
         self._daemon_value = None
         self._daemon_value_timestamp = None
+        self.pub = pub
+        self.sub = None
         self.req = None
+        self.rep = None
         self.subscribed = False
         self.timeout = 120
         self._update_queue = None
@@ -62,25 +65,14 @@ class Item:
                 continue
             else:
                 hostname = stratum['hostname']
-                req = stratum['req']
+                rep = stratum['rep']
                 break
 
         if hostname is None:
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
-        ### A bit of tight coupling here to try and determine if we're
-        ### the authoritative item. It'd be nice if this was more direct.
-
-        try:
-            store_provenance = store.provenance[0]
-        except AttributeError:
-            pass
-        else:
-            if store_provenance in provenance:
-                self.authoritative = True
-
-        self.pub = Protocol.Publish.client(hostname, pub)
-        self.req = Protocol.Request.client(hostname, req)
+        self.sub = Protocol.Publish.client(hostname, pub)
+        self.req = Protocol.Request.client(hostname, rep)
 
         # An Item is a singleton in practice; enforce that constraint here.
 
@@ -155,7 +147,7 @@ class Item:
             the actual work.
         """
 
-        Poll.start(self.req_poll, period)
+        poll.start(self.req_poll, period)
 
 
     def publish(self, new_value, bulk=None, timestamp=None, repeat=False):
@@ -216,7 +208,7 @@ class Item:
 
         if changed == True or repeat == True:
             ### self._update_queue.put(message)
-            self.store.pub.publish(message)
+            self.pub.publish(message)
 
 
     def register(self, method):
@@ -281,6 +273,7 @@ class Item:
             payload['dtype'] = str(bulk.dtype)
             payload['bulk'] = bytes
 
+        print('req_get(): returning: ' + repr(payload))
         return payload
 
 
@@ -471,12 +464,12 @@ class Item:
         self._update_queue_put = self._update_queue.put
         self._update_thread = _Updater(self._update, self._update_queue)
 
-        ### This subscription against self.pub could be omitted if the
+        ### This subscription against self.sub could be omitted if the
         ### Item is in a Daemon context. See the publish() method for the extra
         ### call to the _update_queue that needs to be enabled to bypass that
         ### machinery.
 
-        self.pub.register(self._update_queue_put, self.full_key)
+        self.sub.register(self._update_queue_put, self.full_key)
         self.subscribed = True
 
         if prime == True:
