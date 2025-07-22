@@ -3,7 +3,7 @@ import threading
 import time
 
 from .. import Config
-from .. import Daemon
+from .. import daemon
 from .. import item
 
 try:
@@ -12,7 +12,7 @@ except ModuleNotFoundError:
     ktl = None
 
 
-class Store(Daemon.Store):
+class Daemon(daemon.Daemon):
 
     def __init__(self, name, *args, **kwargs):
 
@@ -28,17 +28,17 @@ class Store(Daemon.Store):
         items = describeService(name)
         Config.File.save_daemon(name, name, items)
 
-        Daemon.Store.__init__(self, name, name)
+        daemon.Daemon.__init__(self, name, name)
 
 
     def setup(self):
 
-        config = self.daemon_config[self.daemon_uuid]
-        items = self.daemon_config[self.daemon_uuid]['items']
+        config = self.config[self.uuid]
+        items = config['items']
         keys = items.keys()
 
         for key in keys:
-            Item(self, key)
+            self.add_item(Item, key)
 
 
     def setup_final(self):
@@ -46,7 +46,7 @@ class Store(Daemon.Store):
             right time to fire up monitoring of all KTL keywords.
         """
 
-        service = ktl.cache(self.name)
+        service = ktl.cache(self.store.name)
 
         for keyword in service:
 
@@ -71,7 +71,7 @@ class Store(Daemon.Store):
         payload['bin'] = binary
 
         key = keyword.name
-        item = self._items[key]
+        item = self.store[key]
         item.publish(payload, timestamp=timestamp)
 
 
@@ -81,10 +81,9 @@ class Store(Daemon.Store):
 
 class Item(item.Item):
 
-
     def req_refresh(self):
 
-        keyword = ktl.cache(self.key)
+        keyword = ktl.cache(self.full_key)
         keyword.read()
 
         slice = keyword.history[-1]
@@ -101,17 +100,14 @@ class Item(item.Item):
 
     def req_set(self, request):
 
-        name = request['name']
-        keyword = ktl.cache(name)
+        new_value = request.payload['data']
 
-        new_value = request['data']
+        keyword = ktl.cache(request.target)
         keyword.write(new_value)
 
-        # Returning True here acknowledges that the request is complete.
-
-        payload = dict()
-        payload['data'] = True
-        return payload
+        # If req_set() returns a payload it will be returned to the caller;
+        # absent any explicit response (not required, nor expected), a default
+        # response will be provided.
 
 
 # end of class Item
