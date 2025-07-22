@@ -5,7 +5,7 @@
 import zmq
 
 from . import Config
-from . import Protocol
+from . import protocol
 from .store import Store
 
 
@@ -101,13 +101,13 @@ def get(store, key=None):
     # broadcast and hope someone's out there that can help.
 
     if config is None:
-        guides = Protocol.Discover.search()
+        guides = protocol.Discover.search()
         if len(guides) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         hostname,port = guides[0]
-        message = Protocol.Message.Request('CONFIG', store)
-        Protocol.Request.send(hostname, port, message)
+        message = protocol.Message.Request('CONFIG', store)
+        protocol.Request.send(hostname, port, message)
         response = message.wait()
 
         try:
@@ -156,8 +156,8 @@ def refresh(store, config):
             hostname = stratum['hostname']
             rep = stratum['rep']
 
-            client = Protocol.Request.client(hostname, rep)
-            message = Protocol.Message.Request('HASH', store)
+            client = protocol.Request.client(hostname, rep)
+            message = protocol.Message.Request('HASH', store)
 
             try:
                 client.send(message)
@@ -183,7 +183,7 @@ def refresh(store, config):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                message = Protocol.Message.Request('CONFIG', store)
+                message = protocol.Message.Request('CONFIG', store)
                 client.send(message)
                 ### Again, exception handling may be required, though the
                 ### previous request went through, so there shouldn't be a

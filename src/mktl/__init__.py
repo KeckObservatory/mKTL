@@ -5,7 +5,7 @@
 
 from . import WeakRef
 
-from . import Protocol
+from . import protocol
 from . import Config
 from . import BackEnd
 

@@ -6,7 +6,7 @@ import time
 
 from . import poll
 from . import Config
-from . import Protocol
+from . import protocol
 
 
 queues = dict()
@@ -51,7 +51,7 @@ def load(store, uuid):
         # portion of a simple value-- that's what the format of a set request
         # would look like on the wire.
 
-        data = Protocol.Json.loads(json)
+        data = protocol.Json.loads(json)
 
         try:
             data = data['bin']
@@ -111,7 +111,7 @@ def save(item, *args, **kwargs):
 
         saved['bulk'] = bytes
 
-    payload = Protocol.Json.dumps(payload)
+    payload = protocol.Json.dumps(payload)
     saved[''] = payload
 
     pending.put((item.key, saved))

@@ -2,7 +2,7 @@
 import os
 import uuid
 
-from ..Protocol import Json
+from ..protocol import Json
 
 
 def directory():

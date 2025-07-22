@@ -7,7 +7,7 @@ import zmq
 from . import Config
 from . import Get
 from . import item
-from . import Protocol
+from . import protocol
 from . import store
 
 from . import persist
@@ -51,9 +51,9 @@ class Daemon:
         rep, pub = port.load(store, self.uuid)
 
         try:
-            self.pub = Protocol.Publish.Server(port=pub, avoid=port.used())
+            self.pub = protocol.Publish.Server(port=pub, avoid=port.used())
         except zmq.error.ZMQError:
-            self.pub = Protocol.Publish.Server(port=None, avoid=port.used())
+            self.pub = protocol.Publish.Server(port=None, avoid=port.used())
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=port.used())
@@ -119,9 +119,9 @@ class Daemon:
 
         # Ready to go on the air.
 
-        discovery = Protocol.Discover.DirectServer(self.rep.port)
+        discovery = protocol.Discover.DirectServer(self.rep.port)
 
-        guides = Protocol.Discover.search(wait=True)
+        guides = protocol.Discover.search(wait=True)
         self._publish_config(guides)
 
 
@@ -173,11 +173,11 @@ class Daemon:
         config = dict(self.config)
         payload = dict()
         payload['data'] = config
-        message = Protocol.Message.Request('CONFIG', self.store.name, payload)
+        message = protocol.Message.Request('CONFIG', self.store.name, payload)
 
         for address,port in targets:
             try:
-                Protocol.Request.send(address, port, message)
+                protocol.Request.send(address, port, message)
             except zmq.error.ZMQError:
                 pass
 
@@ -251,10 +251,10 @@ class Daemon:
 
 
 
-class RequestServer(Protocol.Request.Server):
+class RequestServer(protocol.Request.Server):
 
     def __init__(self, daemon, *args, **kwargs):
-        Protocol.Request.Server.__init__(self, *args, **kwargs)
+        protocol.Request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
 
 

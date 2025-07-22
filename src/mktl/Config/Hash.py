@@ -3,7 +3,7 @@
 
 import hashlib
 
-from ..Protocol import Json
+from ..protocol import Json
 from . import Cache
 
 _cache = dict()

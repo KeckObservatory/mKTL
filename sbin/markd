@@ -82,7 +82,7 @@ def load_configuration(store, identifier, filename):
     import mktl
 
     contents = open(filename, 'r').read()
-    items = mktl.Protocol.Json.loads(contents)
+    items = mktl.protocol.Json.loads(contents)
     mktl.Config.File.save_daemon(store, identifier, items)
 
 

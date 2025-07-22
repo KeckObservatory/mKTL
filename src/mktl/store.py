@@ -8,7 +8,7 @@ class Store:
         dictionary with some additional context. A store has a unique *name*
         within the local mKTL context; which daemons will be contacted to handle
         further requests is determined on a per-Item basis, re-use of
-        connections is managed in the :mod:`mktl.Protocol` submodule, not here.
+        connections is managed in the :mod:`mktl.protocol` submodule, not here.
     """
 
     def __init__(self, name):
