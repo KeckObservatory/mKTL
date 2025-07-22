@@ -11,6 +11,23 @@ from .store import Store
 
 _cache = dict()
 
+def clear(store):
+    """ Clear any cached :class:`mktl.Store` instances currently in the cache.
+        Returns None if no instances were cleared; if there was an instance,
+        it will be returned, largely to allow for possible error handling or
+        inspection.
+    """
+
+    try:
+        existing = _cache[store]
+    except KeyError:
+        return
+
+    del _cache[store]
+    return existing
+
+
+
 def get(store, key=None):
     """ The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store.
@@ -137,9 +154,9 @@ def refresh(store, config):
 
         for stratum in provenance:
             hostname = stratum['hostname']
-            req = stratum['req']
+            rep = stratum['rep']
 
-            client = Protocol.Request.client(hostname, req)
+            client = Protocol.Request.client(hostname, rep)
             message = Protocol.Message.Request('HASH', store)
 
             try:
