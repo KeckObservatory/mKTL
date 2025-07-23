@@ -25,7 +25,7 @@ def main():
     config = parse_command_line()
 
     main.req = RequestServer()
-    main.beacon = mktl.protocol.Discover.Server(main.req.port)
+    main.beacon = mktl.protocol.discover.Server(main.req.port)
 
     delay = 30
     ### It needs to be possible to manipulate this set from the
@@ -34,7 +34,7 @@ def main():
 
     while True:
         not_seen = set(known)
-        discovered = mktl.protocol.Discover.search_direct()
+        discovered = mktl.protocol.discover.search_direct()
 
         for seen in discovered:
             if seen in known:
@@ -46,13 +46,13 @@ def main():
             # configuration blocks discovered in this fashion.
 
             address,port = seen
-            request = mktl.protocol.Message.Request('HASH')
-            hashes = mktl.protocol.Request.send(address, port, request)
+            request = mktl.protocol.message.Request('HASH')
+            hashes = mktl.protocol.request.send(address, port, request)
             hashes = hashes['data']
 
             for store in hashes.keys():
-                request = mktl.protocol.Message.Request('CONFIG', store)
-                config = mktl.protocol.Request.send(address, port, request)
+                request = mktl.protocol.message.Request('CONFIG', store)
+                config = mktl.protocol.request.send(address, port, request)
 
                 try:
                     blocks = config['data']
@@ -93,8 +93,8 @@ def parse_command_line():
 
 
 
-class RequestServer(mktl.protocol.Request.Server):
-    """ Subclass the generic :class:mktl.protocol.Request.Server`, adding
+class RequestServer(mktl.protocol.request.Server):
+    """ Subclass the generic :class:mktl.protocol.request.Server`, adding
         additional logic to locally handle requests.
     """
 

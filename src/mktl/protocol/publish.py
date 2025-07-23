@@ -11,7 +11,7 @@ import zmq
 from .. import json
 from .. import weakref
 
-from . import Message
+from . import message
 
 minimum_port = 10139
 maximum_port = 13679
@@ -168,7 +168,7 @@ class Client:
         topic = parts[0]
         their_version = parts[1]
 
-        if their_version != Message.version:
+        if their_version != message.version:
             ### Maybe we should occasionally log a version mismatch.
             ### For now it's being dropped on the floor.
             return
@@ -184,7 +184,7 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        broadcast = Message.Message(None, 'PUB', topic, payload, bulk)
+        broadcast = message.Message(None, 'PUB', topic, payload, bulk)
         self.propagate(topic, broadcast)
 
 
@@ -285,7 +285,7 @@ class Server:
 
 
     def publish(self, message):
-        """ A *message* is a :class:`Message.Message` instance intended for
+        """ A *message* is a :class:`message.Message` instance intended for
             broadcast to any subscribers.
         """
 

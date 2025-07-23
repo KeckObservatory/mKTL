@@ -13,7 +13,7 @@ import traceback
 import zmq
 
 from .. import json
-from . import Message
+from . import message
 
 minimum_port = 10079
 maximum_port = 13679
@@ -35,7 +35,7 @@ class Client:
         self.address = address
 
         server = "tcp://%s:%d" % (address, port)
-        identity = "Request.Client.%d" % (id(self))
+        identity = "request.Client.%d" % (id(self))
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
@@ -52,17 +52,17 @@ class Client:
     def _rep_incoming(self, parts):
         """ A client only receives two types of messages from the remote side:
             an ACK, or a REP. The response payload, if any, is handed back to
-            the relevant :class:`Message.Request` instance for any further
+            the relevant :class:`message.Request` instance for any further
             handling by the original caller.
         """
 
         their_version = parts[0]
 
-        if their_version != Message.version:
+        if their_version != message.version:
             payload = dict()
             error = dict()
             error['type'] = 'RuntimeError'
-            error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(Message.version))
+            error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
             payload['error'] = error
             response_type = 'REP'
             target = '???'
@@ -98,7 +98,7 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        response = Message.Message(response_id, 'REP', target, payload, bulk)
+        response = message.Message(response_id, 'REP', target, payload, bulk)
         pending._complete(response)
         del self.pending[response_id]
 
@@ -117,7 +117,7 @@ class Client:
 
 
     def send(self, message):
-        """ A *message* is a fully populated class:`Message.Request` instance,
+        """ A *message* is a fully populated class:`message.Request` instance,
             which normalizes the arguments that will be sent via this method
             as a multi-part message. The message will also be used for
             notification of any/all responses from the remote end; this method
@@ -269,7 +269,7 @@ class Server:
         ack = dict()
         ack['time'] = time.time()
 
-        response = Message.Message(request.id, 'ACK', payload=ack)
+        response = message.Message(request.id, 'ACK', payload=ack)
         parts = (ident,) + response.multiparts()
         lock.acquire()
         socket.send_multipart(parts)
@@ -289,7 +289,7 @@ class Server:
         response = dict()
         response['time'] = time.time() ## This should be the value creation time
 
-        response = Message.Message(request.id, 'REP', target, response)
+        response = message.Message(request.id, 'REP', target, response)
         parts = (ident,) + response.multiparts()
 
         lock.acquire()
@@ -325,8 +325,8 @@ class Server:
         ident = parts[0]
         their_version = parts[1]
 
-        if their_version != Message.version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(Message.version)))
+        if their_version != message.version:
+            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(message.version)))
 
         req_id = parts[2]
         req_type = parts[3]
@@ -342,7 +342,7 @@ class Server:
         else:
             payload = json.loads(payload)
 
-        request = Message.Request(req_type, target, payload, bulk, req_id)
+        request = message.Request(req_type, target, payload, bulk, req_id)
 
         try:
             payload = self.req_handler(socket, lock, ident, request)
@@ -377,8 +377,8 @@ class Server:
             else:
                 del payload['bulk']
 
-        message = Message.Message(req_id, 'REP', target, response, bulk)
-        parts = (ident,) + message.multiparts()
+        response = message.Message(req_id, 'REP', target, response, bulk)
+        parts = (ident,) + response.multiparts()
 
         lock.acquire()
         self.socket.send_multipart(parts)
@@ -470,7 +470,7 @@ def client(address, port):
 
 def send(address, port, message):
     """ Use :func:`client` to connect to the specified *address* and *port*,
-        and send the specified :class:`Message.Request` instance. This method
+        and send the specified :class:`message.Request` instance. This method
         blocks until the completion of the request.
     """
 

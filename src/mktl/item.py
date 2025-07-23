@@ -71,8 +71,8 @@ class Item:
         if hostname is None:
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
-        self.sub = protocol.Publish.client(hostname, pub)
-        self.req = protocol.Request.client(hostname, rep)
+        self.sub = protocol.publish.client(hostname, pub)
+        self.req = protocol.request.client(hostname, rep)
 
         # An Item is a singleton in practice; enforce that constraint here.
 
@@ -109,7 +109,7 @@ class Item:
         if refresh == True:
             request['refresh'] = True
 
-        message = protocol.Message.Request('GET', self.full_key, request)
+        message = protocol.message.Request('GET', self.full_key, request)
         self.req.send(message)
         response = message.wait(self.timeout)
 
@@ -199,7 +199,7 @@ class Item:
                 self._daemon_value_timestamp = time.time()
                 changed = True
 
-        message = protocol.Message.Message(None, 'PUB', self.full_key, payload, bulk)
+        message = protocol.message.Message(None, 'PUB', self.full_key, payload, bulk)
 
         # The local call to manipulate the _update_queue is presently commented
         # out because the daemon-aware handling in subscribe() is not enabled.
@@ -235,7 +235,7 @@ class Item:
         """ Handle a GET request. A typical subclass should not need to
             re-implement this method, implementing :func:`req_refresh`
             would normally be sufficient. The *request* argument is a
-            class:`protocol.Message.Request` instance, parsed from the
+            class:`protocol.message.Request` instance, parsed from the
             on-the-wire request. The value returned from :func:`req_get`
             is identical to the value returned by :func:`req_refresh`.
 
@@ -342,7 +342,7 @@ class Item:
             dictionary form, with the response in the 'data' field) if desired.
             Any errors should be indicated by raising an exception.
 
-            The *request* is a :class:`protocol.Message.Request` instance.
+            The *request* is a :class:`protocol.message.Request` instance.
             ### req_set should put the response in as request.response.
         """
 
@@ -377,8 +377,8 @@ class Item:
     def set(self, new_value, wait=True, bulk=None):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
-            the caller will be returned a :class:`mktl.protocol.Request.Pending`
-            instance, which has a :func:`mktl.protocol.Request.Pending.wait`
+            the caller will be returned a :class:`mktl.protocol.message.Request`
+            instance, which has a :func:`mktl.protocol.message.Request.wait`
             method that can optionally be invoked block until completion of the
             request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed
@@ -400,7 +400,7 @@ class Item:
         if bulk is None:
             bulk = b''
 
-        message = protocol.Message.Request('SET', self.full_key, request, bulk)
+        message = protocol.message.Request('SET', self.full_key, request, bulk)
         self.req.send(message)
 
         if wait == False:
@@ -444,7 +444,7 @@ class Item:
             return
 
         # A local thread is used to execute callbacks to ensure we don't tie
-        # up the protocol.Publish.Client from moving on to the next broadcast.
+        # up the protocol.publish.Client from moving on to the next broadcast.
         # This does mean there's an extra background thread for every Item
         # that receives callbacks; on older systems we are limited to 4,000
         # such threads before running into resource limitations, modern systems
