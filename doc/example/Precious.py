@@ -4,9 +4,9 @@ class Store(mKTL.Daemon):
 
     def setup(self):
 
-        Gold(self, 'GOLD')
-        Silver(self, 'SILVER')
-        Platinum(self, 'PLATINUM')
+        self.add_item(Gold, 'GOLD')
+        self.add_item(Silver, 'SILVER')
+        self.add_item(Platinum, 'PLATINUM')
 
 
 class MarketPriced(mKTL.Item):

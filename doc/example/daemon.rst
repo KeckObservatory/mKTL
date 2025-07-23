@@ -115,9 +115,14 @@ publishing prices::
 
     def setup(self):
 
-        Gold(self, 'GOLD')
-	Silver(self, 'SILVER')
-	Platinum(self, 'PLATINUM')
+        self.add_item(Gold, 'GOLD')
+        self.add_item(Silver, 'SILVER')
+        self.add_item(Platinum, 'PLATINUM')
+
+Note the use of :func:`Daemon.add_item` here when establishing :class:`Item`
+instances for those items that the daemon is authoritative for. The
+:func:`Daemon.add_item` method tweaks the instantiation process such that the
+:class:`Item` is properly configured as an authoritative instance.
 
 
 :func:`Daemon.setup_final` method
