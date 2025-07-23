@@ -1,5 +1,5 @@
 import time
-from . import weakref
+import mktl
 
 
 class Referenced:
@@ -10,7 +10,7 @@ class Referenced:
 def test_persistent_object():
     thing = Referenced()
 
-    reference = weakref.ref(thing)
+    reference = mktl.weakref.ref(thing)
     assert reference is not None
     assert callable(reference)
 
@@ -27,7 +27,7 @@ def test_persistent_object_method():
 
     thing = Referenced()
 
-    reference = weakref.ref(thing.a_method)
+    reference = mktl.weakref.ref(thing.a_method)
     assert reference is not None
     assert callable(reference)
 
@@ -39,7 +39,7 @@ def test_persistent_object_method():
 def test_removed_object():
     thing = Referenced()
 
-    reference = weakref.ref(thing)
+    reference = mktl.weakref.ref(thing)
     assert reference is not None
     assert callable(reference)
 
@@ -52,7 +52,7 @@ def test_removed_object():
 def test_removed_object_method():
     thing = Referenced()
 
-    reference = weakref.ref(thing.a_method)
+    reference = mktl.weakref.ref(thing.a_method)
     assert reference is not None
     assert callable(reference)
 
