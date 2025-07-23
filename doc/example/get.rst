@@ -12,10 +12,10 @@ objective is to retrieve the current value for 'population.CRAZY'.
 Getting started
 ---------------
 
-.. py:currentmodule:: mktl.Client
+.. py:currentmodule:: mktl
 
 An :class:`Item` instance is required to perform any client operations; the
-:func:`mktl.get` method should be invoked to acquire a cached singleton for
+:func:`get` method should be invoked to acquire a cached singleton for
 any/all subsequent use. The required boilerplate is short::
 
     import mktl

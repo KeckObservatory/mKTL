@@ -14,7 +14,7 @@ average.
 Getting started
 ---------------
 
-.. py:currentmodule:: mktl.Client
+.. py:currentmodule:: mktl
 
 See the :ref:`getting_started` section of the :ref:`example_get` example for
 more details. We'll get right to it::
@@ -33,7 +33,7 @@ The expected signature of a callback method is::
 These arguments are always passed to the callback; that doesn't necessarily
 mean the callback has to use them, a common pattern is to define a callback
 that ignores the arguments provided, an approach made easier by the use of
-:func:`mktl.get`. First, a callback that uses the arguments::
+:func:`get`. First, a callback that uses the arguments::
 
     def average(item, temp, time):
 
@@ -51,7 +51,7 @@ that ignores the arguments provided, an approach made easier by the use of
     average.computed = None
 
 
-...and an alternate version, using :func:`mktl.get`::
+...and an alternate version, using :func:`get`::
 
     def average(*args, **kwargs):
 
@@ -73,7 +73,7 @@ that ignores the arguments provided, an approach made easier by the use of
 
 
 These two approaches are functionally identical for this simple example.
-The second approach, relying on :func:`mktl.get`, becomes appealing
+The second approach, relying on :func:`get`, becomes appealing
 when multiple items need to be inspected in a given callback; for example,
 if the current temperature were being compared to the current setpoint.
 
@@ -102,13 +102,37 @@ Full example
 Putting it all together::
 
     import mktl
+    import time
     temp = mktl.get('oven.TEMP')
 
-    def callback(*args, **kwargs):
+    def just_print(*args, **kwargs):
         temp = mktl.get('oven.TEMP')
         value = float(temp)
         time = temp.cached_timestamp
         print ("%.3f oven.TEMP: %.1f" % (time, value))
 
-    temp.register(callback)
+    def average(*args, **kwargs):
+
+        temp = mktl.get('oven', 'TEMP')
+
+        factor = 0.01
+        new_weight = factor
+        old_weight = 1 - factor
+
+        if average.computed is None:
+            average.computed = float(temp)
+        else:
+            new = new_weight * temp
+	    old = old_weight * average.computed
+            average.computed = new + old
+
+        timestamp = temp.cached_timestamp
+        print("%.3f %s average: %.1f" % (timestamp, temp.full_key, average.computed)
+
+    average.computed = None
+
+
+    temp.register(just_print)
+    temp.register(average)
+    time.sleep(30)
 

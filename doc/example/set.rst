@@ -8,7 +8,7 @@ objective is to set a new value for 'team.SCORE'.
 Getting started
 ---------------
 
-.. py:currentmodule:: mktl.Client
+.. py:currentmodule:: mktl
 
 See the :ref:`getting_started` section of the :ref:`example_get` example for
 more details. We'll get right to it::
@@ -42,7 +42,7 @@ immediately after the request is successfully delivered to the daemon for
 handling. This is the best option if the client application is not concerned
 about responding to the completion of this request. If the client application
 does want explicit notification when the request is complete, :func:`Item.set`
-returns a :class:`Protocol.Request.Pending` instance that enables this usage
+returns a :class:`protocol.message.Request` instance that enables this usage
 pattern::
 
     pending = score.set(44, wait=False)

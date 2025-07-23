@@ -1,6 +1,6 @@
 import mKTL
 
-class Store(mKTL.Daemon.Store):
+class Store(mKTL.Daemon):
 
     def setup(self):
 
@@ -9,10 +9,10 @@ class Store(mKTL.Daemon.Store):
         Platinum(self, 'PLATINUM')
 
 
-class MarketPriced(mKTL.Daemon.Item):
+class MarketPriced(mKTL.Item):
 
     def __init__(self, *args, **kwargs):
-        mKTL.Daemon.Item.__init__(self, *args, **kwargs)
+        mKTL.Item.__init__(self, *args, **kwargs)
         self.poll(86400)    # Update once per day.
 
 

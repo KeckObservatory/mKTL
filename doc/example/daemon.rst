@@ -10,7 +10,7 @@ market prices for various precious metals.
 Getting started
 ---------------
 
-.. py:currentmodule:: mktl.Daemon
+.. py:currentmodule:: mktl
 
 The canonical approach to establish an mKTL daemon involves creating a Python
 module to represent all of your custom logic. Each of the steps described here
@@ -18,25 +18,25 @@ is required, though there is more than one way to satisfy each step.
 
 In order to successfully run the daemon the Python interpreter being used to
 start the daemon must be able to import the mKTL module as well as any custom
-module(s) implementing the subclass of :class:`Store` that encapsulates
+module(s) implementing the subclass of :class:`Daemon` that encapsulates
 the remainder of the functionality.
 
 
-:class:`Store` subclass
------------------------
+:class:`Daemon` subclass
+------------------------
 
-The structure of the Python module containing the :class:`Store` subclass can
+The structure of the Python module containing the :class:`Daemon` subclass can
 be completely arbitrary; for the sake of this example, the code is contained
 in a ``Metal`` Python module, and the components described here are in a
 ``Precious`` submodule.
 
 Within the ``Precious`` submodule we define our subclass. For no reason other
-than convenience it is defined with the name ``Store``. The structure of the
+than convenience it is defined with the name ``Daemon``. The structure of the
 ``Precious.py`` file will be as follows::
 
     import mktl
 
-    class Store(mktl.Daemon.Store):
+    class Daemon(mktl.Daemon):
 
         def setup(self):
 	    pass
@@ -55,10 +55,10 @@ subclasses.
 
 An example subclass would have a structure like the following::
 
-    class MarketPriced(mktl.Daemon.Item):
+    class MarketPriced(mktl.Item):
 
         def __init__(self, *args, **kwargs):
-            mktl.Daemon.Item.__init__(self, *args, **kwargs)
+            mktl.Item.__init__(self, *args, **kwargs)
 	    # Additional initialization steps would generally follow the
 	    # regular initialization from the base class. In this case,
 	    # our market-prices should update once per day:
@@ -96,17 +96,18 @@ the actual market value. To pick one example::
 
 
 
-:func:`Store.setup` method
---------------------------
+:func:`Daemon.setup` method
+---------------------------
 
-:func:`Store.setup` is the first pass of application-level setup for the daemon.
-This is where instantiation of any custom subclasses of :class:`Item` needs to
+:func:`Daemon.setup` is the first pass of application-level setup for the
+daemon. This is where instantiation of any custom subclasses of :class:`Item`
+needs to
 occur, otherwise the various items defined for this daemon within this store
 will be populated with default, caching-only instances; this occurs immediately
-after the :class:`Store` invokes :func:`Store.setup`.
+after the :class:`Daemon` invokes :func:`Daemon.setup`.
 
 Any custom initialization action for the daemon is reasonable to include as a
-call in :func:`Store.setup`, such as initializing a connection to a controller,
+call in :func:`Daemon.setup`, such as initializing a connection to a controller,
 especially if it is a pre-requisite for any of the custom :class:`Item`
 subclasses. For the example defined here, we only need to instantiate our
 custom subclasses for each of the different precious metals for which we are
@@ -119,12 +120,12 @@ publishing prices::
 	Platinum(self, 'PLATINUM')
 
 
-:func:`Store.setup_final` method
--------------------------------
+:func:`Daemon.setup_final` method
+---------------------------------
 
 If this store contained any logic that must be executed only after all the items
 have been fully instantiated, and/or populated with any previously cached
-persistent values, that logic should be invoked in the:func:`Store.setup_final`
+persistent values, that logic should be invoked in the:func:`Daemon.setup_final`
 method. Most daemons will not take advantage of this method; this example daemon
 is likewise too simple to require it.
 
@@ -148,7 +149,7 @@ lines like the following in its initialization method::
 
         items = generate_config()
         mktl.Config.File.save_daemon('metal', 'precious', items)
-        mktl.Daemon.Store.__init__(self, *args, **kwargs)
+        mktl.Daemon.__init__(self, *args, **kwargs)
 
 It's more likely that the JSON configuration is written out as a file, ready
 to be used by the daemon. The file can be anywhere, so long as it is accessible
