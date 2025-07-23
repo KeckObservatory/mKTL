@@ -7,7 +7,19 @@ client-facing half, and a server-facing half. The interfaces described here
 are generally not exposed to direct usage, they support the end-user
 functionality exposed in the :ref:`client` and :ref:`daemon` code.
 
-.. py:module:: mktl.Protocol.Request
+.. py:module:: mktl.protocol.message
+
+Message classes
+----------------
+
+.. autoclass:: Message
+   :members:
+
+.. autoclass:: Request
+   :members:
+
+
+.. py:module:: mktl.protocol.request
 
 Request client
 --------------
@@ -19,13 +31,6 @@ Request client
 .. autoclass:: Client
    :members:
 
-
-The Pending class
------------------
-
-.. autoclass:: Pending
-   :members:
-
 Request server
 --------------
 
@@ -33,7 +38,7 @@ Request server
    :members:
 
 
-.. py:module:: mktl.Protocol.Publish
+.. py:module:: mktl.protocol.publish
 
 Publish client
 --------------

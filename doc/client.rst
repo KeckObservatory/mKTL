@@ -4,8 +4,6 @@
 Client interface
 ================
 
-.. py:module:: mktl.Client
-
 A client is any software component interacting with a daemon, in the form of
 issuing requests, receiving responses to requests, and receiving asynchronous
 updates of new item values. The Python interface described here makes liberal
@@ -32,27 +30,28 @@ handled via the :class:`Item` instance.
 .. autofunction:: mktl.get
 
 
-Client.Store class
-------------------
+The Store class
+---------------
 
 The :class:`Store` class is primarily an organizational structure, providing
 a dictionary-style interface to retrieve :class:`Item` instances.
 
-.. autoclass:: Store
+.. autoclass:: mktl.Store
    :members:
 
 
-Client.Item class
------------------
+The Item class
+--------------
 
-The bulk of the client interactions will occur with the :class:`Item` class.
-In addition to the methods described here an :class:`Item` instance can be
-used with Python operators, such as addition/concatenation or multiplication.
-The behavior of an :class:`Item` when used in this fashion will be aligned
+The bulk of the client interactions will occur with the :class:`mktl.Item`
+class. In addition to the methods described here an :class:`mktl.Item` instance
+can be used with Python operators, such as addition/concatenation or
+multiplication.
+The behavior of an :class:`mktl.Item` when used in this fashion will be aligned
 with the native Python binary type for the item value; for example, if an
 item test.BAR has an integer value 12, ``test.BAR + 5`` will return 17; if
 the value is instead the string value '12', the same operation will raise a
 TypeError exception.
 
-.. autoclass:: Item
-   :members:
+.. autoclass:: mktl.Item
+   :members: get, register, set, subscribe
