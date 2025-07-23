@@ -18,7 +18,8 @@ version = b'a'
 
 class Message:
     """ The :class:`Message` provides a very thin encapsulation of what it
-        means to be a message in an mKTL context.
+        means to be a message in an mKTL context. This class will be used
+        to represent mKTL messages that do not result in a response.
 
         :ivar payload: The item-specific data, if any, for the message.
         :ivar bulk: The item-specific bulk data, if any, for the message.
@@ -148,7 +149,9 @@ class Message:
 class Request(Message):
     """ A :class:`Request` has a little extra functionality, focusing on
         local caching of response values and signaling that a request is
-        complete.
+        complete. This is the class that will be used on the client side
+        when a server is expected to provide a response, such as returning
+        a requested value, or signaling that a set operation is complete.
 
         :ivar response: The final response to a request (also a Message).
     """
