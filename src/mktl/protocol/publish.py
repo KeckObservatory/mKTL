@@ -184,7 +184,7 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        broadcast = message.Message(None, 'PUB', topic, payload, bulk)
+        broadcast = message.Message('PUB', topic, payload, bulk)
         self.propagate(topic, broadcast)
 
 

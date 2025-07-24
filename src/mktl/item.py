@@ -199,7 +199,7 @@ class Item:
                 self._daemon_value_timestamp = time.time()
                 changed = True
 
-        message = protocol.message.Message(None, 'PUB', self.full_key, payload, bulk)
+        message = protocol.message.Message('PUB', self.full_key, payload, bulk)
 
         # The local call to manipulate the _update_queue is presently commented
         # out because the daemon-aware handling in subscribe() is not enabled.

@@ -98,7 +98,7 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        response = message.Message(response_id, 'REP', target, payload, bulk)
+        response = message.Message('REP', target, payload, bulk, response_id)
         pending._complete(response)
         del self.pending[response_id]
 
@@ -269,7 +269,7 @@ class Server:
         ack = dict()
         ack['time'] = time.time()
 
-        response = message.Message(request.id, 'ACK', payload=ack)
+        response = message.Message('ACK', payload=ack, id=request.id)
         parts = (ident,) + response.multiparts()
         lock.acquire()
         socket.send_multipart(parts)
@@ -289,7 +289,7 @@ class Server:
         response = dict()
         response['time'] = time.time() ## This should be the value creation time
 
-        response = message.Message(request.id, 'REP', target, response)
+        response = message.Message('REP', target, response, id=request.id)
         parts = (ident,) + response.multiparts()
 
         lock.acquire()
@@ -377,7 +377,7 @@ class Server:
             else:
                 del payload['bulk']
 
-        response = message.Message(req_id, 'REP', target, response, bulk)
+        response = message.Message('REP', target, response, bulk, req_id)
         parts = (ident,) + response.multiparts()
 
         lock.acquire()

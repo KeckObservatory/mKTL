@@ -21,6 +21,19 @@ class Message:
         means to be a message in an mKTL context. This class will be used
         to represent mKTL messages that do not result in a response.
 
+        The fields are largely in order of how they are represented on the
+        wire: the message *type*, the key/store *target* for the request,
+        the *payload* of the message (expected to be a Python dictionary),
+        any *bulk* as-bytes component of the message, and an identification
+        number unique to this correspondence. The identification number is
+        the one field that is out-of-order compared to the multipart sequence
+        on the wire; this is because some message types (publish messages,
+        in particular) do not have an identification number, and it is
+        automatically generated for request messages. Rather than force the
+        caller to pass an explicit None, the id is left as the last field,
+        so that the arguments for all :class:`Message` instances can have
+        a similar structure.
+
         :ivar payload: The item-specific data, if any, for the message.
         :ivar bulk: The item-specific bulk data, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
@@ -29,12 +42,16 @@ class Message:
 
     valid_types = set(('ACK', 'PUB', 'REP'))
 
-    def __init__(self, id, type, target=None, payload=None, bulk=None):
+    def __init__(self, type, target=None, payload=None, bulk=None, id=None):
 
         if type in self.valid_types:
             pass
         else:
             raise ValueError('invalid request type: ' + type)
+
+        # There are some message types where the id is allowed to be None;
+        # in particular, publish messages do not have or need an identification
+        # number.
 
         self.id = id
         self.type = type
@@ -67,6 +84,14 @@ class Message:
             target = self.target
             payload = self.payload
             bulk = self.bulk
+
+            # It is legal to create a Message with None as the id-- this happens
+            # all the time when a Message is used as a container-- but trying to
+            # send such a message is not permitted. The publish path must call
+            # publish_multiparts() instead of this method.
+
+            if id is None:
+                raise RuntimeError('messages must have an id to be put on the wire')
 
             try:
                 id.decode
@@ -106,7 +131,8 @@ class Message:
     def publish_multiparts(self):
         """ Convert this :class:`Message` to a tuple of parts appropriate
             for a call send_multipart(), in a publish context, where every
-            part has been converted to bytes. The tuple is returned.
+            part has been converted to bytes; the local id field is not
+            included. The tuple is returned.
         """
 
         parts = self.publish_parts
@@ -160,10 +186,20 @@ class Request(Message):
 
     def __init__(self, type, target=None, payload=None, bulk=None, id=None):
 
+        # Requests are generally initiated without an id number, but they're
+        # required to have one. The expectation is that requests will have an
+        # id number that is locally unique, so that the request/response
+        # handler can correctly tie an incoming response to the request that
+        # generated it.
+
+        # Long story short, for nearly all Request instances the id argument
+        # will be None, and we are expected to auto-generate a locally unique
+        # identification number.
+
         if id is None:
             id = _id_next()
 
-        Message.__init__(self, id, type, target, payload, bulk)
+        Message.__init__(self, type, target, payload, bulk, id)
 
         self.response = None
 
