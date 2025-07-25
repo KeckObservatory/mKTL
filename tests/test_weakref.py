@@ -19,10 +19,10 @@ def test_persistent_object():
 
 
 def test_persistent_object_method():
-    """ This is the reason the local weak reference wrapper exists: in the
-        standard weak reference module a weak reference to an object method
-        becomes immediately invalid. This test will fail if you replace the
-        local wrapper with the standard module.
+    """ This is the reason the local weak reference wrapper exists, and why
+        weakref.WeakMethod exists: the standard weakref.ref() reference cannot
+        refer to a bound method, as they immediately lose scope and are
+        deallocated.
     """
 
     thing = Referenced()
