@@ -53,6 +53,9 @@ class Message:
         # in particular, publish messages do not have or need an identification
         # number.
 
+        if bulk == b'':
+            bulk = None
+
         self.id = id
         self.type = type
         self.payload = payload
@@ -111,7 +114,9 @@ class Message:
 
             # Some JSON encoders will happily take a byte sequence and
             # encode it. We may need to check here whether the payload
-            # is already bytes; it is expected to be a dictionary.
+            # is already bytes; it is expected to be a dictionary, or
+            # something that can be trivially serialized as JSON, like
+            # a bare numeric value, or a string.
 
             if payload == None or payload == '':
                 payload = b''
