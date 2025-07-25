@@ -33,23 +33,24 @@ class Item:
         self.full_key = store.name + '.' + key
         self.store = store
         self.config = store.config[key]
-
         self.callbacks = list()
-        self.value = None
+        self.subscribed = False
+        self.timeout = 120
+
+        self._value = None
+        self._value_timestamp = None
         self._daemon_value = None
         self._daemon_value_timestamp = None
+
         self.pub = pub
         self.sub = None
         self.req = None
         self.rep = None
-        self.subscribed = False
-        self.timeout = 120
         self._update_queue = None
         self._update_queue_put = None
         self._update_thread = None
 
-        item_config = store.config[key]
-        provenance = item_config['provenance']
+        provenance = self.config['provenance']
 
         # Use the highest-numbered stratum that will handle a full range of
         # queries. This capability is implied by the presence of the 'pub'
@@ -95,14 +96,38 @@ class Item:
             self.subscribe(prime=prime)
 
 
-    def get(self, refresh=False):
-        """ Retrieve the current value. Set *refresh* to True to prompt
-            the daemon handling the request to provide the most up-to-date
-            value available, potentially bypassing any local cache.
+    @property
+    def formatted(self):
+        """ The human-readable representation, if any, of an item value.
         """
 
-        if refresh == False and self.subscribed == True and self.value is not None:
-            return self.value
+        ### Interpret self.value according to the item description
+
+        return str(self.value)
+
+
+    @formatted.setter
+    def formatted(self, new_value):
+
+        ### interpret new_value according to the item description
+        ### or punt, and let the daemon handle it
+
+        self.set(new_value)
+
+
+    def get(self, refresh=False, formatted=False):
+        """ Retrieve the current value. Set *refresh* to True to prompt
+            the daemon handling the request to provide the most up-to-date
+            value available, potentially bypassing any local cache. Set
+            *formatted* to True to receive the human-readable formatting
+            of the value, if any such formatting is available.
+        """
+
+        if refresh == False and self.subscribed == True and self._value is not None:
+            if formatted == True:
+                return self.formatted
+            else:
+                return self._value
 
         request = dict()
 
@@ -136,7 +161,11 @@ class Item:
                 raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
         self._update(response)
-        return self.value
+
+        if formatted == True:
+            return self.formatted
+        else:
+            return self._value
 
 
     def poll(self, period):
@@ -151,14 +180,12 @@ class Item:
 
 
     def publish(self, new_value, bulk=None, timestamp=None, repeat=False):
-        """ Publish a new value, which is expected to be a dictionary minimally
-            containing 'asc' and 'bin' keys rerepsenting different views of the
-            new value; bulk values are not represented as a dictionary, they are
-            passed in directly as the *bulk* argument, and the *new_value*
+        """ Publish a new value, which is expected to be the Python binary
+            representation of the new value; bulk values are passed in as
+            the *bulk* argument, and the *new_value*
             argument will be ignored. If *timestamp* is set it is expected to be
             a UNIX epoch timestamp; the current time will be used if it is not
-            set. Any published values are always cached locally for future
-            requests.
+            set. Any published values are always cached locally.
         """
 
         if timestamp is None:
@@ -168,36 +195,33 @@ class Item:
 
         payload = dict()
         payload['time'] = timestamp
-        payload['data'] = new_value
 
         changed = False
 
         if bulk is None:
-            payload['data'] = new_value
-            if self._daemon_value != new_value['bin']:
-                self._daemon_value = new_value['bin']
-                self._daemon_value_timestamp = time.time()
+            payload['value'] = new_value
+            if self._daemon_value != new_value:
+                self._daemon_value = new_value
+                self._daemon_value_timestamp = timestamp
                 changed = True
         else:
+            ### This should use a standard method to interpret the ndarray.
             bytes = bulk.tobytes()
-            description = dict()
-            description['shape'] = bulk.shape
-            description['dtype'] = str(bulk.dtype)
-            payload['data'] = description
-
-            new_value = bulk
-
-            ### This check could be expensive for large arrays.
+            payload['shape'] = bulk.shape
+            payload['dtype'] = str(bulk.dtype)
 
             if self._daemon_value is None:
                 match = False
             else:
-                match = (self._daemon_value & new_value).all()
+                ### This check could be expensive for large arrays.
+                match = (self._daemon_value & bulk).all()
 
             if match == False:
-                self._daemon_value = new_value
-                self._daemon_value_timestamp = time.time()
+                self._daemon_value = bulk
+                self._daemon_value_timestamp = timestamp
                 changed = True
+
+            bulk = bytes
 
         message = protocol.message.Message('PUB', self.full_key, payload, bulk)
 
@@ -239,7 +263,8 @@ class Item:
             on-the-wire request. The value returned from :func:`req_get`
             is identical to the value returned by :func:`req_refresh`.
 
-            ### req_get should put the response in as request.response.
+            ### req_get should put the response in as request.response,
+            ### instead of returning a dictionary.
         """
 
         try:
@@ -250,27 +275,20 @@ class Item:
         if refresh == True:
             payload = self.req_poll()
         else:
-            try:
-                self._daemon_value.tobytes
-            except AttributeError:
-                payload = dict()
-                ### This translation to a string representation needs to be
-                ### generalized to allow more meaningful behavior.
-                payload['asc'] = str(self._daemon_value)
-                payload['bin'] = self._daemon_value
-                payload['time'] = self._daemon_value_timestamp
-            else:
-                payload = self._daemon_value
+            payload = dict()
+            payload['value'] = self._daemon_value
+            payload['time'] = self._daemon_value_timestamp
+
+        new_value = payload['value']
 
         try:
-            bytes = payload.tobytes()
+            bytes = new_value.tobytes()
         except AttributeError:
             pass
         else:
-            bulk = payload
-            payload = dict()
-            payload['shape'] = bulk.shape
-            payload['dtype'] = str(bulk.dtype)
+            del payload['value']
+            payload['shape'] = new_value.shape
+            payload['dtype'] = str(new_value.dtype)
             payload['bulk'] = bytes
 
         return payload
@@ -293,6 +311,15 @@ class Item:
 
         payload = self.req_refresh()
 
+        if payload is None:
+            return
+
+        new_value = payload['value']
+        try:
+            timestamp = payload['time']
+        except:
+            timestamp = time.time()
+
         # Perhaps there is a more declarative way to know whether a given
         # payload is expected to be bulk data; perhaps reference the per-Item
         # configuration? Or does an attribute need to be set to make the
@@ -302,11 +329,11 @@ class Item:
         # changed.
 
         try:
-            payload.tobytes
+            new_value.tobytes
         except AttributeError:
-            self.publish(payload, repeat=repeat)
+            self.publish(new_value, timestamp=timestamp, repeat=repeat)
         else:
-            self.publish(None, bulk=payload, repeat=repeat)
+            self.publish(None, bulk=new_value, timestamp=timestamp, repeat=repeat)
 
         return payload
 
@@ -314,22 +341,23 @@ class Item:
     def req_refresh(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
             and return it to the caller. The return value is a dictionary,
-            nominally with 'asc' and 'bin' keys, representing a human-readable
-            format ('asc') format, and a Python binary representation of the
-            same value. For example, ``{'asc': 'On', 'bin': True}``.
+            with a 'value' key containing the Python binary representation of
+            the item value, and a 'time' key with a UNIX epoch timestamp
+            representing the last-changed time for that value. Returning None
+            is expected if no new value is available; returning None will not
+            clear the currently known value, that is only done if the returned
+            dictionary contains None as the 'value'.
 
-            Bulk values are returned solely as a numpy array. Other return
-            values are in theory possible, as long as the request and publish
-            handling code are prepared to accept them.
+            Examples::
+
+                {'time': 1234.5678, 'value': 54}
+                {'time': 8765.4321, 'value': None}
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
 
         payload = dict()
-        ### This translation to a string representation needs to be
-        ### generalized to allow more meaningful behavior.
-        payload['asc'] = str(self._daemon_value)
-        payload['bin'] = self._daemon_value
+        payload['value'] = self._daemon_value
         payload['time'] = self._daemon_value_timestamp
 
         return payload
@@ -338,40 +366,36 @@ class Item:
     def req_set(self, request):
         """ Handle a client-initiated SET request. Any calls to :func:`req_set`
             are expected to block until completion of the request; no return
-            value of significance is expected, though one can be provided (in
-            dictionary form, with the response in the 'data' field) if desired.
-            Any errors should be indicated by raising an exception.
+            value of significance is expected, though one can be provided and
+            will be returned to the client, even if the client does not use
+            it. Any errors should be indicated by raising an exception.
 
             The *request* is a :class:`protocol.message.Request` instance.
-            ### req_set should put the response in as request.response.
         """
 
-        try:
-            request.payload['bulk']
-        except KeyError:
+        if request.bulk == b'' or request.bulk is None:
             bulk = False
-            new_value = request.payload['data']
         else:
             bulk = True
-            new_value = self._interpret_bulk(request)
-
-        new_value = self.validate(new_value)
-        publish = dict()
 
         if bulk == True:
-            publish['data'] = request['data']
-            publish['bulk'] = request['bulk']
+            new_value = self._interpret_bulk(request)
         else:
-            ### This translation to a string representation needs to be
-            ### generalized to allow more meaningful behavior.
-            publish['asc'] = str(new_value)
-            publish['bin'] = new_value
+            new_value = request.payload['value']
 
-        self.publish(publish)
+        new_value = self.validate(new_value)
+
+        if bulk == True:
+            self.publish(None, new_value)
+        else:
+            self.publish(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
         # absent any explicit response (not required, nor expected), a default
         # response will be provided.
+
+        ### Perhaps req_set should put the response in as request.response.
+
 
 
     def set(self, new_value, wait=True, bulk=None):
@@ -384,23 +408,21 @@ class Item:
             satisfied. There is no return value for a blocking request; failed
             requests will raise exceptions.
 
-            If *bulk* is set to anything it should be an as-bytes representation
-            of the new value; the *new_value* component should be a dictionary
-            providing whatever metadata is required to appropriately handle
-            the as-bytes representation; for example, if a numpy array is being
-            transmitted, the *new_value* dictionary will need to include the
-            dimensions of the array as well as its data type; in that specific
-            case, the expected keys in the dictionary are the 'shape' of the
-            numpy array, and the string representation of the dtype attribute.
+            If *bulk* is set it is expected to be a numpy array, though this
+            could change in the future.
         """
 
-        request = dict()
-        request['data'] = new_value
+        payload = dict()
 
         if bulk is None:
-            bulk = b''
+            payload['value'] = new_value
+        else:
+            ### This should use a standard method to interpret the ndarray.
+            bytes = bulk.tobytes()
+            payload['shape'] = bulk.shape
+            payload['dtype'] = str(bulk.dtype)
 
-        message = protocol.message.Request('SET', self.full_key, request, bulk)
+        message = protocol.message.Request('SET', self.full_key, payload, bulk)
         self.req.send(message)
 
         if wait == False:
@@ -413,7 +435,7 @@ class Item:
 
         try:
             error = response.payload['error']
-        except KeyError:
+        except (TypeError, KeyError):
             pass
         else:
             if error is not None and error != '':
@@ -491,6 +513,33 @@ class Item:
         return value
 
 
+    @property
+    def value(self):
+        """ The current value of the item. Invoke :func:`get` and :func:`set`
+            directly for more control over any just-in-time behavior.
+        """
+
+        if self._daemon_value is not None:
+            return self._daemon_value
+
+        if self._value is not None:
+            return self._value
+
+        if self.authoritative == False:
+            self.get(refresh=True)
+
+        return self._value
+
+
+    @value.setter
+    def value(self, new_value):
+
+        if self.authoritative == True:
+            self.publish(new_value)
+        else:
+            self.set(new_value)
+
+
     def _interpret_bulk(self, message):
         """ Interpret a new bulk value, returning the new rich data construct
             for further handling by methods like :func:`_update`. The default
@@ -502,7 +551,7 @@ class Item:
         if numpy is None:
             raise ImportError('numpy module not available')
 
-        description = message.payload['data']
+        description = message.payload
         bulk = message.bulk
 
         shape = description['shape']
@@ -549,36 +598,27 @@ class Item:
         """
 
         if message.bulk is not None:
-            payload = self._interpret_bulk(message)
+            new_value = self._interpret_bulk(message)
         else:
             try:
-                payload = message.payload['data']
+                new_value = message.payload['value']
             except KeyError:
-                payload = None
+                new_value = None
 
         try:
             timestamp = message.payload['time']
         except KeyError:
-            ### Catching this error may not be desirable-- if it's part of
-            ### the wire protocol, the payload should always have a timestamp
-            ### associated with it.
+            ### Catching this error may not be desirable-- the payload should
+            ### always contain a timestamp.
             timestamp = time.time()
 
-        self.value = payload
-        self.value_timestamp = timestamp
-        self._propagate(payload, timestamp)
+        self._value = new_value
+        self._value_timestamp = timestamp
+        self._propagate(new_value, timestamp)
 
 
     def __bool__(self):
-        if self.value is None:
-            return False
-
-        try:
-            current = self.value['bin']
-        except:
-            # Something other than an asc/bin dictionary. Not sure what it is,
-            # but it's _something_, so...
-            return True
+        current = self.value
 
         if current in self.untruths:
             return False
@@ -604,259 +644,121 @@ class Item:
         return bytes
 
 
-    # __hash__() is not defined, because it would be tied to the key, and would
-    # clash with the use of __eq__() defined above, which is not tied to the
-    # key. This was a point of some confusion for comparison operations in
-    # KTL Python, and the inability to use Item instances as keys in a
-    # dictionary seems like a lesser price to pay.
+    # __hash__() is not defined, because it would be tied to the item key,
+    # and would clash with the use of __eq__() defined below, which is not
+    # tied to the key. This was a point of some confusion for comparison
+    # operations in KTL Python, and the inability to use Item instances as
+    # keys in a dictionary due to the absence of __hash__() seems like a
+    # lesser price to pay.
 
 
     def __str__(self):
-        if self.value is None:
-            return ''
-
-        return str(self.value['asc'])
+        return str(self.formatted)
 
 
     def __lt__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current < other
+        return self.value < other
 
     def __le__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current <= other
+        return self.value <= other
 
     def __eq__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current == other
+        return self.value == other
 
     def __ne__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current != other
+        return self.value != other
 
     def __gt__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current > other
+        return self.value > other
 
     def __ge__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current >= other
+        return self.value >= other
 
     def __add__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current + other
+        return self.value + other
 
     def __radd__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other + current
+        return other + self.value
 
     def __sub__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current - other
+        return self.value - other
 
     def __rsub__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other - current
+        return other - self.value
 
     def __mul__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current * other
+        return self.value * other
 
     def __rmul__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other * current
+        return other * self.value
 
     def __div__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current / other
+        return self.value / other
 
     def __rdiv__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other / current
+        return other / self.value
 
     def __truediv__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        current = float(current)
+        current = float(self.value)
         return current / other
 
     def __rtruediv__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        current = float(current)
+        current = float(self.value)
         return other / current
 
     def __mod__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current % other
+        return self.value % other
 
     def __rmod__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other % current
+        return other % self.value
 
     def __floordiv__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current // other
+        return self.value // other
 
     def __rfloordiv__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other // current
+        return other // self.value
 
     def __divmod__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return (current // other, self % other)
+        return (self.value // other, self % other)
 
     def __rdivmod__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return (other // current, other % self)
+        return (other // self.value, other % self)
 
     def __pow__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current ** other
+        return self.value ** other
 
     def __rpow__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other ** current
+        return other ** self.value
 
     def __neg__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return -current
+        return -self.value
 
     def __pos__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return +current
+        return +self.value
 
     def __abs__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return abs(current)
+        return abs(self.value)
 
     def __invert__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return ~current
+        return ~self.value
 
     def __and__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current & other
+        return self.value & other
 
     def __rand__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other & current
+        return other & self.value
 
     def __or__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current | other
+        return self.value | other
 
     def __ror__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other | current
+        return other | self.value
 
     def __xor__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return current ^ other
+        return self.value ^ other
 
     def __rxor__(self, other):
-        if self.value is None:
-            current = None
-        else:
-            current = self.value['bin']
-        return other ^ current
+        return other ^ self.value
 
 
     def __inplace(self, method, value):
