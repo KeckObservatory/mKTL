@@ -46,8 +46,8 @@ def get_spot_value(metal, currency, units):
     current_price = float(current_price)
 
     payload = dict()
-    payload['asc'] = "%.2f" % (current_price)
-    payload['bin'] = current_price
+    payload['value'] = current_price
+    payload['time'] = time.time()
 
     return payload
 

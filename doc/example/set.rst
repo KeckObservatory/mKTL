@@ -72,7 +72,7 @@ the score can be done a few different ways::
     score = mktl.get('team.SCORE')
 
     # Explicit get() and set():
-    old_score = score.get()['bin']
+    old_score = score.get()
     new_score = old_score + 1
     score.set(new_score)
 

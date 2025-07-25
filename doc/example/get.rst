@@ -62,14 +62,11 @@ specified.
 Handling return values
 ----------------------
 
-The value returned by :func:`Item.get` is, for most item types, a dictionary,
-containing 'asc' and 'bin' keys, where the 'asc' value is a human-readable,
-string representation of the 'bin' value, which will be a Python-native format.
-For example::
+The value returned by :func:`Item.get` is a Python native object, either a
+primitive, such as an integer or floating point number, or something like a
+numpy array. For example::
 
-    >>> current['asc']
-    'On'
-    >>> current['bin']
+    >>> current
     True
 
 If the item represents a bulk value the returned reference will not be a Python
@@ -89,7 +86,7 @@ Putting it all together::
     if current is None:
         print('The population craziness is unknown.')
     else:
-        craziness = current['bin']
+        craziness = current
         if craziness == True:
             print('The population is crazy.')
         else:
@@ -98,8 +95,7 @@ Putting it all together::
 It's worth mentioning that the above comparison can be further simplified,
 if one were not writing an example specifically to describe the behavior of
 :func:`Item.get`. An :class:`Item` instance can be used directly in comparison
-operations, and will behave as if the 'bin' representation is being used
-directly::
+operations, and will behave as if the Item.value is being used directly::
 
     import mktl
     crazy = mktl.get('population.CRAZY')

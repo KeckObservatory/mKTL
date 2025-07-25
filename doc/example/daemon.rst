@@ -89,8 +89,8 @@ the actual market value. To pick one example::
 	    spot = float(spot)
 
 	    payload = dict()
-	    payload['asc'] = "%.2f" % (spot)
-	    payload['bin'] = spot
+	    payload['value'] = spot
+	    payload['time'] = time.time()
 
 	    return spot
 
