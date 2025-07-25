@@ -48,14 +48,14 @@ def main():
             address,port = seen
             request = mktl.protocol.message.Request('HASH')
             hashes = mktl.protocol.request.send(address, port, request)
-            hashes = hashes['data']
+            hashes = hashes['value']
 
             for store in hashes.keys():
                 request = mktl.protocol.message.Request('CONFIG', store)
                 config = mktl.protocol.request.send(address, port, request)
 
                 try:
-                    blocks = config['data']
+                    blocks = config['value']
                 except KeyError:
                     ## No data; there's probably an error we could inspect
                     ## and log here.
@@ -197,19 +197,22 @@ class RequestServer(mktl.protocol.request.Server):
             mktl.Config.Cache.add(name, new)
 
 
-    def req_config(self, store, request):
-        """ When a daemon sets a configuration block it will include a 'data'
+    def req_config(self, request):
+        """ When a daemon sets a configuration block it will include a 'value'
             segment in the request; an empty response is expected upon receipt
-            of the configuration block. That 'data' segment is not present in a
+            of the configuration block. That 'value' segment is not present in a
             client request; a client expects a sequence of configuration blobs
             representing the full configuration of the store, one blob per
             daemon in the store.
         """
 
-        if request != '':
-            payload = list()
+        store = request.target
+        payload = request.payload
 
-            new_blocks = request['data']
+        if payload is not None:
+            response = list()
+
+            new_blocks = payload['value']
             for uuid,new_block in new_blocks.items():
                 try:
                     self.processConfigurationBlock(new_block)
@@ -219,54 +222,56 @@ class RequestServer(mktl.protocol.request.Server):
 
         else:
             try:
-                payload = mktl.Config.Cache.get(store)
+                response = mktl.Config.Cache.get(store)
             except KeyError:
                 raise KeyError('no configuration available for ' + repr(store))
 
 
+        payload = dict()
+        payload['value'] = response
         return payload
 
 
-    def req_handler(self, socket, lock, ident, parts):
+    def req_handler(self, socket, lock, ident, request):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, parts)
+        self.req_ack(socket, lock, ident, request)
 
-        type = parts[1]
-        store = parts[2]
-        request = parts[3]
-        bulk = parts[4]
+        type = request.type
+        target = request.target
 
-        if type != 'HASH' and store == '':
+        if type != 'HASH' and target == '':
             raise KeyError('invalid request, no store/name specified')
 
         if type == 'HASH':
-            if store == '':
-                store = None
-            payload = self.req_hash(store)
+            payload = self.req_hash(request)
         elif type == 'CONFIG':
-            if store == '':
-                store = None
-            payload = self.req_config(store, request)
+            payload = self.req_config(request)
         else:
             raise ValueError('invalid request type: ' + type)
 
         return payload
 
 
-    def req_hash(self, store):
+    def req_hash(self, request):
         """ Return the hash of a configuration block for a requested store name,
             or all hashes for all locally known stores.
         """
+
+        store = request.target
+        if store == '':
+            store = None
 
         try:
             hashes = mktl.Config.Hash.get(store)
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request))
 
-        return hashes
+        payload = dict()
+        payload['value'] = hashes
+        return payload
 
 
 # end of class RequestServer
