@@ -286,10 +286,10 @@ class Server:
 
         self.req_ack(socket, lock, ident, request)
 
-        response = dict()
-        response['time'] = time.time() ## This should be the value creation time
+        payload = dict()
+        payload['time'] = time.time() ## This should be the value creation time
 
-        response = message.Message('REP', target, response, id=request.id)
+        response = message.Message('REP', target, payload, id=request.id)
         parts = (ident,) + response.multiparts()
 
         lock.acquire()
@@ -309,14 +309,9 @@ class Server:
 
             :func:`req_handler` is expected to call :func:`req_ack` to
             acknowledge the incoming request; if :func:`req_handler` is
-            returning a simple payload it will be packged into a REP response;
-            the payload is always a dictionary, containing at minimum a 'data'
-            value, and an optional 'bulk' value. No response will be issued if
-            :func:`req_handler` returns None.
+            returning a simple payload it will be packged into a REP response.
+            No response will be issued if :func:`req_handler` returns None.
         """
-
-        error = None
-        payload = None
 
         ### This all needs to move into a try/except block so that any
         ### exceptions are passed back to the originator of the request.
@@ -343,6 +338,8 @@ class Server:
             payload = json.loads(payload)
 
         request = message.Request(req_type, target, payload, bulk, req_id)
+        payload = None
+        error = None
 
         try:
             payload = self.req_handler(socket, lock, ident, request)
@@ -362,22 +359,21 @@ class Server:
         ### Does the req_handler return value need to be a special Python class?
         ### Faking the fields for now via tight coupling.
 
-        response = dict()
-        bulk = b''
+        if payload is None:
+            payload = dict()
+            payload['time'] = time.time()
 
         if error is not None:
-            response['error'] = error
-        if payload is not None:
-            response['data'] = payload
+            payload['error'] = error
 
-            try:
-                bulk = payload['bulk']
-            except (KeyError, TypeError):
-                pass
-            else:
-                del payload['bulk']
+        try:
+            bulk = payload['bulk']
+        except (KeyError, TypeError):
+            bulk = None
+        else:
+            del payload['bulk']
 
-        response = message.Message('REP', target, response, bulk, req_id)
+        response = message.Message('REP', target, payload, bulk, req_id)
         parts = (ident,) + response.multiparts()
 
         lock.acquire()

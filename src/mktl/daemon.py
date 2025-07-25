@@ -176,7 +176,7 @@ class Daemon:
 
         config = dict(self.config)
         payload = dict()
-        payload['data'] = config
+        payload['value'] = config
         message = protocol.message.Request('CONFIG', self.store.name, payload)
 
         for address,port in targets:
@@ -271,7 +271,9 @@ class RequestServer(protocol.request.Server):
         else:
             config = Config.get(target)
 
-        return config
+        payload = dict()
+        payload['value'] = config
+        return payload
 
 
     def req_handler(self, socket, lock, ident, request):
@@ -288,19 +290,20 @@ class RequestServer(protocol.request.Server):
             raise KeyError("invalid %s request, 'target' not set" % (type))
 
         if type == 'HASH':
-            payload = self.req_hash(request)
+            response = self.req_hash(request)
         elif type == 'SET':
-            payload = self.req_set(request)
-            if payload is None:
-                payload = True
+            response = self.req_set(request)
+            if response is None:
+                response = dict()
+                response['value'] = True
         elif type == 'GET':
-            payload = self.req_get(request)
+            response = self.req_get(request)
         elif type == 'CONFIG':
-            payload = self.req_config(request)
+            response = self.req_config(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
-        return payload
+        return response
 
 
     def req_get(self, request):
@@ -315,8 +318,8 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        payload = self.daemon.store[key].req_get(request)
-        return payload
+        response = self.daemon.store[key].req_get(request)
+        return response
 
 
     def req_set(self, request):
@@ -331,8 +334,8 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        payload = self.daemon.store[key].req_set(request)
-        return payload
+        response = self.daemon.store[key].req_set(request)
+        return response
 
 
     def req_hash(self, request):
@@ -342,7 +345,9 @@ class RequestServer(protocol.request.Server):
             store = None
 
         cached = Config.Hash.get(store)
-        return cached
+        payload = dict()
+        payload['value'] = cached
+        return payload
 
 
 # end of class RequestServer
@@ -464,10 +469,10 @@ persist_queues = dict()
 def load_persistent(store, uuid):
     """ Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
-        dictionary key, and the value will mimic the structure of a message,
-        being returned as a dictionary with a 'data' key and an optional 'bulk'
-        key as appropriate, so that the handling of any interpretation can be
-        unified within the Item code.
+        dictionary key, and the value will be a
+        :class:`protocol.message.Request` instance, as if it were a set request,
+        so that the handling of any interpretation can be unified within the
+        :class`Item` code.
     """
 
     loaded = dict()
@@ -484,8 +489,6 @@ def load_persistent(store, uuid):
         if key[:5] == 'bulk:':
             continue
 
-        message = dict()
-
         filename = os.path.join(uuid_directory, key)
         bulk_filename = os.path.join(uuid_directory, 'bulk:' + key)
 
@@ -494,28 +497,18 @@ def load_persistent(store, uuid):
         if len(raw_json) == 0:
             continue
 
-        # The data on-disk is expected to be an {asc:, bin:} dictionary
-        # for a simple value, or the description of a bulk message. For
-        # the fake messages being reassembled here, only include the 'bin'
-        # portion of a simple value-- that's what the format of a set request
-        # would look like on the wire.
+        # The data on-disk is expected to be the payload component of a typical
+        # mKTL response or broadcast, with an adjacent file containing the bulk
+        # data, if any.
 
-        data = json.loads(raw_json)
-
-        try:
-            data = data['bin']
-        except KeyError:
-            pass
-
-        message['data'] = data
+        payload = json.loads(raw_json)
 
         try:
             bulk = open(bulk_filename, 'rb').read()
         except FileNotFoundError:
-            pass
-        else:
-            message['bulk'] = bulk
+            bulk = None
 
+        message = protocol.message.Request('SET', key, payload, bulk)
         loaded[key] = message
 
     return loaded
@@ -523,9 +516,9 @@ def load_persistent(store, uuid):
 
 
 def save_persistent(item, *args, **kwargs):
-    """ Queue the Item.cached attribute to be written out to disk. Additional
+    """ Queue the Item._value attribute to be written out to disk. Additional
         arguments are ignored so that this method can be registered as a
-        callback for a :class:`mktl.Client.Item` instance.
+        callback for a :class:`mktl.Item` instance.
     """
 
     uuid = item.config['uuid']
@@ -547,23 +540,23 @@ def save_persistent(item, *args, **kwargs):
     ## representation on the client side is not necessarily established as a
     ## desirable practice.
 
-    saved = dict()
+    by_prefix = dict()
+    payload = dict()
+    payload['time'] = item._value_timestamp
 
     try:
-        bytes = item.cached.tobytes()
+        bytes = item._value.tobytes()
     except AttributeError:
-        payload = item.cached
+        payload['value'] = item._value
     else:
-        payload = dict()
-        payload['shape'] = item.cached.shape
-        payload['dtype'] = str(item.cached.dtype)
+        payload['shape'] = item._value.shape
+        payload['dtype'] = str(item._value.dtype)
 
-        saved['bulk'] = bytes
+        by_prefix['bulk'] = bytes
 
-    payload = json.dumps(payload)
-    saved[''] = payload
+    by_prefix[''] = payload
 
-    pending.put((item.key, saved))
+    pending.put((item.key, by_prefix))
 
 
 
