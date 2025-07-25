@@ -66,13 +66,9 @@ class Daemon(daemon.Daemon):
         ascii = slice.ascii
         binary = slice.binary
 
-        payload = dict()
-        payload['asc'] = ascii
-        payload['bin'] = binary
-
         key = keyword.name
         item = self.store[key]
-        item.publish(payload, timestamp=timestamp)
+        item.publish(binary, timestamp=timestamp)
 
 
 # end of class Store
@@ -92,15 +88,15 @@ class Item(item.Item):
         binary = slice.binary
 
         payload = dict()
-        payload['asc'] = ascii
-        payload['bin'] = binary
+        payload['value'] = binary
+        payload['time'] = timestamp
 
         return payload
 
 
     def req_set(self, request):
 
-        new_value = request.payload['data']
+        new_value = request.payload['value']
 
         keyword = ktl.cache(request.target)
         keyword.write(new_value)
@@ -191,8 +187,8 @@ def describeKeyword(keyword):
 
                 if binary_units is not None:
                     units = dict()
-                    units['asc'] = value
-                    units['bin'] = binary_units
+                    units['formatted'] = value
+                    units['base'] = binary_units
 
                     value = units
 
