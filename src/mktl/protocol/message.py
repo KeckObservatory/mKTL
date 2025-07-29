@@ -40,7 +40,7 @@ class Message:
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
-    valid_types = set(('ACK', 'PUB', 'REP'))
+    valid_types = set(('ACK', 'REP'))
 
     def __init__(self, type, target=None, payload=None, bulk=None, id=None):
 
@@ -64,7 +64,11 @@ class Message:
         self.timestamp = time.time()
 
         self.parts = None
-        self.publish_parts = None
+
+
+    def __iter__(self):
+        self._finalize()
+        return iter(self.parts)
 
 
     def __repr__(self):
@@ -72,10 +76,10 @@ class Message:
         return repr(as_tuple)
 
 
-    def multiparts(self):
-        """ Convert this :class:`Message` to a tuple of parts appropriate
-            for a call send_multipart(), where every part has been converted
-            to bytes. The tuple is returned.
+    def _finalize(self):
+        """ Take the contents of this :class:`Message`, interpet them as
+            bytes, and prepare the tuple that will be used for the multipart
+            transmission on the wire.
         """
 
         parts = self.parts
@@ -90,8 +94,7 @@ class Message:
 
             # It is legal to create a Message with None as the id-- this happens
             # all the time when a Message is used as a container-- but trying to
-            # send such a message is not permitted. The publish path must call
-            # publish_multiparts() instead of this method.
+            # send such a message is not permitted.
 
             if id is None:
                 raise RuntimeError('messages must have an id to be put on the wire')
@@ -130,17 +133,21 @@ class Message:
             self.parts = parts
 
 
-        return parts
+# end of class Message
 
 
-    def publish_multiparts(self):
-        """ Convert this :class:`Message` to a tuple of parts appropriate
-            for a call send_multipart(), in a publish context, where every
-            part has been converted to bytes; the local id field is not
-            included. The tuple is returned.
-        """
 
-        parts = self.publish_parts
+class Broadcast(Message):
+    """ A :class:`Broadcast` is a minor variant of a :class:`Message`,
+        with a change to format the multipart tuple in a PUB/SUB specific
+        fashion.
+    """
+
+    valid_types = set(('PUB',))
+
+    def _finalize(self):
+
+        parts = self.parts
 
         if parts is None:
 
@@ -167,13 +174,10 @@ class Message:
                 bulk = b''
 
             parts = (target, version, payload, bulk)
-            self.publish_parts = parts
+            self.parts = parts
 
 
-        return parts
-
-
-# end of class Message
+# end of class Broadcast
 
 
 

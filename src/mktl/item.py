@@ -223,7 +223,8 @@ class Item:
 
             bulk = bytes
 
-        message = protocol.message.Message('PUB', self.full_key, payload, bulk)
+        key = self.full_key
+        message = protocol.message.Broadcast('PUB', key, payload, bulk)
 
         # The local call to manipulate the _update_queue is presently commented
         # out because the daemon-aware handling in subscribe() is not enabled.

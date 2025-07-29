@@ -184,7 +184,7 @@ class Client:
         if bulk == b'':
             bulk = None
 
-        broadcast = message.Message('PUB', topic, payload, bulk)
+        broadcast = message.Broadcast('PUB', topic, payload, bulk)
         self.propagate(topic, broadcast)
 
 
@@ -286,11 +286,11 @@ class Server:
 
 
     def publish(self, message):
-        """ A *message* is a :class:`message.Message` instance intended for
+        """ A *message* is a :class:`message.Broadcast` instance intended for
             broadcast to any subscribers.
         """
 
-        parts = message.publish_multiparts()
+        parts = tuple(message)
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)

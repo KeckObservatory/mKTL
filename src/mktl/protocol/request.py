@@ -125,7 +125,7 @@ class Client:
             free to decide whether to block or wait for the full response.
         """
 
-        parts = message.multiparts()
+        parts = tuple(message)
         self.pending[message.id] = message
 
         self.socket_lock.acquire()
@@ -270,7 +270,7 @@ class Server:
         ack['time'] = time.time()
 
         response = message.Message('ACK', payload=ack, id=request.id)
-        parts = (ident,) + response.multiparts()
+        parts = (ident,) + tuple(response)
         lock.acquire()
         socket.send_multipart(parts)
         lock.release()
@@ -290,7 +290,7 @@ class Server:
         payload['time'] = time.time() ## This should be the value creation time
 
         response = message.Message('REP', target, payload, id=request.id)
-        parts = (ident,) + response.multiparts()
+        parts = (ident,) + tuple(response)
 
         lock.acquire()
         socket.send_multipart(parts)
@@ -374,7 +374,7 @@ class Server:
             del payload['bulk']
 
         response = message.Message('REP', target, payload, bulk, req_id)
-        parts = (ident,) + response.multiparts()
+        parts = (ident,) + tuple(response)
 
         lock.acquire()
         self.socket.send_multipart(parts)
@@ -402,7 +402,7 @@ class Server:
             that need to be relayed back to the original caller.
         """
 
-        parts = (ident,) + message.multiparts()
+        parts = (ident,) + tuple(message)
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
