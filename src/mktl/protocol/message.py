@@ -72,8 +72,8 @@ class Message:
 
 
     def __repr__(self):
-        as_tuple = (version, self.id, self.type, self.target, self.payload, self.bulk)
-        return repr(as_tuple)
+        self._finalize()
+        return repr(self.parts)
 
 
     def _finalize(self):
@@ -113,7 +113,8 @@ class Message:
                 try:
                     target = target.encode()
                 except AttributeError:
-                    print(repr(self))
+                    # Assume it is already bytes.
+                    pass
 
             # Some JSON encoders will happily take a byte sequence and
             # encode it. We may need to check here whether the payload
@@ -217,13 +218,15 @@ class Request(Message):
 
 
     def __repr__(self):
-        as_tuple = (version, self.id, self.type, self.target, self.payload, self.bulk)
-        if self.response is None:
-            as_tuple = as_tuple + (None,)
-        else:
-            as_tuple = as_tuple + (repr(self.response),)
+        self._finalize()
+        request = 'REQ: ' + repr(self.parts)
 
-        return repr(as_tuple)
+        if self.response is None:
+            response = 'REP: None'
+        else:
+            response = 'REP: ' + repr(tuple(self.response))
+
+        return request + ', ' + response
 
 
     def _complete_ack(self):
