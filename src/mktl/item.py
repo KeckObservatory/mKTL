@@ -516,17 +516,15 @@ class Item:
 
     @property
     def value(self):
-        """ The current value of the item. Invoke :func:`get` and :func:`set`
-            directly for more control over any just-in-time behavior.
+        """ Get and set the current value of the item. Invoke :func:`get` and
+            :func:`set` directly for additional control over any just-in-time
+            behavior.
         """
 
-        if self._daemon_value is not None:
+        if self.authoritative == True:
             return self._daemon_value
 
-        if self._value is not None:
-            return self._value
-
-        if self.authoritative == False:
+        if self._value is None:
             self.get(refresh=True)
 
         return self._value
