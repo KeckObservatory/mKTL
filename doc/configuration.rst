@@ -212,8 +212,8 @@ like for a store named 'pie'::
           "ANGLE": {
             "type": "numeric",
             "units": {
-              "asc": "h",
-              "bin": "rad"
+              "base": "rad"
+              "formatted": "h",
             },
             "description": "Writable angle keyword.",
 	    "persist": "true"
@@ -275,8 +275,8 @@ daemon-side .json file for the above two-item example::
           "ANGLE": {
             "type": "numeric",
             "units": {
-              "asc": "h",
-              "bin": "rad"
+              "base": "rad"
+              "formatted": "h",
             },
             "description": "Writable angle keyword."
           },
