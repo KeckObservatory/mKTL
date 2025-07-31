@@ -17,11 +17,12 @@ from . import weakref
 
 class Item:
     """ An Item represents a key/value pair, where the key is the name of the
-        Item, and the value is whatever is provided by the daemon, according to
-        :func:`get` and :func:`subscribe` requests. A :func:`set` request does
-        not update the local value, it only issues a request to the remote
-        daemon; it is the daemon's responsibility to issue a post-set update
-        with any new value(s).
+        Item, and the value is whatever is provided by the authoritative daemon.
+        The principal way for both clients and daemons to get or set the value
+        is via the :func:`value` property.
+
+        A non-authoritative Item will automatically :func:`subscribe` itself to
+        any available updates.
     """
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
@@ -517,8 +518,8 @@ class Item:
     @property
     def value(self):
         """ Get and set the current value of the item. Invoke :func:`get` and
-            :func:`set` directly for additional control over any just-in-time
-            behavior.
+            :func:`set` directly for additional control over how these calls
+            are handled.
         """
 
         if self.authoritative == True:
