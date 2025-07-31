@@ -54,4 +54,4 @@ the value is instead the string value '12', the same operation will raise a
 TypeError exception.
 
 .. autoclass:: mktl.Item
-   :members: get, register, set, subscribe
+   :members: get, register, set, subscribe, value
