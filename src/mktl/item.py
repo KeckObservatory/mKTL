@@ -261,13 +261,14 @@ class Item:
         """ Handle a GET request. A typical subclass should not need to
             re-implement this method, implementing :func:`req_refresh`
             would normally be sufficient. The *request* argument is a
-            class:`protocol.message.Request` instance, parsed from the
+            :class:`protocol.message.Request` instance, parsed from the
             on-the-wire request. The value returned from :func:`req_get`
             is identical to the value returned by :func:`req_refresh`.
-
-            ### req_get should put the response in as request.response,
-            ### instead of returning a dictionary.
         """
+
+        ### TODO:
+        ### Should req_get put the response in as request.response,
+        ### instead of returning a payload?
 
         try:
             refresh = request.payload['refresh']

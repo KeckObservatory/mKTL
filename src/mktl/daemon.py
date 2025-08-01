@@ -16,24 +16,26 @@ from . import store
 
 
 class Daemon:
-    """ The mKTL :class:`Daemon` is little more than a facilitator for common
-        mKTL actions taken in a daemon context: loading a configuration file,
-        instantiating :class:`mktl.Item` instances, and commencing routine
-        operations.
+    """ The mKTL :class:`Daemon` is a facilitator for common mKTL actions taken
+        in a daemon context: loading a configuration file, instantiating
+        :class:`mktl.Item` instances, and commencing routine operations.
 
         The developer is expected to subclass the :class:`Daemon` class and
         implement a :func:`setup` method, and/or a :func:`setup_final`
-        method.
+        method. This subclass is the gateway between mKTL functionality and
+        the domain-specific custom code appropriate for the developer's
+        application.
 
-        The *store* argument is the name of this store; *config* is the base
-        name of the mKTL configuration file that defines the items in this
-        store. *arguments* is expected to be an :class:`argparse.ArgumentParser`
+        The *store* argument is the name of the store that this daemon is
+        providing items for; *config* is the base name of the mKTL configuration
+        file that defines the items for which this daemon is authoritative.
+        *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
-        named attributes of interest to a :class:`Daemon` subclass; it is not
-        required. This is intended to be a vehicle for subclasses to receive
-        key information from command-line arguments, such as the location of
-        an auxiliary configuration file containing information about a hardware
-        controller.
+        named attributes of interest to a :class:`Daemon` subclass; the
+        *arguments* argument is not required. This is intended to be a vehicle
+        for custom subclasses to receive key information from command-line
+        arguments, such as the location of an auxiliary configuration file
+        containing information about a hardware controller.
     """
 
     def __init__(self, store, config, arguments=None):
@@ -214,7 +216,7 @@ class Daemon:
         """ Subclasses should override the :func:`setup` method to invoke
             :func:`add_item` for any custom :class:`mktl.Item` subclasses
             or otherwise execute custom code. When :func:`setup` is called
-            the bulk of the :class:`Store` machinery is in place, but cached
+            the bulk of the :class:`Daemon` machinery is in place, but cached
             values have not been loaded, nor has the presence of this daemon
             been announced. The default implementation of this method takes
             no actions.
@@ -226,7 +228,8 @@ class Daemon:
     def _setup_missing(self):
         """ Inspect the locally known list of :class:`mktl.Item` instances;
             create default, caching instances for any that were not previously
-            populated by the call to :func:`setup`.
+            populated by the call to :func:`setup`; this method is called before
+            :func:`setup_final` is invoked.
         """
 
         local = self._items.keys()
@@ -243,7 +246,7 @@ class Daemon:
         """ Subclasses should override the :func:`setup_final` method to
             execute any/all code that should occur after all :class:`mktl.Item`
             instances have been created, including any non-custom
-            :class:`mktl.Item` instances, but before this :class:`Store`
+            :class:`mktl.Item` instances, but before this daemon
             announces its availability on the local network. The default
             implementation of this method takes no actions.
         """
