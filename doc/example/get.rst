@@ -34,7 +34,7 @@ a ``KeyError`` exception will be raised if the key does not exist.
 Rerieving a value
 -----------------
 
-Referencing the :func:`Item.value` property is the preferred approach to
+Referencing the :py:attr:`Item.value` property is the preferred approach to
 retrieve the current value of an item. The getter method behind the property
 will retrieve the value if one is not already available, though this is not
 expected to be the average case-- a client-side :class:`Item` instance will
@@ -49,8 +49,8 @@ Calling :func:`Item.get`
 ------------------------
 
 :func:`Item.get` offers additional options if the default behavior using the
-:func:`Item.value` property is not adequate. Most exceptions do not need to be
-caught if you are calling :func:`Item.get`
+:py:attr:`Item.value` property is not adequate. Most exceptions do not need
+to be caught if you are calling :func:`Item.get`
 directly, unless the caller expects to operate in a regime where the
 authoritative daemon is offline and the application will retry at a later time.
 This section shows exception handling for completeness's sake::
@@ -66,7 +66,7 @@ This section shows exception handling for completeness's sake::
 With no arguments the call to :func:`Item.get` will return the locally
 cached value if the item is subscribed to broadcasts, or request the value
 from the authoritative daemon if it is not-- the same behavior one would get
-by using the :func:`Item.value` property. The caller can bypass the local
+by using the :py:attr:`Item.value` property. The caller can bypass the local
 cache if it is relevant for their application, explicitly requesting that
 the daemon update (and broadcast) the current value while handling this call::
 
@@ -109,7 +109,7 @@ Putting it all together::
 
 It's worth mentioning that the above comparison can be further simplified:
 an :class:`Item` instance can be used directly in comparison operations,
-and will behave as if :func:`Item.value` is being used directly::
+and will behave as if :py:attr:`Item.value` is being used directly::
 
     import mktl
     crazy = mktl.get('population.CRAZY')
