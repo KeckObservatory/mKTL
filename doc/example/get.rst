@@ -32,8 +32,8 @@ configuration is available for that store (i.e., the store does not exist);
 a ``KeyError`` exception will be raised if the key does not exist.
 
 
-Rerieving a value
------------------
+The :py:attr:`Item.value` property
+----------------------------------
 
 Referencing the :py:attr:`Item.value` property is the preferred approach to
 retrieve the current value of an item. The getter method behind the property
@@ -41,7 +41,7 @@ will retrieve the value if one is not already available, though this is not
 expected to be the average case-- a client-side :class:`Item` instance will
 automatically call :func:`Item.subscribe` when it is instantiated.
 
-The property can be used directly::
+The property is used directly::
 
     current = crazy.value
 
