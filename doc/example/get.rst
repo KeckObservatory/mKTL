@@ -79,15 +79,15 @@ specified.
 Handling return values
 ----------------------
 
-The value returned by :func:`Item.get` is a Python native object, either a
+The reference at the :py:attr:`Item.value` property as well as the value
+returned by :func:`Item.get`, is a Python native object, either a
 primitive, such as an integer or floating point number, or something like a
 numpy array. For example::
 
     >>> current
     True
 
-If the item represents a bulk value the returned reference will be
-a numpy array. If no value is availble the current value will be ``None``.
+If no value is availble the current value will be ``None``.
 
 
 Full example
@@ -107,7 +107,7 @@ Putting it all together::
         else:
             print('The population is sane.')
 
-It's worth mentioning that the above comparison can be further simplified:
+The above comparison can be further simplified:
 an :class:`Item` instance can be used directly in comparison operations,
 and will behave as if :py:attr:`Item.value` is being used directly::
 
