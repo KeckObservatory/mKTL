@@ -27,17 +27,33 @@ any/all subsequent use. The required boilerplate is short::
 The ``crazy`` reference here will be identical for each different invocation
 shown. The important part is that we now have a :class:`Item` that can be used
 for subsequent calls. A ``ValueError`` exception will be raised if no
-configuration is available for that store; a ``KeyError`` exception will be
-raised if the key does not exist.
+configuration is available for that store (i.e., the store does not exist);
+a ``KeyError`` exception will be raised if the key does not exist.
+
+
+Rerieving a value
+-----------------
+
+Referencing the :func:`Item.value` property is the preferred approach to
+retrieve the current value of an item. The getter method behind the property
+will retrieve the value if one is not already available, though this is not
+expected to be the average case-- a client-side :class:`Item` instance will
+automatically call :func:`Item.subscribe` when it is instantiated.
+
+The property can be used directly::
+
+    current = crazy.value
 
 
 Calling :func:`Item.get`
 ------------------------
 
-Most exceptions do not need to be caught if you are calling :func:`Item.get`
-directly; an exception here is unexpected, and likely violates any reasonable
-attempts at error recovery that might be performed. This section shows exception
-handling for completeness's sake::
+:func:`Item.get` offers additional options if the default behavior using the
+:func:`Item.value` property is not adequate. Most exceptions do not need to be
+caught if you are calling :func:`Item.get`
+directly, unless the caller expects to operate in a regime where the
+authoritative daemon is offline and the application will retry at a later time.
+This section shows exception handling for completeness's sake::
 
     try:
         current = crazy.get()
@@ -49,7 +65,8 @@ handling for completeness's sake::
 
 With no arguments the call to :func:`Item.get` will return the locally
 cached value if the item is subscribed to broadcasts, or request the value
-from the authoritative daemon if it is not. The caller can bypass the local
+from the authoritative daemon if it is not-- the same behavior one would get
+by using the :func:`Item.value` property. The caller can bypass the local
 cache if it is relevant for their application, explicitly requesting that
 the daemon update (and broadcast) the current value while handling this call::
 
@@ -69,9 +86,8 @@ numpy array. For example::
     >>> current
     True
 
-If the item represents a bulk value the returned reference will not be a Python
-dictionary, it will be a numpy array. If no value is availble the current value
-could simply be ``None``.
+If the item represents a bulk value the returned reference will be
+a numpy array. If no value is availble the current value will be ``None``.
 
 
 Full example
@@ -81,29 +97,26 @@ Putting it all together::
 
     import mktl
     crazy = mktl.get('population.CRAZY')
-    current = crazy.get()
+    craziness = crazy.value
 
-    if current is None:
+    if craziness is None:
         print('The population craziness is unknown.')
     else:
-        craziness = current
         if craziness == True:
             print('The population is crazy.')
         else:
             print('The population is sane.')
 
-It's worth mentioning that the above comparison can be further simplified,
-if one were not writing an example specifically to describe the behavior of
-:func:`Item.get`. An :class:`Item` instance can be used directly in comparison
-operations, and will behave as if the Item.value is being used directly::
+It's worth mentioning that the above comparison can be further simplified:
+an :class:`Item` instance can be used directly in comparison operations,
+and will behave as if :func:`Item.value` is being used directly::
 
     import mktl
     crazy = mktl.get('population.CRAZY')
-    crazy.subscribe()	# For this example calling crazy.get() would also work
 
     if crazy == None:
         print('The population craziness is unknown.')
-    elif craziness == True:
+    elif crazy == True:
         print('The population is crazy.')
     else:
         print('The population is sane.')
