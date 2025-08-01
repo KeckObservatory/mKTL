@@ -16,7 +16,8 @@ Getting started
 
 An :class:`Item` instance is required to perform any client operations; the
 :func:`get` method should be invoked to acquire a cached singleton for
-any/all subsequent use. The required boilerplate is short::
+any/all subsequent use. Case is not significant in the key name. The required
+boilerplate is short::
 
     import mktl
     crazy = mktl.get('population.CRAZY')
