@@ -77,8 +77,8 @@ Note in particular the documentation for :func:`Item.req_refresh` and
 :func:`Item.req_set`, as it covers the expected behavior of each method.
 For our example, the various items are intended to represent the market
 spot price of different precious metals. In this case, the
-:func:`req_refresh` method may request the current value from a website,
-and :func:`req_set` would not be defined, since we don't get to change
+:func:`Item.req_refresh` method may request the current value from a website,
+and :func:`Item.req_set` would not be defined, since we don't get to change
 the actual market value. To pick one example::
 
 
@@ -106,8 +106,8 @@ occur, otherwise the various items defined for this daemon within this store
 will be populated with default, caching-only instances; this occurs immediately
 after the :class:`Daemon` invokes :func:`Daemon.setup`.
 
-Any custom initialization action for the daemon is reasonable to include as a
-call in :func:`Daemon.setup`, such as initializing a connection to a controller,
+Any application-specific initialization is reasonable to include in
+:func:`Daemon.setup`, such as initializing a connection to a controller,
 especially if it is a pre-requisite for any of the custom :class:`Item`
 subclasses. For the example defined here, we only need to instantiate our
 custom subclasses for each of the different precious metals for which we are
@@ -119,10 +119,11 @@ publishing prices::
         self.add_item(Silver, 'SILVER')
         self.add_item(Platinum, 'PLATINUM')
 
-Note the use of :func:`Daemon.add_item` here when establishing :class:`Item`
-instances for those items that the daemon is authoritative for. The
-:func:`Daemon.add_item` method tweaks the instantiation process such that the
-:class:`Item` is properly configured as an authoritative instance.
+Note the use of :func:`Daemon.add_item` here when establishing authoritative
+:class:`Item` instances. The :func:`Daemon.add_item` method tweaks the
+instantiation process such that the :class:`Item` is properly configured as
+an authoritative instance, in addition to other tracking local to the
+:class:`Daemon` instance that gets leveraged when handling requests.
 
 
 :func:`Daemon.setup_final` method
@@ -134,6 +135,11 @@ persistent values, that logic should be invoked in the:func:`Daemon.setup_final`
 method. Most daemons will not take advantage of this method; this example daemon
 is likewise too simple to require it.
 
+A more complex example, such as a proxy for some other key/value protocol,
+might establish all of the :class:`Item` instances, and the in the
+:func:`Daemon.setup_final` method, it would take whatever actions are necessary
+in the foreign protocol to subscribe to event broadcasts.
+
 
 JSON description of items
 -------------------------
@@ -141,11 +147,11 @@ JSON description of items
 The :ref:`configuration syntax <configuration>` describing a set of items is a
 JSON associative array. When a daemon first starts it must have a complete JSON
 description of every item; this forms the core of the configuration managed by
-that daemon, which is responsible for adding the additional metadata required
-for proper client interactions.
+that daemon, which is responsible for adding the metadata required for proper
+client interactions.
 
 The JSON contents can be generated at run time and 'saved' for future use by
-other mKTL calls. This is the approach taken by the KTL translation backend,
+other mKTL calls. This is the approach taken by the KTL protocol translation,
 where the JSON is a repackaging of the configuration metadata supplied by
 KTL API calls; with a JSON-like dictionary in hand, the daemon would have
 lines like the following in its initialization method::
@@ -161,7 +167,7 @@ to be used by the daemon. The file can be anywhere, so long as it is accessible
 upon startup, after which the file is no longer referenced in any way. The
 configuration file is expected to contain a single JSON-formatted dictionary,
 with a :ref:`dictionary for each item <items>`. Whitespace is not important,
-so long as a JSON parser understands the file contents.
+so long as JSON parsers understand the file contents.
 
 The following is a configuration block appropriate for the items used in this
 example:
