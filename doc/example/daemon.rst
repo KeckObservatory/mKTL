@@ -141,6 +141,41 @@ might establish all of the :class:`Item` instances, and the in the
 in the foreign protocol to subscribe to event broadcasts.
 
 
+Setting values of other items
+-----------------------------
+
+This scenario is not relevant to this simple example, but it occurs often
+in actual usage. What if you have code that needs to set the value of an
+:class:`Item` instance within the context of a single daemon? Not every
+item will have a custom subclass defined for it; the default behavior of
+a 'caching' item is adequate for a large fraction of authoritative items.
+It's common for there to be an item that sets derived values elsewhere,
+or sets a family of related item values as a result of an isolated change
+elsewhere.
+
+The :func:`Item.get` and :func:`Item.set` methods are inherently client-facing.
+While they can be used in a daemon context they will invoke the full mKTL
+request handling; in some cases this will be desired, but in the average
+case it is not necessary, or desired-- and adds extra overhead.
+
+Updating the value for an authoritative :class:`Item` is done via the
+:func:`Item.publish` method. The :py:attr:`Item.value` property, for
+authoritative items, will map to this method. These two calls are
+equivalent, only one is necessary::
+
+    self.value = 102.45
+    self.publish(102.45)
+
+Likewise, for other authoritative items within a daemon, with two equivalent
+ways to retrieve the local authoritative item instance::
+
+    other = self.store['OTHER_ITEM']
+    other = mktl.get('metal.OTHER_ITEM')
+
+    other.value = 33.67
+    other.publish(33.67)
+
+
 JSON description of items
 -------------------------
 
