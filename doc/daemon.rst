@@ -61,11 +61,11 @@ of the containing :class:`mktl.Daemon`.
 
 Subclass definitions of the :func:`mktl.Item.req_refresh`,
 :func:`mktl.Item.req_set`, and :func:`mktl.Item.validate` methods
-are especially important for defining any
-custom behavior. Any method with a `req_` prefix is part of the handling chain
-for an inbound request, with :func`mktl.Item.req_get` and
-:func:`mktl.Item.req_set` implementing entry points for their respective
-operations, though if necessary :func:`mktl.Item.req_get` calls
+are the key methods to override when implementing custom behavior.
+Any method with a `req_` prefix is part of the handling chain
+for an inbound request, with :func:`mktl.Item.req_get` and
+:func:`mktl.Item.req_set` implementing entry points for GET and SET operations,
+respectively, though if :func:`mktl.Item.req_get` leverages
 :func:`mktl.Item.req_refresh` in order to acquire the most recent value.
 
 .. autoclass:: mktl.Item
