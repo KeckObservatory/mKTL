@@ -187,6 +187,10 @@ class Item:
             argument will be ignored. If *timestamp* is set it is expected to be
             a UNIX epoch timestamp; the current time will be used if it is not
             set. Any published values are always cached locally.
+
+            Note that, for simple cases, an authoritative daemon can set the
+            :func:`value` property to publish a new value instead of calling
+            :func:`publish` directly.
         """
 
         if timestamp is None:
