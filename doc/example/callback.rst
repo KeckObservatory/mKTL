@@ -44,14 +44,16 @@ that ignores the arguments provided, an approach made easier by the use of
         if average.computed is None:
             average.computed = temp
         else:
-            average.computed = new_weight * temp + old_weight * average.computed
+            new = new_weight * temp
+            old = old_weight * average.computed
+            average.computed = new + old
 
         print("%.3f %s average: %.1f" % (time, item.key, average.computed)
 
     average.computed = None
 
 
-...and an alternate version, using :func:`get`::
+...and an alternate version, ignoring the arguments::
 
     def average(*args, **kwargs):
 
@@ -64,7 +66,9 @@ that ignores the arguments provided, an approach made easier by the use of
         if average.computed is None:
             average.computed = float(temp)
         else:
-            average.computed = new_weight * temp + old_weight * average.computed
+            new = new_weight * temp
+            old = old_weight * average.computed
+            average.computed = new + old
 
         timestamp = temp.cached_timestamp
         print("%.3f %s average: %.1f" % (timestamp, temp.key, average.computed)
@@ -76,11 +80,15 @@ These two approaches are functionally identical for this simple example.
 The second approach, relying on :func:`get`, becomes appealing
 when multiple items need to be inspected in a given callback; for example,
 if the current temperature were being compared to the current setpoint.
+There is no provision for calling a callback with arguments from multiple
+items, a single invocation of a callback is only ever triggered by a
+broadcast event associated with a single item.
 
 It is possible to block up a queue of events if the events arrive more
 rapidly than their callbacks can be processed. Each different :class:`Item`
-has its own processing queue, and events are processed sequentially on
-a per-item basis.
+has its own processing queue on the client side, and events are processed
+sequentially on a per-item basis. Callbacks should avoid delays in order
+to prevent the local queue from backing up.
 
 
 Calling :func:`Item.register`
@@ -92,8 +100,9 @@ of that item changes. This is accomplished via :func:`Item.register`::
 
     temp.register(average)
 
-:func:`Item.register` will invoke :func:`Item.subscribe` if the caller did
-not already do so in some other context.
+:func:`Item.register` will invoke :func:`Item.subscribe` if necessary,
+though all client-facing :class:`Item` instances generally invoke
+:func:`Item.subscribe` when they are first instantiated.
 
 
 Full example
@@ -106,6 +115,7 @@ Putting it all together::
     temp = mktl.get('oven.TEMP')
 
     def just_print(*args, **kwargs):
+
         temp = mktl.get('oven.TEMP')
         value = float(temp)
         time = temp.cached_timestamp
@@ -123,7 +133,7 @@ Putting it all together::
             average.computed = float(temp)
         else:
             new = new_weight * temp
-	    old = old_weight * average.computed
+            old = old_weight * average.computed
             average.computed = new + old
 
         timestamp = temp.cached_timestamp
