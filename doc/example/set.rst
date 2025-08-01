@@ -17,6 +17,21 @@ more details. We'll get right to it::
     score = mktl.get('team.SCORE')
 
 
+The :py:attr:`Item.value` property
+----------------------------------
+
+Assigning a new value to the :py:attr:`Item.value` property will call
+:func:`Item.set` with default arguments, in particular, the call will
+block until the set operation is complete. This is considered the
+"Pythonic" approach to change the value of an mKTL item, though there
+are many circumstances (such as graphical user interfaces) where a
+blocking call is not desired.
+
+The property is assigned directly::
+
+    score.value = 44
+
+
 Calling :func:`Item.set`
 ------------------------
 
@@ -40,7 +55,7 @@ set request::
 With the ``wait=False`` argument the call to :func:`Item.set` will return
 immediately after the request is successfully delivered to the daemon for
 handling. This is the best option if the client application is not concerned
-about responding to the completion of this request. If the client application
+about when or whether the request completes. If the client application
 does want explicit notification when the request is complete, :func:`Item.set`
 returns a :class:`protocol.message.Request` instance that enables this usage
 pattern::
@@ -71,20 +86,21 @@ the score can be done a few different ways::
     import mktl
     score = mktl.get('team.SCORE')
 
+    # Using in-place modification:
+    score += 1
+
+    # Using the .value property:
+    score.value += 1
+
+    # Using operator support:
+    score.set(score + 1)
+
     # Explicit get() and set():
     old_score = score.get()
     new_score = old_score + 1
     score.set(new_score)
 
-    # Using operator support:
-    score.subscribe()
-    score.set(score + 1)
-
-    # Using in-place modification:
-    score.subscribe()	# Not required, the in-place call will subscribe()
-    score += 1
-
-All three of the approaches shown yield the same result.
+All of the approaches shown yield the same result.
 
 
 Full example
@@ -94,5 +110,5 @@ Putting it all together::
 
     import mktl
     score = mktl.get('team.SCORE')
-    score.set(44)
+    score.value = 44
 
