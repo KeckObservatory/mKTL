@@ -197,52 +197,28 @@ class Item:
         else:
             timestamp = float(timestamp)
 
-        # Perhaps there is a more declarative way to know whether a given
-        # value is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
-        # expected behavior explicit?
-
-        try:
-            new_value.tobytes
-        except AttributeError:
-            bulk = False
-        else:
-            bulk = True
-
-        payload = dict()
+        payload, bulk = self._prepare_value(new_value)
         payload['time'] = timestamp
 
         changed = False
 
-        if bulk == True:
-            ### This should use a standard method to interpret the ndarray.
-            bytes = new_value.tobytes()
-            payload['shape'] = new_value.shape
-            payload['dtype'] = str(new_value.dtype)
-
-            if self._daemon_value is None:
-                match = False
+        if repeat == False:
+            if bulk is None:
+                changed = self._daemon_value != new_value
             else:
-                ### This check could be expensive for large arrays.
-                match = (self._daemon_value & new_value).all()
+                if self._daemon_value is None and new_value is not None:
+                    changed = True
+                elif self._daemon_value is not None and new_value is None:
+                    changed = True
+                else:
+                    ### This check could be expensive for large arrays.
+                    match = (self._daemon_value & new_value).all()
+                    changed = not match
 
-            if match == False:
-                self._daemon_value = new_value
-                self._daemon_value_timestamp = timestamp
-                changed = True
+        if changed == True:
+            self._daemon_value = new_value
+            self._daemon_value_timestamp = timestamp
 
-            bulk = bytes
-
-        else:
-            bulk = None
-            payload['value'] = new_value
-            if self._daemon_value != new_value:
-                self._daemon_value = new_value
-                self._daemon_value_timestamp = timestamp
-                changed = True
-
-        key = self.full_key
-        message = protocol.message.Broadcast('PUB', key, payload, bulk)
 
         # The local call to manipulate the _update_queue is presently commented
         # out because the daemon-aware handling in subscribe() is not enabled.
@@ -250,6 +226,9 @@ class Item:
         # the usual PUB/SUB machinery is too expensive.
 
         if changed == True or repeat == True:
+            key = self.full_key
+            message = protocol.message.Broadcast('PUB', key, payload, bulk)
+
             ### self._update_queue.put(message)
             self.pub.publish(message)
 
@@ -292,24 +271,21 @@ class Item:
         except (TypeError, KeyError):
             refresh = False
 
+        bulk = None
+
         if refresh == True:
             payload = self.req_poll()
+            new_value = payload['value']
+            timestamp = payload['time']
+
+            payload, bulk = self._prepare_value(new_value)
+            payload['time'] = timestamp
         else:
-            payload = dict()
-            payload['value'] = self._daemon_value
+            payload, bulk = self._prepare_value()
             payload['time'] = self._daemon_value_timestamp
 
-        new_value = payload['value']
-
-        try:
-            bytes = new_value.tobytes()
-        except AttributeError:
-            pass
-        else:
-            del payload['value']
-            payload['shape'] = new_value.shape
-            payload['dtype'] = str(new_value.dtype)
-            payload['bulk'] = bytes
+        if bulk is not None:
+            payload['bulk'] = bulk
 
         return payload
 
@@ -404,7 +380,7 @@ class Item:
 
 
 
-    def set(self, new_value, wait=True, bulk=None):
+    def set(self, new_value, wait=True):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
@@ -413,21 +389,9 @@ class Item:
             request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed
             requests will raise exceptions.
-
-            If *bulk* is set it is expected to be a numpy array, though this
-            could change in the future.
         """
 
-        payload = dict()
-
-        if bulk is None:
-            payload['value'] = new_value
-        else:
-            ### This should use a standard method to interpret the ndarray.
-            bytes = bulk.tobytes()
-            payload['shape'] = bulk.shape
-            payload['dtype'] = str(bulk.dtype)
-
+        payload, bulk = self._prepare_value(new_value)
         message = protocol.message.Request('SET', self.full_key, payload, bulk)
         self.req.send(message)
 
@@ -544,28 +508,37 @@ class Item:
             self.set(new_value)
 
 
-    def _interpret_bulk(self, message):
-        """ Interpret a new bulk value, returning the new rich data construct
-            for further handling by methods like :func:`_update`. The default
-            handling here treats the bulk message as if it is an N-dimensional
-            numpy array; breaking out the interpretation allows future handlers
-            to change this behavior for different types of bulk data.
+    def _prepare_value(self, value=None):
+        """ Interpret the current value of this item into a payload, bulk
+            data tuple, appropriate for inclusion in a
+            :class:`protocol.message.Message` instance.
+
+            This is the inverse of :func:`_recreate_value`.
         """
 
-        if numpy is None:
-            raise ImportError('numpy module not available')
+        if value is None:
+            if self.authoritative == False:
+                value = self._value
+            else:
+                value = self._daemon_value
 
-        description = message.payload
-        bulk = message.bulk
+        payload = dict()
 
-        shape = description['shape']
-        dtype = description['dtype']
-        dtype = getattr(numpy, dtype)
+        # Perhaps there is a more declarative way to know whether a given
+        # value is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
 
-        serialized = numpy.frombuffer(bulk, dtype=dtype)
-        reshaped = numpy.reshape(serialized, newshape=shape)
+        try:
+            bulk = value.tobytes()
+        except AttributeError:
+            bulk = None
+            payload['value'] = value
+        else:
+            payload['shape'] = value.shape
+            payload['dtype'] = str(value.dtype)
 
-        return reshaped
+        return (payload, bulk)
 
 
     def _propagate(self, new_data, new_timestamp):
@@ -596,18 +569,48 @@ class Item:
             self.callbacks.remove(reference)
 
 
-    def _update(self, message):
-        """ The caller received a new data segment either from a directed
-            GET request or from a PUB subscription.
+    def _recreate_value(self, message):
+        """ Recreate the fundamental Python type of the value from the provided
+            *message*.
+
+            This default handler will interpret the bulk component, if any,
+            as an N-dimensional numpy array, with the description of the
+            array present in the payload of the message.
+
+            This is the inverse of :func:`_prepare_value`.
         """
 
         if message.bulk is not None:
-            new_value = self._interpret_bulk(message)
+
+            if numpy is None:
+                raise ImportError('numpy module not available')
+
+            description = message.payload
+            bulk = message.bulk
+
+            shape = description['shape']
+            dtype = description['dtype']
+            dtype = getattr(numpy, dtype)
+
+            serialized = numpy.frombuffer(bulk, dtype=dtype)
+            new_value = numpy.reshape(serialized, newshape=shape)
+
         else:
             try:
                 new_value = message.payload['value']
             except KeyError:
                 new_value = None
+
+
+        return new_value
+
+
+    def _update(self, message):
+        """ The caller received a new data segment either from a directed
+            GET request or from a PUB subscription.
+        """
+
+        new_value = self._recreate_value(message)
 
         try:
             timestamp = message.payload['time']
