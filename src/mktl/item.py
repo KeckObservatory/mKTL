@@ -180,13 +180,12 @@ class Item:
         poll.start(self.req_poll, period)
 
 
-    def publish(self, new_value, bulk=None, timestamp=None, repeat=False):
+    def publish(self, new_value, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be the Python binary
-            representation of the new value; bulk values are passed in as
-            the *bulk* argument, and the *new_value*
-            argument will be ignored. If *timestamp* is set it is expected to be
+            representation of the new value.
+            If *timestamp* is set it is expected to be
             a UNIX epoch timestamp; the current time will be used if it is not
-            set. Any published values are always cached locally.
+            provided. Newly published values are always cached locally.
 
             Note that, for simple cases, an authoritative daemon can set the
             :func:`value` property to publish a new value instead of calling
@@ -198,35 +197,49 @@ class Item:
         else:
             timestamp = float(timestamp)
 
+        # Perhaps there is a more declarative way to know whether a given
+        # value is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
+
+        try:
+            new_value.tobytes
+        except AttributeError:
+            bulk = False
+        else:
+            bulk = True
+
         payload = dict()
         payload['time'] = timestamp
 
         changed = False
 
-        if bulk is None:
-            payload['value'] = new_value
-            if self._daemon_value != new_value:
-                self._daemon_value = new_value
-                self._daemon_value_timestamp = timestamp
-                changed = True
-        else:
+        if bulk == True:
             ### This should use a standard method to interpret the ndarray.
-            bytes = bulk.tobytes()
-            payload['shape'] = bulk.shape
-            payload['dtype'] = str(bulk.dtype)
+            bytes = new_value.tobytes()
+            payload['shape'] = new_value.shape
+            payload['dtype'] = str(new_value.dtype)
 
             if self._daemon_value is None:
                 match = False
             else:
                 ### This check could be expensive for large arrays.
-                match = (self._daemon_value & bulk).all()
+                match = (self._daemon_value & new_value).all()
 
             if match == False:
-                self._daemon_value = bulk
+                self._daemon_value = new_value
                 self._daemon_value_timestamp = timestamp
                 changed = True
 
             bulk = bytes
+
+        else:
+            bulk = None
+            payload['value'] = new_value
+            if self._daemon_value != new_value:
+                self._daemon_value = new_value
+                self._daemon_value_timestamp = timestamp
+                changed = True
 
         key = self.full_key
         message = protocol.message.Broadcast('PUB', key, payload, bulk)
@@ -327,20 +340,10 @@ class Item:
         except:
             timestamp = time.time()
 
-        # Perhaps there is a more declarative way to know whether a given
-        # payload is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
-        # expected behavior explicit?
-
         # The default behavior is to only publish a value if the value has
         # changed.
 
-        try:
-            new_value.tobytes
-        except AttributeError:
-            self.publish(new_value, timestamp=timestamp, repeat=repeat)
-        else:
-            self.publish(None, bulk=new_value, timestamp=timestamp, repeat=repeat)
+        self.publish(new_value, timestamp=timestamp, repeat=repeat)
 
         return payload
 
@@ -391,11 +394,7 @@ class Item:
             new_value = request.payload['value']
 
         new_value = self.validate(new_value)
-
-        if bulk == True:
-            self.publish(None, new_value)
-        else:
-            self.publish(new_value)
+        self.publish(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
         # absent any explicit response (not required, nor expected), a default
