@@ -27,12 +27,12 @@ the remainder of the functionality.
 
 The structure of the Python module containing the :class:`Daemon` subclass can
 be completely arbitrary; for the sake of this example, the code is contained
-in a ``Metal`` Python module, and the components described here are in a
-``Precious`` submodule.
+in a ``metal`` Python module, and the components described here are in a
+``precious`` submodule.
 
-Within the ``Precious`` submodule we define our subclass. For no reason other
+Within the ``precious`` submodule we define our subclass. For no reason other
 than convenience it is defined with the name ``Daemon``. The structure of the
-``Precious.py`` file will be as follows::
+``precious.py`` file will be as follows::
 
     import mktl
 
@@ -217,4 +217,4 @@ The :ref:`markd` executable provides a common entry point for a persistent
 daemon. Assuming the default search path is set up correctly, for the example
 outlined here the invocation would resemble::
 
-    markd metal precious --module Metal.Precious -c precious_metals.json
+    markd metal precious --module metal.precious -c precious_metals.json
