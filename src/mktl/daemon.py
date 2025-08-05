@@ -531,33 +531,15 @@ def save_persistent(item, *args, **kwargs):
     except KeyError:
         pending = PendingPersistence(uuid)
 
-    ## Does this need to be made more generic, to rely on a method from the
-    ## Item class to provide the interpretation-to-bytes? Right now this
-    ## code checks for something that acts like a numpy array and handles
-    ## it for bulk data, but otherwise will throw whatever's at the .cached
-    ## attribute at the JSON translator directly.
-
-    ## Likewise, for normal values, this is taking the client perception of
-    ## a value and saving it-- where the server side may only have the 'binary'
-    ## value cached. We only "need" to save the binary value, but the asc/bin
-    ## representation on the client side is not necessarily established as a
-    ## desirable practice.
-
     by_prefix = dict()
-    payload = dict()
+    payload, bulk = item._prepare_value()
     payload['time'] = item._value_timestamp
 
-    try:
-        bytes = item._value.tobytes()
-    except AttributeError:
-        payload['value'] = item._value
-    else:
-        payload['shape'] = item._value.shape
-        payload['dtype'] = str(item._value.dtype)
-
+    if bulk is not None:
         by_prefix['bulk'] = bytes
 
-    by_prefix[''] = payload
+    json_payload = json.dumps(payload)
+    by_prefix[''] = json_payload
 
     pending.put((item.key, by_prefix))
 
