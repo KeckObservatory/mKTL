@@ -55,7 +55,7 @@ A per-daemon configuration block will contain the following fields:
 		requests. Clients will connect to the stratum zero
 		entry to handle any requests; this may change in
 		the future to allow identification of full proxies
-		for all req+pub traffic for a daemon.
+		for all REQ/REP and PUB/SUB traffic for a daemon.
 
 **time**	Daemon-provided timestamp for the contents of this
 		block. The timestamp may change even if the contents
