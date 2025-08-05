@@ -502,7 +502,8 @@ def load_persistent(store, uuid):
 
         # The data on-disk is expected to be the payload component of a typical
         # mKTL response or broadcast, with an adjacent file containing the bulk
-        # data, if any.
+        # data, if any. In other words, exactly the components that would be
+        # put into a protocol.message.Message instance.
 
         payload = json.loads(raw_json)
 
