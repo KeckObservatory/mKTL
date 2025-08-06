@@ -9,7 +9,6 @@ try:
 except ImportError:
     numpy = None
 
-from . import Config
 from . import protocol
 from . import poll
 from . import weakref
