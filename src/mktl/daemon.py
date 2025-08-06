@@ -6,7 +6,7 @@ import subprocess
 import sys
 import zmq
 
-from . import Config
+from . import config
 from . import Get
 from . import item
 from . import json
@@ -27,8 +27,9 @@ class Daemon:
         application.
 
         The *store* argument is the name of the store that this daemon is
-        providing items for; *config* is the base name of the mKTL configuration
-        file that defines the items for which this daemon is authoritative.
+        providing items for; *configuration* is the base name of the mKTL
+        configuration file that defines the items for which this daemon is
+        authoritative.
         *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
@@ -38,14 +39,14 @@ class Daemon:
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, config, arguments=None):
+    def __init__(self, store, configuration, arguments=None):
 
         self._items = dict()
         self.config = None
         self.uuid = None
 
-        config = Config.load(store, config)
-        self._update_config(store, config)
+        configuration = config.load(store, configuration)
+        self._update_config(store, configuration)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
@@ -85,13 +86,13 @@ class Daemon:
         # consistency.
 
         self.config[self.uuid]['provenance'] = self.provenance
-        Config.add(store, self.config)
+        config.add(store, self.config)
 
-        # The cached configuration managed by Config needs to be in its final
-        # form before creating a local Store instance. For the sake of future
-        # calls to get() we need to be sure that there are no existing instances
-        # in the cache, the daemon needs to always get back the instance
-        # containing authoritative items.
+        # The cached configuration needs to be in its final form before creating
+        # a local Store instance. For the sake of future calls to get() we need
+        # to be sure that there are no existing instances in the cache, the
+        # daemon needs to always get back the instance containing authoritative
+        # items.
 
         existing = Get.clear(store)
 
@@ -176,9 +177,9 @@ class Daemon:
         """ Put our local configuration out on the wire.
         """
 
-        config = dict(self.config)
+        configuration = dict(self.config)
         payload = dict()
-        payload['value'] = config
+        payload['value'] = configuration
         message = protocol.message.Request('CONFIG', self.store.name, payload)
 
         for address,port in targets:
@@ -201,15 +202,15 @@ class Daemon:
             item.req_set(faux_message)
 
 
-    def _update_config(self, store, config):
+    def _update_config(self, store, configuration):
 
-        uuid = list(config.keys())[0]
-        self.config = config
+        uuid = list(configuration.keys())[0]
+        self.config = configuration
         self.uuid = uuid
-        Config.add(store, config)
+        config.add(store, configuration)
 
-        config = Config.Items.get(store)
-        self._items.update(config)
+        configuration = config.get(store, by_key=True)
+        self._items.update(configuration)
 
 
     def setup(self):
@@ -270,12 +271,12 @@ class RequestServer(protocol.request.Server):
         target = request.target
 
         if target == self.daemon.store.name:
-            config = dict(self.daemon.config)
+            configuration = dict(self.daemon.config)
         else:
-            config = Config.get(target)
+            configuration = config.get(target)
 
         payload = dict()
-        payload['value'] = config
+        payload['value'] = configuration
         return payload
 
 
@@ -347,7 +348,7 @@ class RequestServer(protocol.request.Server):
         if store == '':
             store = None
 
-        cached = Config.Hash.get(store)
+        cached = config.get(store, hashes=True)
         payload = dict()
         payload['value'] = cached
         return payload
@@ -365,7 +366,7 @@ def load_port(store, uuid):
         value cannot be retrieved.
     """
 
-    base_directory = Config.File.directory()
+    base_directory = config.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -395,7 +396,7 @@ def save_port(store, uuid, req=None, pub=None):
         restarts of a persistent daemon.
     """
 
-    base_directory = Config.File.directory()
+    base_directory = config.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -436,7 +437,7 @@ def used_ports():
     """ Return a set of port numbers that were previously in use on this host.
     """
 
-    base_directory = Config.File.directory()
+    base_directory = config.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port')
 
     ports = set()
@@ -480,7 +481,7 @@ def load_persistent(store, uuid):
 
     loaded = dict()
 
-    base_directory = Config.File.directory()
+    base_directory = config.directory()
     uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
     try:
@@ -571,7 +572,7 @@ class PendingPersistence:
         self.uuid = uuid
         persist_queues[uuid] = self
 
-        base_directory = Config.File.directory()
+        base_directory = config.directory()
         uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
         if os.path.exists(uuid_directory):

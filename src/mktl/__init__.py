@@ -12,8 +12,8 @@ from . import weakref
 # Submodules used by multiple other components.
 
 from . import protocol
-from . import Config
-home = Config.File.home
+from . import config
+home = config.directory
 
 # Primary public-facing interfaces.
 

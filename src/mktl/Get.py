@@ -4,7 +4,7 @@
 
 import zmq
 
-from . import Config
+from . import config
 from . import protocol
 from .store import Store
 
@@ -81,26 +81,26 @@ def get(store, key=None):
     # Assume any configuration loaded into memory is recent and adequate.
 
     try:
-        config = Config.get(store)
+        configuration = config.get(store)
     except KeyError:
-        config = None
+        configuration = None
 
     # If there is no local configuration, try loading one from disk. If that
     # succeeds we need to confirm it is still current before proceeding.
 
-    if config is None:
+    if configuration is None:
         try:
-            config = Config.load(store)
+            configuration = config.load(store)
         except KeyError:
-            config = None
+            configuration = None
         else:
-            Config.add(store, config, save=False)
-            config = refresh(store, config)
+            config.add(store, configuration, persist=False)
+            configuration = refresh(store, configuration)
 
     # If we still don't have a configuration it's time to try a network
     # broadcast and hope someone's out there that can help.
 
-    if config is None:
+    if configuration is None:
         guides = protocol.discover.search()
         if len(guides) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
@@ -111,17 +111,17 @@ def get(store, key=None):
         response = message.wait()
 
         try:
-            config = response.payload['value']
+            configuration = response.payload['value']
         except KeyError:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         # If we made it this far the network came through with an answer.
-        Config.add(store, config)
+        config.add(store, configuration)
 
 
     # The local reference to the configuration isn't necessary, when the Store
     # instance initializes it will request the current configuration from what's
-    # in Config.Cache.
+    # in the config cache.
 
     store = Store(store)
     _cache[store.name] = store
@@ -134,15 +134,15 @@ def get(store, key=None):
 
 
 
-def refresh(store, config):
+def refresh(store, configuration):
     """ This is a helper method for :func:`get` defined in this file. The
         *config* passed in here was loaded from a file. Inspect the provenance
         for each block and attempt to refresh the local contents. Save any
         changes back to disk for future clients.
     """
 
-    for uuid in config.keys():
-        block = config[uuid]
+    for uuid in configuration.keys():
+        block = configuration[uuid]
         local_hash = block['hash']
         updated = False
 
@@ -197,15 +197,15 @@ def refresh(store, config):
                     # No response available.
                     continue
 
-                Config.add(store, new_block)
+                config.add(store, new_block)
                 break
 
 
     # Whatever is present in the loaded cache is as good as it will get.
     # Return the current contents.
 
-    config = Config.get(store)
-    return config
+    configuration = config.get(store)
+    return configuration
 
 
 

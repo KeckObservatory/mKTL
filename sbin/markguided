@@ -61,7 +61,7 @@ def main():
                     ## and log here.
                     pass
                 else:
-                    mktl.Config.Cache.add(store, blocks)
+                    mktl.config.add(store, blocks)
 
             known.add(seen)
 
@@ -120,7 +120,7 @@ class RequestServer(mktl.protocol.request.Server):
         store = new['name']
 
         try:
-            known_blocks = mktl.Config.Cache.get(store)
+            known_blocks = mktl.config.get(store)
         except KeyError:
             # No previously stored blocks to check against. That's a pass.
             return
@@ -151,7 +151,7 @@ class RequestServer(mktl.protocol.request.Server):
         name = new['name']
 
         try:
-            known_blocks = mktl.Config.Cache.get(name)
+            known_blocks = mktl.config.get(name)
         except KeyError:
             known_blocks = dict()
 
@@ -159,7 +159,7 @@ class RequestServer(mktl.protocol.request.Server):
         local_provenance['hostname'] = self.hostname
         local_provenance['req'] = self.port
 
-        if mktl.Config.Provenance.contains(new, local_provenance):
+        if mktl.config.contains_provenance(new, local_provenance):
             raise ProvenanceLoopError('circular provenance detected')
 
         to_add = list()
@@ -193,8 +193,8 @@ class RequestServer(mktl.protocol.request.Server):
         # cache of configuration data.
 
         for new in to_add:
-            mktl.Config.Provenance.add(new, self.hostname, self.port)
-            mktl.Config.Cache.add(name, new)
+            mktl.config.add_provenance(new, self.hostname, self.port)
+            mktl.config.add(name, new)
 
 
     def req_config(self, request):
@@ -222,7 +222,7 @@ class RequestServer(mktl.protocol.request.Server):
 
         else:
             try:
-                response = mktl.Config.Cache.get(store)
+                response = mktl.config.get(store)
             except KeyError:
                 raise KeyError('no configuration available for ' + repr(store))
 
@@ -265,7 +265,7 @@ class RequestServer(mktl.protocol.request.Server):
             store = None
 
         try:
-            hashes = mktl.Config.Hash.get(store)
+            hashes = mktl.config.get(store, hashes=True)
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request))
 

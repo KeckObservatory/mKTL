@@ -1,5 +1,5 @@
 
-from . import Config
+from . import config
 from .item import Item
 
 
@@ -17,14 +17,14 @@ class Store:
         self.config = None
         self._items = dict()
 
-        config = Config.Items.get(name)
-        self._update_config(config)
+        configuration = config.get(name, by_key=True)
+        self._update_config(configuration)
 
 
-    def _update_config(self, config):
+    def _update_config(self, configuration):
 
-        self.config = config
-        keys = config.keys()
+        self.config = configuration
+        keys = configuration.keys()
         keys = list(keys)
         keys.sort()
 

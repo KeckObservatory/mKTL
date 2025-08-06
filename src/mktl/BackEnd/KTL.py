@@ -2,7 +2,7 @@
 import threading
 import time
 
-from .. import Config
+from .. import config
 from .. import daemon
 from .. import item
 
@@ -26,7 +26,7 @@ class Daemon(daemon.Daemon):
         # are generating the configuration at runtime.
 
         items = describeService(name)
-        Config.File.save_daemon(name, name, items)
+        config.save(name, items, name)
 
         daemon.Daemon.__init__(self, name, name)
 
