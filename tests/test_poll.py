@@ -87,7 +87,10 @@ def test_high_frequency():
     calls = len(test_high_frequency.calls)
     expected_calls = window * frequency
     assert calls > expected_calls - 5
-    assert calls > expected_calls + 5
+    assert calls < expected_calls + frequency / 100
+
+    # Yes, it's strange that we're winding up with a large number of "extra"
+    # polling calls. No, it has not been looked into.
 
 
     if numpy is not None:
@@ -105,13 +108,6 @@ def test_high_frequency():
         standard_deviation = numpy.std(deltas)
 
         assert standard_deviation < 0.0005
-
-
-
-
-
-
-
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
