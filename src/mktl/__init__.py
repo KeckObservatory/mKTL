@@ -24,8 +24,4 @@ from .item import Item
 from .store import Store
 from .daemon import Daemon
 
-# Example code, probably will be broken out elsewhere in the future.
-
-from . import BackEnd
-
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
