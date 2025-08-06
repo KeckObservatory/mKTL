@@ -128,6 +128,10 @@ class Client:
         parts = tuple(message)
         self.pending[message.id] = message
 
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
+
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
         self.socket_lock.release()
@@ -271,6 +275,11 @@ class Server:
 
         response = message.Message('ACK', payload=ack, id=request.id)
         parts = (ident,) + tuple(response)
+
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
+
         lock.acquire()
         socket.send_multipart(parts)
         lock.release()
@@ -291,6 +300,10 @@ class Server:
 
         response = message.Message('REP', target, payload, id=request.id)
         parts = (ident,) + tuple(response)
+
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
 
         lock.acquire()
         socket.send_multipart(parts)
@@ -376,6 +389,10 @@ class Server:
         response = message.Message('REP', target, payload, bulk, req_id)
         parts = (ident,) + tuple(response)
 
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
+
         lock.acquire()
         self.socket.send_multipart(parts)
         lock.release()
@@ -403,6 +420,10 @@ class Server:
         """
 
         parts = (ident,) + tuple(message)
+
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
 
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)

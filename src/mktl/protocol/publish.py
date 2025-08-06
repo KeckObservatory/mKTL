@@ -292,6 +292,10 @@ class Server:
 
         parts = tuple(message)
 
+        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed together.
+
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
         self.socket_lock.release()
