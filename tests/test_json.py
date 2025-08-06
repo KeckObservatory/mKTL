@@ -25,6 +25,9 @@ def encode_and_decode(dumps, loads, dump_is_bytes=True):
         assert isinstance(encoded, bytes)
     else:
         assert isinstance(encoded, str)
+        # The loads() methods must handle bytes, not strings, so encode the
+        # JSON to bytes before proceeding.
+        encoded.encode()
 
     # It won't do to compare the encoded JSON against a pre-set notion of
     # what the encoded output should look like, as there is variance in
