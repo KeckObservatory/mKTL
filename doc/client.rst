@@ -19,6 +19,20 @@ of the classes defined here, they are expected to be used directly, as-is.
 Getting started
 ---------------
 
+mKTL will cache information locally; there are no restrictions on where this
+information gets cached, other than it needs to be cached somewhere. The
+default location for this cache is::
+
+    $HOME/.mKTL
+
+You can override this location by setting the ``MKTL_HOME`` environment
+variable to the absolute path of your choice; any directory specified in
+this fashion will be created if it does not already exist. Alternatively,
+the program may invoke the :func:`mktl.home` method to specify the location
+at run time.
+
+.. autofunction:: mktl.home
+
 The :func:`mktl.get` method is the universal entry point to retrieve a
 :class:`Store` or :class:`Item` instance; client configuration is automatically
 refreshed if necessary, and the remainder of the connection logic is handled
