@@ -17,8 +17,8 @@ home = config.directory
 
 # Primary public-facing interfaces.
 
-from . import Get
-get = Get.get
+from . import begin
+get = begin.get
 
 from .item import Item
 from .store import Store

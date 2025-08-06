@@ -6,8 +6,8 @@ import subprocess
 import sys
 import zmq
 
+from . import begin
 from . import config
-from . import Get
 from . import item
 from . import json
 from . import poll
@@ -94,7 +94,7 @@ class Daemon:
         # daemon needs to always get back the instance containing authoritative
         # items.
 
-        existing = Get.clear(store)
+        existing = begin.clear(store)
 
         if existing is None:
             pass
@@ -102,7 +102,7 @@ class Daemon:
             # It's possible this should be a warning as opposed to a hard error.
             raise RuntimeError('the Daemon needs to be started before any client requests against its store name')
 
-        self.store = Get.get(store)
+        self.store = begin.get(store)
 
         # Local machinery is intact. Invoke the setup() method, which is the
         # hook for the developer to establish their own custom Item classes
