@@ -7,9 +7,6 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, name, *args, **kwargs):
 
-        if ktl is None:
-            raise ModuleNotFoundError("cannot import the 'ktl' module")
-
         # Generate the configuration matching this KTL service. The base
         # Daemon.Store will want to know where it can be loaded from, and
         # it is always loading from a location on disk-- so we need to save
