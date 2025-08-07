@@ -1,18 +1,9 @@
 
-import threading
-import time
-
-from .. import config
-from .. import daemon
-from .. import item
-
-try:
-    import ktl
-except ModuleNotFoundError:
-    ktl = None
+import ktl
+import mktl
 
 
-class Daemon(daemon.Daemon):
+class Daemon(mktl.Daemon):
 
     def __init__(self, name, *args, **kwargs):
 
@@ -26,9 +17,8 @@ class Daemon(daemon.Daemon):
         # are generating the configuration at runtime.
 
         items = describeService(name)
-        config.save(name, items, name)
-
-        daemon.Daemon.__init__(self, name, name)
+        mktl.config.save(name, items, name)
+        mktl.Daemon.__init__(self, name, name)
 
 
     def setup(self):
@@ -75,7 +65,7 @@ class Daemon(daemon.Daemon):
 
 
 
-class Item(item.Item):
+class Item(mktl.Item):
 
     def req_refresh(self):
 
