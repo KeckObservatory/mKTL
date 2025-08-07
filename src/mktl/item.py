@@ -775,6 +775,12 @@ class Item:
         modified = method(value)
         self.set(modified)
 
+        ## Though the call to set() blocks until the request is complete
+        ## there is no guarantee that the broadcast of the updated value
+        ## has arrived. Is there a good way to block until that occurs?
+        ## Some kind of wait-for-broadcast method? A transient callback
+        ## that goes out of scope?
+
         return self
 
     def __iadd__(self, value):
