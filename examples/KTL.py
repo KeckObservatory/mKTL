@@ -1,3 +1,6 @@
+""" This is an implementation of a KTL proxy, enabling full mKTL commands
+    to a KTL service.
+"""
 
 import ktl
 import mktl
