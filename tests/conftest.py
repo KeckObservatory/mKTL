@@ -37,9 +37,10 @@ def run_markd():
     markd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     # Apparently it takes a smidge of time for things to come online. Hence
-    # this arbitrary sleep before yielding to the test.
+    # this arbitrary sleep before yielding to the test. 0.1 seconds is not
+    # enough, 0.2 usually is, one second should be more than enough.
 
-    time.sleep(0.2)
+    time.sleep(1)
 
     yield
 
