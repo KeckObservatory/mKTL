@@ -83,6 +83,8 @@ class Store:
 
 
     def has_key(self, key):
+        ## Should probably switch to lower case for case insensitivity.
+        key = key.upper()
         return key in self._items
 
 
