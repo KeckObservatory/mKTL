@@ -31,10 +31,15 @@ def run_markd():
     arguments.append('-m')
     arguments.append('UnitStore')
     arguments.append('unittest')
-    arguments.append('unittest')
+    arguments.append('unittest')    # Yes, twice.
 
     pipe = subprocess.PIPE
     markd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+
+    # Apparently it takes a smidge of time for things to come online. Hence
+    # this arbitrary sleep before yielding to the test.
+
+    time.sleep(0.2)
 
     yield
 
