@@ -31,6 +31,7 @@ class Client:
 
         self.socket = zmq_context.socket(zmq.SUB)
         self.socket.connect(server)
+        self._poll_flush()
 
         self.callback_all = list()
         self.callback_specific = dict()
@@ -110,6 +111,20 @@ class Client:
 
         if len(references) == 0:
             del self.callback_specific[topic]
+
+
+    def _poll_flush(self, timeout=0.01):
+        """ Poll the subscribe socket in an effort to make sure we're fully
+            connected before proceeding. This is not necessarily deterministic,
+            but is considered a PUB/SUB best practice, and has been observed
+            to fix odd PUB/SUB subscription 'misses' where the client never
+            receives any broadcast messages, despite having subscribed
+            normally. The *timeout* specified here is in seconds.
+        """
+
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN|zmq.POLLOUT)
+        poller.poll(timeout * 1000)
 
 
     def register(self, callback, topic=None):
@@ -202,6 +217,7 @@ class Client:
             topic = topic.encode()
 
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+        self._poll_flush()
 
 
 # end of class Client
