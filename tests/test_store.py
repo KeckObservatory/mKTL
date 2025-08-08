@@ -1,18 +1,55 @@
 import mktl
+import pytest
 
 
 def test_store(run_markguided, run_markd):
 
-    unittest = mktl.get('unittest')
+    store = mktl.get('unittest')
 
-    integer = unittest['integer']
-    string = unittest['string']
+    assert store.name == 'unittest'
 
-    integer2 = unittest['INTEGER']
-    string2 = unittest['STRING']
+    assert store.has_key('angle')
+    assert store.has_key('integer')
+    assert store.has_key('string')
 
-    assert integer is integer2
-    assert string is string2
+    with pytest.raises(NotImplementedError):
+        store['angle'] = 55
+        store['bad_key_name'] = 346
+
+    with pytest.raises(KeyError):
+         store['bad_key_name']
+
+    with pytest.raises(NotImplementedError):
+        del store['angle']
+        del store['bad_key_name']
+
+    with pytest.raises(NotImplementedError):
+        store.clear()
+        store.copy()
+        store.update()
+
+    integer1 = store['integer']
+    string1 = store['string']
+
+    integer2 = store['INTEGER']
+    string2 = store['STRING']
+
+    assert integer1 is integer2
+    assert string1 is string2
+
+    for item in store:
+        assert isinstance(item, mktl.Item)
+
+    for item in store.values():
+        assert isinstance(item, mktl.Item)
+
+    for key in store.keys():
+        assert isinstance(key, str)
+
+    assert len(store) == len(store.keys())
+
+    for key in store.keys():
+        assert key in store.config
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
