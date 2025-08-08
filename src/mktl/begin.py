@@ -11,7 +11,7 @@ from .store import Store
 
 _cache = dict()
 
-def clear(store):
+def _clear(store):
     """ Clear any cached :class:`mktl.Store` instances currently in the cache.
         Returns None if no instances were cleared; if there was an instance,
         it will be returned, largely to allow for possible error handling or

@@ -94,7 +94,7 @@ class Daemon:
         # daemon needs to always get back the instance containing authoritative
         # items.
 
-        existing = begin.clear(store)
+        existing = begin._clear(store)
 
         if existing is None:
             pass
