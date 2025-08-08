@@ -49,6 +49,7 @@ class Item:
         self._update_queue = None
         self._update_queue_put = None
         self._update_thread = None
+        self._updated = threading.Event()
 
         provenance = self.config['provenance']
 
@@ -390,6 +391,8 @@ class Item:
             requests will raise exceptions.
         """
 
+        self._updated.clear()
+
         payload, bulk = self._prepare_value(new_value)
         message = protocol.message.Request('SET', self.full_key, payload, bulk)
         self.req.send(message)
@@ -423,6 +426,19 @@ class Item:
                 raise RuntimeError(error)
 
 
+        # Wait a smidge for local values to update in response to the set
+        # request. This is not guaranteed to occur, but it often does-- and
+        # typical client behavior expects the local value to be up-to-date
+        # upon returning from a blocking set() operation. If everything is
+        # working as expected this wait() should return immediately.
+
+        # It would be better if this delay blocked on the definite arrival
+        # of a broadcast, as opposed to hoping that one arrives. That's part
+        # of why this arbitrary wait is so short.
+
+        self._updated.wait(0.01)
+
+
     def subscribe(self, prime=True):
         """ Subscribe to all future broadcast events. Doing so ensures that
             locally cached values will always be current, regardless of whether
@@ -448,7 +464,9 @@ class Item:
         # subscription makes the processing straightforward.
 
         # The reference to SimpleQueue.put() gets deallocated immediately if we
-        # don't keep a local reference.
+        # don't keep a local reference; the weak reference used in register()
+        # (despite using a weak method wrapper) doesn't function once it goes
+        # out of scope.
 
         self._update_queue = queue.SimpleQueue()
         self._update_queue_put = self._update_queue.put
@@ -620,6 +638,7 @@ class Item:
 
         self._value = new_value
         self._value_timestamp = timestamp
+        self._updated.set()
         self._propagate(new_value, timestamp)
 
 
