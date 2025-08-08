@@ -40,6 +40,9 @@ class Store:
 
 
     def __getitem__(self, key):
+        ## Should probably switch to lower case for case insensitivity.
+        key = key.upper()
+
         try:
             item = self._items[key]
         except KeyError:
