@@ -99,7 +99,7 @@ class Server:
                 continue
 
             data = data.strip()
-            if data == call:
+            if data == call and self.socket is not None:
                 self.socket.sendto(self.response, address)
                 self.seen[address] = now
 
