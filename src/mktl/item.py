@@ -755,16 +755,16 @@ class Item:
     def __rpow__(self, other):
         return other ** self.value
 
-    def __neg__(self, other):
+    def __neg__(self):
         return -self.value
 
-    def __pos__(self, other):
+    def __pos__(self):
         return +self.value
 
-    def __abs__(self, other):
+    def __abs__(self):
         return abs(self.value)
 
-    def __invert__(self, other):
+    def __invert__(self):
         return ~self.value
 
     def __and__(self, other):
