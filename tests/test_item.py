@@ -1,13 +1,14 @@
 import mktl
 import pytest
+import time
 
-def test_item_get(run_markguided, run_markd):
+def test_get(run_markguided, run_markd):
 
     integer = mktl.get('unittest.INTEGER')
     integer.get()
 
 
-def test_item_set(run_markguided, run_markd):
+def test_set(run_markguided, run_markd):
 
     integer = mktl.get('unittest.INTEGER')
     integer.set(-1)
@@ -28,7 +29,7 @@ def test_item_set(run_markguided, run_markd):
     string.set('')
 
 
-def test_item_logic(run_markguided, run_markd):
+def test_logic(run_markguided, run_markd):
 
     string = mktl.get('unittest.STRING')
 
@@ -70,7 +71,7 @@ def test_item_logic(run_markguided, run_markd):
     assert 1 ^ integer == 3
 
 
-def test_item_math(run_markguided, run_markd):
+def test_math(run_markguided, run_markd):
 
     integer = mktl.get('unittest.INTEGER')
 
@@ -112,6 +113,32 @@ def test_item_math(run_markguided, run_markd):
     assert integer == 25
     integer *= 2
     assert integer == 50
+
+
+def test_callback(run_markguided, run_markd):
+
+    string = mktl.get('unittest.STRING')
+
+    test_callback.called = False
+    test_callback.item = None
+    test_callback.value = None
+    test_callback.timestamp = None
+
+    def callback(item, value, timestamp):
+        test_callback.called = True
+        test_callback.item = item
+        test_callback.value = value
+        test_callback.timestamp = timestamp
+
+    string.register(callback)
+    before = time.time()
+    string.value = 'callback testing'
+
+    assert test_callback.called == True
+    assert test_callback.item is string
+    assert test_callback.value == 'callback testing'
+    assert test_callback.timestamp != None
+    assert test_callback.timestamp > before
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
