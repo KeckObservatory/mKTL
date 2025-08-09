@@ -28,6 +28,33 @@ def test_basics():
     assert test_basics.polled == False
 
 
+    mktl.poll.start(callback, 0.1)
+    time.sleep(0.12)
+
+    assert test_basics.polled == True
+
+
+    mktl.poll.start(callback, period=None)
+    test_basics.polled = False
+    time.sleep(0.12)
+
+    assert test_basics.polled == False
+
+    # Redundant calls should be a no-op.
+
+    mktl.poll.start(callback, period=0)
+    mktl.poll.start(callback, period=None)
+    mktl.poll.stop(callback)
+
+
+    mktl.poll.start(callback, period=None)
+    del(callback)
+    test_basics.polled = False
+    time.sleep(0.12)
+
+    assert test_basics.polled == False
+
+
 def test_low_frequency():
     test_low_frequency.calls = list()
 
