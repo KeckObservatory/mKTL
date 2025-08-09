@@ -1,3 +1,7 @@
+""" This is a super-simple mktl.Daemon to act as a foil for any client-facing
+    unit tests. This file is used by the invocation of markd in the run_markd()
+    fixture defined in conftest.py.
+"""
 
 import mktl
 import time
@@ -23,7 +27,6 @@ def generate_config():
     items['INTEGER'] = dict()
     items['INTEGER']['description'] = 'A dummy keyword, ostensibly numeric.'
     items['INTEGER']['units'] = 'meaningless units'
-    items['INTEGER']['persist'] = True
     items['INTEGER']['type'] = 'numeric'
 
     items['STRING'] = dict()
