@@ -59,5 +59,11 @@ def test_store(run_markguided, run_markd):
     for key in store.keys():
         assert key in store.config
 
+    # The actual result from str() and repr() is not enforced, just want to
+    # invoke the statement(s) for completeness's sake.
+
+    str(store)
+    repr(store)
+
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
