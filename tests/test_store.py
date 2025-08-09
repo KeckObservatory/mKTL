@@ -14,6 +14,8 @@ def test_store(run_markguided, run_markd):
 
     with pytest.raises(NotImplementedError):
         store['angle'] = 55
+
+    with pytest.raises(NotImplementedError):
         store['bad_key_name'] = 346
 
     with pytest.raises(KeyError):
@@ -21,11 +23,17 @@ def test_store(run_markguided, run_markd):
 
     with pytest.raises(NotImplementedError):
         del store['angle']
+
+    with pytest.raises(NotImplementedError):
         del store['bad_key_name']
 
     with pytest.raises(NotImplementedError):
         store.clear()
+
+    with pytest.raises(NotImplementedError):
         store.copy()
+
+    with pytest.raises(NotImplementedError):
         store.update()
 
     integer1 = store['integer']
