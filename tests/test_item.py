@@ -93,12 +93,16 @@ def test_item_math(run_markguided, run_markd):
     assert integer * 2 == 100
     assert integer / 2 == 25
     assert integer ** 2 == 2500
+    assert integer % 25 == 0
+    assert integer % 12 == 2
 
     assert 1 + integer == 51
     assert 1 - integer == -49
     assert 2 * integer == 100
     assert 2 / integer == 0.04
     assert 2 ** integer == 1125899906842624
+    assert 100 % integer == 0
+    assert 52 % integer == 2
 
     integer += 1
     assert integer == 51
