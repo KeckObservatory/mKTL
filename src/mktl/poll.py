@@ -7,6 +7,22 @@ from . import weakref
 active = dict()
 
 
+def period(method):
+    """ Return the currently set polling period for the provided *method*.
+        Returns None if no polling is presently active for that method.
+    """
+
+    method_id = id(method)
+
+    try:
+        poller = active[method_id]
+    except KeyError:
+        return None
+
+    return poller.interval
+
+
+
 def start(method, period):
     """ Call the provided *method* on an interval of *period* seconds.
         A dedicated background thread is used for each method; it is possible
@@ -14,7 +30,9 @@ def start(method, period):
         of background threads.
 
         If a background poller is already active for the specified method, the
-        poller will be updated to use the newly requested period.
+        poller will be updated to use the newly requested period. This means
+        that this mechanism cannot be used to trigger two independent polling
+        sequences for the same method.
     """
 
     if period is None or period == 0:
@@ -26,7 +44,7 @@ def start(method, period):
     try:
         poller = active[method_id]
     except KeyError:
-        poller = Poller(method)
+        poller = _Poller(method)
         active[method_id] = poller
 
     poller.period(period)
@@ -48,7 +66,7 @@ def stop(method):
 
 
 
-class Poller:
+class _Poller:
     """ Background thread to invoke any polling requests.
     """
 
@@ -87,15 +105,20 @@ class Poller:
             self.alarm.wait(1)
 
         while True:
-            now = time.time()
+            begin = time.time()
 
             if self.shutdown == True:
                 break
 
             if self.alarm.is_set() == True:
                 self.alarm.clear()
+
+                # The interval only changes when the alarm is set, including
+                # when it is set upon startup. That's our cue to load a new
+                # interval for this loop.
+
                 interval = self.interval
-                next = now + interval
+                next = begin + interval
             else:
                 next += interval
 
@@ -106,9 +129,9 @@ class Poller:
                 break
 
             method()
-            now = time.time()
+            end = time.time()
 
-            delay = next - now
+            delay = next - end
             if delay > 0:
                 self.alarm.wait(delay)
 
