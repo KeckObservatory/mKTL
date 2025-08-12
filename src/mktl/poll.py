@@ -29,6 +29,11 @@ def start(method, period):
         to exhaust the available system resources with a high enough quantity
         of background threads.
 
+        Though there is no lower bound on the polling period, keep in mind
+        the limitations of your platform: in 2025, anything less than 0.0001
+        seconds (10 kHz) is not going to reliably keep up; tests indicate a
+        frequency of 100 kHz falls further behind on every cycle.
+
         If a background poller is already active for the specified method, the
         poller will be updated to use the newly requested period. This means
         that this mechanism cannot be used to trigger two independent polling
@@ -115,11 +120,17 @@ class _Poller:
 
                 # The interval only changes when the alarm is set, including
                 # when it is set upon startup. That's our cue to load a new
-                # interval for this loop.
+                # interval for this loop, and start an entirely new cadence.
 
                 interval = self.interval
                 next = begin + interval
+
             else:
+                # Ideally the period is constant-- regardless of when we woke
+                # up we want to honor the requested cadence, and set the next
+                # wakeup according to the previous value, incremented solely
+                # by the interval.
+
                 next += interval
 
             method = self.reference()
