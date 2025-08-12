@@ -7,6 +7,35 @@ except ImportError:
     numpy = None
 
 
+class Referenced:
+    def a_method(self):
+        pass
+
+
+def test_references():
+    """ The mKTL polling functionality promises to only have one polling
+        entity active for a given method. We can wind up in a bad place
+        if there is a mismatch in how that uniqueness constraint is applied,
+        so make sure it's working as expected.
+    """
+
+    def callback():
+        pass
+
+    mktl.poll.start(callback, period=1)
+    period = mktl.poll.period(callback)
+    assert period is not None
+    assert period == 1
+
+
+    referenced = Referenced()
+    mktl.poll.start(referenced.a_method, period=1)
+    period = mktl.poll.period(referenced.a_method)
+    assert period is not None
+    assert period == 1
+
+
+
 def test_basics():
 
     test_basics.polled = False
