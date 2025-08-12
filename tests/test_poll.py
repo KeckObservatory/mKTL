@@ -91,7 +91,8 @@ def test_low_frequency():
         test_low_frequency.calls.append(time.time())
 
     # Polling at 1 kilohertz is not expected to occur often, but it's not
-    # unreasonable. The jitter should be measurable and low.
+    # unreasonable. The jitter should be measurable and low. A 0.2 second
+    # run routinely yields 201 calls.
 
     frequency = 1000
     period = 1.0 / frequency
@@ -110,8 +111,9 @@ def test_low_frequency():
     if numpy is not None:
         timestamps = list(test_low_frequency.calls)
         timestamps.reverse()
-
         previous = timestamps.pop()
+        timestamps.reverse()
+
         deltas = list()
         for timestamp in timestamps:
             delta = timestamp - previous
@@ -121,7 +123,7 @@ def test_low_frequency():
         deltas = numpy.array(deltas)
         standard_deviation = numpy.std(deltas)
 
-        assert standard_deviation < 0.02
+        assert standard_deviation < 0.0002
 
 
 def test_high_frequency():
@@ -131,6 +133,7 @@ def test_high_frequency():
         test_high_frequency.calls.append(time.time())
 
     # Polling at 1 megahertz is well beyond any expected mKTL application.
+    # A 0.2 second run routinely yields just short of 210000 calls.
 
     frequency = 1000000
     period = 1.0 / frequency
@@ -152,8 +155,9 @@ def test_high_frequency():
     if numpy is not None:
         timestamps = list(test_high_frequency.calls)
         timestamps.reverse()
-
         previous = timestamps.pop()
+        timestamps.reverse()
+
         deltas = list()
         for timestamp in timestamps:
             delta = timestamp - previous
@@ -163,7 +167,7 @@ def test_high_frequency():
         deltas = numpy.array(deltas)
         standard_deviation = numpy.std(deltas)
 
-        assert standard_deviation < 0.0005
+        assert standard_deviation < 0.00001
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
