@@ -264,7 +264,8 @@ Message payload
 
 The payload of a message is a JSON associative array. The fields will vary
 depending on the message type, and are optional in nearly all circumstances,
-but each field has a consistent meaning.
+but each field has a consistent meaning. Arbitrary additional fields are
+allowed, but a standard mKTL client will not notice or handle them.
 
 .. list-table::
 
