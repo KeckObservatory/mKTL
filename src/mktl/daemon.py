@@ -338,6 +338,15 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
+        ### This may be the right place to send a publish message indicating
+        ### that a set request has been received. This would largely be a
+        ### debug message, structured exactly like a publish request, but
+        ### with a leading 'set:' for the topic to distinguish it from anything
+        ### that might be a normal broadcast.
+
+        ### This would allow a debug client to subscribe to all messages with
+        ### a leading 'set:' topic.
+
         response = self.daemon.store[key].req_set(request)
         return response
 
