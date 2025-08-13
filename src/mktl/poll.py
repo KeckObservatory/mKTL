@@ -96,18 +96,19 @@ class _Poller:
 
         period = float(period)
         self.interval = period
-        self.wake()
+        self.alarm.set()
 
 
     def run(self):
 
         interval = 30
         next = time.time()
+        alarm = self.alarm
 
         # Initial wait for someone to call self.period().
 
         while self.interval is None:
-            self.alarm.wait(1)
+            alarm.wait(1)
 
         while True:
             begin = time.time()
@@ -115,8 +116,8 @@ class _Poller:
             if self.shutdown == True:
                 break
 
-            if self.alarm.is_set() == True:
-                self.alarm.clear()
+            if alarm.is_set() == True:
+                alarm.clear()
 
                 # The interval only changes when the alarm is set, including
                 # when it is set upon startup. That's our cue to load a new
@@ -140,11 +141,11 @@ class _Poller:
                 break
 
             method()
-            end = time.time()
 
+            end = time.time()
             delay = next - end
             if delay > 0:
-                self.alarm.wait(delay)
+                alarm.wait(delay)
 
 
         # Infinite loop exited.
@@ -153,10 +154,6 @@ class _Poller:
 
     def stop(self):
         self.shutdown = True
-        self.wake()
-
-
-    def wake(self):
         self.alarm.set()
 
 
