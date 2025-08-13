@@ -3,8 +3,8 @@
 """
 
 import atexit
+import concurrent.futures
 import itertools
-import queue
 import socket
 import sys
 import threading
@@ -234,6 +234,11 @@ class Server:
 
         self.port = trial
 
+        self.shutdown = False
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
         # The use of worker threads and a synchronization primitive is something
         # like a 10-20% hit in performance compared to using a single thread.
         # Multiple worker threads allow for a request to block until completion.
@@ -248,19 +253,7 @@ class Server:
         # necessary when sharing a ZeroMQ socket across threads as ZeroMQ
         # makes no attempt to be thread-safe.
 
-        self.queue = queue.SimpleQueue()
-
-        self.shutdown = False
-        self.thread = threading.Thread(target=self.run)
-        self.thread.daemon = True
-        self.thread.start()
-
-        self.workers = list()
-        for thread_number in range(self.worker_count):
-            thread = threading.Thread(target=self._worker_main)
-            thread.daemon = True
-            thread.start()
-            self.workers.append(thread)
+        self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
 
 
     def req_ack(self, socket, lock, ident, request):
@@ -408,7 +401,10 @@ class Server:
             for active,flag in sockets:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
-                    self.queue.put((self.socket, self.socket_lock, parts))
+                    args = (self.socket, self.socket_lock, parts)
+                    self.workers.submit(self.req_incoming, *args)
+
+        self.workers.shutdown()
 
 
     def send(self, ident, message):
@@ -428,40 +424,6 @@ class Server:
         self.socket_lock.acquire()
         self.socket.send_multipart(parts)
         self.socket_lock.release()
-
-
-    def _worker_main(self):
-        """ This is the 'main' method for the worker threads responsible for
-            handling incoming requests. The task of a worker thread is limited:
-            receive a request, and feed it to :func:`req_incoming` for
-            processing. Multiple threads are allocated to this function to
-            allow for long-duration requests to be handled gracefully without
-            jamming up the processing of subsequent requests.
-        """
-
-        while self.shutdown == False:
-            # The distribution of jobs is handled via a simple queue rather
-            # than a ZeroMQ construct, as the overall throughput was higher.
-
-            try:
-                dequeued = self.queue.get(timeout=300)
-            except queue.Empty:
-                continue
-
-            if dequeued is None:
-                continue
-
-            try:
-                self.req_incoming(*dequeued)
-            except:
-                ### Proper error handling needs to go here.
-                print(traceback.format_exc())
-
-        # self.shutdown is True. Ensure the queue has something in it to wake
-        # up the other worker threads, having None in the queue too many times
-        # is better than not having it there enough times.
-
-        self.queue.put(None)
 
 
 # end of class Server
