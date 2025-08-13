@@ -3,6 +3,7 @@
 """
 
 import concurrent.futures
+import pytest
 import time
 
 
@@ -21,19 +22,15 @@ def test_blocking():
 
     future = workers.submit(short_block)
 
-    try:
+    # This exception is expected, the timeout is too short.
+    with pytest.raises(concurrent.futures.TimeoutError):
         future.result(timeout=0.1)
-    except concurrent.futures.TimeoutError:
-        # This exception is expected, the timeout is too short.
-        pass
-    else:
-        raise RuntimeError('expected a timeout from a blocked worker request')
 
-    # This timeout should not be triggered.
+    # This timeout should not be triggered, since we already waited 0.1 seconds,
+    # and this test should only take 0.2 + epsilon seconds.
     future.result(timeout=0.11)
 
     end = time.time()
-
     elapsed = end - begin
 
     # With a sleep of 0.1 seconds, and two workers available, we expect the
