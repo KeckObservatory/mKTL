@@ -161,7 +161,7 @@ class Server:
         :ivar port: The port on which this server is listening for connections.
     """
 
-    worker_count = 10
+    worker_count = 128
 
     def __init__(self, hostname=None, port=None, avoid=set()):
 
@@ -241,12 +241,16 @@ class Server:
 
         # The use of worker threads and a synchronization primitive is something
         # like a 10-20% hit in performance compared to using a single thread.
-        # Multiple worker threads allow for a request to block until completion.
+        # Multiple worker threads allow for a request to block until completion,
+        # without blocking all other request handling. A ThreadPoolExecutor is
+        # an easy way to achieve the same performance without rolling our own
+        # queueing and handling.
 
         # Using a deque and a synchronization construct (such as a Condition)
         # is similar in performance to using a SimpleQueue. Using a fast
         # Condition implementation might make it worth the trouble, but the
-        # one in the threading module is slow enough that it's not any better.
+        # implementation in the threading module is slow enough that it's not
+        # any better.
 
         # Using ZeroMQ sockets to implement a multithreaded queue was much
         # slower (in the absence of multiprocessing). The use of a lock is
@@ -402,6 +406,7 @@ class Server:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
                     args = (self.socket, self.socket_lock, parts)
+                    # Calling submit() will block if a worker is not available.
                     self.workers.submit(self.req_incoming, *args)
 
         self.workers.shutdown()
