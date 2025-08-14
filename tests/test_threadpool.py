@@ -1,5 +1,6 @@
 """ Confirm that the concurrent.futures.ThreadPoolExecutor still behaves
-    the way we expect it to.
+    the way we expect it to. Not that dramatic changes in this API are
+    expected, but our assumptions are easy to test.
 """
 
 import concurrent.futures
