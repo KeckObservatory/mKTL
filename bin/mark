@@ -1,0 +1,127 @@
+#! /usr/bin/env python3
+
+description = """
+This is the mKTL command line interface. The real work is done in the
+mktl Python library; this executable parses command-line flags, invokes
+mktl routines to handle any/all requests, and otherwise waits until all
+requests are complete. Note that the default is to execute all requests
+in parallel.
+"""
+
+epilog = """
+"""
+
+import argparse
+import threading
+
+import mktl
+
+
+def main():
+
+    requests = parse_command_line()
+    requests = parse_requests(requests)
+    execute_requests(requests)
+
+
+main.shutdown = threading.Event()
+
+
+
+def parse_command_line():
+
+    arguments = dict()
+    arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
+    arguments['description'] = description
+    ###arguments['epilog'] = epilog
+
+    parser = argparse.ArgumentParser(**arguments)
+
+    parser.add_argument('-s', '--store',
+        default=None,
+        help='Name of an mKTL store to prefix to all subsequent keys.')
+    parser.add_argument('--serial',
+        default=False,
+        action=argparse.BooleanOptionalAction,
+        help='Process all requests serially. The default is to process requests in parallel.')
+
+    parser.add_argument('type',
+        choices=('get', 'set'),
+        type=str.lower,
+        help='Request type')
+    parser.add_argument('requests',
+        nargs='+',
+        help='Whitespace-separated sequence of requests. For a get request, this is a sequence of keys; for a set request, this is a sequence of key=value statements.')
+
+
+    parsed = parser.parse_args()
+    return parsed
+
+
+
+def parse_requests(requests):
+    """ Expand keys to include the store name if the store is optionally
+        specified. Parse out any 'set' requests into named key/value pairs.
+    """
+
+    store = requests.store
+    if store is None:
+        pass
+    else:
+        expanded_requests = list()
+
+        for request in requests.requests:
+            expanded_requests.append(store + '.' + request)
+
+        requests.requests = expanded_requests
+
+
+    requests.get = tuple()
+    requests.set = dict()
+
+    if requests.type == 'get':
+        requests.get = requests.requests
+
+    elif requests.type == 'set':
+        for request in requests.requests:
+            try:
+                key, value = request.split('=', maxsplit=1)
+            except:
+                raise ValueError('bad key=value assignment: ' + request)
+
+            requests.set[key] = value
+
+
+    return requests
+
+
+
+def execute_requests(requests):
+
+    for key in requests.get:
+        item = mktl.get(key)
+
+        ### Needs datetime formatting of timestamp.
+        print ("%.3f %s: %s" % (item._value_timestamp, key, item.value))
+
+
+    responses = list()
+    for key,value in requests.set.items():
+
+        item = mktl.get(key)
+        response = item.set(value, wait=False)
+        responses.append(response)
+
+
+    for response in responses:
+        response.wait()
+        key = response.target
+        value = response.payload['value']
+        print("Set %s to %s " % (key, value))
+
+
+if __name__ == '__main__':
+    main()
+
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
