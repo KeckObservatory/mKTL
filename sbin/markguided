@@ -1,6 +1,6 @@
 #! /usr/bin/env python3
 
-description = '''
+description = """
 The guide daemon acts as a broker for configuration requests; when daemons
 first start running they will seek out any guides on their local network
 and provide configuration updates; any clients broadcasting will discover
@@ -8,7 +8,7 @@ a local guide, and ask for any available configuration information.
 
 Daemons and clients can both bypass broadcast discovery for a local guide
 if they already know where to find a guide.
-'''
+"""
 
 import argparse
 import threading

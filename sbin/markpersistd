@@ -1,6 +1,6 @@
 #! /usr/bin/env kpython3
 
-description = '''
+description = """
 This is a subprocess invoked by a mktl.Daemon.Store instance; its sole purpose
 is to receive broadcasts of any 'persistent' items and queue any/all incoming
 updates for persistent storage to disk. Where and how the value is stored is
@@ -9,7 +9,7 @@ governed entirely by the mktl/persist.py code.
 The motivation for using a subprocess comes from two sources: one is the
 simplicity of using the existing mKTL publish/subscribe machinery, the other
 is to lighten the resource load on the 'main' daemon process.
-'''
+"""
 
 import argparse
 import sys
