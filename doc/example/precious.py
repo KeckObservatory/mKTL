@@ -1,6 +1,7 @@
-import mKTL
+import mktl
+import time
 
-class Store(mKTL.Daemon):
+class Daemon(mktl.Daemon):
 
     def setup(self):
 
@@ -9,10 +10,10 @@ class Store(mKTL.Daemon):
         self.add_item(Platinum, 'PLATINUM')
 
 
-class MarketPriced(mKTL.Item):
+class MarketPriced(mktl.Item):
 
     def __init__(self, *args, **kwargs):
-        mKTL.Item.__init__(self, *args, **kwargs)
+        mktl.Item.__init__(self, *args, **kwargs)
         self.poll(86400)    # Update once per day.
 
 
@@ -42,6 +43,7 @@ def get_spot_value(metal, currency, units):
     # and units of interest.
     #
     # current_price = some magical invocation of external resources
+    current_price = 100.4
 
     current_price = float(current_price)
 
