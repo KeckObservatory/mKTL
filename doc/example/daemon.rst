@@ -82,7 +82,7 @@ and :func:`Item.req_set` would not be defined, since we don't get to change
 the actual market value. To pick one example::
 
 
-    class Gold(MarketPriced)
+    class Gold(MarketPriced):
 
         def req_refresh(self):
             spot = get_spot_value('gold', 'usd', 'grams')

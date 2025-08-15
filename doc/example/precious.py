@@ -16,19 +16,19 @@ class MarketPriced(mKTL.Item):
         self.poll(86400)    # Update once per day.
 
 
-class Gold(MarketPriced)
+class Gold(MarketPriced):
 
     def req_refresh(self):
         return get_spot_value('gold', 'usd', 'grams')
 
 
-class Platinum(MarketPriced)
+class Platinum(MarketPriced):
 
     def req_refresh(self):
         return get_spot_value('platinum', 'usd', 'grams')
 
 
-class Silver(MarketPriced)
+class Silver(MarketPriced):
 
     def req_refresh(self):
         return get_spot_value('silver', 'usd', 'grams')
