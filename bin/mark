@@ -9,6 +9,12 @@ in parallel.
 """
 
 epilog = """
+Example usage:
+
+    mark get rosebud.model rosebud.length
+    mark get -s rosebud model length height color
+    mark set rosebud.speed=50
+    mark set -s rosebud speed=50 passengers=2 --no-wait
 """
 
 import argparse
@@ -38,7 +44,7 @@ def parse_command_line():
     arguments = dict()
     arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
     arguments['description'] = description
-    ###arguments['epilog'] = epilog
+    arguments['epilog'] = epilog
 
     parser = argparse.ArgumentParser(**arguments)
 
