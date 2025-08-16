@@ -9,12 +9,10 @@ mark
 ----
 
 `mark` is intended to be the primary command line interface for client
-interactions with mKTL. It doesn't exist yet, but when it does, the
-command set is expected to be something akin to::
+interactions with mKTL. The command line arguments describe its usage:
 
-    mark get key1 key2 key3
-    mark plot key1 key2 key3
-    mark set key1=foo key2=bar key3=baz
+.. literalinclude:: ./mark.txt
+   :language: none
 
 
 .. _markd:
@@ -23,11 +21,11 @@ markd
 -----
 
 The `markd` executable provides a command-line interface to invoke a
-persistent daemon executing a :class:`Store` subclass to implement its core
-functionality. The `markd` executable is positioned to be the common point
-of entry for any Python-based mKTL daemon.
+persistent daemon executing a :class:`mktl.Daemon` subclass to implement
+application-specific functionality. The `markd` executable is intended
+to be the common point of entry for any Python-based mKTL daemon.
 
-The command line arguments describe the intended usage:
+The command line arguments describe its usage:
 
 .. literalinclude:: ./markd.txt
    :language: none

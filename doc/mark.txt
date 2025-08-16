@@ -1,0 +1,25 @@
+usage: mark [-h] [-s STORE] [--serial | --no-serial] [--wait | --no-wait]
+            {get,set} requests [requests ...]
+
+This is the mKTL command line interface. The real work is done in the
+mktl Python library; this executable parses command-line flags, invokes
+mktl routines to handle any/all requests, and otherwise waits until all
+requests are complete. Note that the default is to execute all requests
+in parallel.
+
+positional arguments:
+  {get,set}             Request type
+  requests              Whitespace-separated sequence of requests. For a get
+                        request, this is a sequence of keys; for a set
+                        request, this is a sequence of key=value statements.
+
+options:
+  -h, --help            show this help message and exit
+  -s, --store STORE     Name of an mKTL store to prefix to all subsequent
+                        keys.
+  --serial, --no-serial
+                        Process all requests serially. The default is to
+                        process requests in parallel.
+  --wait, --no-wait     Wait until all set requests are complete before
+                        exiting. The default is to wait. --no-wait is not
+                        compatible with --serial.
