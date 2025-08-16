@@ -385,8 +385,8 @@ class Item:
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
             instance, which has a :func:`mktl.protocol.message.Request.wait`
-            method that can optionally be invoked block until completion of the
-            request; the wait will return immediately once the request is
+            method that can optionally be invoked to block until completion of
+            the request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed
             requests will raise exceptions.
         """
