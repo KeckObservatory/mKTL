@@ -22,11 +22,10 @@ mKTL, as compared to KTL, focus on usability.
    client to access a service, mKTL will discover any/all service metadata
    at run time.
 
-Despite the emphasis on usability there is a strong desire to improve the
-latency and throughput of commands; early testing suggests that these
-improvements are within reach. Additional features, such as bulk data
-transmission and 'structured' key/value pairs, are also being considered
-as key improvements over the original capabilities of KTL.
+In addition to usability mKTL also places a strong emphasis on performance,
+with sufficiently lightweight handling to allow high frequency (greater
+than a kilohertz) and high bandwidth (greater than 10 gigabit/sec)
+applications.
 
 The documentation for mKTL is published here:
 
