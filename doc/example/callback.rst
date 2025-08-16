@@ -5,7 +5,11 @@ This example will use the 'oven' store and the item 'TEMP'. The objective is
 to handle all broadcasts for 'oven.TEMP'; a callback method will be defined
 that performs any/all desired operations whenever the value changes. This
 callback method will be invoked asynchronously whenever a new broadcast
-arrives.
+arrives. Callbacks arriving via these mechanisms will not be serialized
+across items, though within an item they will be invoked in the order they
+were originally registered. If you have the same callback method registered
+with multiple items there is no inherent mKTL-based guarantee to prevent
+that method from being called multiple times simultaneously.
 
 The toy example here will calculate and print an exponentially weighted
 average.

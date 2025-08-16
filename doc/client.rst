@@ -8,9 +8,7 @@ A client is any software component interacting with a daemon, in the form of
 issuing requests, receiving responses to requests, and receiving asynchronous
 updates of new item values. The Python interface described here makes liberal
 use of background threads, callbacks in particular can and will arrive from
-background threads as asynchronous updates arrive. the author of any custom
-code should not assume that calls arriving via these mechanisms will be
-serialized or thread-safe to any meaningful degree.
+background threads as asynchronous updates arrive.
 
 Unlike the :ref:`daemon`, a typical client application will not need subclasses
 of the classes defined here, they are expected to be used directly, as-is.
