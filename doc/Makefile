@@ -14,7 +14,10 @@ help:
 
 .PHONY: help Makefile
 
-markd.txt:
+mark.txt: ../bin/mark
+	PYTHONPATH=../src ../bin/mark -h > mark.txt
+
+markd.txt: ../sbin/markd
 	../sbin/markd -h > markd.txt
 
 # Catch-all target: route all unknown targets to Sphinx using the new
