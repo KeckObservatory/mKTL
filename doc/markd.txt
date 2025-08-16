@@ -2,8 +2,8 @@ usage: markd [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
              store identifier
 
 This is a generic mKTL daemon. The real work is done in the subclass of
-Daemon.Store (if any); this executable parses command-line flags, invokes
-a Daemon.Store instance to handle any/all requests, and otherwise waits
+mktl.Daemon (if any); this executable parses command-line flags, invokes
+a mktl.Daemon instance to handle any/all requests, and otherwise waits
 until the program is terminated.
 
 The store name and configuration identifier must be specified in order
@@ -18,12 +18,12 @@ positional arguments:
 
 options:
   -h, --help            show this help message and exit
-  -m, --module MODULE   Module to import which contains the Daemon.Store
+  -m, --module MODULE   Module to import which contains the mktl.Daemon
                         subclass to invoke.
   -s, --subclass SUBCLASS
-                        Specific Daemon.Store subclass to invoke; this is the
-                        bare class name (Store), not a fully qualified class
-                        name (mKTL.Daemon.Store).
+                        Specific mktl.Daemon subclass to invoke; this is the
+                        bare class name (Daemon), not a fully qualified class
+                        name (mktl.Daemon).
   -c, --configuration CONFIGURATION
                         File containing daemon-specific mKTL configuration of
                         items; if specified, the contents of this file will
@@ -31,14 +31,14 @@ options:
                         this identifier.
   -a, --appconfig APPCONFIG
                         Custom configuration file location, not used directly
-                        by mKTL, but made available to the Daemon.Store
+                        by mKTL, but made available to the mktl.Daemon
                         subclass. How this directive is used is entirely up to
                         the application-specific subclass code.
 
 For example, to run markd for the store 'rosebud', using the existing
 on-disk configuration identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
-Daemon.Store, one might invoke:
+mktl.Daemon, one might invoke:
 
     markd rosebud innocence
     markd rosebud innocence --module Kane --subclass Sled
