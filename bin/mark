@@ -21,7 +21,12 @@ def main():
 
     requests = parse_command_line()
     requests = parse_requests(requests)
-    execute_requests(requests)
+
+    if requests.get:
+        execute_get_requests(requests)
+
+    if requests.set:
+        execute_set_requests(requests)
 
 
 main.shutdown = threading.Event()
@@ -44,6 +49,10 @@ def parse_command_line():
         default=False,
         action=argparse.BooleanOptionalAction,
         help='Process all requests serially. The default is to process requests in parallel.')
+    parser.add_argument('--wait',
+        default=True,
+        action=argparse.BooleanOptionalAction,
+        help='Wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
         choices=('get', 'set'),
@@ -55,6 +64,10 @@ def parse_command_line():
 
 
     parsed = parser.parse_args()
+
+    if parsed.serial == True and parsed.wait == False:
+        raise ValueError('--serial requires --wait')
+
     return parsed
 
 
@@ -96,7 +109,7 @@ def parse_requests(requests):
 
 
 
-def execute_requests(requests):
+def execute_get_requests(requests):
 
     for key in requests.get:
         item = mktl.get(key)
@@ -105,19 +118,27 @@ def execute_requests(requests):
         print ("%.3f %s: %s" % (item._value_timestamp, key, item.value))
 
 
+
+def execute_set_requests(requests):
+
     responses = list()
+
     for key,value in requests.set.items():
 
         item = mktl.get(key)
-        response = item.set(value, wait=False)
+        response = item.set(value, wait=requests.serial)
         responses.append(response)
 
+        if requests.serial == True:
+            print("Set %s to %s " % (key, value))
 
-    for response in responses:
-        response.wait()
-        key = response.target
-        value = response.payload['value']
-        print("Set %s to %s " % (key, value))
+
+    if requests.serial == False and requests.wait == True:
+        for response in responses:
+            response.wait()
+            key = response.target
+            value = response.payload['value']
+            print("Set %s to %s " % (key, value))
 
 
 if __name__ == '__main__':
