@@ -23,3 +23,10 @@ options:
   --wait, --no-wait     Wait until all set requests are complete before
                         exiting. The default is to wait. --no-wait is not
                         compatible with --serial.
+
+Example usage:
+
+    mark get rosebud.model rosebud.length
+    mark get -s rosebud model length height color
+    mark set rosebud.speed=50
+    mark set -s rosebud speed=50 passengers=2 --no-wait
