@@ -148,10 +148,17 @@ def search(port=default_port, wait=False):
 
     found = list()
 
+    try:
+        timeouts = (TimeoutError, socket.timeout)
+    except AttributeError:
+        # socket.timeout was deprecated in 3.10, in favor of TimeoutError.
+        # Presumably at some point socket.timeout will go away.
+        timeouts = (TimeoutError,)
+
     while elapsed < expiration:
         try:
             data, server = sock.recvfrom(4096)
-        except (socket.timeout, TimeoutError):
+        except timeouts:
             now = time.time()
             elapsed = now - start
             continue
