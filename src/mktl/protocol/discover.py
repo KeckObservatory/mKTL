@@ -151,7 +151,7 @@ def search(port=default_port, wait=False):
     while elapsed < expiration:
         try:
             data, server = sock.recvfrom(4096)
-        except TimeoutError:
+        except (socket.timeout, TimeoutError):
             now = time.time()
             elapsed = now - start
             continue
