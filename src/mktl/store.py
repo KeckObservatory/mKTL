@@ -40,8 +40,7 @@ class Store:
 
 
     def __getitem__(self, key):
-        ## Should probably switch to lower case for case insensitivity.
-        key = key.upper()
+        key = key.lower()
 
         try:
             item = self._items[key]
@@ -83,8 +82,7 @@ class Store:
 
 
     def has_key(self, key):
-        ## Should probably switch to lower case for case insensitivity.
-        key = key.upper()
+        key = key.lower()
         return key in self._items
 
 

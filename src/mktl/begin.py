@@ -60,7 +60,7 @@ def get(store, key=None):
 
     if key is not None:
         key = str(key)
-        key = key.upper()
+        key = key.lower()
 
     # Work from the local cache of Store instances first. This sequence
     # of checks is replicated at the end of the routine, after all the

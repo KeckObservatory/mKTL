@@ -29,6 +29,7 @@ class Item:
     def __init__(self, store, key, subscribe=True, authoritative=False, pub=None):
 
         self.authoritative = authoritative
+        key = key.lower()
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store

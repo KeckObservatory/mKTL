@@ -508,6 +508,15 @@ def _rebuild(store):
 
         cached[uuid] = hash
 
+        # Enforce case-insensitivity.
+
+        items = block['items']
+        for key in items.keys():
+            lower = key.lower()
+            if key != lower:
+                item = items[key]
+                del items[key]
+                items[lower] = item
 
         # Regenerate the by-key configuration cache, which is what gets
         # used by mktl.Item instances.
