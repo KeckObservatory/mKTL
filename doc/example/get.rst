@@ -16,7 +16,7 @@ Getting started
 
 An :class:`Item` instance is required to perform any client operations; the
 :func:`get` method should be invoked to acquire a cached singleton for
-any/all subsequent use. Case is not significant in the key name. The required
+any/all subsequent use; key names are case insensitive. The required
 boilerplate is short::
 
     import mktl
@@ -26,8 +26,10 @@ boilerplate is short::
     crazy = mktl.get('PoPuLaTiOn', 'crazy')
 
 The ``crazy`` reference here will be identical for each different invocation
-shown. The important part is that we now have a :class:`Item` that can be used
-for subsequent calls. A ``ValueError`` exception will be raised if no
+shown, always returning the same object-- not copies of the same mKTL item,
+the exact same Python object. The important part is that we now have a
+:class:`Item` that can be used for subsequent calls. A ``ValueError`` exception
+will be raised if no
 configuration is available for that store (i.e., the store does not exist);
 a ``KeyError`` exception will be raised if the key does not exist.
 
