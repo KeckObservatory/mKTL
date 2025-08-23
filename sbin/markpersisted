@@ -52,7 +52,7 @@ def main():
         raise RuntimeError("no items found in '%s' for UUID %s" % (store, uuid))
 
     if watched == 0:
-        print('No persistent items found, markpersistd subprocess exiting.')
+        print('No persistent items found, markpersisted subprocess exiting.')
         sys.exit(0)
 
     while True:

@@ -72,14 +72,14 @@ respectively, though if :func:`mktl.Item.req_get` leverages
    :members: poll, publish, req_get, req_poll, req_refresh, req_set, validate
 
 
-markd executable
+marked executable
 ----------------
 
-The `markd` executable provides a command-line interface to invoke a
+The `marked` executable provides a command-line interface to invoke a
 persistent daemon executing a :class:`mktl.Daemon` subclass as described above.
 It is the natural starting point for any persistent daemon implementing
 the scheme described in this document, since that is the precise purpose
 it is written for.
 
-Refer to the section covering :ref:`markd` in the :ref:`executables`
+Refer to the section covering :ref:`marked` in the :ref:`executables`
 documentation for additional details.

@@ -17,8 +17,8 @@ help:
 mark.txt: ../bin/mark
 	PYTHONPATH=../src ../bin/mark -h > mark.txt
 
-markd.txt: ../sbin/markd
-	../sbin/markd -h > markd.txt
+marked.txt: ../sbin/marked
+	../sbin/marked -h > marked.txt
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

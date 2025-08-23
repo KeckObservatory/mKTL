@@ -1,5 +1,5 @@
-usage: markd [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
-             store identifier
+usage: marked [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
+              store identifier
 
 This is a generic mKTL daemon. The real work is done in the subclass of
 mktl.Daemon (if any); this executable parses command-line flags, invokes
@@ -35,10 +35,10 @@ options:
                         subclass. How this directive is used is entirely up to
                         the application-specific subclass code.
 
-For example, to run markd for the store 'rosebud', using the existing
+For example, to run marked for the store 'rosebud', using the existing
 on-disk configuration identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
 mktl.Daemon, one might invoke:
 
-    markd rosebud innocence
-    markd rosebud innocence --module Kane --subclass Sled
+    marked rosebud innocence
+    marked rosebud innocence --module Kane --subclass Sled

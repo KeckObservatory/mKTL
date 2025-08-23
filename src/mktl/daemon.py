@@ -161,11 +161,11 @@ class Daemon:
 
         daemon = sys.argv[0]
         dirname = os.path.dirname(daemon)
-        markpersistd = os.path.join(dirname, 'markpersistd')
+        markpersisted = os.path.join(dirname, 'markpersisted')
 
         arguments = list()
         arguments.append(sys.executable)
-        arguments.append(markpersistd)
+        arguments.append(markpersisted)
         arguments.append(self.store.name)
         arguments.append(self.uuid)
 

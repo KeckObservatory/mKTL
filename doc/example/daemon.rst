@@ -217,11 +217,11 @@ The :ref:`markguided` executable is a persistent application that enables
 clients to easily find authoritative mKTL daemons. Having one instance of
 :ref:`markguided` running on the local network is recommended.
 
-The :ref:`markd` executable provides a common entry point for a persistent
+The :ref:`marked` executable provides a common entry point for a persistent
 daemon. Assuming the default search path is set up correctly, for the example
 outlined here the invocation would resemble::
 
-    markd metal precious --module metal.precious -c precious_metals.json
+    marked metal precious --module metal.precious -c precious_metals.json
 
-Both :ref:`markguided` and :ref:`markd` should be running before mKTL client
+Both :ref:`markguided` and :ref:`marked` should be running before mKTL client
 interactions are attempted.

@@ -11,13 +11,13 @@ for this daemon to function correctly; all other arguments are optional.
 """
 
 epilog = """
-For example, to run markd for the store 'rosebud', using the existing
+For example, to run marked for the store 'rosebud', using the existing
 on-disk configuration identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
 mktl.Daemon, one might invoke:
 
-    markd rosebud innocence
-    markd rosebud innocence --module Kane --subclass Sled
+    marked rosebud innocence
+    marked rosebud innocence --module Kane --subclass Sled
 """
 
 import argparse

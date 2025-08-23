@@ -15,19 +15,19 @@ interactions with mKTL. The command line arguments describe its usage:
    :language: none
 
 
-.. _markd:
+.. _marked:
 
-markd
------
+marked
+------
 
-The `markd` executable provides a command-line interface to invoke a
+The `marked` executable provides a command-line interface to invoke a
 persistent daemon executing a :class:`mktl.Daemon` subclass to implement
-application-specific functionality. The `markd` executable is intended
+application-specific functionality. The `marked` executable is intended
 to be the common point of entry for any Python-based mKTL daemon.
 
 The command line arguments describe its usage:
 
-.. literalinclude:: ./markd.txt
+.. literalinclude:: ./marked.txt
    :language: none
 
 
