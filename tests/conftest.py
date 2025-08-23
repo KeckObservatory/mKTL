@@ -21,20 +21,20 @@ def run_markguided():
 
 
 @pytest.fixture(scope="session")
-def run_markd():
+def run_marked():
 
     os.environ['PYTHONPATH'] = os.getcwd()
 
     arguments = list()
     arguments.append(sys.executable)
-    arguments.append('../sbin/markd')
+    arguments.append('../sbin/marked')
     arguments.append('-m')
     arguments.append('UnitStore')
     arguments.append('unittest')
     arguments.append('unittest')    # Yes, twice.
 
     pipe = subprocess.PIPE
-    markd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+    marked = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     # Apparently it takes a smidge of time for things to come online. Hence
     # this arbitrary sleep before yielding to the test. 0.1 seconds is not
@@ -44,6 +44,6 @@ def run_markd():
 
     yield
 
-    markd.terminate()
+    marked.terminate()
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
