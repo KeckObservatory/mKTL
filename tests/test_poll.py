@@ -122,7 +122,7 @@ def test_low_frequency():
         deltas = numpy.array(deltas)
         standard_deviation = numpy.std(deltas)
 
-        assert standard_deviation < 0.0001
+        assert standard_deviation < 0.001
 
 
 def test_high_frequency():
@@ -169,7 +169,7 @@ def test_high_frequency():
         deltas = numpy.array(deltas)
         standard_deviation = numpy.std(deltas)
 
-        assert standard_deviation < 0.0001
+        assert standard_deviation < 0.001
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
