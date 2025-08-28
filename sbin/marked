@@ -90,10 +90,10 @@ def load_configuration(store, alias, filename):
 
 def start_daemon(config):
     store = config.store
-    config_id = config.alias
+    alias = config.alias
 
     if config.configuration is not None:
-        load_configuration(store, config_id, config.configuration)
+        load_configuration(store, alias, config.configuration)
 
     if config.module == 'mktl':
         # The mKTL import is here (as opposed to the top of the script) to allow
@@ -105,7 +105,7 @@ def start_daemon(config):
         daemon_module = importlib.import_module(config.module)
 
     daemon_subclass = getattr(daemon_module, config.subclass)
-    started = daemon_subclass(store, config_id, config)
+    started = daemon_subclass(store, alias, config)
 
     return started
 
