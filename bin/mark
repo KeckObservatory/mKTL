@@ -15,6 +15,8 @@ Example usage:
     mark get -s rosebud model length height color
     mark set rosebud.speed=50
     mark set -s rosebud speed=50 passengers=2 --no-wait
+    mark list -s rosebud
+    mark list rosebud redflyer
 """
 
 import argparse
@@ -33,6 +35,9 @@ def main():
 
     if requests.set:
         execute_set_requests(requests)
+
+    if requests.list:
+        execute_list_requests(requests)
 
 
 main.shutdown = threading.Event()
@@ -61,18 +66,21 @@ def parse_command_line():
         help='Wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
-        choices=('get', 'set'),
+        choices=('get', 'set', 'list'),
         type=str.lower,
         help='Request type')
     parser.add_argument('requests',
-        nargs='+',
-        help='Whitespace-separated sequence of requests. For a get request, this is a sequence of keys; for a set request, this is a sequence of key=value statements.')
+        nargs='*',
+        help='Whitespace-separated sequence of requests. For a get request, this is a sequence of keys; for a set request, this is a sequence of key=value statements. For a list request this is a sequence of stores.')
 
 
     parsed = parser.parse_args()
 
     if parsed.serial == True and parsed.wait == False:
         raise ValueError('--serial requires --wait')
+
+    if len(parsed.requests) == 0 and parsed.type != 'list':
+        raise ValueError('no requests specified')
 
     return parsed
 
@@ -96,6 +104,7 @@ def parse_requests(requests):
 
 
     requests.get = tuple()
+    requests.list = list()
     requests.set = dict()
 
     if requests.type == 'get':
@@ -109,6 +118,12 @@ def parse_requests(requests):
                 raise ValueError('bad key=value assignment: ' + request)
 
             requests.set[key] = value
+
+    elif requests.type == 'list':
+        if requests.store is not None:
+            requests.list.append(requests.store)
+
+        requests.list.extend(requests.requests)
 
 
     return requests
@@ -127,6 +142,20 @@ def execute_get_requests(requests):
             timestamp = 0.0
 
         print ("%.3f %s: %s" % (timestamp, key, item.value))
+
+
+
+def execute_list_requests(requests):
+
+    for name in requests.list:
+        store = mktl.get(name)
+
+        # It would be helpful to include additional metadata here besides
+        # just the key names.
+
+        keys = store.keys()
+        for key in store.keys():
+            print(name + '.' + key)
 
 
 
