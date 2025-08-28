@@ -44,6 +44,7 @@ class Daemon:
 
         self._items = dict()
         self.config = None
+        self.store = None
         self.uuid = None
 
         configuration = config.load(store, configuration)
@@ -215,6 +216,9 @@ class Daemon:
         configuration = config.get(store, by_key=True)
         self._items.update(configuration)
 
+        if self.store is not None:
+            self.store._update_config(configuration)
+
 
     def setup(self):
         """ Subclasses should override the :func:`setup` method to invoke
@@ -238,9 +242,25 @@ class Daemon:
         # The configuration needs to be updated with these items before they
         # can be instantiated.
 
-        print(repr(self.config))
+        items = self.config[self.uuid]['items']
+
+        key = self.uuid + '-dev'
+        items[key] = dict()
+        items[key]['description'] = 'A terse description for the function of this daemon.'
+        items[key]['type'] = 'string'
+
+        key = self.uuid + '-host'
+        items[key] = dict()
+        items[key]['description'] = 'The hostname where this daemon is running.'
+        items[key]['type'] = 'string'
+
+        self._update_config(self.store.name, self.config)
 
         # Having updated the configuration, now instantiate the built-in items.
+
+        for suffix in ('-dev', '-host'):
+            key = self.uuid + suffix
+            self.add_item(item.Item, key)
 
 
     def _setup_missing(self):
