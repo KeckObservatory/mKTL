@@ -46,13 +46,12 @@ A per-daemon configuration block will contain the following fields:
 		when a remotely-served configuration block changes.
 
 **alias**	A recognizable identifier for this daemon. This
-		alias is optional, and is used as an alternate
-		representation for the UUID. For example, if a
-		daemon provides built-in items, the keys are
-		based on the UUID, which is not necessarily
-		human-readable; the alias provides an alternate
-		way to build the key such that the results are
-		more approachable.
+		alias is optional in the configuration contents,
+		but it allows the daemon to check whether the
+		alias it provided at run-time matches the
+		specified configuration. Among other things, the
+		alias will be used to build keys for built-in
+		items provided by the daemon.
 
 **provenance**	The chain of handling for this configuration
 		block. The provenance is a sequence, listing every
