@@ -121,7 +121,12 @@ def execute_get_requests(requests):
         item = mktl.get(key)
 
         ### Needs datetime formatting of timestamp.
-        print ("%.3f %s: %s" % (item._value_timestamp, key, item.value))
+
+        timestamp = item._value_timestamp
+        if timestamp is None:
+            timestamp = 0.0
+
+        print ("%.3f %s: %s" % (timestamp, key, item.value))
 
 
 
