@@ -40,14 +40,24 @@ class Daemon:
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, configuration, arguments=None):
+    def __init__(self, store, alias, arguments=None):
 
-        self._items = dict()
+        self.alias = alias
         self.config = None
+        self._items = dict()
         self.store = None
         self.uuid = None
 
-        configuration = config.load(store, configuration)
+        configuration = config.load(store, alias)
+
+        try:
+            config_alias = configuration['alias']
+        except KeyError:
+            configuration['alias'] = alias
+        else:
+            if config_alias != alias:
+                raise ValueError("mismatched alias in configuration: %s, expected %s" % (repr(config_alias), repr(alias)))
+
         self._update_config(store, configuration)
 
         # Use cached port numbers when possible. The ZMQError is thrown
@@ -244,12 +254,13 @@ class Daemon:
 
         items = self.config[self.uuid]['items']
 
-        key = self.uuid + '-dev'
+        key = self.alias + 'dev'
         items[key] = dict()
         items[key]['description'] = 'A terse description for the function of this daemon.'
         items[key]['type'] = 'string'
+        items[key]['persist'] = True
 
-        key = self.uuid + '-host'
+        key = self.alias + 'host'
         items[key] = dict()
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
@@ -258,7 +269,7 @@ class Daemon:
 
         # Having updated the configuration, now instantiate the built-in items.
 
-        for suffix in ('-dev', '-host'):
+        for suffix in ('dev', 'host'):
             key = self.uuid + suffix
             self.add_item(item.Item, key)
 
