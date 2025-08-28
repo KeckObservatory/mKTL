@@ -29,4 +29,4 @@ applications.
 
 The documentation for mKTL is published here:
 
-https://keckobservatory.github.io/mKTL/
+https://keckobservatory.github.io/mKTL
