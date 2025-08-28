@@ -110,6 +110,7 @@ class Daemon:
         # before filling in with empty caching Item classes.
 
         self.setup()
+        self._setup_builtin_items()
         self._setup_missing()
 
         # Restore any persistent values, and enable the retention of future
@@ -208,6 +209,7 @@ class Daemon:
         uuid = list(configuration.keys())[0]
         self.config = configuration
         self.uuid = uuid
+
         config.add(store, configuration)
 
         configuration = config.get(store, by_key=True)
@@ -225,6 +227,20 @@ class Daemon:
         """
 
         pass
+
+
+    def _setup_builtin_items(self):
+        """ Add the built-in :class:`mktl.Item` instances for this daemon
+            to the supplied configuration. These are a set of items associated
+            with the UUID assigned to this daemon.
+        """
+
+        # The configuration needs to be updated with these items before they
+        # can be instantiated.
+
+        print(repr(self.config))
+
+        # Having updated the configuration, now instantiate the built-in items.
 
 
     def _setup_missing(self):
