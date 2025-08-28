@@ -45,6 +45,15 @@ A per-daemon configuration block will contain the following fields:
 		to apply continuity (such as clearing local cache)
 		when a remotely-served configuration block changes.
 
+**alias**	A recognizable identifier for this daemon. This
+		alias is optional, and is used as an alternate
+		representation for the UUID. For example, if a
+		daemon provides built-in items, the keys are
+		based on the UUID, which is not necessarily
+		human-readable; the alias provides an alternate
+		way to build the key such that the results are
+		more approachable.
+
 **provenance**	The chain of handling for this configuration
 		block. The provenance is a sequence, listing every
 		daemon between the client and the original source
