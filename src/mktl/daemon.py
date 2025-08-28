@@ -49,15 +49,6 @@ class Daemon:
         self.uuid = None
 
         configuration = config.load(store, alias)
-
-        try:
-            config_alias = configuration['alias']
-        except KeyError:
-            configuration['alias'] = alias
-        else:
-            if config_alias != alias:
-                raise ValueError("mismatched alias in configuration: %s, expected %s" % (repr(config_alias), repr(alias)))
-
         self._update_config(store, configuration)
 
         # Use cached port numbers when possible. The ZMQError is thrown
@@ -221,6 +212,14 @@ class Daemon:
         self.config = configuration
         self.uuid = uuid
 
+        try:
+            uuid_alias = configuration[uuid]['alias']
+        except KeyError:
+            configuration[uuid]['alias'] = self.alias
+        else:
+            if uuid_alias != self.alias:
+                raise ValueError("mismatched alias in configuration: %s, expected %s" % (repr(uuid_alias), repr(self.alias)))
+
         config.add(store, configuration)
 
         configuration = config.get(store, by_key=True)
@@ -270,7 +269,7 @@ class Daemon:
         # Having updated the configuration, now instantiate the built-in items.
 
         for suffix in ('dev', 'host'):
-            key = self.uuid + suffix
+            key = self.alias + suffix
             self.add_item(item.Item, key)
 
 
