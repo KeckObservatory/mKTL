@@ -289,10 +289,10 @@ def load(store, specific=None):
     """ Load the configuration from disk for the specified store name. If
         *specific* is not None it is expected to be the unique string
         corresponding to a single configuration file, either a unique string
-        of the caller's choice for a locally authoritative configuration, or
-        the UUID for a cached file. Results are returned as a dictionary, keyed
-        by the UUID, and the configuration contents as the value. The returned
-        contents already translated from JSON.
+        of the caller's choice for a locally authoritative configuration (the
+        'alias'), or the UUID for a cached file. Results are returned as a
+        dictionary, keyed by the UUID, and the configuration contents as the
+        value. The returned contents already translated from JSON.
     """
 
     store = store.lower()
@@ -587,16 +587,16 @@ def _remove_cache(store, data, cleanup=True):
 
 
 
-def save(store, configuration, specific=None):
-    """ Save a configuration block to the cache directory. If the *specific*
+def save(store, configuration, alias=None):
+    """ Save a configuration block to the cache directory. If the *alias*
         argument is set this method will instead save the configuration block
-        to the daemon directory.
+        to the daemon directory, using *alias* as the base for the filename.
     """
 
-    if specific is None:
+    if alias is None:
         _save_client(store, configuration)
     else:
-        _save_daemon(store, configuration, specific)
+        _save_daemon(store, configuration, alias)
 
 
 
@@ -650,7 +650,7 @@ def _save_client(store, configuration):
 
 
 
-def _save_daemon(store, configuration, specific):
+def _save_daemon(store, configuration, alias):
     """ Save a configuration block to the daemon directory. This is only
         relevant if a daemon is generating its configuration at runtime,
         or as an entry point for external tools that generate the configuration
@@ -661,7 +661,7 @@ def _save_daemon(store, configuration, specific):
     """
 
     base_directory = directory()
-    json_filename = specific + '.json'
+    json_filename = alias + '.json'
 
     daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
 
