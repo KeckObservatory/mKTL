@@ -30,6 +30,7 @@ class Daemon:
         providing items for; *configuration* is the base name of the mKTL
         configuration file that defines the items for which this daemon is
         authoritative.
+
         *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
