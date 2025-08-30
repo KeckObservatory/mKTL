@@ -15,6 +15,8 @@ Example usage:
     mark get -s rosebud model length height color
     mark set rosebud.speed=50
     mark set -s rosebud speed=50 passengers=2 --no-wait
+    mark watch rosebud.model rosebud.length
+    mark watch -s rosebud model length height color
     mark list -s rosebud
     mark list rosebud redflyer
 """
@@ -74,7 +76,7 @@ def parse_command_line():
         help='Request type')
     parser.add_argument('requests',
         nargs='*',
-        help='Whitespace-separated sequence of requests. For a get request, this is a sequence of keys; for a set request, this is a sequence of key=value statements. For a list request this is a sequence of stores.')
+        help='Whitespace-separated sequence of requests. For a get or a watch request, this is a sequence of keys; for a set request, this is a sequence of key=value statements. For a list request this is a sequence of stores.')
 
 
     parsed = parser.parse_args()
