@@ -1,20 +1,20 @@
 usage: marked [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
-              store identifier
+              store alias
 
 This is a generic mKTL daemon. The real work is done in the subclass of
 mktl.Daemon (if any); this executable parses command-line flags, invokes
 a mktl.Daemon instance to handle any/all requests, and otherwise waits
 until the program is terminated.
 
-The store name and configuration identifier must be specified in order
-for this daemon to function correctly; all other arguments are optional.
+The store name and configuration alias must be specified in order for
+this daemon to function correctly; all other arguments are optional.
 
 positional arguments:
   store                 Name of this mKTL store.
-  identifier            Unique identifier for the mKTL configuration
-                        associated with this specific daemon; this is an
-                        arbitrary string, and must be unique for this daemon
-                        within this store.
+  alias                 Unique alias for the mKTL configuration associated
+                        with this specific daemon; this is an arbitrary
+                        string, and must be unique for this daemon within this
+                        store.
 
 options:
   -h, --help            show this help message and exit
@@ -28,7 +28,7 @@ options:
                         File containing daemon-specific mKTL configuration of
                         items; if specified, the contents of this file will
                         supplant any cached daemon-specific configuration for
-                        this identifier.
+                        this store+alias.
   -a, --appconfig APPCONFIG
                         Custom configuration file location, not used directly
                         by mKTL, but made available to the mktl.Daemon
