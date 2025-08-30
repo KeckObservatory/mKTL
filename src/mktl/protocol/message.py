@@ -298,7 +298,7 @@ def _id_next():
 
         if id > _id_max:
             # This shouldn't happen, but here we are...
-            id = _ next(_id_ticker)
+            id = next(_id_ticker)
 
     _id_lock.release()
 
