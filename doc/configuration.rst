@@ -147,7 +147,7 @@ item.
 		An example set of enumerators for a boolean item
 		might be ``{'0': 'False', '1': 'True'}``. Note that
 		in JSON a dictionary key must be a string, these
-		values can and should be cast back to integers
+		keys can and should be cast back to integers
 		after the JSON is parsed.
 =============== ===============================================================
 
