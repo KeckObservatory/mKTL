@@ -259,6 +259,12 @@ class Daemon:
 
         items = self.config[self.uuid]['items']
 
+        key = self.alias + 'clk'
+        items[key] = dict()
+        items[key]['description'] = 'Uptime for this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'seconds'
+
         key = self.alias + 'dev'
         items[key] = dict()
         items[key]['description'] = 'A terse description for the function of this daemon.'
@@ -274,7 +280,11 @@ class Daemon:
 
         self._update_config(self.store.name, self.config)
 
+
         # Having updated the configuration, now instantiate the built-in items.
+
+        key = self.alias + 'clk'
+        self.add_item(Uptime, key)
 
         for suffix in ('dev', 'host'):
             key = self.alias + suffix
@@ -713,7 +723,28 @@ class PendingPersistence:
 
 
 
-# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
+class Uptime(item.Item):
+
+
+    def __init__(self, *args, **kwargs):
+
+        self.starttime = time.time()
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+        now = time.time()
+        uptime = now - self.starttime
+
+        payload = dict()
+        payload['value'] = uptime
+        payload['time'] = now
+
+        return payload
+
+
+# end of class Uptime
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
