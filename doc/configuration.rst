@@ -118,6 +118,10 @@ item.
 		example an angular value transmitted as radians but
 		also expressed in sexagesimal.
 
+**initial**	Initial value for this item. This is only relevant
+		for the authoritative daemon, and is only used if
+		there is no persistent value to restore for this item.
+
 **persist**	A boolean to indicate whether this item's value
 		should be persistent on the daemon side, such that
 		values persist across a restart of the daemon. This
@@ -224,6 +228,7 @@ like for a store named 'pie'::
               "formatted": "h",
             },
             "description": "Writable angle keyword.",
+	    "initial": 0.0,
 	    "persist": "true"
           },
           "DISPSTOP": {
@@ -286,7 +291,9 @@ daemon-side .json file for the above two-item example::
               "base": "rad"
               "formatted": "h",
             },
-            "description": "Writable angle keyword."
+            "description": "Writable angle keyword.",
+	    "initial": 0.0,
+	    "persist": "true"
           },
           "DISPSTOP": {
             "type": "boolean",
