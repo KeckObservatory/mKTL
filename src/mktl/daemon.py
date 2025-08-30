@@ -1,9 +1,11 @@
 
 import atexit
 import os
+import platform
 import queue
 import subprocess
 import sys
+import time
 import zmq
 
 from . import begin
@@ -44,7 +46,7 @@ class Daemon:
 
         self.alias = alias
         self.config = None
-        self._items = dict()
+        self._item_config = dict()
         self.store = None
         self.uuid = None
 
@@ -115,6 +117,10 @@ class Daemon:
         self._setup_builtin_items()
         self._setup_missing()
 
+        # Apply any initial values according to the configuration contents.
+
+        self._setup_initial_values()
+
         # Restore any persistent values, and enable the retention of future
         # persistent values. If there are no persistent items present for this
         # daemon the call to _restore() is a no-op, and the persistence
@@ -144,7 +150,7 @@ class Daemon:
         """
 
         try:
-            self._items[key]
+            self._item_config[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
@@ -223,7 +229,7 @@ class Daemon:
         config.add(store, configuration)
 
         configuration = config.get(store, by_key=True)
-        self._items.update(configuration)
+        self._item_config.update(configuration)
 
         if self.store is not None:
             self.store._update_config(configuration)
@@ -258,11 +264,13 @@ class Daemon:
         items[key]['description'] = 'A terse description for the function of this daemon.'
         items[key]['type'] = 'string'
         items[key]['persist'] = True
+        items[key]['initial'] = ''
 
         key = self.alias + 'host'
         items[key] = dict()
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
+        items[key]['initial'] = platform.node()
 
         self._update_config(self.store.name, self.config)
 
@@ -280,7 +288,7 @@ class Daemon:
             :func:`setup_final` is invoked.
         """
 
-        local = self._items.keys()
+        local = self._item_config.keys()
         local = list(local)
 
         for key in local:
@@ -288,6 +296,31 @@ class Daemon:
 
             if existing is None:
                 self.add_item(item.Item, key)
+
+
+    def _setup_initial_values(self):
+        """ Apply all initial values defined in the configuration for all
+            local authoritative items. If a persistent value is available
+            it will override the default initial value.
+        """
+
+        items = self.config[self.uuid]['items']
+
+        for key in items.keys():
+
+            configuration = items[key]
+            try:
+                initial = configuration['initial']
+            except KeyError:
+                continue
+
+            payload = dict()
+            payload['value'] = initial
+            payload['time'] = time.time()
+
+            item = self.store[key]
+            request = protocol.message.Request('SET', item.full_key, payload)
+            item.req_set(request)
 
 
     def setup_final(self):
@@ -364,7 +397,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._items:
+        if key in self.daemon._item_config:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -380,7 +413,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._items:
+        if key in self.daemon._item_config:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
