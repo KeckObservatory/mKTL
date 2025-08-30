@@ -39,6 +39,9 @@ def main():
     if requests.list:
         execute_list_requests(requests)
 
+    if requests.watch:
+        execute_watch_requests(requests)
+
 
 main.shutdown = threading.Event()
 
@@ -66,7 +69,7 @@ def parse_command_line():
         help='Wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
-        choices=('get', 'set', 'list'),
+        choices=('get', 'set', 'watch', 'list'),
         type=str.lower,
         help='Request type')
     parser.add_argument('requests',
@@ -106,6 +109,7 @@ def parse_requests(requests):
     requests.get = tuple()
     requests.list = list()
     requests.set = dict()
+    requests.watch = tuple()
 
     if requests.type == 'get':
         requests.get = requests.requests
@@ -118,6 +122,9 @@ def parse_requests(requests):
                 raise ValueError('bad key=value assignment: ' + request)
 
             requests.set[key] = value
+
+    elif requests.type == 'watch':
+        requests.watch = requests.requests
 
     elif requests.type == 'list':
         if requests.store is not None:
@@ -134,14 +141,7 @@ def execute_get_requests(requests):
 
     for key in requests.get:
         item = mktl.get(key)
-
-        ### Needs datetime formatting of timestamp.
-
-        timestamp = item._value_timestamp
-        if timestamp is None:
-            timestamp = 0.0
-
-        print ("%.3f %s: %s" % (timestamp, key, item.value))
+        print_item(item, item.value, item._value_timestamp)
 
 
 
@@ -179,6 +179,31 @@ def execute_set_requests(requests):
             key = response.target
             value = response.payload['value']
             print("Set %s to %s " % (key, value))
+
+
+
+def execute_watch_requests(requests):
+
+    for key in requests.watch:
+        item = mktl.get(key)
+        item.register(print_item)
+
+    while True:
+        try:
+            main.shutdown.wait(30)
+        except (KeyboardInterrupt, SystemExit):
+            break
+
+
+
+def print_item(item, value, timestamp):
+
+        ### Needs datetime formatting of timestamp.
+
+        if timestamp is None:
+            timestamp = 0.0
+
+        print ("%.3f %s: %s" % (timestamp, item.key, value))
 
 
 if __name__ == '__main__':
