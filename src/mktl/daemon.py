@@ -3,6 +3,7 @@ import atexit
 import os
 import platform
 import queue
+import resource
 import subprocess
 import sys
 import time
@@ -265,6 +266,12 @@ class Daemon:
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
 
+        key = self.alias + 'cpu'
+        items[key] = dict()
+        items[key]['description'] = 'Processor consumption by this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'percent'
+
         key = self.alias + 'dev'
         items[key] = dict()
         items[key]['description'] = 'A terse description for the function of this daemon.'
@@ -278,13 +285,20 @@ class Daemon:
         items[key]['type'] = 'string'
         items[key]['initial'] = platform.node()
 
+        key = self.alias + 'mem'
+        items[key] = dict()
+        items[key]['description'] = 'Physical memory consumption by this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'kilobytes'
+
         self._update_config(self.store.name, self.config)
 
 
         # Having updated the configuration, now instantiate the built-in items.
 
-        key = self.alias + 'clk'
-        self.add_item(Uptime, key)
+        self.add_item(Uptime, self.alias + 'clk')
+        self.add_item(MemoryUsage, self.alias + 'mem')
+        self.add_item(ProcessorUsage, self.alias + 'cpu')
 
         for suffix in ('dev', 'host'):
             key = self.alias + suffix
@@ -723,8 +737,72 @@ class PendingPersistence:
 
 
 
-class Uptime(item.Item):
+class MemoryUsage(item.Item):
 
+    def __init__(self, *args, **kwargs):
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        max_usage = resources.ru_maxrss
+
+        payload = dict()
+        payload['value'] = max_usage
+        payload['time'] = time.time()
+
+        return payload
+
+
+# end of class MemoryUsage
+
+
+
+class ProcessorUsage(item.Item):
+
+    def __init__(self, *args, **kwargs):
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        self.previous_usage = resources.ru_utime + resources.ru_stime
+        self.previous_time = time.time()
+
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        current_usage = resources.ru_utime + resources.ru_stime
+        current_time = time.time()
+
+        consumed = current_usage - self.previous_usage
+        elapsed = current_time - self.previous_time
+
+        self.previous_usage = current_usage
+        self.previous_time = current_time
+
+        if elapsed > 0:
+            usage_percent = 100 * consumed / elapsed
+        elif consumed > 0:
+            usage_percent = 100
+        else:
+            usage_percent = 0
+
+
+        payload = dict()
+        payload['time'] = current_time
+        payload['value'] = usage_percent
+
+        return payload
+
+
+# end of class ProcessorUsage
+
+
+
+class Uptime(item.Item):
 
     def __init__(self, *args, **kwargs):
 
