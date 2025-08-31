@@ -250,9 +250,9 @@ class Daemon:
 
 
     def _setup_builtin_items(self):
-        """ Add the built-in :class:`mktl.Item` instances for this daemon
-            to the supplied configuration. These are a set of items associated
-            with the UUID assigned to this daemon.
+        """ Add the built-in :class:`mktl.Item` instances for this daemon.
+            These items use standard suffixes applied to the unique alias
+            assigned to this daemon.
         """
 
         # The configuration needs to be updated with these items before they
@@ -271,6 +271,7 @@ class Daemon:
         items[key]['description'] = 'Processor consumption by this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'percent'
+        items[key]['settable'] = False
 
         key = self.alias + 'dev'
         items[key] = dict()
@@ -284,12 +285,14 @@ class Daemon:
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
         items[key]['initial'] = platform.node()
+        items[key]['settable'] = False
 
         key = self.alias + 'mem'
         items[key] = dict()
         items[key]['description'] = 'Physical memory consumption by this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'kilobytes'
+        items[key]['settable'] = False
 
         self._update_config(self.store.name, self.config)
 
