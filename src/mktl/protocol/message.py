@@ -116,16 +116,18 @@ class Message:
                     # Assume it is already bytes.
                     pass
 
-            # Some JSON encoders will happily take a byte sequence and
-            # encode it. We may need to check here whether the payload
-            # is already bytes; it is expected to be a dictionary, or
-            # something that can be trivially serialized as JSON, like
-            # a bare numeric value, or a string.
-
             if payload == None or payload == '':
                 payload = b''
             else:
-                payload = json.dumps(payload)
+                try:
+                    payload = payload.encapsulate()
+                except AttributeError:
+                    pass
+
+                try:
+                    payload.decode
+                except AttributeError:
+                    payload = json.dumps(payload)
 
             if bulk is None:
                 bulk = b''
@@ -276,6 +278,38 @@ class Request(Message):
 
 # end of class Request
 
+
+
+class Payload:
+    """ This is a lightweight class to properly encapsulate a Python-native
+        value for later inclusion in a :class:`Message` instance.
+    """
+
+    def __init__(self, value, timestamp=None):
+
+        if timestamp is None:
+            timestamp = time.time()
+
+        self.timestamp = timestamp
+        self.value = value
+        self.encapsulated = None
+
+
+    def encapsulate(self):
+
+        if self.encapsulated:
+            return self.encapsulated
+
+        payload = dict()
+        payload['value'] = self.value
+        payload['time'] = self.timestamp
+        payload = json.dumps(payload)
+
+        self.encapsulated = payload
+        return payload
+
+
+# end of class Payload
 
 
 _id_min = 0
