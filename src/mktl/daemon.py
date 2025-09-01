@@ -59,14 +59,14 @@ class Daemon:
         # auto-assigned when that happens.
 
         rep, pub = load_port(store, self.uuid)
-        avoid = used_ports()
+        avoid = _used_ports()
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
         except zmq.error.ZMQError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
-        avoid = used_ports()
+        avoid = _used_ports()
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=avoid)
@@ -549,7 +549,7 @@ def save_port(store, uuid, req=None, pub=None):
 
 
 
-def used_ports():
+def _used_ports():
     """ Return a set of port numbers that were previously in use on this host.
         There are enough ports in the available range that a previously used
         port can be "reserved" for that daemon unless/until there are no other
