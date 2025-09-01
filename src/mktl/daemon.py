@@ -58,7 +58,7 @@ class Daemon:
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
 
-        rep, pub = load_port(store, self.uuid)
+        rep, pub = _load_port(store, self.uuid)
         avoid = _used_ports()
 
         try:
@@ -73,7 +73,7 @@ class Daemon:
         except zmq.error.ZMQError:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
-        save_port(store, self.uuid, self.rep.port, self.pub.port)
+        _save_port(store, self.uuid, self.rep.port, self.pub.port)
 
         provenance = dict()
         provenance['stratum'] = 0
@@ -205,7 +205,7 @@ class Daemon:
             through to affected Items for handling.
         """
 
-        loaded = load_persistent(self.store.name, self.uuid)
+        loaded = _load_persistent(self.store.name, self.uuid)
 
         for key in loaded.keys():
             faux_message = loaded[key]
@@ -475,7 +475,7 @@ class RequestServer(protocol.request.Server):
 
 
 
-def load_port(store, uuid):
+def _load_port(store, uuid):
     """ Return the REQ and PUB port numbers, if any, that were last used
         for the specified *store* and *uuid*. The numbers are returned as
         a two-item tuple (REQ, PUB). None will be returned if a specific
@@ -507,7 +507,7 @@ def load_port(store, uuid):
 
 
 
-def save_port(store, uuid, req=None, pub=None):
+def _save_port(store, uuid, req=None, pub=None):
     """ Save a REQ or PUB port number to the local disk cache for future
         restarts of a persistent daemon.
     """
@@ -589,7 +589,7 @@ def _used_ports():
 persist_queues = dict()
 
 
-def load_persistent(store, uuid):
+def _load_persistent(store, uuid):
     """ Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
         dictionary key, and the value will be a
@@ -639,7 +639,7 @@ def load_persistent(store, uuid):
 
 
 
-def save_persistent(item, *args, **kwargs):
+def _save_persistent(item, *args, **kwargs):
     """ Queue the Item._value attribute to be written out to disk. Additional
         arguments are ignored so that this method can be registered as a
         callback for a :class:`mktl.Item` instance.
@@ -666,7 +666,7 @@ def save_persistent(item, *args, **kwargs):
 
 
 
-def flush_persistent():
+def _flush_persistent():
     """ Request that any/all background threads with queued :func:`save` calls
         flush their queue out to disk. This call will block until the flush is
         complete.
@@ -677,7 +677,7 @@ def flush_persistent():
         pending.flush()
 
 
-atexit.register(flush_persistent)
+atexit.register(_flush_persistent)
 
 
 
