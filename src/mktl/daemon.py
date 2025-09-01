@@ -551,6 +551,9 @@ def save_port(store, uuid, req=None, pub=None):
 
 def used_ports():
     """ Return a set of port numbers that were previously in use on this host.
+        There are enough ports in the available range that a previously used
+        port can be "reserved" for that daemon unless/until there are no other
+        ports available.
     """
 
     base_directory = config.directory()
