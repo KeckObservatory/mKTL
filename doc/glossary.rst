@@ -37,7 +37,16 @@ mKTL-specific terms
              and was the clear choice out of a field of a dozen options
 	     that were presented to the future power users of the protocol.
 
- *  **Daemon**:
+ * **Protocol**:
+		Protocol, as used in the above statement, refers to
+		a communication protocol, as opposed to an object
+		oriented synonym for interface. Borrowing phrasing from
+		`Wikipedia <https://en.wikipedia.org/wiki/Communication_protocol>`_,
+		a communication protocol defines the rules, syntax,
+		semantics, and synchronization of communication between
+		two entities.
+
+ * **Daemon**:
 		A persistent process responsible for some or all of
 		the key-value pairs in a given store. When client
 		requests are initiated it is the daemon that will be
