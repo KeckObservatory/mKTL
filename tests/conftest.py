@@ -29,7 +29,7 @@ def run_marked():
     arguments.append(sys.executable)
     arguments.append('../sbin/marked')
     arguments.append('-m')
-    arguments.append('UnitStore')
+    arguments.append('unitdaemon')
     arguments.append('unittest')
     arguments.append('unittest')    # Yes, twice.
 

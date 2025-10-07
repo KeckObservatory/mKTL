@@ -6,8 +6,8 @@ mktl.Daemon (if any); this executable parses command-line flags, invokes
 a mktl.Daemon instance to handle any/all requests, and otherwise waits
 until the program is terminated.
 
-The store name and configuration identifier must be specified in order
-for this daemon to function correctly; all other arguments are optional.
+The store name and configuration alias must be specified in order for
+this daemon to function correctly; all other arguments are optional.
 """
 
 epilog = """
@@ -51,11 +51,11 @@ def parse_command_line():
     parser = argparse.ArgumentParser(**arguments)
 
     parser.add_argument('store', help='Name of this mKTL store.')
-    parser.add_argument('identifier', help='Unique identifier for the mKTL configuration associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
+    parser.add_argument('alias', help='Unique alias for the mKTL configuration associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
 
     parser.add_argument('-m', '--module', help='Module to import which contains the mktl.Daemon subclass to invoke.', default='mktl')
     parser.add_argument('-s', '--subclass', help='Specific mktl.Daemon subclass to invoke; this is the bare class name (Daemon), not a fully qualified class name (mktl.Daemon).', default='Daemon')
-    parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this identifier.')
+    parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this store+alias.')
     parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the mktl.Daemon subclass. How this directive is used is entirely up to the application-specific subclass code.')
 
 
@@ -63,7 +63,7 @@ def parse_command_line():
     return parsed
 
 
-def load_configuration(store, identifier, filename):
+def load_configuration(store, alias, filename):
     """ Pre-load the user-specified mKTL configuration; this is expected to
         be a JSON-formatted description of a sequence of items, as defined
         in the configuration syntax section of the mKTL documentation:
@@ -84,16 +84,16 @@ def load_configuration(store, identifier, filename):
 
     contents = open(filename, 'r').read()
     items = mktl.json.loads(contents)
-    mktl.config.save(store, items, identifier)
+    mktl.config.save(store, items, alias)
 
 
 
 def start_daemon(config):
     store = config.store
-    config_id = config.identifier
+    alias = config.alias
 
     if config.configuration is not None:
-        load_configuration(store, config_id, config.configuration)
+        load_configuration(store, alias, config.configuration)
 
     if config.module == 'mktl':
         # The mKTL import is here (as opposed to the top of the script) to allow
@@ -105,7 +105,7 @@ def start_daemon(config):
         daemon_module = importlib.import_module(config.module)
 
     daemon_subclass = getattr(daemon_module, config.subclass)
-    started = daemon_subclass(store, config_id, config)
+    started = daemon_subclass(store, alias, config)
 
     return started
 

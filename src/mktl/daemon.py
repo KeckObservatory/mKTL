@@ -1,9 +1,12 @@
 
 import atexit
 import os
+import platform
 import queue
+import resource
 import subprocess
 import sys
+import time
 import zmq
 
 from . import begin
@@ -30,6 +33,7 @@ class Daemon:
         providing items for; *configuration* is the base name of the mKTL
         configuration file that defines the items for which this daemon is
         authoritative.
+
         *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
@@ -39,35 +43,37 @@ class Daemon:
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, configuration, arguments=None):
+    def __init__(self, store, alias, arguments=None):
 
-        self._items = dict()
+        self.alias = alias
         self.config = None
+        self._item_config = dict()
+        self.store = None
         self.uuid = None
 
-        configuration = config.load(store, configuration)
+        configuration = config.load(store, alias)
         self._update_config(store, configuration)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
 
-        rep, pub = load_port(store, self.uuid)
-        avoid = used_ports()
+        rep, pub = _load_port(store, self.uuid)
+        avoid = _used_ports()
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
         except zmq.error.ZMQError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
-        avoid = used_ports()
+        avoid = _used_ports()
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=avoid)
         except zmq.error.ZMQError:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
-        save_port(store, self.uuid, self.rep.port, self.pub.port)
+        _save_port(store, self.uuid, self.rep.port, self.pub.port)
 
         provenance = dict()
         provenance['stratum'] = 0
@@ -109,7 +115,12 @@ class Daemon:
         # before filling in with empty caching Item classes.
 
         self.setup()
+        self._setup_builtin_items()
         self._setup_missing()
+
+        # Apply any initial values according to the configuration contents.
+
+        self._setup_initial_values()
 
         # Restore any persistent values, and enable the retention of future
         # persistent values. If there are no persistent items present for this
@@ -140,7 +151,7 @@ class Daemon:
         """
 
         try:
-            self._items[key]
+            self._item_config[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
@@ -194,7 +205,7 @@ class Daemon:
             through to affected Items for handling.
         """
 
-        loaded = load_persistent(self.store.name, self.uuid)
+        loaded = _load_persistent(self.store.name, self.uuid)
 
         for key in loaded.keys():
             faux_message = loaded[key]
@@ -207,10 +218,22 @@ class Daemon:
         uuid = list(configuration.keys())[0]
         self.config = configuration
         self.uuid = uuid
+
+        try:
+            uuid_alias = configuration[uuid]['alias']
+        except KeyError:
+            configuration[uuid]['alias'] = self.alias
+        else:
+            if uuid_alias != self.alias:
+                raise ValueError("mismatched alias in configuration: %s, expected %s" % (repr(uuid_alias), repr(self.alias)))
+
         config.add(store, configuration)
 
         configuration = config.get(store, by_key=True)
-        self._items.update(configuration)
+        self._item_config.update(configuration)
+
+        if self.store is not None:
+            self.store._update_config(configuration)
 
 
     def setup(self):
@@ -226,6 +249,65 @@ class Daemon:
         pass
 
 
+    def _setup_builtin_items(self):
+        """ Add the built-in :class:`mktl.Item` instances for this daemon.
+            These items use standard suffixes applied to the unique alias
+            assigned to this daemon.
+        """
+
+        # The configuration needs to be updated with these items before they
+        # can be instantiated.
+
+        items = self.config[self.uuid]['items']
+
+        key = self.alias + 'clk'
+        items[key] = dict()
+        items[key]['description'] = 'Uptime for this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'seconds'
+
+        key = self.alias + 'cpu'
+        items[key] = dict()
+        items[key]['description'] = 'Processor consumption by this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'percent'
+        items[key]['settable'] = False
+
+        key = self.alias + 'dev'
+        items[key] = dict()
+        items[key]['description'] = 'A terse description for the function of this daemon.'
+        items[key]['type'] = 'string'
+        items[key]['persist'] = True
+        items[key]['initial'] = ''
+
+        key = self.alias + 'host'
+        items[key] = dict()
+        items[key]['description'] = 'The hostname where this daemon is running.'
+        items[key]['type'] = 'string'
+        items[key]['initial'] = platform.node()
+        items[key]['settable'] = False
+
+        key = self.alias + 'mem'
+        items[key] = dict()
+        items[key]['description'] = 'Physical memory consumption by this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['units'] = 'kilobytes'
+        items[key]['settable'] = False
+
+        self._update_config(self.store.name, self.config)
+
+
+        # Having updated the configuration, now instantiate the built-in items.
+
+        self.add_item(Uptime, self.alias + 'clk')
+        self.add_item(MemoryUsage, self.alias + 'mem')
+        self.add_item(ProcessorUsage, self.alias + 'cpu')
+
+        for suffix in ('dev', 'host'):
+            key = self.alias + suffix
+            self.add_item(item.Item, key)
+
+
     def _setup_missing(self):
         """ Inspect the locally known list of :class:`mktl.Item` instances;
             create default, caching instances for any that were not previously
@@ -233,7 +315,7 @@ class Daemon:
             :func:`setup_final` is invoked.
         """
 
-        local = self._items.keys()
+        local = self._item_config.keys()
         local = list(local)
 
         for key in local:
@@ -241,6 +323,31 @@ class Daemon:
 
             if existing is None:
                 self.add_item(item.Item, key)
+
+
+    def _setup_initial_values(self):
+        """ Apply all initial values defined in the configuration for all
+            local authoritative items. If a persistent value is available
+            it will override the default initial value.
+        """
+
+        items = self.config[self.uuid]['items']
+
+        for key in items.keys():
+
+            configuration = items[key]
+            try:
+                initial = configuration['initial']
+            except KeyError:
+                continue
+
+            payload = dict()
+            payload['value'] = initial
+            payload['time'] = time.time()
+
+            item = self.store[key]
+            request = protocol.message.Request('SET', item.full_key, payload)
+            item.req_set(request)
 
 
     def setup_final(self):
@@ -317,7 +424,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._items:
+        if key in self.daemon._item_config:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -333,7 +440,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._items:
+        if key in self.daemon._item_config:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -368,7 +475,7 @@ class RequestServer(protocol.request.Server):
 
 
 
-def load_port(store, uuid):
+def _load_port(store, uuid):
     """ Return the REQ and PUB port numbers, if any, that were last used
         for the specified *store* and *uuid*. The numbers are returned as
         a two-item tuple (REQ, PUB). None will be returned if a specific
@@ -400,7 +507,7 @@ def load_port(store, uuid):
 
 
 
-def save_port(store, uuid, req=None, pub=None):
+def _save_port(store, uuid, req=None, pub=None):
     """ Save a REQ or PUB port number to the local disk cache for future
         restarts of a persistent daemon.
     """
@@ -442,8 +549,11 @@ def save_port(store, uuid, req=None, pub=None):
 
 
 
-def used_ports():
+def _used_ports():
     """ Return a set of port numbers that were previously in use on this host.
+        There are enough ports in the available range that a previously used
+        port can be "reserved" for that daemon unless/until there are no other
+        ports available.
     """
 
     base_directory = config.directory()
@@ -479,7 +589,7 @@ def used_ports():
 persist_queues = dict()
 
 
-def load_persistent(store, uuid):
+def _load_persistent(store, uuid):
     """ Load any/all saved values for the specified *store* name and *uuid*.
         The values will be returned as a dictionary, with the item key as the
         dictionary key, and the value will be a
@@ -529,7 +639,7 @@ def load_persistent(store, uuid):
 
 
 
-def save_persistent(item, *args, **kwargs):
+def _save_persistent(item, *args, **kwargs):
     """ Queue the Item._value attribute to be written out to disk. Additional
         arguments are ignored so that this method can be registered as a
         callback for a :class:`mktl.Item` instance.
@@ -556,7 +666,7 @@ def save_persistent(item, *args, **kwargs):
 
 
 
-def flush_persistent():
+def _flush_persistent():
     """ Request that any/all background threads with queued :func:`save` calls
         flush their queue out to disk. This call will block until the flush is
         complete.
@@ -567,7 +677,7 @@ def flush_persistent():
         pending.flush()
 
 
-atexit.register(flush_persistent)
+atexit.register(_flush_persistent)
 
 
 
@@ -633,7 +743,92 @@ class PendingPersistence:
 
 
 
-# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
+class MemoryUsage(item.Item):
+
+    def __init__(self, *args, **kwargs):
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        max_usage = resources.ru_maxrss
+
+        payload = dict()
+        payload['value'] = max_usage
+        payload['time'] = time.time()
+
+        return payload
+
+
+# end of class MemoryUsage
+
+
+
+class ProcessorUsage(item.Item):
+
+    def __init__(self, *args, **kwargs):
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        self.previous_usage = resources.ru_utime + resources.ru_stime
+        self.previous_time = time.time()
+
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+
+        resources = resource.getrusage(resource.RUSAGE_SELF)
+        current_usage = resources.ru_utime + resources.ru_stime
+        current_time = time.time()
+
+        consumed = current_usage - self.previous_usage
+        elapsed = current_time - self.previous_time
+
+        self.previous_usage = current_usage
+        self.previous_time = current_time
+
+        if elapsed > 0:
+            usage_percent = 100 * consumed / elapsed
+        elif consumed > 0:
+            usage_percent = 100
+        else:
+            usage_percent = 0
+
+
+        payload = dict()
+        payload['time'] = current_time
+        payload['value'] = usage_percent
+
+        return payload
+
+
+# end of class ProcessorUsage
+
+
+
+class Uptime(item.Item):
+
+    def __init__(self, *args, **kwargs):
+
+        self.starttime = time.time()
+        item.Item.__init__(self, *args, **kwargs)
+        self.poll(1)
+
+
+    def req_refresh(self):
+        now = time.time()
+        uptime = now - self.starttime
+
+        payload = dict()
+        payload['value'] = uptime
+        payload['time'] = now
+
+        return payload
+
+
+# end of class Uptime
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

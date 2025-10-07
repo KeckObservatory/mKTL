@@ -44,7 +44,7 @@ def main():
             continue
 
         if persist == True:
-            item.register(mktl.daemon.save_persistent)
+            item.register(mktl.daemon._save_persistent)
             watched += 1
 
 

@@ -45,6 +45,14 @@ A per-daemon configuration block will contain the following fields:
 		to apply continuity (such as clearing local cache)
 		when a remotely-served configuration block changes.
 
+**alias**	A recognizable identifier for this daemon. This
+		alias is optional in the configuration contents,
+		but it allows the daemon to check whether the
+		alias it provided at run-time matches the
+		specified configuration. Among other things, the
+		alias will be used to build keys for built-in
+		items provided by the daemon.
+
 **provenance**	The chain of handling for this configuration
 		block. The provenance is a sequence, listing every
 		daemon between the client and the original source
@@ -110,6 +118,10 @@ item.
 		example an angular value transmitted as radians but
 		also expressed in sexagesimal.
 
+**initial**	Initial value for this item. This is only relevant
+		for the authoritative daemon, and is only used if
+		there is no persistent value to restore for this item.
+
 **persist**	A boolean to indicate whether this item's value
 		should be persistent on the daemon side, such that
 		values persist across a restart of the daemon. This
@@ -135,7 +147,7 @@ item.
 		An example set of enumerators for a boolean item
 		might be ``{'0': 'False', '1': 'True'}``. Note that
 		in JSON a dictionary key must be a string, these
-		values can and should be cast back to integers
+		keys can and should be cast back to integers
 		after the JSON is parsed.
 =============== ===============================================================
 
@@ -216,6 +228,7 @@ like for a store named 'pie'::
               "formatted": "h",
             },
             "description": "Writable angle keyword.",
+	    "initial": 0.0,
 	    "persist": "true"
           },
           "DISPSTOP": {
@@ -278,7 +291,9 @@ daemon-side .json file for the above two-item example::
               "base": "rad"
               "formatted": "h",
             },
-            "description": "Writable angle keyword."
+            "description": "Writable angle keyword.",
+	    "initial": 0.0,
+	    "persist": "true"
           },
           "DISPSTOP": {
             "type": "boolean",

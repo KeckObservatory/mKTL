@@ -194,7 +194,7 @@ lines like the following in its initialization method::
     def __init__(self, *args, **kwargs):
 
         items = generate_config()
-        mktl.Config.File.save_daemon('metal', 'precious', items)
+        mktl.config.save('metal', items, 'precious')
         mktl.Daemon.__init__(self, *args, **kwargs)
 
 It's more likely that the JSON configuration is written out as a file, ready
