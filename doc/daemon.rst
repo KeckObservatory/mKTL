@@ -73,7 +73,7 @@ respectively, though if :func:`mktl.Item.req_get` leverages
 
 
 marked executable
-----------------
+-----------------
 
 The `marked` executable provides a command-line interface to invoke a
 persistent daemon executing a :class:`mktl.Daemon` subclass as described above.
