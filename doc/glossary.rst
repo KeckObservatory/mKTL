@@ -46,6 +46,13 @@ mKTL-specific terms
 	semantics, and synchronization of communication between
 	two entities.
 
+ * **Transport**:
+	A `transport layer <https://en.wikipedia.org/wiki/Transport_layer>`_
+	is the underlying layer of the network stack that handles application
+	level messaging. Though it is built upon TCP and UDP,
+	`ZeroMQ <https://zeromq.org/>`_ is effectively the transport layer
+	for the mKTL protocol.
+
  * **Daemon**:
 	A persistent process responsible for some or all of the key-value
 	pairs in a given store. When client requests are initiated it is
