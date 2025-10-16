@@ -39,8 +39,8 @@ mKTL-specific terms
 
  * **Protocol**:
 	Protocol, as used in the above statement, refers to
-	a communication protocol, as opposed to an object
-	oriented synonym for interface. Borrowing phrasing from
+	a communication protocol, as opposed to being a synonym for an interface
+	in an object-oriented context. Borrowing phrasing from
 	`Wikipedia <https://en.wikipedia.org/wiki/Communication_protocol>`_,
 	a communication protocol defines the rules, syntax,
 	semantics, and synchronization of communication between
