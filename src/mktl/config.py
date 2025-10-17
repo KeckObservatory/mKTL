@@ -510,13 +510,18 @@ def _rebuild(store):
 
         # Enforce case-insensitivity.
 
+        fixes = list()
         items = block['items']
         for key in items.keys():
             lower = key.lower()
             if key != lower:
-                item = items[key]
-                del items[key]
-                items[lower] = item
+                fixes.append(key)
+
+        for key in fixes:
+            lower = key.lower()
+            item = items[key]
+            del items[key]
+            items[lower] = item
 
         # Regenerate the by-key configuration cache, which is what gets
         # used by mktl.Item instances.
