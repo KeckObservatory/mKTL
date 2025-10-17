@@ -179,7 +179,7 @@ def execute_set_requests(requests):
         for response in responses:
             response.wait()
             key = response.target
-            value = response.payload['value']
+            value = response.payload.value
             print("Set %s to %s " % (key, value))
 
 
