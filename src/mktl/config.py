@@ -510,7 +510,7 @@ def _rebuild(store):
 
         # Enforce case-insensitivity.
 
-        fixes = list()
+        fixes = []  # list() is redefined in this file
         items = block['items']
         for key in items.keys():
             lower = key.lower()
