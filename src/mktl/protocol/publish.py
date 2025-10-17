@@ -205,7 +205,7 @@ class Client:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        broadcast = message.Broadcast('PUB', topic, payload, bulk)
+        broadcast = message.Broadcast('PUB', topic, payload)
         self.propagate(topic, broadcast)
 
 

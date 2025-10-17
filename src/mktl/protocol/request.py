@@ -104,7 +104,7 @@ class Client:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        response = message.Message('REP', target, payload, bulk, response_id)
+        response = message.Message('REP', target, payload, response_id)
         pending._complete(response)
         del self.pending[response_id]
 
@@ -358,7 +358,7 @@ class Server:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        request = message.Request(req_type, target, payload, bulk, req_id)
+        request = message.Request(req_type, target, payload, req_id)
         payload = None
         error = None
 
@@ -383,9 +383,7 @@ class Server:
         if error is not None and payload.error is None:
             payload.error = error
 
-        bulk = payload.bulk
-
-        response = message.Message('REP', target, payload, bulk, req_id)
+        response = message.Message('REP', target, payload, req_id)
         parts = (ident,) + tuple(response)
 
         # The lock around the ZeroMQ socket is necessary in a multithreaded
@@ -465,10 +463,6 @@ def send(address, port, message):
     message.wait()
 
     payload = message.response.payload
-
-    if message.response.bulk is not None:
-        payload.bulk = message.response.bulk
-
     return payload
 
 

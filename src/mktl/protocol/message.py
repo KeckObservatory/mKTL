@@ -23,8 +23,8 @@ class Message:
 
         The fields are largely in order of how they are represented on the
         wire: the message *type*, the key/store *target* for the request,
-        the *payload* of the message (expected to be a Python dictionary),
-        any *bulk* as-bytes component of the message, and an identification
+        the *payload* of the message (a :class:`Payload` instance),
+        and an identification
         number unique to this correspondence. The identification number is
         the one field that is out-of-order compared to the multipart sequence
         on the wire; this is because some message types (publish messages,
@@ -35,14 +35,13 @@ class Message:
         a similar structure.
 
         :ivar payload: The item-specific data, if any, for the message.
-        :ivar bulk: The item-specific bulk data, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
     valid_types = set(('ACK', 'REP'))
 
-    def __init__(self, type, target=None, payload=None, bulk=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None):
 
         if type in self.valid_types:
             pass
@@ -53,14 +52,10 @@ class Message:
         # in particular, publish messages do not have or need an identification
         # number.
 
-        if bulk == b'':
-            bulk = None
-
         self.id = id
         self.type = type
         self.payload = payload
         self.target = target
-        self.bulk = bulk
         self.timestamp = timemodule.time()
 
         self.parts = None
@@ -90,7 +85,6 @@ class Message:
             type = self.type
             target = self.target
             payload = self.payload
-            bulk = self.bulk
 
             # It is legal to create a Message with None as the id-- this happens
             # all the time when a Message is used as a container-- but trying to
@@ -116,13 +110,14 @@ class Message:
                     # Assume it is already bytes.
                     pass
 
-            if payload == None or payload == '':
+            if payload is None or payload == '':
+                bulk = b''
                 payload = b''
             else:
+                bulk = payload.bulk
+                if bulk is None:
+                    bulk = b''
                 payload = payload.encapsulate()
-
-            if bulk is None:
-                bulk = b''
 
             parts = (version, id, type, target, payload, bulk)
             self.parts = parts
@@ -148,7 +143,6 @@ class Broadcast(Message):
 
             target = self.target
             payload = self.payload
-            bulk = self.bulk
 
             # The PUB/SUB topic has a trailing dot to prevent leading
             # substring matches from picking up extra keys.
@@ -156,13 +150,14 @@ class Broadcast(Message):
             target = target + '.'
             target = target.encode()
 
-            if payload == None or payload == '':
+            if payload is None or payload == '':
+                bulk = b''
                 payload = b''
             else:
+                bulk = payload.bulk
+                if bulk is None:
+                    bulk = b''
                 payload = payload.encapsulate()
-
-            if bulk is None:
-                bulk = b''
 
             parts = (target, version, payload, bulk)
             self.parts = parts
@@ -184,7 +179,7 @@ class Request(Message):
 
     valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
 
-    def __init__(self, type, target=None, payload=None, bulk=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None):
 
         # Requests are generally initiated without an id number, but they're
         # required to have one. The expectation is that requests will have an
@@ -199,7 +194,7 @@ class Request(Message):
         if id is None:
             id = _id_next()
 
-        Message.__init__(self, type, target, payload, bulk, id)
+        Message.__init__(self, type, target, payload, id)
 
         self.response = None
 

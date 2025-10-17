@@ -628,7 +628,7 @@ def _load_persistent(store, uuid):
             bulk = None
 
         payload = protocol.message.Payload(**payload, bulk=bulk)
-        message = protocol.message.Request('SET', key, payload, bulk)
+        message = protocol.message.Request('SET', key, payload)
         loaded[key] = message
 
     return loaded
