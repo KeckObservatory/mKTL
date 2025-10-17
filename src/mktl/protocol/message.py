@@ -4,7 +4,7 @@
 
 import itertools
 import threading
-import time
+import time as timemodule
 
 from .. import json
 
@@ -61,7 +61,7 @@ class Message:
         self.payload = payload
         self.target = target
         self.bulk = bulk
-        self.timestamp = time.time()
+        self.timestamp = timemodule.time()
 
         self.parts = None
 
@@ -119,15 +119,7 @@ class Message:
             if payload == None or payload == '':
                 payload = b''
             else:
-                try:
-                    payload = payload.encapsulate()
-                except AttributeError:
-                    pass
-
-                try:
-                    payload.decode
-                except AttributeError:
-                    payload = json.dumps(payload)
+                payload = payload.encapsulate()
 
             if bulk is None:
                 bulk = b''
@@ -164,14 +156,10 @@ class Broadcast(Message):
             target = target + '.'
             target = target.encode()
 
-            # Some JSON encoders will happily take a byte sequence and
-            # encode it. We may need to check here whether the payload
-            # is already bytes; it is expected to be a dictionary.
-
             if payload == None or payload == '':
                 payload = b''
             else:
-                payload = json.dumps(payload)
+                payload = payload.encapsulate()
 
             if bulk is None:
                 bulk = b''
@@ -285,24 +273,55 @@ class Payload:
         value for later inclusion in a :class:`Message` instance.
     """
 
-    def __init__(self, value, timestamp=None):
+    _optional = ('dtype', 'error', 'refresh', 'shape')
 
-        if timestamp is None:
-            timestamp = time.time()
+    def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None):
 
-        self.timestamp = timestamp
+        # The use of 'time' as a keyword argument is what's motivating the
+        # weird import of the time module in this file. We want the keyword
+        # arguments to be aligned with the fields in the JSON description
+        # of a payload: value, time, and error.
+
+        if time is None:
+            time = timemodule.time()
+
+        if refresh is False:
+            refresh = None
+
+        self.bulk = bulk
+        self.dtype = dtype
+        self.error = error
+        self.refresh = refresh
+        self.shape = shape
+        self.time = time
         self.value = value
         self.encapsulated = None
 
 
+    def __repr__(self):
+        return self.encapsulate().decode()
+
+
     def encapsulate(self):
+        ''' Encapsulate the non-bulk fields as a dictionary, and return the
+            JSON encoding of that dictionary. Calling this method multiple
+            times will return the cached encapsulation rather than generate
+            it anew.
+        '''
 
         if self.encapsulated:
             return self.encapsulated
 
         payload = dict()
         payload['value'] = self.value
-        payload['time'] = self.timestamp
+        payload['time'] = self.time
+
+        for optional_field in self._optional:
+            optional_value = getattr(self, optional_field)
+
+            if optional_value is not None:
+                payload[optional_field] = optional_value
+
         payload = json.dumps(payload)
 
         self.encapsulated = payload

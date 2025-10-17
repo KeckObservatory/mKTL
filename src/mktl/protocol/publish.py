@@ -191,13 +191,19 @@ class Client:
         payload = parts[2]
         bulk = parts[3]
 
+        if bulk == b'':
+            bulk = None
+
         if payload == b'':
             payload = None
         else:
             payload = json.loads(payload)
-
-        if bulk == b'':
-            bulk = None
+            try:
+                payload = message.Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
 
         broadcast = message.Broadcast('PUB', topic, payload, bulk)
         self.propagate(topic, broadcast)

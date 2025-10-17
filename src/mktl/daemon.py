@@ -150,6 +150,8 @@ class Daemon:
             directly to the *item_class* when it is called to be instantiated.
         """
 
+        key = key.lower()
+
         try:
             self._item_config[key]
         except KeyError:
@@ -189,8 +191,7 @@ class Daemon:
         """
 
         configuration = dict(self.config)
-        payload = dict()
-        payload['value'] = configuration
+        payload = protocol.message.Payload(configuration)
         message = protocol.message.Request('CONFIG', self.store.name, payload)
 
         for address,port in targets:
@@ -341,11 +342,8 @@ class Daemon:
             except KeyError:
                 continue
 
-            payload = dict()
-            payload['value'] = initial
-            payload['time'] = time.time()
-
             item = self.store[key]
+            payload = protocol.message.Payload(initial)
             request = protocol.message.Request('SET', item.full_key, payload)
             item.req_set(request)
 
@@ -382,8 +380,7 @@ class RequestServer(protocol.request.Server):
         else:
             configuration = config.get(target)
 
-        payload = dict()
-        payload['value'] = configuration
+        payload = protocol.message.Payload(configuration)
         return payload
 
 
@@ -405,8 +402,7 @@ class RequestServer(protocol.request.Server):
         elif type == 'SET':
             response = self.req_set(request)
             if response is None:
-                response = dict()
-                response['value'] = True
+                response = protocol.message.Payload(True)
         elif type == 'GET':
             response = self.req_get(request)
         elif type == 'CONFIG':
@@ -464,9 +460,8 @@ class RequestServer(protocol.request.Server):
         if store == '':
             store = None
 
-        cached = config.get(store, hashes=True)
-        payload = dict()
-        payload['value'] = cached
+        hashes = config.get(store, hashes=True)
+        payload = protocol.message.Payload(hashes)
         return payload
 
 
@@ -632,6 +627,7 @@ def _load_persistent(store, uuid):
         except FileNotFoundError:
             bulk = None
 
+        payload = protocol.message.Payload(**payload, bulk=bulk)
         message = protocol.message.Request('SET', key, payload, bulk)
         loaded[key] = message
 
@@ -653,14 +649,12 @@ def _save_persistent(item, *args, **kwargs):
         pending = PendingPersistence(uuid)
 
     by_prefix = dict()
-    payload, bulk = item._prepare_value()
-    payload['time'] = item._value_timestamp
+    payload = item._prepare_value()
 
-    if bulk is not None:
-        by_prefix['bulk'] = bytes
+    if payload.bulk is not None:
+        by_prefix['bulk'] = payload.bulk
 
-    json_payload = json.dumps(payload)
-    by_prefix[''] = json_payload
+    by_prefix[''] = payload.encapsulate()
 
     pending.put((item.key, by_prefix))
 
@@ -755,10 +749,7 @@ class MemoryUsage(item.Item):
         resources = resource.getrusage(resource.RUSAGE_SELF)
         max_usage = resources.ru_maxrss
 
-        payload = dict()
-        payload['value'] = max_usage
-        payload['time'] = time.time()
-
+        payload = protocol.message.Payload(max_usage)
         return payload
 
 
@@ -796,11 +787,7 @@ class ProcessorUsage(item.Item):
         else:
             usage_percent = 0
 
-
-        payload = dict()
-        payload['time'] = current_time
-        payload['value'] = usage_percent
-
+        payload = protocol.message.Payload(usage_percent, current_time)
         return payload
 
 
@@ -821,10 +808,7 @@ class Uptime(item.Item):
         now = time.time()
         uptime = now - self.starttime
 
-        payload = dict()
-        payload['value'] = uptime
-        payload['time'] = now
-
+        payload = protocol.message.Payload(uptime, now)
         return payload
 
 

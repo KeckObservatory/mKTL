@@ -59,11 +59,11 @@ class Client:
         their_version = parts[0]
 
         if their_version != message.version:
-            payload = dict()
             error = dict()
             error['type'] = 'RuntimeError'
             error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
-            payload['error'] = error
+            payload = message.Payload(None, error=error)
+            payload = payload.encapsulate()
             response_type = 'REP'
             target = '???'
             bulk = None
@@ -90,13 +90,19 @@ class Client:
             pending._complete_ack()
             return
 
+        if bulk == b'':
+            bulk = None
+
         if payload == b'':
             payload = None
         else:
             payload = json.loads(payload)
-
-        if bulk == b'':
-            bulk = None
+            try:
+                payload = message.Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
 
         response = message.Message('REP', target, payload, bulk, response_id)
         pending._complete(response)
@@ -267,9 +273,7 @@ class Server:
             request.
         """
 
-        ack = dict()
-        ack['time'] = time.time()
-
+        ack = message.Payload(None)
         response = message.Message('ACK', payload=ack, id=request.id)
         parts = (ident,) + tuple(response)
 
@@ -292,9 +296,7 @@ class Server:
 
         self.req_ack(socket, lock, ident, request)
 
-        payload = dict()
-        payload['time'] = time.time() ## This should be the value creation time
-
+        payload = message.Payload(None)
         response = message.Message('REP', target, payload, id=request.id)
         parts = (ident,) + tuple(response)
 
@@ -342,10 +344,19 @@ class Server:
         req_type = req_type.decode()
         target = target.decode()
 
+        if bulk == b'':
+            bulk = None
+
         if payload == b'':
             payload = None
         else:
             payload = json.loads(payload)
+            try:
+                payload = message.Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
 
         request = message.Request(req_type, target, payload, bulk, req_id)
         payload = None
@@ -366,22 +377,13 @@ class Server:
             # other processing chain that will issue a proper response.
             return
 
-        ### Does the req_handler return value need to be a special Python class?
-        ### Faking the fields for now via tight coupling.
-
         if payload is None:
-            payload = dict()
-            payload['time'] = time.time()
+            payload = message.Payload(None)
 
-        if error is not None:
-            payload['error'] = error
+        if error is not None and payload.error is None:
+            payload.error = error
 
-        try:
-            bulk = payload['bulk']
-        except (KeyError, TypeError):
-            bulk = None
-        else:
-            del payload['bulk']
+        bulk = payload.bulk
 
         response = message.Message('REP', target, payload, bulk, req_id)
         parts = (ident,) + tuple(response)
@@ -465,7 +467,7 @@ def send(address, port, message):
     payload = message.response.payload
 
     if message.response.bulk is not None:
-        payload['bulk'] = message.response.bulk
+        payload.bulk = message.response.bulk
 
     return payload
 

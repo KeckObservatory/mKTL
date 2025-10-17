@@ -133,9 +133,7 @@ class Item:
 
         request = dict()
 
-        if refresh == True:
-            request['refresh'] = True
-
+        request = protocol.message.Payload(None, refresh=refresh)
         message = protocol.message.Request('GET', self.full_key, request)
         self.req.send(message)
         response = message.wait(self.timeout)
@@ -143,24 +141,20 @@ class Item:
         if response == None:
             raise RuntimeError('GET failed: no response to request')
 
-        try:
-            error = response.payload['error']
-        except KeyError:
-            pass
-        else:
-            if error is not None and error != '':
-                e_type = error['type']
-                e_text = error['text']
+        error = response.payload.error
+        if error is not None and error != '':
+            e_type = error['type']
+            e_text = error['text']
 
-                ### This debug print should be removed.
-                try:
-                    print(error['debug'])
-                except KeyError:
-                    pass
+            ### This debug print should be removed.
+            try:
+                print(error['debug'])
+            except KeyError:
+                pass
 
-                ### The exception type here should be something unique
-                ### instead of a RuntimeError.
-                raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
+            ### The exception type here should be something unique
+            ### instead of a RuntimeError.
+            raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
         self._update(response)
 
@@ -198,13 +192,11 @@ class Item:
         else:
             timestamp = float(timestamp)
 
-        payload, bulk = self._prepare_value(new_value)
-        payload['time'] = timestamp
-
+        payload = self._prepare_value(new_value, timestamp)
         changed = False
 
         if repeat == False:
-            if bulk is None:
+            if payload.bulk is None:
                 changed = self._daemon_value != new_value
             else:
                 if self._daemon_value is None and new_value is not None:
@@ -228,7 +220,7 @@ class Item:
 
         if changed == True or repeat == True:
             key = self.full_key
-            message = protocol.message.Broadcast('PUB', key, payload, bulk)
+            message = protocol.message.Broadcast('PUB', key, payload)
 
             ### self._update_queue.put(message)
             self.pub.publish(message)
@@ -267,26 +259,12 @@ class Item:
         ### Should req_get put the response in as request.response,
         ### instead of returning a payload?
 
-        try:
-            refresh = request.payload['refresh']
-        except (TypeError, KeyError):
-            refresh = False
-
-        bulk = None
+        refresh = request.payload.refresh
 
         if refresh == True:
             payload = self.req_poll()
-            new_value = payload['value']
-            timestamp = payload['time']
-
-            payload, bulk = self._prepare_value(new_value)
-            payload['time'] = timestamp
         else:
-            payload, bulk = self._prepare_value()
-            payload['time'] = self._daemon_value_timestamp
-
-        if bulk is not None:
-            payload['bulk'] = bulk
+            payload = self._prepare_value()
 
         return payload
 
@@ -311,14 +289,11 @@ class Item:
         if payload is None:
             return
 
-        new_value = payload['value']
-        try:
-            timestamp = payload['time']
-        except:
-            timestamp = time.time()
+        new_value = payload.value
+        timestamp = payload.time
 
         # The default behavior is to only publish a value if the value has
-        # changed.
+        # changed. That check is made is in the publish() method.
 
         self.publish(new_value, timestamp=timestamp, repeat=repeat)
 
@@ -343,10 +318,7 @@ class Item:
 
         # This implementation is strictly caching, there is nothing to refresh.
 
-        payload = dict()
-        payload['value'] = self._daemon_value
-        payload['time'] = self._daemon_value_timestamp
-
+        payload = self._prepare_value()
         return payload
 
 
@@ -360,16 +332,7 @@ class Item:
             The *request* is a :class:`protocol.message.Request` instance.
         """
 
-        if request.bulk == b'' or request.bulk is None:
-            bulk = False
-        else:
-            bulk = True
-
-        if bulk == True:
-            new_value = self._interpret_bulk(request)
-        else:
-            new_value = request.payload['value']
-
+        new_value = self._recreate_value(request)
         new_value = self.validate(new_value)
         self.publish(new_value)
 
@@ -394,8 +357,8 @@ class Item:
 
         self._updated.clear()
 
-        payload, bulk = self._prepare_value(new_value)
-        message = protocol.message.Request('SET', self.full_key, payload, bulk)
+        payload = self._prepare_value(new_value)
+        message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
         if wait == False:
@@ -406,25 +369,21 @@ class Item:
         if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        try:
-            error = response.payload['error']
-        except (TypeError, KeyError):
-            pass
-        else:
-            if error is not None and error != '':
-                e_type = error['type']
-                e_text = error['text']
+        error = response.payload.error
+        if error is not None and error != '':
+            e_type = error['type']
+            e_text = error['text']
 
-                ### This debug print should be removed.
-                try:
-                    print(error['debug'])
-                except KeyError:
-                    pass
+            ### This debug print should be removed.
+            try:
+                print(error['debug'])
+            except KeyError:
+                pass
 
-                ### The exception type here should be something unique
-                ### instead of a RuntimeError.
-                error = "SET of %s failed: %s: %s" % (self.key, e_type, e_text)
-                raise RuntimeError(error)
+            ### The exception type here should be something unique
+            ### instead of a RuntimeError.
+            error = "SET of %s failed: %s: %s" % (self.key, e_type, e_text)
+            raise RuntimeError(error)
 
 
         # Wait a smidge for local values to update in response to the set
@@ -526,9 +485,10 @@ class Item:
             self.set(new_value)
 
 
-    def _prepare_value(self, value=None):
-        """ Interpret the current value of this item into a payload, bulk
-            data tuple, appropriate for inclusion in a
+    def _prepare_value(self, value=None, timestamp=None):
+        """ Interpret the current value of this item into a
+            :class:`protocol.message.Payload` instance,
+            appropriate for inclusion in a
             :class:`protocol.message.Message` instance.
 
             This is the inverse of :func:`_recreate_value`.
@@ -540,7 +500,11 @@ class Item:
             else:
                 value = self._daemon_value
 
-        payload = dict()
+        if timestamp is None:
+            if self.authoritative == False:
+                timestamp = self._value_timestamp
+            else:
+                timestamp = self._daemon_value_timestamp
 
         # Perhaps there is a more declarative way to know whether a given
         # value is expected to be bulk data; perhaps reference the per-Item
@@ -551,12 +515,13 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload['value'] = value
+            payload = protocol.message.Payload(value, timestamp)
         else:
-            payload['shape'] = value.shape
-            payload['dtype'] = str(value.dtype)
+            shape = value.shape
+            dtype = str(value.dtype)
+            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
-        return (payload, bulk)
+        return payload
 
 
     def _propagate(self, new_data, new_timestamp):
@@ -598,26 +563,25 @@ class Item:
             This is the inverse of :func:`_prepare_value`.
         """
 
-        if message.bulk is not None:
+        ### TODO: should this work on a Payload instead of a Message?
+
+        payload = message.payload
+        if payload.bulk is not None:
 
             if numpy is None:
                 raise ImportError('numpy module not available')
 
-            description = message.payload
-            bulk = message.bulk
+            bulk = payload.bulk
 
-            shape = description['shape']
-            dtype = description['dtype']
+            shape = payload.shape
+            dtype = payload.dtype
             dtype = getattr(numpy, dtype)
 
             serialized = numpy.frombuffer(bulk, dtype=dtype)
             new_value = numpy.reshape(serialized, newshape=shape)
 
         else:
-            try:
-                new_value = message.payload['value']
-            except KeyError:
-                new_value = None
+            new_value = message.payload.value
 
 
         return new_value
@@ -629,13 +593,7 @@ class Item:
         """
 
         new_value = self._recreate_value(message)
-
-        try:
-            timestamp = message.payload['time']
-        except KeyError:
-            ### Catching this error may not be desirable-- the payload should
-            ### always contain a timestamp.
-            timestamp = time.time()
+        timestamp = message.payload.time
 
         self._value = new_value
         self._value_timestamp = timestamp

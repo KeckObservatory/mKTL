@@ -110,9 +110,9 @@ def get(store, key=None):
         protocol.request.send(hostname, port, message)
         response = message.wait()
 
-        try:
-            configuration = response.payload['value']
-        except KeyError:
+        configuration = response.payload.value
+
+        if configuration is None:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         # If we made it this far the network came through with an answer.
@@ -169,9 +169,8 @@ def refresh(store, configuration):
 
             response = message.wait()
 
-            try:
-                hashes = response.payload['value']
-            except KeyError:
+            hashes = response.payload.value
+            if hashes is None:
                 # No response available.
                 continue
 
@@ -191,9 +190,9 @@ def refresh(store, configuration):
                 ### went offline.
                 response = message.wait()
 
-                try:
-                    new_block = response.payload['value']
-                except KeyError:
+                new_block = response.payload.value
+
+                if new_block is None:
                     # No response available.
                     continue
 
