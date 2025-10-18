@@ -265,12 +265,13 @@ class Request(Message):
 
 class Payload:
     """ This is a lightweight class to properly encapsulate a Python-native
-        value for later inclusion in a :class:`Message` instance.
+        value for later inclusion in a :class:`Message` instance. Any fields
+        in the Payload.omit set will be excluded from the encapsulation.
     """
 
-    _optional = ('dtype', 'error', 'refresh', 'shape')
+    omit = set(('bulk', '_encapsulated', 'omit'))
 
-    def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None):
+    def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None, **kwargs):
 
         # The use of 'time' as a keyword argument is what's motivating the
         # weird import of the time module in this file. We want the keyword
@@ -290,7 +291,15 @@ class Payload:
         self.shape = shape
         self.time = time
         self.value = value
-        self.encapsulated = None
+
+        self._encapsulated = None
+
+        # Allow additional arbitrary fields in the payload. We are assuming
+        # the caller knows what they are doing, and that these additional
+        # fields can be serialized as JSON.
+
+        for key,value in kwargs.items():
+            setattr(self, key, value)
 
 
     def __repr__(self):
@@ -304,22 +313,22 @@ class Payload:
             it anew.
         '''
 
-        if self.encapsulated:
-            return self.encapsulated
+        if self._encapsulated:
+            return self._encapsulated
 
         payload = dict()
-        payload['value'] = self.value
-        payload['time'] = self.time
 
-        for optional_field in self._optional:
-            optional_value = getattr(self, optional_field)
+        # All local attributes get put into the encapsulated payload,
+        # except for those included in the omit set.
 
-            if optional_value is not None:
-                payload[optional_field] = optional_value
+        for key,value in vars(self).items():
+            if key in self.omit:
+                continue
+            payload[key] = value
 
         payload = json.dumps(payload)
 
-        self.encapsulated = payload
+        self._encapsulated = payload
         return payload
 
 
