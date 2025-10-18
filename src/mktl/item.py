@@ -259,7 +259,10 @@ class Item:
         ### Should req_get put the response in as request.response,
         ### instead of returning a payload?
 
-        refresh = request.payload.refresh
+        try:
+            refresh = request.payload.refresh
+        except AttributeError:
+            refresh = False
 
         if refresh == True:
             payload = self.req_poll()
