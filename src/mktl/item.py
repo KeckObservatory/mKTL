@@ -305,18 +305,11 @@ class Item:
 
     def req_refresh(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. The return value is a dictionary,
-            with a 'value' key containing the Python binary representation of
-            the item value, and a 'time' key with a UNIX epoch timestamp
-            representing the last-changed time for that value. Returning None
-            is expected if no new value is available; returning None will not
-            clear the currently known value, that is only done if the returned
-            dictionary contains None as the 'value'.
-
-            Examples::
-
-                {'time': 1234.5678, 'value': 54}
-                {'time': 8765.4321, 'value': None}
+            and return it to the caller. The return value is a :class:`Payload`
+            instance. Returning None is expected if no new value is available;
+            returning None will not clear the currently known value, that is
+            only done if the returned :class:`Payload` instance contains None
+            as the 'value'.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
@@ -464,6 +457,13 @@ class Item:
                 value = self._value
             else:
                 value = self._daemon_value
+
+        elif timestamp is None:
+            # If the value is specified, but the timestamp is not, use the
+            # current time as the timestamp-- the next condition would instead
+            # use the previous timestamp, which is not appropriate for a new
+            # payload.
+            timestamp = time.time()
 
         if timestamp is None:
             if self.authoritative == False:
