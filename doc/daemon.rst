@@ -69,7 +69,7 @@ respectively, though if :func:`mktl.Item.req_get` leverages
 :func:`mktl.Item.req_refresh` in order to acquire the most recent value.
 
 .. autoclass:: mktl.Item
-   :members: poll, publish, req_get, req_poll, req_refresh, req_set, validate
+   :members: from_payload, poll, publish, req_get, req_poll, req_refresh, req_set, to_payload, validate
 
 
 marked executable
