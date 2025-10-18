@@ -328,7 +328,11 @@ class Item:
             The *request* is a :class:`protocol.message.Request` instance.
         """
 
-        new_value = self._recreate_value(request)
+        payload = request.payload
+        if payload is None:
+            return
+
+        new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
         self.publish(new_value)
 
@@ -444,12 +448,13 @@ class Item:
 
 
     def to_payload(self, value=None, timestamp=None):
-        """ Interpret the current value of this item (or the provided
-            arguments, if any) into a :class:`protocol.message.Payload`
-            instance, appropriate for inclusion in a
-            :class:`protocol.message.Message` instance.
+        """ Interpret either the current value of this item or the provided
+            arguments into a :class:`protocol.message.Payload` instance,
+            appropriate for inclusion in a :class:`protocol.message.Message`
+            instance. This is particularly important as a step in a custom
+            :func:`req_refresh` implementation.
 
-            This is the inverse of :func:`_recreate_value`.
+            This is the inverse of :func:`from_payload`.
         """
 
         if value is None:
@@ -555,20 +560,17 @@ class Item:
             self.callbacks.remove(reference)
 
 
-    def _recreate_value(self, message):
+    def from_payload(self, payload):
         """ Recreate the fundamental Python type of the value from the provided
-            *message*.
+            :class:`Payload` instance.
 
             This default handler will interpret the bulk component, if any,
             as an N-dimensional numpy array, with the description of the
-            array present in the payload of the message.
+            array present in the other fields of the payload.
 
             This is the inverse of :func:`to_payload`.
         """
 
-        ### TODO: should this work on a Payload instead of a Message?
-
-        payload = message.payload
         if payload.bulk is not None:
 
             if numpy is None:
@@ -584,7 +586,7 @@ class Item:
             new_value = numpy.reshape(serialized, newshape=shape)
 
         else:
-            new_value = message.payload.value
+            new_value = payload.value
 
 
         return new_value
@@ -595,7 +597,12 @@ class Item:
             GET request or from a PUB subscription.
         """
 
-        new_value = self._recreate_value(message)
+        payload = message.payload
+
+        if payload is None:
+            return
+
+        new_value = self.from_payload(payload)
         timestamp = message.payload.time
 
         self._value = new_value
