@@ -306,10 +306,17 @@ class Item:
     def req_refresh(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
             and return it to the caller. The return value is a :class:`Payload`
-            instance. Returning None is expected if no new value is available;
-            returning None will not clear the currently known value, that is
-            only done if the returned :class:`Payload` instance contains None
-            as the 'value'.
+            instance; the use of :func:`to_payload` is encouraged to ensure
+            the :class:`Payload` instance is properly constructed for complex
+            data types.
+
+            Returning None is expected if no new value is available.
+            Returning None will not clear the currently known value, that is
+            only done if the returned :class:`Payload` instance is assigned
+            None as the 'value'; this is not expected to be a common occurrence,
+            but if the caller wants that to happen they need to construct their
+            own :class:`Payload` instance with None as the value rather than
+            use :func:`to_payload` for this specific case.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
