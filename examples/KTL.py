@@ -74,26 +74,22 @@ class Item(mktl.Item):
 
         slice = keyword.history[-1]
         timestamp = slice.time
-        ascii = slice.ascii
         binary = slice.binary
 
-        payload = dict()
-        payload['value'] = binary
-        payload['time'] = timestamp
-
+        payload = mktl.Payload(binary, timestamp)
         return payload
 
 
     def req_set(self, request):
 
-        new_value = request.payload['value']
+        new_value = request.payload.value
 
         keyword = ktl.cache(request.target)
         keyword.write(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
-        # absent any explicit response (not required, nor expected), a default
-        # response will be provided.
+        # absent any explicit response (not required, nor expected), mktl
+        # provides a default payload.
 
 
 # end of class Item
