@@ -192,7 +192,7 @@ class Item:
         else:
             timestamp = float(timestamp)
 
-        payload = self._prepare_value(new_value, timestamp)
+        payload = self.to_payload(new_value, timestamp)
         changed = False
 
         if repeat == False:
@@ -267,7 +267,7 @@ class Item:
         if refresh == True:
             payload = self.req_poll()
         else:
-            payload = self._prepare_value()
+            payload = self.to_payload()
 
         return payload
 
@@ -321,7 +321,7 @@ class Item:
 
         # This implementation is strictly caching, there is nothing to refresh.
 
-        payload = self._prepare_value()
+        payload = self.to_payload()
         return payload
 
 
@@ -360,7 +360,7 @@ class Item:
 
         self._updated.clear()
 
-        payload = self._prepare_value(new_value)
+        payload = self.to_payload(new_value)
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
@@ -450,6 +450,45 @@ class Item:
         ### a callback on a topic substring of our key name.
 
 
+    def to_payload(self, value=None, timestamp=None):
+        """ Interpret the current value of this item (or the provided
+            arguments, if any) into a :class:`protocol.message.Payload`
+            instance, appropriate for inclusion in a
+            :class:`protocol.message.Message` instance.
+
+            This is the inverse of :func:`_recreate_value`.
+        """
+
+        if value is None:
+            if self.authoritative == False:
+                value = self._value
+            else:
+                value = self._daemon_value
+
+        if timestamp is None:
+            if self.authoritative == False:
+                timestamp = self._value_timestamp
+            else:
+                timestamp = self._daemon_value_timestamp
+
+        # Perhaps there is a more declarative way to know whether a given
+        # value is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
+
+        try:
+            bulk = value.tobytes()
+        except AttributeError:
+            bulk = None
+            payload = protocol.message.Payload(value, timestamp)
+        else:
+            shape = value.shape
+            dtype = str(value.dtype)
+            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+
+        return payload
+
+
     def validate(self, value):
         """ A hook for a daemon to validate a new value. The default behavior
             is a no-op; any checks should raise exceptions if they encounter
@@ -488,45 +527,6 @@ class Item:
             self.set(new_value)
 
 
-    def _prepare_value(self, value=None, timestamp=None):
-        """ Interpret the current value of this item into a
-            :class:`protocol.message.Payload` instance,
-            appropriate for inclusion in a
-            :class:`protocol.message.Message` instance.
-
-            This is the inverse of :func:`_recreate_value`.
-        """
-
-        if value is None:
-            if self.authoritative == False:
-                value = self._value
-            else:
-                value = self._daemon_value
-
-        if timestamp is None:
-            if self.authoritative == False:
-                timestamp = self._value_timestamp
-            else:
-                timestamp = self._daemon_value_timestamp
-
-        # Perhaps there is a more declarative way to know whether a given
-        # value is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
-        # expected behavior explicit?
-
-        try:
-            bulk = value.tobytes()
-        except AttributeError:
-            bulk = None
-            payload = protocol.message.Payload(value, timestamp)
-        else:
-            shape = value.shape
-            dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
-
-        return payload
-
-
     def _propagate(self, new_data, new_timestamp):
         """ Invoke any registered callbacks upon receipt of a new value.
         """
@@ -563,7 +563,7 @@ class Item:
             as an N-dimensional numpy array, with the description of the
             array present in the payload of the message.
 
-            This is the inverse of :func:`_prepare_value`.
+            This is the inverse of :func:`to_payload`.
         """
 
         ### TODO: should this work on a Payload instead of a Message?

@@ -649,7 +649,7 @@ def _save_persistent(item, *args, **kwargs):
         pending = PendingPersistence(uuid)
 
     by_prefix = dict()
-    payload = item._prepare_value()
+    payload = item.to_payload()
 
     if payload.bulk is not None:
         by_prefix['bulk'] = payload.bulk
