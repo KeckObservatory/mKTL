@@ -87,6 +87,11 @@ class Item(mktl.Item):
         keyword.write(new_value)
 
 
+    def req_set(self, *args, **kwargs):
+        kwargs['publish'] = False
+        mktl.Item.req_set(self, *args, **kwargs)
+
+
 # end of class Item
 
 
