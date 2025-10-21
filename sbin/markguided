@@ -47,16 +47,15 @@ def main():
 
             address,port = seen
             request = mktl.protocol.message.Request('HASH')
-            hashes = mktl.protocol.request.send(address, port, request)
-            hashes = hashes['value']
+            payload = mktl.protocol.request.send(address, port, request)
+            hashes = payload.value
 
             for store in hashes.keys():
                 request = mktl.protocol.message.Request('CONFIG', store)
-                config = mktl.protocol.request.send(address, port, request)
+                payload = mktl.protocol.request.send(address, port, request)
 
-                try:
-                    blocks = config['value']
-                except KeyError:
+                blocks = payload.value
+                if blocks is None:
                     ## No data; there's probably an error we could inspect
                     ## and log here.
                     pass
@@ -212,7 +211,7 @@ class RequestServer(mktl.protocol.request.Server):
         if payload is not None:
             response = list()
 
-            new_blocks = payload['value']
+            new_blocks = payload.value
             for uuid,new_block in new_blocks.items():
                 try:
                     self.processConfigurationBlock(new_block)
@@ -227,8 +226,7 @@ class RequestServer(mktl.protocol.request.Server):
                 raise KeyError('no configuration available for ' + repr(store))
 
 
-        payload = dict()
-        payload['value'] = response
+        payload = mktl.Payload(response)
         return payload
 
 
@@ -269,8 +267,7 @@ class RequestServer(mktl.protocol.request.Server):
         except KeyError:
             raise KeyError('no local configuration for ' + repr(request))
 
-        payload = dict()
-        payload['value'] = hashes
+        payload = mktl.Payload(hashes)
         return payload
 
 
