@@ -64,7 +64,7 @@ An example subclass would have a structure like the following::
             # our market-prices should update once per day:
             self.poll(86400)
 
-        def req_refresh(self):
+        def perform_get(self):
             # Determine the current value for this item and return it
             # encapsulated as an mktl.Payload instance.
             pass
@@ -74,18 +74,18 @@ An example subclass would have a structure like the following::
             # once the request is complete.
             pass
 
-Note in particular the documentation for :func:`Item.req_refresh` and
+Note in particular the documentation for :func:`Item.perform_get` and
 :func:`Item.req_set`, as it covers the expected behavior of each method.
 For our example, the various items are intended to represent the market
 spot price of different precious metals. In this case, the
-:func:`Item.req_refresh` method may request the current value from a website,
+:func:`Item.perform_get` method may request the current value from a website,
 and :func:`Item.req_set` would not be defined, since we don't get to change
 the actual market value. To pick one example::
 
 
     class Gold(MarketPriced):
 
-        def req_refresh(self):
+        def perform_get(self):
             spot = get_spot_value('gold', 'usd', 'grams')
             spot = float(spot)
 

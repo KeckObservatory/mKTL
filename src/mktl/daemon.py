@@ -744,7 +744,7 @@ class MemoryUsage(item.Item):
         self.poll(1)
 
 
-    def req_refresh(self):
+    def perform_get(self):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
         max_usage = resources.ru_maxrss
@@ -767,7 +767,7 @@ class ProcessorUsage(item.Item):
         self.poll(1)
 
 
-    def req_refresh(self):
+    def perform_get(self):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
         current_usage = resources.ru_utime + resources.ru_stime
@@ -802,7 +802,7 @@ class Uptime(item.Item):
         self.poll(1)
 
 
-    def req_refresh(self):
+    def perform_get(self):
         current_time = time.time()
         uptime = current_time - self.starttime
 

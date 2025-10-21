@@ -287,7 +287,7 @@ class Item:
         """ Handle a GET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
             from :func:`req_get` is identical to the value returned by
-            :func:`req_refresh`, which is where custom handling by subclasses
+            :func:`perform_get`, which is where custom handling by subclasses
             is expected to occur.
         """
 
@@ -306,17 +306,17 @@ class Item:
 
     def req_poll(self, repeat=False):
         """ Handle a background poll request, established by calling
-            :func:`poll`. :func:`req_refresh` is where custom handling by
+            :func:`poll`. :func:`perform_get` is where custom handling by
             subclasses is expected to occur. The payload returned from
             :func:`req_poll` is identical to the payload returned by
-            :func:`req_refresh`.
+            :func:`perform_get`.
 
             A common pattern for custom subclasses involves registering
             :func:`req_poll` as a callback on other items, so that the value
             of this item can be refreshed when external events occur.
         """
 
-        payload = self.req_refresh()
+        payload = self.perform_get()
 
         if payload is None:
             return
@@ -329,7 +329,7 @@ class Item:
         return payload
 
 
-    def req_refresh(self):
+    def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
             and return it to the caller. The return value is a
             :class:`mktl.Payload`
@@ -341,7 +341,7 @@ class Item:
             Returning None will not clear the currently known value, that will
             only occur if the returned :class:`mktl.Payload` instance is
             assigned None as the 'value'; this is not expected to be a common
-            occurrence, but if the custom :func:`req_refresh` implementation
+            occurrence, but if the custom :func:`perform_get` implementation
             wants that to occur they need to instantiate the
             :class:`mktl.Payload` instance directly rather than use
             :func:`to_payload`.
@@ -372,7 +372,7 @@ class Item:
 
         # If this implementation included any custom logic this is where
         # it would occur. Similar to the interaction between req_get() and
-        # req_refresh(), perhaps it would be preferable for there to be
+        # perform_get(), perhaps it would be preferable for there to be
         # an isolated method that is the expected place for all such custom
         # logic, while req_set() remains unmodified by custom subclasses.
         #
@@ -494,7 +494,7 @@ class Item:
             not specified the current value of this :class:`Item` will be
             used; if the *timestamp* is not specified the current time will
             be used. This is particularly important as a step in a custom
-            :func:`req_refresh` implementation.
+            :func:`perform_get` implementation.
 
             This is the inverse of :func:`from_payload`.
         """
