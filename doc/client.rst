@@ -32,12 +32,12 @@ at run time.
 .. autofunction:: mktl.home
 
 The :func:`mktl.get` method is the universal entry point to retrieve a
-:class:`Store` or :class:`Item` instance; client configuration is automatically
-refreshed if necessary, and the remainder of the connection logic is handled
-by the :class:`Store`.
+:class:`mktl.Store` or :class:`mktl.Item` instance; client configuration is
+automatically refreshed if necessary, and the remainder of the connection logic
+is handled by the :class:`mktl.Store`.
 
 All other client operations, such as getting and setting item values, are
-handled via the :class:`Item` instance.
+handled via the :class:`mktl.Item` instance.
 
 .. autofunction:: mktl.get
 
@@ -45,8 +45,8 @@ handled via the :class:`Item` instance.
 The Store class
 ---------------
 
-The :class:`Store` class is primarily an organizational structure, providing
-a dictionary-style interface to retrieve :class:`Item` instances.
+The :class:`mktl.Store` class is primarily an organizational structure,
+providing a dictionary-like interface to retrieve :class:`mktl.Item` instances.
 
 .. autoclass:: mktl.Store
    :members:
@@ -61,9 +61,10 @@ can be used with Python operators, such as addition/concatenation or
 multiplication.
 The behavior of an :class:`mktl.Item` when used in this fashion will be aligned
 with the native Python binary type for the item value; for example, if an
-item test.BAR has an integer value 12, ``test.BAR + 5`` will return 17; if
-the value is instead the string value '12', the same operation will raise a
-TypeError exception.
+item test.BAR has an integer value 12, ``test.BAR + 5`` will return the integer
+value 17. If test.BAR is instead the string value '12', the same operation
+would raise a TypeError exception; however, ``test.BAR + '5'`` would return
+the string value '125', just like you would expect for string concatenation.
 
 .. autoclass:: mktl.Item
    :members: get, register, set, subscribe, value

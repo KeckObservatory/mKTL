@@ -227,11 +227,11 @@ class Item:
 
 
     def register(self, method):
-        """ Register a callback to be invoked whenever a new value is received,
-            either by a direct :func:`get` request or the arrival of an
-            asynchronous broadcast. :func:`subscribe` will automatically be
-            invoked as necessary, the client does not need to call it
-            separately.
+        """ Register a callback to be invoked whenever a new value is received
+            from a remote daemon, regardless of how that new value arrived.
+            :func:`subscribe` will automatically be invoked if it has not been
+            invoked for this :class:`Item` instance, the client does not need
+            to call it separately.
         """
 
         if callable(method):
@@ -404,10 +404,10 @@ class Item:
 
     def subscribe(self, prime=True):
         """ Subscribe to all future broadcast events. Doing so ensures that
-            locally cached values will always be current, regardless of whether
-            :func:`get` has been invoked recently. If *prime* is True a call
+            locally cached values will always be current, regardless of any
+            local polling behavior. If *prime* is True a call
             will be made to :func:`get` to refresh the locally cached value
-            before returning.
+            before this method returns.
         """
 
         if self.subscribed == True:
@@ -466,8 +466,8 @@ class Item:
     @property
     def value(self):
         """ Get and set the current value of the item. Invoke :func:`get` and
-            :func:`set` directly for additional control over how these calls
-            are handled.
+            :func:`set` directly for additional control over how these
+            respective calls are handled.
         """
 
         if self.authoritative == True:
