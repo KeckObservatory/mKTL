@@ -364,7 +364,7 @@ class Item:
         return payload
 
 
-    def req_set(self, request):
+    def req_set(self, request, publish=True):
         """ Handle a SET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
             from :func:`req_set` will be returned to the caller, though no
@@ -384,7 +384,12 @@ class Item:
         # similar to perform_get().
 
         response = self.perform_set(new_value)
-        self.publish(new_value)
+
+        # That said, not all custom implementations want req_set() to publish
+        # the new value.
+
+        if publish == True:
+            self.publish(new_value)
 
         # If perform_set() returns a payload it will be returned to the caller;
         # absent any explicit response (not required, nor expected), a default
