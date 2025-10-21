@@ -83,7 +83,7 @@ class Item(mktl.Item):
     def perform_set(self, new_value):
 
         keyword = self.full_key
-        keyword = ktl.cache(full_key)
+        keyword = ktl.cache(keyword)
         keyword.write(new_value)
 
 
