@@ -117,6 +117,38 @@ class Item:
         self.set(new_value)
 
 
+    def from_payload(self, payload):
+        """ Recreate the fundamental Python type of the value from the provided
+            :class:`mktl.Payload` instance, and return it to the caller.
+
+            This default handler will interpret the bulk component, if any,
+            of the payload as an N-dimensional numpy array, with the
+            description of the array present in the other fields of the payload.
+
+            This is the inverse of :func:`to_payload`.
+        """
+
+        if payload.bulk is not None:
+
+            if numpy is None:
+                raise ImportError('numpy module not available')
+
+            bulk = payload.bulk
+
+            shape = payload.shape
+            dtype = payload.dtype
+            dtype = getattr(numpy, dtype)
+
+            serialized = numpy.frombuffer(bulk, dtype=dtype)
+            new_value = numpy.reshape(serialized, newshape=shape)
+
+        else:
+            new_value = payload.value
+
+
+        return new_value
+
+
     def get(self, refresh=False, formatted=False):
         """ Retrieve the current value. Set *refresh* to True to prompt
             the daemon handling the request to provide the most up-to-date
@@ -166,10 +198,9 @@ class Item:
 
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero. The actual
-            acquisition of a new value is accomplished via the :func:`req_poll`
-            method, which in turn leans heavily on :func:`req_refresh` to do
-            the actual work.
+            discontinued if *period* is set to None or zero. Polling occurs
+            within a local background thread which will invoke :func:`req_poll`
+            at the requested interval.
         """
 
         poll.start(self.req_poll, period)
@@ -191,6 +222,12 @@ class Item:
             timestamp = time.time()
         else:
             timestamp = float(timestamp)
+
+        # publish() does not require a Payload instance as an argument to
+        # allow flexibility in cases where the timestamp is not already
+        # established, though in the average case publish() will be invoked
+        # as a result of a req_poll() call, which already has a Payload
+        # instance.
 
         payload = self.to_payload(new_value, timestamp)
         changed = False
@@ -247,17 +284,12 @@ class Item:
 
 
     def req_get(self, request):
-        """ Handle a GET request. A typical subclass should not need to
-            re-implement this method, implementing :func:`req_refresh`
-            would normally be sufficient. The *request* argument is a
-            :class:`protocol.message.Request` instance, parsed from the
-            on-the-wire request. The value returned from :func:`req_get`
-            is identical to the value returned by :func:`req_refresh`.
+        """ Handle a GET request. The *request* argument is a
+            :class:`protocol.message.Request` instance; the value returned
+            from :func:`req_get` is identical to the value returned by
+            :func:`req_refresh`, which is where custom handling by subclasses
+            is expected to occur.
         """
-
-        ### TODO:
-        ### Should req_get put the response in as request.response,
-        ### instead of returning a payload?
 
         try:
             refresh = request.payload.refresh
@@ -273,18 +305,15 @@ class Item:
 
 
     def req_poll(self, repeat=False):
-        """ Entry point for calls established by :func:`poll`; a typical
-            subclass should not need to reimplement this method. The main reason
-            :func:`req_poll` exists is to streamline the expected behavior of
-            :func:`req_refresh`, allowing it to focus entirely on what it means
-            to acquire a new value; after receiving the refreshed value,
-            :func:`req_poll` will additionally publish the new value. A common
-            pattern for custom subclasses involves registering :func:`req_poll`
-            as a callback on other items, so that the local value of this item
-            can be refreshed when events occur elsewhere within a daemon.
+        """ Handle a background poll request, established by calling
+            :func:`poll`. :func:`req_refresh` is where custom handling by
+            subclasses is expected to occur. The payload returned from
+            :func:`req_poll` is identical to the payload returned by
+            :func:`req_refresh`.
 
-            For convenience, the value returned from :func:`req_poll` is
-            identical to the value returned by :func:`req_refresh`.
+            A common pattern for custom subclasses involves registering
+            :func:`req_poll` as a callback on other items, so that the value
+            of this item can be refreshed when external events occur.
         """
 
         payload = self.req_refresh()
@@ -292,31 +321,30 @@ class Item:
         if payload is None:
             return
 
-        new_value = payload.value
-        timestamp = payload.time
-
         # The default behavior is to only publish a value if the value has
         # changed. That check is made is in the publish() method.
 
-        self.publish(new_value, timestamp=timestamp, repeat=repeat)
+        self.publish(payload.value, payload.time, repeat)
 
         return payload
 
 
     def req_refresh(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. The return value is a :class:`Payload`
+            and return it to the caller. The return value is a
+            :class:`mktl.Payload`
             instance; the use of :func:`to_payload` is encouraged to ensure
             the :class:`Payload` instance is properly constructed for complex
             data types.
 
             Returning None is expected if no new value is available.
-            Returning None will not clear the currently known value, that is
-            only done if the returned :class:`Payload` instance is assigned
-            None as the 'value'; this is not expected to be a common occurrence,
-            but if the caller wants that to happen they need to construct their
-            own :class:`Payload` instance with None as the value rather than
-            use :func:`to_payload` for this specific case.
+            Returning None will not clear the currently known value, that will
+            only occur if the returned :class:`mktl.Payload` instance is
+            assigned None as the 'value'; this is not expected to be a common
+            occurrence, but if the custom :func:`req_refresh` implementation
+            wants that to occur they need to instantiate the
+            :class:`mktl.Payload` instance directly rather than use
+            :func:`to_payload`.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
@@ -326,7 +354,7 @@ class Item:
 
 
     def req_set(self, request):
-        """ Handle a client-initiated SET request. Any calls to :func:`req_set`
+        """ Handle a SET request. Any calls to :func:`req_set`
             are expected to block until completion of the request; no return
             value of significance is expected, though one can be provided and
             will be returned to the client, even if the client does not use
@@ -341,14 +369,20 @@ class Item:
 
         new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
+
+        # If this implementation included any custom logic this is where
+        # it would occur. Similar to the interaction between req_get() and
+        # req_refresh(), perhaps it would be preferable for there to be
+        # an isolated method that is the expected place for all such custom
+        # logic, while req_set() remains unmodified by custom subclasses.
+        #
+        # Something TODO.
+
         self.publish(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
         # absent any explicit response (not required, nor expected), a default
         # response will be provided.
-
-        ### Perhaps req_set should put the response in as request.response.
-
 
 
     def set(self, new_value, wait=True):
@@ -455,10 +489,11 @@ class Item:
 
 
     def to_payload(self, value=None, timestamp=None):
-        """ Interpret either the current value of this item or the provided
-            arguments into a :class:`protocol.message.Payload` instance,
-            appropriate for inclusion in a :class:`protocol.message.Message`
-            instance. This is particularly important as a step in a custom
+        """ Interpret the provided arguments into a
+            :class:`mktl.Payload` instance; if the *value* is
+            not specified the current value of this :class:`Item` will be
+            used; if the *timestamp* is not specified the current time will
+            be used. This is particularly important as a step in a custom
             :func:`req_refresh` implementation.
 
             This is the inverse of :func:`from_payload`.
@@ -507,8 +542,8 @@ class Item:
             a problem with the incoming value. The 'validated' value should
             be returned by this method; this allows for the possibility that
             the incoming value has been translated to a more acceptable format,
-            for example, converting '123' to the bare number 123 for a numeric
-            item type.
+            for example, converting the string '123' to the integer 123 for a
+            numeric item type.
         """
 
         return value
@@ -518,7 +553,8 @@ class Item:
     def value(self):
         """ Get and set the current value of the item. Invoke :func:`get` and
             :func:`set` directly for additional control over how these
-            respective calls are handled.
+            respective calls are handled, the handling invoked here relies on
+            default values for all optional arguments.
         """
 
         if self.authoritative == True:
@@ -565,38 +601,6 @@ class Item:
 
         for reference in invalid:
             self.callbacks.remove(reference)
-
-
-    def from_payload(self, payload):
-        """ Recreate the fundamental Python type of the value from the provided
-            :class:`Payload` instance.
-
-            This default handler will interpret the bulk component, if any,
-            as an N-dimensional numpy array, with the description of the
-            array present in the other fields of the payload.
-
-            This is the inverse of :func:`to_payload`.
-        """
-
-        if payload.bulk is not None:
-
-            if numpy is None:
-                raise ImportError('numpy module not available')
-
-            bulk = payload.bulk
-
-            shape = payload.shape
-            dtype = payload.dtype
-            dtype = getattr(numpy, dtype)
-
-            serialized = numpy.frombuffer(bulk, dtype=dtype)
-            new_value = numpy.reshape(serialized, newshape=shape)
-
-        else:
-            new_value = payload.value
-
-
-        return new_value
 
 
     def _update(self, message):
