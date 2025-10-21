@@ -196,6 +196,51 @@ class Item:
             return self._value
 
 
+    def perform_get(self, request=None):
+        """ Acquire the most up-to-date value available for this :class:`Item`
+            and return it to the caller. The return value is a
+            :class:`mktl.Payload`
+            instance; the use of :func:`to_payload` is encouraged to ensure
+            the :class:`Payload` instance is properly constructed for complex
+            data types.
+
+            The original :class:`protocol.message.Request`, if available,
+            is passed as an optional argument, to allow for the possibility
+            that the request includes additional fields that may be of utility
+            to a custom subclass.
+
+            Returning None is expected if no new value is available.
+
+            Returning None will not clear the currently known value, that will
+            only occur if the returned :class:`mktl.Payload` instance is
+            assigned None as the 'value'; this is not expected to be a common
+            occurrence, but if the custom :func:`perform_get` implementation
+            wants that to occur they need to instantiate the
+            :class:`mktl.Payload` instance directly rather than use
+            :func:`to_payload`.
+        """
+
+        # This implementation is strictly caching, there is nothing to refresh.
+
+        payload = self.to_payload()
+        return payload
+
+
+    def perform_set(self, new_value, request=None):
+        """ Implement any custom behavior that should occur as a result of
+            a set request for this item. No additional actions are taken by
+            default; no return value is expected. Any subclass implementations
+            should raise an exception in order to trigger an error response.
+
+            The original :class:`protocol.message.Request`, if available,
+            is passed as an optional argument, to allow for the possibility
+            that the request includes additional fields that may be of utility
+            to a custom subclass.
+        """
+
+        pass
+
+
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
             discontinued if *period* is set to None or zero. Polling occurs
@@ -297,14 +342,14 @@ class Item:
             refresh = False
 
         if refresh == True:
-            payload = self.req_poll()
+            payload = self.req_poll(request=request)
         else:
             payload = self.to_payload()
 
         return payload
 
 
-    def req_poll(self, repeat=False):
+    def req_poll(self, repeat=False, request=None):
         """ Handle a background poll request, established by calling
             :func:`poll`. :func:`perform_get` is where custom handling by
             subclasses is expected to occur. The payload returned from
@@ -316,7 +361,7 @@ class Item:
             of this item can be refreshed when external events occur.
         """
 
-        payload = self.perform_get()
+        payload = self.perform_get(request)
 
         if payload is None:
             return
@@ -326,30 +371,6 @@ class Item:
 
         self.publish(payload.value, payload.time, repeat)
 
-        return payload
-
-
-    def perform_get(self):
-        """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. The return value is a
-            :class:`mktl.Payload`
-            instance; the use of :func:`to_payload` is encouraged to ensure
-            the :class:`Payload` instance is properly constructed for complex
-            data types.
-
-            Returning None is expected if no new value is available.
-            Returning None will not clear the currently known value, that will
-            only occur if the returned :class:`mktl.Payload` instance is
-            assigned None as the 'value'; this is not expected to be a common
-            occurrence, but if the custom :func:`perform_get` implementation
-            wants that to occur they need to instantiate the
-            :class:`mktl.Payload` instance directly rather than use
-            :func:`to_payload`.
-        """
-
-        # This implementation is strictly caching, there is nothing to refresh.
-
-        payload = self.to_payload()
         return payload
 
 
@@ -370,14 +391,10 @@ class Item:
         new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
 
-        # If this implementation included any custom logic this is where
-        # it would occur. Similar to the interaction between req_get() and
-        # perform_get(), perhaps it would be preferable for there to be
-        # an isolated method that is the expected place for all such custom
-        # logic, while req_set() remains unmodified by custom subclasses.
-        #
-        # Something TODO.
+        # All custom logic is expected to occur in the perform_set() method,
+        # similar to perform_get().
 
+        self.perform_set(new_value, request)
         self.publish(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
