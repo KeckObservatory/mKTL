@@ -59,12 +59,16 @@ subclasses. This is where requests get handled, where data gets interpreted,
 where logic is defined that could span items within and without the boundaries
 of the containing :class:`mktl.Daemon`.
 
-Subclass definitions of the :func:`mktl.Item.perform_get`,
-:func:`mktl.Item.req_set`, and :func:`mktl.Item.validate` methods
-are the key methods to override when implementing custom behavior.
+The key methods to override when implementing custom behavior are
+:func:`mktl.Item.perform_get`,
+:func:`mktl.Item.perform_set`, and
+:func:`mktl.Item.validate`.
+In addition, :func:`mktl.Item.req_poll` will be of interest, used in combination
+with :func:`mktl.Item.register`, and the :func:`mktl.Item.value` property to
+explicitly set a new item value.
 
 .. autoclass:: mktl.Item
-   :members: from_payload, perform_get, poll, publish, req_get, req_poll, req_set, to_payload, validate
+   :members: from_payload, perform_get, perform_set, poll, publish, req_get, req_poll, req_set, to_payload, validate
 
 
 marked executable

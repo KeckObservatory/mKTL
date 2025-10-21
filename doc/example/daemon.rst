@@ -69,17 +69,17 @@ An example subclass would have a structure like the following::
             # encapsulated as an mktl.Payload instance.
             pass
 
-        def req_set(self, request):
+        def perform_set(self, new_value):
             # Receive a request to set a new value for this item; return
             # once the request is complete.
             pass
 
 Note in particular the documentation for :func:`Item.perform_get` and
-:func:`Item.req_set`, as it covers the expected behavior of each method.
+:func:`Item.perform_set`, as it covers the expected behavior of each method.
 For our example, the various items are intended to represent the market
 spot price of different precious metals. In this case, the
 :func:`Item.perform_get` method may request the current value from a website,
-and :func:`Item.req_set` would not be defined, since we don't get to change
+and :func:`Item.perform_set` would not be defined, since we don't get to change
 the actual market value. To pick one example::
 
 
