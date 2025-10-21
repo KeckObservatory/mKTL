@@ -192,7 +192,7 @@ class Item:
         else:
             timestamp = float(timestamp)
 
-        payload = self._prepare_value(new_value, timestamp)
+        payload = self.to_payload(new_value, timestamp)
         changed = False
 
         if repeat == False:
@@ -267,7 +267,7 @@ class Item:
         if refresh == True:
             payload = self.req_poll()
         else:
-            payload = self._prepare_value()
+            payload = self.to_payload()
 
         return payload
 
@@ -305,23 +305,23 @@ class Item:
 
     def req_refresh(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. The return value is a dictionary,
-            with a 'value' key containing the Python binary representation of
-            the item value, and a 'time' key with a UNIX epoch timestamp
-            representing the last-changed time for that value. Returning None
-            is expected if no new value is available; returning None will not
-            clear the currently known value, that is only done if the returned
-            dictionary contains None as the 'value'.
+            and return it to the caller. The return value is a :class:`Payload`
+            instance; the use of :func:`to_payload` is encouraged to ensure
+            the :class:`Payload` instance is properly constructed for complex
+            data types.
 
-            Examples::
-
-                {'time': 1234.5678, 'value': 54}
-                {'time': 8765.4321, 'value': None}
+            Returning None is expected if no new value is available.
+            Returning None will not clear the currently known value, that is
+            only done if the returned :class:`Payload` instance is assigned
+            None as the 'value'; this is not expected to be a common occurrence,
+            but if the caller wants that to happen they need to construct their
+            own :class:`Payload` instance with None as the value rather than
+            use :func:`to_payload` for this specific case.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
 
-        payload = self._prepare_value()
+        payload = self.to_payload()
         return payload
 
 
@@ -335,7 +335,11 @@ class Item:
             The *request* is a :class:`protocol.message.Request` instance.
         """
 
-        new_value = self._recreate_value(request)
+        payload = request.payload
+        if payload is None:
+            return
+
+        new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
         self.publish(new_value)
 
@@ -360,7 +364,7 @@ class Item:
 
         self._updated.clear()
 
-        payload = self._prepare_value(new_value)
+        payload = self.to_payload(new_value)
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
@@ -450,6 +454,53 @@ class Item:
         ### a callback on a topic substring of our key name.
 
 
+    def to_payload(self, value=None, timestamp=None):
+        """ Interpret either the current value of this item or the provided
+            arguments into a :class:`protocol.message.Payload` instance,
+            appropriate for inclusion in a :class:`protocol.message.Message`
+            instance. This is particularly important as a step in a custom
+            :func:`req_refresh` implementation.
+
+            This is the inverse of :func:`from_payload`.
+        """
+
+        if value is None:
+            if self.authoritative == False:
+                value = self._value
+            else:
+                value = self._daemon_value
+
+        elif timestamp is None:
+            # If the value is specified, but the timestamp is not, use the
+            # current time as the timestamp-- the next condition would instead
+            # use the previous timestamp, which is not appropriate for a new
+            # payload.
+            timestamp = time.time()
+
+        if timestamp is None:
+            if self.authoritative == False:
+                timestamp = self._value_timestamp
+            else:
+                timestamp = self._daemon_value_timestamp
+
+        # Perhaps there is a more declarative way to know whether a given
+        # value is expected to be bulk data; perhaps reference the per-Item
+        # configuration? Or does an attribute need to be set to make the
+        # expected behavior explicit?
+
+        try:
+            bulk = value.tobytes()
+        except AttributeError:
+            bulk = None
+            payload = protocol.message.Payload(value, timestamp)
+        else:
+            shape = value.shape
+            dtype = str(value.dtype)
+            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+
+        return payload
+
+
     def validate(self, value):
         """ A hook for a daemon to validate a new value. The default behavior
             is a no-op; any checks should raise exceptions if they encounter
@@ -488,45 +539,6 @@ class Item:
             self.set(new_value)
 
 
-    def _prepare_value(self, value=None, timestamp=None):
-        """ Interpret the current value of this item into a
-            :class:`protocol.message.Payload` instance,
-            appropriate for inclusion in a
-            :class:`protocol.message.Message` instance.
-
-            This is the inverse of :func:`_recreate_value`.
-        """
-
-        if value is None:
-            if self.authoritative == False:
-                value = self._value
-            else:
-                value = self._daemon_value
-
-        if timestamp is None:
-            if self.authoritative == False:
-                timestamp = self._value_timestamp
-            else:
-                timestamp = self._daemon_value_timestamp
-
-        # Perhaps there is a more declarative way to know whether a given
-        # value is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
-        # expected behavior explicit?
-
-        try:
-            bulk = value.tobytes()
-        except AttributeError:
-            bulk = None
-            payload = protocol.message.Payload(value, timestamp)
-        else:
-            shape = value.shape
-            dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
-
-        return payload
-
-
     def _propagate(self, new_data, new_timestamp):
         """ Invoke any registered callbacks upon receipt of a new value.
         """
@@ -555,20 +567,17 @@ class Item:
             self.callbacks.remove(reference)
 
 
-    def _recreate_value(self, message):
+    def from_payload(self, payload):
         """ Recreate the fundamental Python type of the value from the provided
-            *message*.
+            :class:`Payload` instance.
 
             This default handler will interpret the bulk component, if any,
             as an N-dimensional numpy array, with the description of the
-            array present in the payload of the message.
+            array present in the other fields of the payload.
 
-            This is the inverse of :func:`_prepare_value`.
+            This is the inverse of :func:`to_payload`.
         """
 
-        ### TODO: should this work on a Payload instead of a Message?
-
-        payload = message.payload
         if payload.bulk is not None:
 
             if numpy is None:
@@ -584,7 +593,7 @@ class Item:
             new_value = numpy.reshape(serialized, newshape=shape)
 
         else:
-            new_value = message.payload.value
+            new_value = payload.value
 
 
         return new_value
@@ -595,7 +604,12 @@ class Item:
             GET request or from a PUB subscription.
         """
 
-        new_value = self._recreate_value(message)
+        payload = message.payload
+
+        if payload is None:
+            return
+
+        new_value = self.from_payload(payload)
         timestamp = message.payload.time
 
         self._value = new_value

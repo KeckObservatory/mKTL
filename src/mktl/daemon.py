@@ -649,7 +649,7 @@ def _save_persistent(item, *args, **kwargs):
         pending = PendingPersistence(uuid)
 
     by_prefix = dict()
-    payload = item._prepare_value()
+    payload = item.to_payload()
 
     if payload.bulk is not None:
         by_prefix['bulk'] = payload.bulk
@@ -749,8 +749,7 @@ class MemoryUsage(item.Item):
         resources = resource.getrusage(resource.RUSAGE_SELF)
         max_usage = resources.ru_maxrss
 
-        payload = protocol.message.Payload(max_usage)
-        return payload
+        return self.to_payload(max_usage)
 
 
 # end of class MemoryUsage
@@ -787,8 +786,7 @@ class ProcessorUsage(item.Item):
         else:
             usage_percent = 0
 
-        payload = protocol.message.Payload(usage_percent, current_time)
-        return payload
+        return self.to_payload(usage_percent, current_time)
 
 
 # end of class ProcessorUsage
@@ -805,11 +803,10 @@ class Uptime(item.Item):
 
 
     def req_refresh(self):
-        now = time.time()
-        uptime = now - self.starttime
+        current_time = time.time()
+        uptime = current_time - self.starttime
 
-        payload = protocol.message.Payload(uptime, now)
-        return payload
+        return self.to_payload(uptime, current_time)
 
 
 # end of class Uptime

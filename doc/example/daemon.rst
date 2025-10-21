@@ -39,10 +39,10 @@ than convenience it is defined with the name ``Daemon``. The structure of the
     class Daemon(mktl.Daemon):
 
         def setup(self):
-	    pass
+            pass
 
-	def setup_final(self):
-	    pass
+        def setup_final(self):
+            pass
 
 
 :class:`Item` subclasses
@@ -59,19 +59,20 @@ An example subclass would have a structure like the following::
 
         def __init__(self, *args, **kwargs):
             mktl.Item.__init__(self, *args, **kwargs)
-	    # Additional initialization steps would generally follow the
-	    # regular initialization from the base class. In this case,
-	    # our market-prices should update once per day:
-	    self.poll(86400)
+            # Additional initialization steps would generally follow the
+            # regular initialization from the base class. In this case,
+            # our market-prices should update once per day:
+            self.poll(86400)
 
         def req_refresh(self):
-            # Determine the current value for this item and return it.
-	    pass
+            # Determine the current value for this item and return it
+            # encapsulated as an mktl.Payload instance.
+            pass
 
-	def req_set(self, request):
+        def req_set(self, request):
             # Receive a request to set a new value for this item; return
-	    # once the request is complete.
-	    pass
+            # once the request is complete.
+            pass
 
 Note in particular the documentation for :func:`Item.req_refresh` and
 :func:`Item.req_set`, as it covers the expected behavior of each method.
@@ -86,13 +87,9 @@ the actual market value. To pick one example::
 
         def req_refresh(self):
             spot = get_spot_value('gold', 'usd', 'grams')
-	    spot = float(spot)
+            spot = float(spot)
 
-	    payload = dict()
-	    payload['value'] = spot
-	    payload['time'] = time.time()
-
-	    return spot
+            return self.to_payload(spot)
 
 
 

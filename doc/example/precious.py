@@ -20,19 +20,22 @@ class MarketPriced(mktl.Item):
 class Gold(MarketPriced):
 
     def req_refresh(self):
-        return get_spot_value('gold', 'usd', 'grams')
+        current = get_spot_value('gold', 'usd', 'grams')
+        return self.to_payload(current)
 
 
 class Platinum(MarketPriced):
 
     def req_refresh(self):
-        return get_spot_value('platinum', 'usd', 'grams')
+        current = get_spot_value('platinum', 'usd', 'grams')
+        return self.to_payload(current)
 
 
 class Silver(MarketPriced):
 
     def req_refresh(self):
-        return get_spot_value('silver', 'usd', 'grams')
+        current = get_spot_value('silver', 'usd', 'grams')
+        return self.to_payload(current)
 
 
 def get_spot_value(metal, currency, units):
@@ -46,12 +49,7 @@ def get_spot_value(metal, currency, units):
     current_price = 100.4
 
     current_price = float(current_price)
-
-    payload = dict()
-    payload['value'] = current_price
-    payload['time'] = time.time()
-
-    return payload
+    return current_price
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
