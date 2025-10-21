@@ -196,18 +196,13 @@ class Item:
             return self._value
 
 
-    def perform_get(self, request=None):
+    def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
             and return it to the caller. The return value is a
             :class:`mktl.Payload`
             instance; the use of :func:`to_payload` is encouraged to ensure
             the :class:`Payload` instance is properly constructed for complex
             data types.
-
-            The original :class:`protocol.message.Request`, if available,
-            is passed as an optional argument, to allow for the possibility
-            that the request includes additional fields that may be of utility
-            to a custom subclass.
 
             Returning None is expected if no new value is available.
 
@@ -226,16 +221,11 @@ class Item:
         return payload
 
 
-    def perform_set(self, new_value, request=None):
+    def perform_set(self, new_value):
         """ Implement any custom behavior that should occur as a result of
             a set request for this item. No additional actions are taken by
             default; no return value is expected. Any subclass implementations
             should raise an exception in order to trigger an error response.
-
-            The original :class:`protocol.message.Request`, if available,
-            is passed as an optional argument, to allow for the possibility
-            that the request includes additional fields that may be of utility
-            to a custom subclass.
         """
 
         pass
@@ -361,7 +351,7 @@ class Item:
             of this item can be refreshed when external events occur.
         """
 
-        payload = self.perform_get(request)
+        payload = self.perform_get()
 
         if payload is None:
             return
@@ -394,7 +384,7 @@ class Item:
         # All custom logic is expected to occur in the perform_set() method,
         # similar to perform_get().
 
-        self.perform_set(new_value, request)
+        self.perform_set(new_value)
         self.publish(new_value)
 
         # If req_set() returns a payload it will be returned to the caller;
