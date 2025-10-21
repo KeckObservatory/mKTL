@@ -30,9 +30,9 @@ class Daemon:
         application.
 
         The *store* argument is the name of the store that this daemon is
-        providing items for; *configuration* is the base name of the mKTL
-        configuration file that defines the items for which this daemon is
-        authoritative.
+        providing items for; *alias* is the unique name of this mKTL daemon,
+        and is used to locate the configuration file that defines the items
+        for which this daemon is authoritative.
 
         *arguments* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
