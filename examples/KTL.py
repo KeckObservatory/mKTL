@@ -67,7 +67,7 @@ class Daemon(mktl.Daemon):
 
 class Item(mktl.Item):
 
-    def req_refresh(self):
+    def perform_get(self):
 
         keyword = ktl.cache(self.full_key)
         keyword.read()
