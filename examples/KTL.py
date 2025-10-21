@@ -80,16 +80,11 @@ class Item(mktl.Item):
         return payload
 
 
-    def req_set(self, request):
+    def perform_set(self, new_value):
 
-        new_value = request.payload.value
-
-        keyword = ktl.cache(request.target)
+        keyword = self.full_key
+        keyword = ktl.cache(full_key)
         keyword.write(new_value)
-
-        # If req_set() returns a payload it will be returned to the caller;
-        # absent any explicit response (not required, nor expected), mktl
-        # provides a default payload.
 
 
 # end of class Item
