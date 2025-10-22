@@ -331,9 +331,13 @@ class Payload:
 
 
     def encapsulate(self):
-        ''' Include all non-omitted fields as a dictionary, and return the
-            JSON encoding of that dictionary.
-        '''
+        """ Add all non-omitted local attributes to a dictionary, and return
+            the JSON encoding of that dictionary. For example, if the .value
+            and .time attributes of a :class:`Payload` are assigned, the caller
+            will receive a value like::
+
+                b'{"value": 12, "time": 1761100609.234571}'
+        """
 
         # The output from this method was initially cached, but there's never
         # a situation where this method is called twice for a given Payload,
@@ -347,7 +351,13 @@ class Payload:
         for key,value in vars(self).items():
             if key in self.omit:
                 continue
-            payload[key] = value
+
+            # It's faster to check the key against 'value' repeatedly than
+            # to build a separate set of includes and only assign those
+            # key/value pairs to the payload.
+
+            if value is not None or key == 'value':
+                payload[key] = value
 
         payload = json.dumps(payload)
         return payload
