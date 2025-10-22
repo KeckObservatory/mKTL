@@ -24,6 +24,9 @@ Message classes
 .. autoclass:: Message
    :members:
 
+.. autoclass:: Broadcast
+   :members:
+
 .. autoclass:: Request
    :members:
 
