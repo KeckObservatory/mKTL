@@ -9,6 +9,13 @@ functionality exposed in the :ref:`client` and :ref:`daemon` code.
 
 .. py:module:: mktl.protocol.message
 
+Payload class
+-------------
+
+.. autoclass:: Payload
+   :members:
+
+
 Message classes
 ----------------
 
