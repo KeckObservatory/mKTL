@@ -331,7 +331,7 @@ class Payload:
 
 
     def encapsulate(self):
-        ''' Encapsulate the non-bulk fields as a dictionary, and return the
+        ''' Include all non-omitted fields as a dictionary, and return the
             JSON encoding of that dictionary.
         '''
 
