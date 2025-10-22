@@ -1,4 +1,6 @@
 
+.. py:module:: mktl.protocol
+
 Protocol interface
 ==================
 
