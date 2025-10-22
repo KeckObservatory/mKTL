@@ -58,17 +58,17 @@ class Message:
         self.target = target
         self.timestamp = timemodule.time()
 
-        self.parts = None
+        self._parts = None
 
 
     def __iter__(self):
         self._finalize()
-        return iter(self.parts)
+        return iter(self._parts)
 
 
     def __repr__(self):
         self._finalize()
-        return repr(self.parts)
+        return repr(self._parts)
 
 
     def _finalize(self):
@@ -77,50 +77,49 @@ class Message:
             transmission on the wire.
         """
 
-        parts = self.parts
+        if self._parts:
+            # Once finalized, always finalized.
+            return
 
-        if parts is None:
+        id = self.id
+        type = self.type
+        target = self.target
+        payload = self.payload
 
-            id = self.id
-            type = self.type
-            target = self.target
-            payload = self.payload
+        # It is legal to create a Message with None as the id-- this happens
+        # all the time when a Message is used as a container-- but trying to
+        # send such a message is not permitted.
 
-            # It is legal to create a Message with None as the id-- this happens
-            # all the time when a Message is used as a container-- but trying to
-            # send such a message is not permitted.
+        if id is None:
+            raise RuntimeError('messages must have an id to be put on the wire')
 
-            if id is None:
-                raise RuntimeError('messages must have an id to be put on the wire')
+        try:
+            id.decode
+        except AttributeError:
+            id = '%08x' % (id)
+            id = id.encode()
 
+        type = type.encode()
+
+        if target ==  None or target == '':
+            target = b''
+        else:
             try:
-                id.decode
+                target = target.encode()
             except AttributeError:
-                id = '%08x' % (id)
-                id = id.encode()
+                # Assume it is already bytes.
+                pass
 
-            type = type.encode()
-
-            if target ==  None or target == '':
-                target = b''
-            else:
-                try:
-                    target = target.encode()
-                except AttributeError:
-                    # Assume it is already bytes.
-                    pass
-
-            if payload is None or payload == '':
+        if payload is None or payload == '':
+            bulk = b''
+            payload = b''
+        else:
+            bulk = payload.bulk
+            if bulk is None:
                 bulk = b''
-                payload = b''
-            else:
-                bulk = payload.bulk
-                if bulk is None:
-                    bulk = b''
-                payload = payload.encapsulate()
+            payload = payload.encapsulate()
 
-            parts = (version, id, type, target, payload, bulk)
-            self.parts = parts
+        self._parts = (version, id, type, target, payload, bulk)
 
 
 # end of class Message
@@ -137,30 +136,29 @@ class Broadcast(Message):
 
     def _finalize(self):
 
-        parts = self.parts
+        if self._parts:
+            # Once finalized, always finalized.
+            return
 
-        if parts is None:
+        target = self.target
+        payload = self.payload
 
-            target = self.target
-            payload = self.payload
+        # The PUB/SUB topic has a trailing dot to prevent leading
+        # substring matches from picking up extra keys.
 
-            # The PUB/SUB topic has a trailing dot to prevent leading
-            # substring matches from picking up extra keys.
+        target = target + '.'
+        target = target.encode()
 
-            target = target + '.'
-            target = target.encode()
-
-            if payload is None or payload == '':
+        if payload is None or payload == '':
+            bulk = b''
+            payload = b''
+        else:
+            bulk = payload.bulk
+            if bulk is None:
                 bulk = b''
-                payload = b''
-            else:
-                bulk = payload.bulk
-                if bulk is None:
-                    bulk = b''
-                payload = payload.encapsulate()
+            payload = payload.encapsulate()
 
-            parts = (target, version, payload, bulk)
-            self.parts = parts
+        self._parts = (target, version, payload, bulk)
 
 
 # end of class Broadcast
@@ -204,7 +202,7 @@ class Request(Message):
 
     def __repr__(self):
         self._finalize()
-        request = 'REQ: ' + repr(self.parts)
+        request = 'REQ: ' + repr(self._parts)
 
         if self.response is None:
             response = 'REP: None'
