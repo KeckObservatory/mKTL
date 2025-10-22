@@ -459,6 +459,9 @@ class Item:
             local polling behavior. If *prime* is True a call
             will be made to :func:`get` to refresh the locally cached value
             before this method returns.
+
+            A non-authoritative :class:`Item` will automatically call
+            :func:`subscribe` upon being instantiated.
         """
 
         if self.subscribed == True:
