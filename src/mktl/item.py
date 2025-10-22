@@ -199,19 +199,17 @@ class Item:
 
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. The return value is a
-            :class:`mktl.protocol.message.Payload`
-            instance; the use of :func:`to_payload` is encouraged to ensure
-            the Payload is properly constructed for complex data types.
-
-            Returning None is expected if no new value is available.
+            and return it to the caller. Return None if no new value is
+            available; if a :class:`mktl.protocol.message.Payload` instance
+            is returned it will be used as-is, otherwise the return value
+            will be passed to :func:`to_payload` for encapsulation.
 
             Returning None will not clear the currently known value, that will
-            only occur if the returned Payload instance is
-            assigned None as the 'value'; this is not expected to be a common
-            occurrence, but if the custom :func:`perform_get` implementation
-            wants that to occur they need to instantiate the Payload instance
-            directly rather than use :func:`to_payload`.
+            only occur if the returned Payload instance is assigned None as the
+            'value'; this is not expected to be a common occurrence, but if the
+            custom :func:`perform_get` implementation wants that to occur they
+            need to instantiate and return the Payload instance directly rather
+            than use :func:`to_payload`.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
@@ -222,9 +220,14 @@ class Item:
 
     def perform_set(self, new_value):
         """ Implement any custom behavior that should occur as a result of
-            a set request for this item. No additional actions are taken by
-            default; no return value is expected. Any subclass implementations
-            should raise an exception in order to trigger an error response.
+            a set request for this item. No return value is expected. Any
+            subclass implementations should raise an exception in order to
+            trigger an error response.
+
+            Any return value, though again none is expected, will be
+            encapsulated via :func:`to_payload`, after the same fashion as
+            :func:`perform_get`, and included in the response to the original
+            request.
         """
 
         pass
