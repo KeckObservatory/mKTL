@@ -119,7 +119,8 @@ class Item:
 
     def from_payload(self, payload):
         """ Recreate the fundamental Python type of the value from the provided
-            :class:`mktl.Payload` instance, and return it to the caller.
+            :class:`mktl.protocol.message.Payload` instance, and return it to
+            the caller.
 
             This default handler will interpret the bulk component, if any,
             of the payload as an N-dimensional numpy array, with the
@@ -199,20 +200,18 @@ class Item:
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
             and return it to the caller. The return value is a
-            :class:`mktl.Payload`
+            :class:`mktl.protocol.message.Payload`
             instance; the use of :func:`to_payload` is encouraged to ensure
-            the :class:`Payload` instance is properly constructed for complex
-            data types.
+            the Payload is properly constructed for complex data types.
 
             Returning None is expected if no new value is available.
 
             Returning None will not clear the currently known value, that will
-            only occur if the returned :class:`mktl.Payload` instance is
+            only occur if the returned Payload instance is
             assigned None as the 'value'; this is not expected to be a common
             occurrence, but if the custom :func:`perform_get` implementation
-            wants that to occur they need to instantiate the
-            :class:`mktl.Payload` instance directly rather than use
-            :func:`to_payload`.
+            wants that to occur they need to instantiate the Payload instance
+            directly rather than use :func:`to_payload`.
         """
 
         # This implementation is strictly caching, there is nothing to refresh.
@@ -332,14 +331,14 @@ class Item:
             refresh = False
 
         if refresh == True:
-            payload = self.req_poll(request=request)
+            payload = self.req_poll()
         else:
             payload = self.to_payload()
 
         return payload
 
 
-    def req_poll(self, repeat=False, request=None):
+    def req_poll(self, repeat=False):
         """ Handle a background poll request, established by calling
             :func:`poll`. :func:`perform_get` is where custom handling by
             subclasses is expected to occur. The payload returned from
