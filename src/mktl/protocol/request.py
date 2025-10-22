@@ -52,8 +52,8 @@ class Client:
     def _rep_incoming(self, parts):
         """ A client only receives two types of messages from the remote side:
             an ACK, or a REP. The response payload, if any, is handed back to
-            the relevant :class:`message.Request` instance for any further
-            handling by the original caller.
+            the relevant :class:`mktl.protocol.message.Request` instance for
+            any further handling by the original caller.
         """
 
         their_version = parts[0]
@@ -123,7 +123,8 @@ class Client:
 
 
     def send(self, message):
-        """ A *message* is a fully populated class:`message.Request` instance,
+        """ A *message* is a fully populated
+            :class:`mktl.protocol.message.Request` instance,
             which normalizes the arguments that will be sent via this method
             as a multi-part message. The message will also be used for
             notification of any/all responses from the remote end; this method
@@ -288,7 +289,7 @@ class Server:
 
     def req_handler(self, socket, lock, ident, request):
         """ The default request handler is for debug purposes only, and is
-            effectively a no-op. :class:`mktl.Daemon.Store` leverages a
+            effectively a no-op. :class:`mktl.Daemon` leverages a
             custom subclass of :class:`Server` that properly handles specific
             types of requests, since it needs to be aware of the actual
             structure of what's happening in the daemon code.
@@ -454,8 +455,8 @@ def client(address, port):
 
 def send(address, port, message):
     """ Use :func:`client` to connect to the specified *address* and *port*,
-        and send the specified :class:`message.Request` instance. This method
-        blocks until the completion of the request.
+        and send the specified :class:`mktl.protocol.message.Request` instance.
+        This method blocks until the completion of the request.
     """
 
     connection = client(address, port)

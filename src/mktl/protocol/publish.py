@@ -308,8 +308,8 @@ class Server:
 
 
     def publish(self, message):
-        """ A *message* is a :class:`message.Broadcast` instance intended for
-            broadcast to any subscribers.
+        """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
+            intended for broadcast to any/all subscribers.
         """
 
         parts = tuple(message)
