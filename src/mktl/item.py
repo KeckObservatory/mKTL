@@ -505,7 +505,7 @@ class Item:
 
     def to_payload(self, value=None, timestamp=None):
         """ Interpret the provided arguments into a
-            :class:`mktl.Payload` instance; if the *value* is
+            :class:`mktl.protocol.message.Payload` instance; if the *value* is
             not specified the current value of this :class:`Item` will be
             used; if the *timestamp* is not specified the current time will
             be used. This is particularly important as a step in a custom
