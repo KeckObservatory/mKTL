@@ -401,8 +401,6 @@ class RequestServer(protocol.request.Server):
             response = self.req_hash(request)
         elif type == 'SET':
             response = self.req_set(request)
-            if response is None:
-                response = protocol.message.Payload(True)
         elif type == 'GET':
             response = self.req_get(request)
         elif type == 'CONFIG':
