@@ -265,13 +265,29 @@ class Request(Message):
 
 class Payload:
     """ This is a lightweight class to properly encapsulate a Python-native
-        value for later inclusion in a :class:`Message` instance. Any fields
-        in the Payload.omit set will be excluded from the encapsulation.
+        value for later inclusion in a :class:`Message` instance. All attributes
+        of this class, except for the :attr:`bulk` attribute, will be
+        encapsulated as a JSON dictionary via :func:`encapsulate` as part of
+        a :class:`Message` instance finalizing itself to go out on the wire.
+
+        No interpretation of the :class:`Payload` contents is performed, any
+        interpretation (such as converting a numpy array to a form suitable
+        for enapsulation) must occur before the :class:`Payload` is
+        instantiated.
+
+        :ivar bulk: A bulk data value, in bytes, or None
+        :ivar omit: A set of fields to omit from encapsulation
     """
 
-    omit = set(('bulk', '_encapsulated', 'omit'))
+    omit = set(('bulk', 'omit'))
 
     def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None, **kwargs):
+        """ Arbitrary keyword arguments are allowed when creating a
+            :class:`Payload` instance, beyond the canonical set; when
+            included, these additional keyword arguments will be assigned
+            directly as attributes for later encapsulation. Any values
+            assigned in this fashion must be serializable as JSON.
+        """
 
         # The use of 'time' as a keyword argument is what's motivating the
         # weird import of the time module in this file. We want the keyword
@@ -284,6 +300,10 @@ class Payload:
         if refresh is False:
             refresh = None
 
+        # We expect the canonical arguments to all be set all the time,
+        # even if their value is None. That's why they're not rolled up
+        # into the kwargs catch-all.
+
         self.bulk = bulk
         self.dtype = dtype
         self.error = error
@@ -292,7 +312,13 @@ class Payload:
         self.time = time
         self.value = value
 
-        self._encapsulated = None
+        if not kwargs:
+            # This is the average case. Faster to check this one condition
+            # and return than to drop out of the next two conditions.
+            return
+
+        if 'omit' in kwargs:
+            raise ValueError("cannot assign 'omit' to a Payload")
 
         # Allow additional arbitrary fields in the payload. We are assuming
         # the caller knows what they are doing, and that these additional
@@ -313,9 +339,6 @@ class Payload:
             it anew.
         '''
 
-        if self._encapsulated:
-            return self._encapsulated
-
         payload = dict()
 
         # All local attributes get put into the encapsulated payload,
@@ -327,8 +350,6 @@ class Payload:
             payload[key] = value
 
         payload = json.dumps(payload)
-
-        self._encapsulated = payload
         return payload
 
 
