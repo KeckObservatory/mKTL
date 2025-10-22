@@ -238,7 +238,7 @@ class Request(Message):
 
     def wait_ack(self, timeout):
         """ Block until the request has been acknowledged. This is a wrapper to
-            a class:`threading.Event` instance; if the event has occurred it
+            a :class:`threading.Event` instance; if the event has occurred it
             will return True, otherwise it returns False after the requested
             *timeout*. If the *timeout* argument is None it will block
             indefinitely.
