@@ -334,10 +334,12 @@ class Payload:
 
     def encapsulate(self):
         ''' Encapsulate the non-bulk fields as a dictionary, and return the
-            JSON encoding of that dictionary. Calling this method multiple
-            times will return the cached encapsulation rather than generate
-            it anew.
+            JSON encoding of that dictionary.
         '''
+
+        # The output from this method was initially cached, but there's never
+        # a situation where this method is called twice for a given Payload,
+        # so the caching was removed.
 
         payload = dict()
 
