@@ -172,7 +172,7 @@ class Request(Message):
         when a server is expected to provide a response, such as returning
         a requested value, or signaling that a set operation is complete.
 
-        :ivar response: The final response to a request (also a Message).
+        :ivar response: The response (as a :class:`Message`) to this request
     """
 
     valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
