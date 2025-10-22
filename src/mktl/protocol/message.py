@@ -34,7 +34,7 @@ class Message:
         so that the arguments for all :class:`Message` instances can have
         a similar structure.
 
-        :ivar payload: The item-specific data, if any, for the message.
+        :ivar payload: The :class:`Payload`, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
@@ -276,7 +276,7 @@ class Payload:
         # The use of 'time' as a keyword argument is what's motivating the
         # weird import of the time module in this file. We want the keyword
         # arguments to be aligned with the fields in the JSON description
-        # of a payload: value, time, and error.
+        # of a payload: value, time, error, etc.
 
         if time is None:
             time = timemodule.time()
