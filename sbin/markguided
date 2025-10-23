@@ -47,7 +47,13 @@ def main():
 
             address,port = seen
             request = mktl.protocol.message.Request('HASH')
-            payload = mktl.protocol.request.send(address, port, request)
+            try:
+                payload = mktl.protocol.request.send(address, port, request)
+            except:
+                ## This should probably be logged instead of going to stdout.
+                print("HASH request of %s:%d failed" % (address, port))
+                continue
+
             hashes = payload.value
 
             for store in hashes.keys():
