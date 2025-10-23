@@ -41,24 +41,9 @@ class Daemon(mktl.Daemon):
         for keyword in service:
 
             if keyword['broadcasts'] == True:
-                keyword.callback(self.relay)
+                item = self.store[keyword.name]
+                keyword.callback(item.publish_broadcast)
                 keyword.monitor(wait=False)
-
-
-    def relay(self, keyword):
-
-        try:
-            slice = keyword.history[-1]
-        except IndexError:
-            return
-
-        timestamp = slice.time
-        ascii = slice.ascii
-        binary = slice.binary
-
-        key = keyword.name
-        item = self.store[key]
-        item.publish(binary, timestamp=timestamp)
 
 
 # end of class Store
@@ -67,7 +52,40 @@ class Daemon(mktl.Daemon):
 
 class Item(mktl.Item):
 
+    def __init__(self, *args, **kwargs):
+        mktl.Item.__init__(self, *args, **kwargs)
+
+        # We want the KTL dispatchers to be the sole source of broadcast
+        # events. mKTL defaults to publishing a new value when a SET operation
+        # completes successfully; this attribute inhibits that behavior.
+
+        self.publish_on_set = False
+
+
+    def publish_broadcast(self, keyword):
+        ''' This method is registered as a KTL callback; take any/all KTL
+            broadcast events and publish them as mKTL events.
+        '''
+
+        try:
+            slice = keyword.history[-1]
+        except IndexError:
+            return
+
+        timestamp = slice.time
+        #ascii = slice.ascii
+        binary = slice.binary
+
+        self.publish(binary, timestamp)
+
+
     def perform_get(self):
+        ''' Wrap an incoming GET request to a KTL keyword read. This method
+            is only invoked on synchronous GET requests, normally it would
+            also be invoked when local polling occurs, but this wrapper
+            relies on KTL callbacks to receive asynchronous broadcasts
+            (see :func:`publish_broadcast`).
+        '''
 
         keyword = ktl.cache(self.full_key)
         keyword.read()
@@ -81,15 +99,13 @@ class Item(mktl.Item):
 
 
     def perform_set(self, new_value):
+        ''' Wrap an incoming SET request to a KTL keyword write. This method
+            is expected to block until completion of the request.
+        '''
 
         keyword = self.full_key
         keyword = ktl.cache(keyword)
         keyword.write(new_value)
-
-
-    def req_set(self, *args, **kwargs):
-        kwargs['publish'] = False
-        mktl.Item.req_set(self, *args, **kwargs)
 
 
 # end of class Item
@@ -97,6 +113,9 @@ class Item(mktl.Item):
 
 
 def describeService(name):
+    ''' Construct an mKTL configuration block to describe the named KTL service.
+    '''
+
     service = ktl.cache(name)
 
     keywords = dict()
@@ -111,6 +130,10 @@ def describeService(name):
 
 
 def describeKeyword(keyword):
+    ''' Construct an item-specific mKTL configuration block for a single
+        KTL keyword.
+    '''
+
     keyword_dict = dict()
 
     type = keyword['type']
