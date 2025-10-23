@@ -22,6 +22,10 @@ class Daemon(mktl.Daemon):
 
 
     def setup(self):
+        """ The only reason this method exists is to create a KTL.Item
+            instance for each and every KTL keyword being proxied by this
+            daemon.
+        """
 
         config = self.config[self.uuid]
         items = config['items']
@@ -63,9 +67,9 @@ class Item(mktl.Item):
 
 
     def publish_broadcast(self, keyword):
-        ''' This method is registered as a KTL callback; take any/all KTL
+        """ This method is registered as a KTL callback; take any/all KTL
             broadcast events and publish them as mKTL events.
-        '''
+        """
 
         try:
             slice = keyword.history[-1]
@@ -80,12 +84,12 @@ class Item(mktl.Item):
 
 
     def perform_get(self):
-        ''' Wrap an incoming GET request to a KTL keyword read. This method
+        """ Wrap an incoming GET request to a KTL keyword read. This method
             is only invoked on synchronous GET requests, normally it would
             also be invoked when local polling occurs, but this wrapper
             relies on KTL callbacks to receive asynchronous broadcasts
             (see :func:`publish_broadcast`).
-        '''
+        """
 
         keyword = ktl.cache(self.full_key)
         keyword.read()
@@ -99,9 +103,9 @@ class Item(mktl.Item):
 
 
     def perform_set(self, new_value):
-        ''' Wrap an incoming SET request to a KTL keyword write. This method
+        """ Wrap an incoming SET request to a KTL keyword write. This method
             is expected to block until completion of the request.
-        '''
+        """
 
         keyword = self.full_key
         keyword = ktl.cache(keyword)
@@ -113,8 +117,8 @@ class Item(mktl.Item):
 
 
 def describeService(name):
-    ''' Construct an mKTL configuration block to describe the named KTL service.
-    '''
+    """ Construct an mKTL configuration block to describe the named KTL service.
+    """
 
     service = ktl.cache(name)
 
@@ -130,9 +134,9 @@ def describeService(name):
 
 
 def describeKeyword(keyword):
-    ''' Construct an item-specific mKTL configuration block for a single
+    """ Construct an item-specific mKTL configuration block for a single
         KTL keyword.
-    '''
+    """
 
     keyword_dict = dict()
 
