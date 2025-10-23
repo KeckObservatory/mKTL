@@ -693,7 +693,12 @@ class PendingPersistence:
             os.makedirs(uuid_directory, mode=0o775)
 
         self.directory = uuid_directory
-        self.queue = queue.SimpleQueue()
+
+        try:
+            self.queue = queue.SimpleQueue()
+        except AttributeError:
+            self.queue = queue.Queue()
+
         self.put = self.queue.put
 
         # Use a background poller to flush events to disk every five seconds.

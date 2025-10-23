@@ -508,7 +508,11 @@ class Item:
         # (despite using a weak method wrapper) doesn't function once it goes
         # out of scope.
 
-        self._update_queue = queue.SimpleQueue()
+        try:
+            self._update_queue = queue.SimpleQueue()
+        except AttributeError:
+            self._update_queue = queue.Queue()
+
         self._update_queue_put = self._update_queue.put
         self._update_thread = _Updater(self._update, self._update_queue)
 
