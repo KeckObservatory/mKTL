@@ -692,12 +692,14 @@ class Item:
         return bytes
 
 
-    # __hash__() is not defined, because it would be tied to the item key,
-    # and would clash with the use of __eq__() defined below, which is not
-    # tied to the key. This was a point of some confusion for comparison
-    # operations in KTL Python, and the inability to use Item instances as
-    # keys in a dictionary due to the absence of __hash__() seems like a
-    # lesser price to pay.
+    def __hash__(self):
+        """ The __hash__() method needs to be defined in order for Items to
+            be usable in dictionaries. Note there is a difference between the
+            meaning of __hash__() and __eq__() as defined here: the hash is
+            relying on the identity of the Item instance, where equivalence
+            is based on the (mutable) value of the item.
+        """
+        return id(self)
 
 
     def __str__(self):
