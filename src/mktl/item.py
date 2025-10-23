@@ -35,6 +35,7 @@ class Item:
         self.store = store
         self.config = store.config[key]
         self.callbacks = list()
+        self.publish_on_set = True
         self.subscribed = False
         self.timeout = 120
 
@@ -372,13 +373,18 @@ class Item:
         return payload
 
 
-    def req_set(self, request, publish=True):
+    def req_set(self, request):
         """ Handle a SET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
             from :func:`req_set` will be returned to the caller, though no
             such return value is expected. Any calls to :func:`req_set` are
             expected to block until completion. Custom handling by subclasses
             is expected to occur in :func:`perform_set`.
+
+            If the `publish_on_set` attribute is set to True (this is the
+            default) a call to :func:`publish` will occur at the tail end
+            of any successful SET request. Custom subclasses can set this
+            attribute to False to inhibit that behavior.
         """
 
         payload = request.payload
@@ -405,10 +411,11 @@ class Item:
         else:
             payload = self.to_payload(response)
 
-        # That said, not all custom implementations want req_set() to publish
-        # the new value.
+        # Not all custom implementations want req_set() to publish the newly
+        # set value. The publish_on_set attribute allows subclasses to inhibit
+        # this behavior.
 
-        if publish == True:
+        if self.publish_on_set == True:
             self.publish(new_value)
 
         return payload
