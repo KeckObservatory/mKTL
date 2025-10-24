@@ -1,4 +1,4 @@
-usage: mark [-h] [-s STORE] [--serial | --no-serial] [--wait | --no-wait]
+usage: mark [-h] [-s STORE] [--serial] [--no-wait]
             {get,set,watch,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
@@ -19,10 +19,9 @@ options:
   -h, --help            show this help message and exit
   -s, --store STORE     Name of an mKTL store to prefix to all subsequent
                         keys.
-  --serial, --no-serial
-                        Process all requests serially. The default is to
+  --serial              Process all requests serially. The default is to
                         process requests in parallel.
-  --wait, --no-wait     Wait until all set requests are complete before
+  --no-wait             Do not wait until all set requests are complete before
                         exiting. The default is to wait. --no-wait is not
                         compatible with --serial.
 
