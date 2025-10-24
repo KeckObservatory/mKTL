@@ -695,6 +695,7 @@ class PendingPersistence:
         self.directory = uuid_directory
 
         try:
+            # Available in Python 3.7+.
             self.queue = queue.SimpleQueue()
         except AttributeError:
             self.queue = queue.Queue()

@@ -509,6 +509,7 @@ class Item:
         # out of scope.
 
         try:
+            # Available in Python 3.7+.
             self._update_queue = queue.SimpleQueue()
         except AttributeError:
             self._update_queue = queue.Queue()
