@@ -61,14 +61,19 @@ def parse_command_line():
     parser.add_argument('-s', '--store',
         default=None,
         help='Name of an mKTL store to prefix to all subsequent keys.')
+
+    # The argparse.BooleanOptionalAction would be nice to use here instead of
+    # 'store_true', because it handles both the --foo and --no-foo case, but
+    # that wasn't added until Python 3.9.
+
     parser.add_argument('--serial',
         default=False,
-        action=argparse.BooleanOptionalAction,
+        action='store_true',
         help='Process all requests serially. The default is to process requests in parallel.')
-    parser.add_argument('--wait',
-        default=True,
-        action=argparse.BooleanOptionalAction,
-        help='Wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
+    parser.add_argument('--no-wait',
+        default=False,
+        action='store_true',
+        help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
         choices=('get', 'set', 'watch', 'list'),
@@ -80,9 +85,10 @@ def parse_command_line():
 
 
     parsed = parser.parse_args()
+    parsed.wait = not parsed.no_wait
 
-    if parsed.serial == True and parsed.wait == False:
-        raise ValueError('--serial requires --wait')
+    if parsed.serial == True and parsed.no_wait == True:
+        raise ValueError('--serial is incompatible with --no-wait')
 
     if len(parsed.requests) == 0 and parsed.type != 'list':
         raise ValueError('no requests specified')
