@@ -91,7 +91,7 @@ def get(store, key=None):
     if configuration is None:
         try:
             configuration = config.load(store)
-        except KeyError:
+        except ValueError:
             configuration = None
         else:
             config.add(store, configuration, persist=False)
