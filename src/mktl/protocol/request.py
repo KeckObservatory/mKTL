@@ -126,10 +126,12 @@ class Client:
         """ A *message* is a fully populated
             :class:`mktl.protocol.message.Request` instance,
             which normalizes the arguments that will be sent via this method
-            as a multi-part message. The message will also be used for
+            as a multi-part message. The message instance will also be used for
             notification of any/all responses from the remote end; this method
-            will block while waiting for the ACK request, but the caller is
-            free to decide whether to block or wait for the full response.
+            will block while waiting for the ACK request, but will never block
+            waiting for the full response; the caller is free to decide whether
+            to block or wait for the full response, using the methods in the
+            :class:`mktl.protocol.message.Request` instance.
         """
 
         parts = tuple(message)
@@ -146,7 +148,10 @@ class Client:
         ack = message.wait_ack(self.timeout)
 
         if ack == False:
-            raise zmq.ZMQError("no response received in %.2fs" % (self.timeout))
+            error = '%s @ %s:%d: no response received in %.2f sec'
+            args = (message.type, self.address, self.port, self.timeout)
+            error = error % args
+            raise zmq.ZMQError(error)
 
 
 # end of class Client
