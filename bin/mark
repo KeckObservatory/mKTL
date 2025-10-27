@@ -175,11 +175,27 @@ def execute_list_requests(requests):
 def execute_set_requests(requests):
 
     responses = list()
+    failed = False
 
     for key,value in requests.set.items():
 
-        item = mktl.get(key)
-        response = item.set(value, wait=requests.serial)
+        if failed == True and requests.serial == True:
+            sys.exit(1)
+
+        try:
+            item = mktl.get(key)
+        except Exception as e:
+            sys.stderr.write("%s failed: %s\n" % (key, str(e)))
+            failed = True
+            continue
+
+        try:
+            response = item.set(value, wait=requests.serial)
+        except Exception as e:
+            sys.stderr.write("%s failed: %s\n" % (key, str(e)))
+            failed = True
+            continue
+
         responses.append(response)
 
         if requests.serial == True:
@@ -193,9 +209,15 @@ def execute_set_requests(requests):
             value = response.payload.value
             print("Set %s to %s " % (key, value))
 
+    if failed == True:
+        sys.exit(1)
+
 
 
 def execute_watch_requests(requests):
+
+    ### It should be possible to initiate a 'watch' request without
+    ### dying if the remote daemon is offline.
 
     for key in requests.watch:
         item = mktl.get(key)
