@@ -264,9 +264,10 @@ class Request(Message):
 class Payload:
     """ This is a lightweight class to properly encapsulate a Python-native
         value for later inclusion in a :class:`Message` instance. All attributes
-        of this class, except for the :attr:`bulk` attribute, will be
-        encapsulated as a JSON dictionary via :func:`encapsulate` as part of
-        a :class:`Message` instance finalizing itself to go out on the wire.
+        of this class, except for the :attr:`bulk` attribute, or any attrbiutes
+        set to None, will be added to as a JSON dictionary via
+        :func:`encapsulate`, which is called when a :class:`Message` instance
+        finalizes itself before generating its final on-the-wire representation.
 
         No interpretation of the :class:`Payload` contents is performed, any
         interpretation (such as converting a numpy array to a form suitable
@@ -351,6 +352,10 @@ class Payload:
         for key,value in vars(self).items():
             if key in self.omit:
                 continue
+
+            # Do not include attributes that are just 'None'. This may be
+            # premature optimization, but it seems silly to put a bunch of
+            # extra bytes on the wire when it conveys no additional information.
 
             # It's faster to check the key against 'value' repeatedly than
             # to build a separate set of includes and only assign those
