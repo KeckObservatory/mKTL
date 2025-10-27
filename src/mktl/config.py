@@ -143,8 +143,8 @@ def directory(default=None):
         configuration files. This defaults to ``$HOME/.mKTL``, but can be
         overridden by calling this method with a valid path, or by setting
         the ``MKTL_HOME`` environment variable. Note that changes to the
-        environment variable will be ignored unless it is set prior to calling
-        this method.
+        environment variable will be ignored unless it is set prior to the
+        first invocation of this method.
     """
 
     if default is not None:
