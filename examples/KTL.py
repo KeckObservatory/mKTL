@@ -10,21 +10,19 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, name, *args, **kwargs):
 
-        # Generate the configuration matching this KTL service. The base
-        # Daemon.Store will want to know where it can be loaded from, and
-        # it is always loading from a location on disk-- so we need to save
-        # it first. This bit of indirection is only necessary because we
-        # are generating the configuration at runtime.
+        # Generate the configuration matching this KTL service. Since this
+        # configuration is not in the default location it must be declared
+        # prior to initializing the Daemon.
 
         items = describeService(name)
-        mktl.config.save(name, items, name)
+        mktl.config.authoritative(name, name, items)
         mktl.Daemon.__init__(self, name, name)
 
 
     def setup(self):
         """ The only reason this method exists is to create a KTL.Item
             instance for each and every KTL keyword being proxied by this
-            daemon.
+            daemon, as opposed to letting them be the default mktl.Item.
         """
 
         config = self.config[self.uuid]

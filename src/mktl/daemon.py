@@ -47,12 +47,15 @@ class Daemon:
 
         self.alias = alias
         self.config = None
-        self._item_config = dict()
         self.store = None
         self.uuid = None
 
-        configuration = config.load(store, alias)
-        self._update_config(store, configuration)
+        self.config = config.get(store, alias)
+        self.uuid = self.config.authoritative_uuid
+
+        if self.uuid is None:
+            # This isn't supposed to happen. Catching it here just in case.
+            raise RuntimeError('mktl.config did not set my UUID!')
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
@@ -91,8 +94,9 @@ class Daemon:
         # after-the-fact, and thus need to refresh the local cache to ensure
         # consistency.
 
-        self.config[self.uuid]['provenance'] = self.provenance
-        config.add(store, self.config)
+        block = self.config.authoritative_block
+        block['provenance'] = self.provenance
+        self.config.update(block, save=False)
 
         # The cached configuration needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
@@ -153,7 +157,7 @@ class Daemon:
         key = key.lower()
 
         try:
-            self._item_config[key]
+            self.config.authoritative_items[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
@@ -187,10 +191,11 @@ class Daemon:
 
 
     def _publish_config(self, targets=tuple()):
-        """ Put our local configuration out on the wire.
+        """ Put our local configuration out on the wire, but only our local
+            configuration-- not for any other daemons in this store.
         """
 
-        configuration = dict(self.config)
+        configuration = dict(self.config.authoritative_block)
         payload = protocol.message.Payload(configuration)
         message = protocol.message.Request('CONFIG', self.store.name, payload)
 
@@ -212,29 +217,6 @@ class Daemon:
             faux_message = loaded[key]
             item = self.store[key]
             item.req_set(faux_message)
-
-
-    def _update_config(self, store, configuration):
-
-        uuid = list(configuration.keys())[0]
-        self.config = configuration
-        self.uuid = uuid
-
-        try:
-            uuid_alias = configuration[uuid]['alias']
-        except KeyError:
-            configuration[uuid]['alias'] = self.alias
-        else:
-            if uuid_alias != self.alias:
-                raise ValueError("mismatched alias in configuration: %s, expected %s" % (repr(uuid_alias), repr(self.alias)))
-
-        config.add(store, configuration)
-
-        configuration = config.get(store, by_key=True)
-        self._item_config.update(configuration)
-
-        if self.store is not None:
-            self.store._update_config(configuration)
 
 
     def setup(self):
@@ -259,7 +241,8 @@ class Daemon:
         # The configuration needs to be updated with these items before they
         # can be instantiated.
 
-        items = self.config[self.uuid]['items']
+        block = self.config.authoritative_block
+        items = block['items']
 
         key = self.alias + 'clk'
         items[key] = dict()
@@ -295,7 +278,8 @@ class Daemon:
         items[key]['units'] = 'kilobytes'
         items[key]['settable'] = False
 
-        self._update_config(self.store.name, self.config)
+        self.config.update(block, save=False)
+        self.store._update_config()
 
 
         # Having updated the configuration, now instantiate the built-in items.
@@ -316,10 +300,7 @@ class Daemon:
             :func:`setup_final` is invoked.
         """
 
-        local = self._item_config.keys()
-        local = list(local)
-
-        for key in local:
+        for key in self.config.authoritative_items.keys():
             existing = self.store._items[key]
 
             if existing is None:
@@ -374,13 +355,19 @@ class RequestServer(protocol.request.Server):
     def req_config(self, request):
 
         target = request.target
+        response = dict()
 
         if target == self.daemon.store.name:
-            configuration = dict(self.daemon.config)
+            uuid = self.daemon.uuid
+            configuration = dict(self.daemon.config[uuid])
+            response[uuid] = configuration
         else:
             configuration = config.get(target)
+            uuids = configuration.uuids()
+            for uuid in uuids:
+                response[uuid] = config[uuid]
 
-        payload = protocol.message.Payload(configuration)
+        payload = protocol.message.Payload(response)
         return payload
 
 
@@ -418,7 +405,9 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._item_config:
+        block = self.daemon.config[self.daemon.uuid]
+        items = block['items']
+        if key in items:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -434,7 +423,9 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        if key in self.daemon._item_config:
+        block = self.daemon.config[self.daemon.uuid]
+        items = block['items']
+        if key in items:
             pass
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
@@ -458,7 +449,7 @@ class RequestServer(protocol.request.Server):
         if store == '':
             store = None
 
-        hashes = config.get(store, hashes=True)
+        hashes = config.get_hashes(store)
         payload = protocol.message.Payload(hashes)
         return payload
 

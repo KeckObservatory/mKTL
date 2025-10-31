@@ -12,7 +12,7 @@ class Daemon(mktl.Daemon):
     def __init__(self, *args, **kwargs):
 
         items = generate_config()
-        mktl.config.save('unittest', items, 'unittest')
+        mktl.config.authoritative('unittest', 'unittest', items)
         mktl.Daemon.__init__(self, *args, **kwargs)
 
 

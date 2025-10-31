@@ -77,30 +77,18 @@ def get(store, key=None):
             key = store[key]
             return key
 
+    # Start with whatever is available in memory, or the local disk cache.
 
-    # Assume any configuration loaded into memory is recent and adequate.
+    configuration = config.get(store)
 
-    try:
-        configuration = config.get(store)
-    except KeyError:
-        configuration = None
+    # Try the network if that didn't yield results.
 
-    # If there is no local configuration, try loading one from disk. If that
-    # succeeds we need to confirm it is still current before proceeding.
+    if len(configuration) > 0:
+        # Confirm the on-disk contents are still valid.
+        refresh(configuration)
 
-    if configuration is None:
-        try:
-            configuration = config.load(store)
-        except ValueError:
-            configuration = None
-        else:
-            config.add(store, configuration, persist=False)
-            configuration = refresh(store, configuration)
-
-    # If we still don't have a configuration it's time to try a network
-    # broadcast and hope someone's out there that can help.
-
-    if configuration is None:
+    if len(configuration) == 0:
+        # Nothing valid cached locally. Broadcast for responses.
         guides = protocol.discover.search()
         if len(guides) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
@@ -110,18 +98,16 @@ def get(store, key=None):
         protocol.request.send(hostname, port, message)
         response = message.wait()
 
-        configuration = response.payload.value
+        new_config = response.payload.value
 
-        if configuration is None:
+        if new_config is None:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         # If we made it this far the network came through with an answer.
-        config.add(store, configuration)
+        configuration.update(new_config)
 
 
-    # The local reference to the configuration isn't necessary, when the Store
-    # instance initializes it will request the current configuration from what's
-    # in the config cache.
+    # If we made it this far we have something that the Store class can use.
 
     store = Store(store)
     _cache[store.name] = store
@@ -134,14 +120,16 @@ def get(store, key=None):
 
 
 
-def refresh(store, configuration):
+def refresh(configuration):
     """ This is a helper method for :func:`get` defined in this file. The
-        *config* passed in here was loaded from a file. Inspect the provenance
-        for each block and attempt to refresh the local contents. Save any
-        changes back to disk for future clients.
+        *configuration* passed in here was loaded from a file. Inspect the
+        provenance for each block and attempt to refresh the local contents.
+        Save any changes back to disk for future clients.
     """
 
-    for uuid in configuration.keys():
+    store = configuration.store
+
+    for uuid in configuration.uuids():
         block = configuration[uuid]
         local_hash = block['hash']
         updated = False
@@ -149,7 +137,13 @@ def refresh(store, configuration):
         # Make a copy of the provenance sequence, traversing it in reverse
         # order (highest stratum first) looking for an updated configuration.
 
-        provenance = list(block['provenance'])
+        try:
+            provenance = block['provenance']
+        except KeyError:
+            # Must be local.
+            return
+
+        provenance = list(provenance)
         provenance.reverse()
 
         for stratum in provenance:
@@ -196,17 +190,8 @@ def refresh(store, configuration):
                     # No response available.
                     continue
 
-                config.add(store, new_block)
+                configuration.update(new_block)
                 break
-
-
-    # Whatever is present in the loaded cache is as good as it will get.
-    # Return the current contents.
-
-    configuration = config.get(store)
-    return configuration
-
-
 
 
 

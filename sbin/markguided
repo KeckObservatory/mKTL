@@ -66,7 +66,11 @@ def main():
                     ## and log here.
                     pass
                 else:
-                    mktl.config.add(store, blocks)
+                    for uuid,block in blocks.items():
+                        ### This really should be 'store' instead of 'name'
+                        store = block['name']
+                        config = mktl.config.get(store)
+                        config.update(block)
 
             known.add(seen)
 
@@ -125,19 +129,19 @@ class RequestServer(mktl.protocol.request.Server):
         store = new['name']
 
         try:
-            known_blocks = mktl.config.get(store)
+            config = mktl.config.get(store)
         except KeyError:
             # No previously stored blocks to check against. That's a pass.
             return
 
-        for known_uuid in known_blocks.keys():
+        for known_uuid in config.uuids():
 
             if new['uuid'] == known_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
-            known = known_blocks[known_uuid]
+            known = config[known_uuid]
 
             old_items = known['items']
             for key in old_items:
@@ -149,16 +153,9 @@ class RequestServer(mktl.protocol.request.Server):
 
     def processConfigurationBlock(self, new):
 
-        def get_stratum(provenance):
-            return provenance['stratum']
-
-        new['provenance'].sort(key=get_stratum)
+        ### This should be a 'store' not a 'name'
         name = new['name']
-
-        try:
-            known_blocks = mktl.config.get(name)
-        except KeyError:
-            known_blocks = dict()
+        config = mktl.config.get(name)
 
         local_provenance = dict()
         local_provenance['hostname'] = self.hostname
@@ -170,14 +167,14 @@ class RequestServer(mktl.protocol.request.Server):
         to_add = list()
         unique = True
 
-        for known_uuid in known_blocks.keys():
+        for known_uuid in config.uuids():
 
             new_uuid = new['uuid']
 
             if known_uuid != new['uuid']:
                 continue
 
-            known = known_blocks[known_uuid]
+            known = config[known_uuid]
             unique = False
 
             if known['hash'] == new['hash']:
@@ -197,9 +194,16 @@ class RequestServer(mktl.protocol.request.Server):
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
 
+        def get_stratum(provenance):
+            return provenance['stratum']
+
+        new['provenance'].sort(key=get_stratum)
+
+
         for new in to_add:
             mktl.config.add_provenance(new, self.hostname, self.port)
-            mktl.config.add(name, new)
+            config = mktl.config.get(name)
+            config.update(new)
 
 
     def req_config(self, request):
@@ -215,7 +219,7 @@ class RequestServer(mktl.protocol.request.Server):
         payload = request.payload
 
         if payload is not None:
-            response = list()
+            response = True
 
             new_blocks = payload.value
             for uuid,new_block in new_blocks.items():
@@ -227,10 +231,11 @@ class RequestServer(mktl.protocol.request.Server):
 
         else:
             try:
-                response = mktl.config.get(store)
+                config = mktl.config.get(store)
             except KeyError:
                 raise KeyError('no configuration available for ' + repr(store))
-
+            else:
+                response = config._by_uuid
 
         payload = mktl.Payload(response)
         return payload
@@ -269,9 +274,9 @@ class RequestServer(mktl.protocol.request.Server):
             store = None
 
         try:
-            hashes = mktl.config.get(store, hashes=True)
+            hashes = mktl.config.get_hashes(store)
         except KeyError:
-            raise KeyError('no local configuration for ' + repr(request))
+            raise KeyError('no local configuration for ' + repr(store))
 
         payload = mktl.Payload(hashes)
         return payload

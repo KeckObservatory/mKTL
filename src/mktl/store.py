@@ -14,21 +14,15 @@ class Store:
     def __init__(self, name):
 
         self.name = name
-        self.config = None
+        self.config = config.get(name)
         self._items = dict()
 
-        configuration = config.get(name, by_key=True)
-        self._update_config(configuration)
+        self._update_config()
 
 
-    def _update_config(self, configuration):
+    def _update_config(self):
 
-        self.config = configuration
-        keys = configuration.keys()
-        keys = list(keys)
-        keys.sort()
-
-        for key in keys:
+        for key in self.config.keys():
             try:
                 self._items[key]
             except KeyError:

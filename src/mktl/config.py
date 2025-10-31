@@ -1,11 +1,15 @@
 
 import hashlib
 import os
+import threading
+import time
 import uuid
 
 from . import json
 
 
+_cache = dict()
+_cache_lock = threading.Lock()
 _cache_by_key = dict()
 _cache_by_uuid = dict()
 _hashes = dict()
@@ -13,54 +17,426 @@ _hashes = dict()
 py_list = list
 
 
-def add(store, data, persist=True):
-    """ Add a configuration block to the local cache. The *store* name is
-        a simple string; *data* can either be a bare configuration block,
-        or a dictionary of uuid-keyed configuration blocks. If *persist* is
-        set to True any additions will be written back out to the local
-        cache on disk.
+class Configuration:
+    """ A convenience class to represent mKTL configuration data. To first
+        order an instance acts like a dictionary, returning the configuration
+        block for a single key at a time.
     """
 
-    try:
-        blocks = _cache_by_uuid[store]
-    except KeyError:
-        blocks = dict()
-        _cache_by_uuid[store] = blocks
+    def __init__(self, store, alias=None):
 
-    try:
-        data['uuid']
-    except KeyError:
-        # Many blocks, keyed by UUID. No changes required to the format.
+        self.store = store.lower()
+        self.alias = alias
+        self.authoritative_uuid = None
+        self.authoritative_block = None
+        self.authoritative_items = None
+        self._by_uuid = dict()
+        self._by_key = dict()
+
+        _cache_lock.acquire()
+        if store in _cache:
+            _cache_lock.release()
+            raise ValueError('Configuration class is a singleton')
+
+        try:
+            self.load()
+        except ValueError:
+            pass
+
+        _cache[store] = self
+        _cache_lock.release()
+
+
+    def __contains__(self, key):
+        return key in self._by_uuid or key in self._by_key
+
+
+    def __getitem__(self, key):
+
+        # This relies on the assumption that there will never be a key name
+        # matching a UUID. This seems like a safe assumption...
+
+        key = key.lower()
+
+        try:
+            item = self._by_key[key]
+        except KeyError:
+            pass
+        else:
+            return item
+
+        try:
+            block = self._by_uuid[key]
+        except KeyError:
+            pass
+        else:
+            return block
+
+        raise KeyError('key not found: ' + str(key))
+
+
+    def __len__(self):
+        return len(self._by_uuid)
+
+
+    def format(self, key, value):
+        """ Translate the provided *value* according to the configuration of
+            the item identified by the supplied *key*. For example, if the
+            item is enumerated, this method will enable one-way mapping from
+            integer values to representative strings; for example, 0 to 'Off',
+            1 to 'On', etc.
+
+            This is the inverse of :func:`unformat`.
+        """
+
+        key = key.lower()
         pass
-    else:
-        # Just one block. Put it in dictionary form so we handle it the
-        # same way below.
-        uuid = data['uuid']
-        data = {uuid: data}
-        uuids = data.keys()
 
-    # Make sure the blocks each have a hash.
 
-    for uuid in data.keys():
-        block = data[uuid]
+    def hashes(self):
+        """ Retrieve known hashes for this store's known configuration blocks.
+            The hashes are always returned as a dictionary, keyed by UUID for
+            each configuration block.
+        """
+
+        hashes = dict()
+        for uuid,block in self._by_uuid.items():
+            hashes[uuid] = block['hash']
+
+        return hashes
+
+
+    def keys(self, authoritative=False):
+        """ Return an iterable sequence of keys for the items represented in
+            this configuration. If *authoritative* is set to True, only
+            return the keys for locally authoritative items.
+        """
+
+        if authoritative == True:
+            if self.authoritative_items is None:
+                return ()
+            else:
+                return self.authoritative_items.keys()
+        else:
+            return tuple(self._by_key.keys())
+
+
+    def load(self):
+        """ Load the configuration from disk for this store, and alias,
+            if provided.
+        """
+
+        base_dir = directory()
+
+        if base_dir is None:
+            raise RuntimeError('cannot determine location of mKTL configuration files')
+
+        cache_dir = os.path.join(base_dir, 'client', 'cache', self.store)
+        daemon_dir = os.path.join(base_dir, 'daemon', 'store', self.store)
+
+        if self.alias:
+            filename = os.path.join(daemon_dir, self.alias + '.json')
+            block = self._load_daemon(filename)
+            self.update(block, save=False)
+
+        if os.path.isdir(cache_dir):
+            pass
+        elif self.alias is None:
+            raise ValueError('no locally stored configuration for ' + repr(self.store))
+
+        filenames = py_list()
+
+        # The contents of a store's cache directory will include a single file
+        # for each UUID in the store. Load all such files.
+
+        try:
+            cache_dir_files = os.listdir(cache_dir)
+        except FileNotFoundError:
+            cache_dir_files = tuple()
+
+        for cache_dir_file in cache_dir_files:
+            filename = os.path.join(cache_dir, cache_dir_file)
+            filenames.append(filename)
+
+        for filename in filenames:
+            loaded = self._load_client(filename)
+            try:
+                self.update(loaded, save=False)
+            except ValueError:
+                # update() removed the unwanted file.
+                continue
+
+
+    def _load_client(self, filename):
+        """ Load a single client configuration file.
+        """
+
+        base_filename = filename[:-5]
+        target_uuid = os.path.basename(base_filename)
+
+        raw_json = open(filename, 'r').read()
+        configuration = json.loads(raw_json)
+        return configuration
+
+
+    def _load_daemon(self, filename):
+        """ Load a single daemon configuration file.
+        """
+
+        base_filename = filename[:-5]
+        uuid_filename = base_filename + '.uuid'
+
+        if os.path.exists(uuid_filename):
+            target_uuid = open(uuid_filename, 'r').read()
+            target_uuid = target_uuid.strip()
+        else:
+            target_uuid = str(uuid.uuid4())
+            target_uuid = target_uuid.lower()
+            writer = open(uuid_filename, 'w')
+            writer.write(target_uuid)
+            writer.close()
+
+        configuration = dict()
+
+        raw_json = open(filename, 'r').read()
+        items = json.loads(raw_json)
+
+        configuration['name'] = self.store
+        configuration['uuid'] = target_uuid
+        configuration['items'] = items
+        return configuration
+
+
+    def remove(self, uuid):
+        """ Remove any/all cached information associated with the provided
+            UUID, and remove any on-disk contents likewise belonging to that
+            UUID.
+        """
+
+        # Remove the file, if it exists.
+        remove(self.store, uuid)
+
+        try:
+            block = self._by_uuid[uuid]
+        except KeyError:
+            return
+
+        items = block['items']
+
+        for key in items.keys():
+            del self._by_key[key]
+
+        del self._by_uuid[uuid]
+
+
+    def unformat(self, key, value):
+        """ Translate the provided *value* according to the configuration of
+            the item identified by the supplied *key*. For example, if the
+            item is enumerated, this method will enable one-way mapping from
+            string values to integers; for example, 'Off' to 0, 'On' to 1, etc.
+
+            This is the inverse of :func:`format`.
+        """
+
+        key = key.lower()
+        pass
+
+
+    def update(self, block, save=True, replace=False):
+        """ Update the locally cached configuration to include any/all contents
+            in the provided *block*. A configuration block is a Python
+            dictionary in the on-disk client format, minimally including the
+            keys 'name', 'uuid', and 'items'.
+        """
+
+        ### That should probably be 'store' instead of 'name'.
+
+        store = block['name']
+        items = block['items']
+        uuid = block['uuid']
+
+        if self.alias:
+            try:
+                alias = block['alias']
+            except KeyError:
+                pass
+            else:
+                if alias != self.alias:
+                    raise ValueError('not ready to handle two aliases in a single daemon')
+                if self.authoritative_uuid and self.authoritative_uuid != uuid:
+                    raise ValueError('UUID in our authoritative block changed')
+
+                self.authoritative_uuid = uuid
+                self.authoritative_block = block
+                self.authoritative_items = block['items']
+
+        # Enforce case-insensitivity for keys. Doing this for every
+        # configuration block may not be necessary, it should only be
+        # necessary for blocks originating with a daemon.
+
+        fixes = py_list()
+        for key in items.keys():
+            lower = key.lower()
+            if key != lower:
+                fixes.append(key)
+
+        for key in fixes:
+            lower = key.lower()
+            item = items[key]
+            del items[key]
+            items[lower] = item
 
         try:
             block['hash']
         except KeyError:
-            block['hash'] = generate_hash(block['items'])
+            block['hash'] = generate_hash(items)
 
 
-    # The update() call will replace any matching UUID keys with new blocks,
-    # or add them if the UUID is unique.
+        # Done with pre-processing. Look for potential conflicts before
+        # accepting this update. For example, there might be UUID mismatch
+        # that needs to be cleared from the local cache.
 
-    blocks.update(data)
+        hash = block['hash']
+        for known_uuid in self.uuids():
+            if uuid == known_uuid:
+                # Replacing the config block for the same UUID is fine.
+                break
 
-    ## What about duplicate keys? Or is something upstream in the configuration
-    ## handling chain handling that before this method gets called?
+            collision = None
 
-    _rebuild(store)
-    if persist == True:
-        save(store, blocks)
+            # Check for hash collisions.
+
+            known_block = self._by_uuid[known_uuid]
+            known_hash = known_block['hash']
+            if hash == known_hash:
+                collision = 'hash collision'
+
+
+            # Check for duplicate keys.
+
+            if collision is None:
+                known_items = known_block['items']
+                for key in items.keys():
+                    if key in known_items:
+                        collision = 'duplicate key: ' + key
+                        break
+
+            if collision:
+                # Keep the most recent block if a collision occured.
+
+                try:
+                    time = block['time']
+                except KeyError:
+                    time = 0
+
+                try:
+                    known_time = known_block['time']
+                except KeyError:
+                    # Maybe it doesn't make sense to give the first-seen
+                    # block an edge in this case. It's not like the files
+                    # on disk are stored in some significant order. But
+                    # every configuration should have a timestamp, so the
+                    # odds of reaching a condition where both configurations
+                    # are missing their timestamp should be vanishingly low.
+                    known_time = 1
+
+                if time >= known_time:
+                    # Get rid of the previous block, and process the newer one.
+                    self.remove(known_uuid)
+                else:
+                    # Get rid of this block, and discontinue processing.
+                    self.remove(uuid)
+                    raise ValueError(collision + ', and this block is older')
+
+
+        # Done with validity checks. The cache/save the block for future
+        # reference.
+
+        self._by_uuid[uuid] = block
+
+        # Regenerate the by-key configuration cache, which is what gets
+        # used by mktl.Item instances.
+
+        for key in items.keys():
+            item = items[key]
+
+            # A fresh dictionary is made here so we don't modify what's stored
+            # in the Cache, which is supposed to be representative of the
+            # on-the-wire representation. We want the daemon's UUID and
+            # provenance to be present in the per-item configuration for use
+            # within the Item class.
+
+            copied = dict(item)
+            copied['uuid'] = uuid
+
+            try:
+                ### Should this also be a copy?
+                copied['provenance'] = block['provenance']
+            except KeyError:
+                pass
+
+            self._by_key[key] = copied
+
+        if save == True:
+            _save_client(self.store, block)
+
+
+    def uuids(self, authoritative=False):
+        """ Return an iterable sequence of UUIDs represented in this
+            configuration. If *authoritative* is set to True, only
+            return the authoritative UUID.
+        """
+
+        if authoritative == True:
+            if self.authoritative_uuid:
+                return (self.authoritative_uuid,)
+            else:
+                return ()
+        else:
+            return tuple(self._by_uuid.keys())
+
+
+# end of class Configuration
+
+
+
+def to_block(store, alias, items):
+    """ Generate a block dictionary appropriate for the store, alias, and
+        items provided. This is only relevant for a daemon, a client will
+        always receive full blocks.
+    """
+
+    block = dict()
+    block['name'] = store ### this should be 'store', not 'name'
+    block['alias'] = alias
+
+    # Use the locally cached UUID, if any. Create one if it does not exist,
+    # and save it for next time.
+
+    base_directory = directory()
+    daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
+    uuid_filename = os.path.join(daemon_directory, alias + '.uuid')
+
+    if os.path.exists(daemon_directory):
+        pass
+    else:
+        os.makedirs(daemon_directory, mode=0o775)
+
+    if os.path.exists(uuid_filename):
+        block_uuid = open(uuid_filename, 'r').read()
+        block_uuid = block_uuid.strip()
+    else:
+        block_uuid = str(uuid.uuid4())
+        writer = open(uuid_filename, 'w')
+        writer.write(block_uuid)
+        writer.close()
+
+    block['uuid'] = block_uuid
+    block['time'] = time.time()
+    block['hash'] = generate_hash(items)
+    block['items'] = items
+
+    return block
 
 
 
@@ -90,6 +466,17 @@ def add_provenance(block, hostname, req, pub=None):
 
     block['provenance'].append(provenance)
     return provenance
+
+
+
+def authoritative(store, alias, items):
+    """ Declare an authoritative configuration block for use by a local
+        authoritative daemon.
+    """
+
+    block = to_block(store, alias, items)
+    config = get(store, alias)
+    config.update(block, save=False)
 
 
 
@@ -208,45 +595,32 @@ def generate_hash(dumpable):
 
 
 
-def get(store=None, by_uuid=True, by_key=False, hashes=False):
-    """ Retrieve the locally cached configuration for a given *store*.
+def get(store, alias=None):
+    """ Retrieve the locally cached :class:`Configuration` instance for
+        the specified *store*.
         A KeyError exception is raised if there are no locally cached
         configuration blocks for that store. A typical client will only
         interact with :func:`mktl.get`, which in turn calls this method.
-
-        The *by_uuid*, *by_key*, and *hashes* arguments indicate which
-        type of dictionary is being requested: configuration blocks keyed
-        by UUID, per-item configurations keyed by the item key, or hashes
-        of configuration blocks, also keyed by UUID.
     """
 
-    if store is None and hashes == False:
-        raise RuntimeError('must specify a store name')
+    store = store.lower()
 
-    if hashes == True:
-        return get_hashes(store)
-
-    if by_key == True:
-        try:
-            cached = _cache_by_key[store]
-        except KeyError:
-            cached = dict()
-            _cache_by_key[store] = cached
-
-    elif by_uuid == True:
-        try:
-            cached = _cache_by_uuid[store]
-        except KeyError:
-            cached = dict()
-            _cache_by_uuid[store] = cached
-
+    try:
+        config = _cache[store]
+    except KeyError:
+        config = Configuration(store, alias)
+        _cache[store] = config
     else:
-        raise RuntimeError('must request one of by_uuid, by_key, or hashes')
+        if alias and config.alias is None:
+            config.alias = alias
 
-    if len(cached) == 0:
+        elif alias and alias != config.alias:
+            raise ValueError('not ready to handle two aliases in a single daemon')
+
+    if len(config) == 0:
         raise KeyError('no local configuration for ' + repr(store))
 
-    return cached
+    return config
 
 
 
@@ -257,13 +631,25 @@ def get_hashes(store=None):
         the associated configuration block.
     """
 
+    hashes = dict()
+    requested_store = store
+
     if store is None:
-        hashes = _hashes
+        stores = _cache.keys()
     else:
-        try:
-            hashes = _hashes[store]
-        except KeyError:
-            raise KeyError('no local configuration for ' + repr(store))
+        stores = (store,)
+
+    for store in stores:
+        config = get(store)
+        config_hashes = config.hashes()
+
+        hashes[store] = config.hashes()
+
+        if len(config_hashes) > 0:
+            hashes[store] = config_hashes
+
+    if requested_store and len(hashes) == 0:
+        raise KeyError('no local configuration for ' + repr(requested_store))
 
     return dict(hashes)
 
@@ -273,176 +659,15 @@ def list():
     """ Return a list of all store names present in the local cache.
     """
 
-    names = _cache_by_uuid.keys()
+    names = _cache.keys()
     results = py_list()
 
     for name in names:
-        blocks = _cache_by_uuid[name]
-        if len(blocks) > 0:
+        config = _cache[name]
+        if len(config) > 0:
             results.append(name)
 
     return results
-
-
-
-def load(store, specific=None):
-    """ Load the configuration from disk for the specified store name. If
-        *specific* is not None it is expected to be the unique string
-        corresponding to a single configuration file, either a unique string
-        of the caller's choice for a locally authoritative configuration (the
-        'alias'), or the UUID for a cached file. Results are returned as a
-        dictionary, keyed by the UUID, and the configuration contents as the
-        value. The returned contents already translated from JSON.
-    """
-
-    store = store.lower()
-
-    if specific is not None:
-        return _load_one(store, specific)
-
-    base_directory = directory()
-
-    if base_directory is None:
-        raise RuntimeError('cannot determine location of mKTL configuration files')
-
-
-    # The daemon context will know what it is looking for and provide a
-    # 'specific' argument, and get caught by the condition above. The remainder
-    # of this method will ignore the daemon directory.
-
-    cache_directory = os.path.join(base_directory, 'client', 'cache', store)
-
-    if os.path.isdir(cache_directory):
-        pass
-    else:
-        raise ValueError('no locally stored configuration for ' + repr(store))
-
-    filenames = py_list()
-
-    # The contents of a store's cache directory will include a single file
-    # for each UUID in the store. Load all such files and return them.
-
-    try:
-        cache_directory_files = os.listdir(cache_directory)
-    except FileNotFoundError:
-        cache_directory_files = tuple()
-
-    for cache_directory_file in cache_directory_files:
-        filename = os.path.join(cache_directory, cache_directory_file)
-        filenames.append(filename)
-
-
-    results = dict()
-    for filename in filenames:
-        loaded = _load_one(store, filename)
-        new_uuid = py_list(loaded.keys())[0]
-        results.update(loaded)
-
-    return results
-
-
-
-def _load_client(store, filename):
-    """ Load a single client configuration file; this method is called by
-        :func:`_load_one` as a final processing step.
-    """
-
-    base_filename = filename[:-5]
-    target_uuid = os.path.basename(base_filename)
-
-    raw_json = open(filename, 'r').read()
-    configuration = json.loads(raw_json)
-    configuration['uuid'] = target_uuid
-
-    results = dict()
-    results[target_uuid] = configuration
-
-    return results
-
-
-
-def _load_daemon(store, filename):
-    """ Load a single daemon configuration file; this method is called by
-        :func:`_load_one` as a final processing step.
-    """
-
-    base_filename = filename[:-5]
-    uuid_filename = base_filename + '.uuid'
-
-    if os.path.exists(uuid_filename):
-        target_uuid = open(uuid_filename, 'r').read()
-        target_uuid = target_uuid.strip()
-    else:
-        target_uuid = str(uuid.uuid4())
-        writer = open(uuid_filename, 'w')
-        writer.write(target_uuid)
-        writer.close()
-
-    configuration = dict()
-
-    raw_json = open(filename, 'r').read()
-    items = json.loads(raw_json)
-
-    configuration['name'] = store
-    configuration['uuid'] = target_uuid
-    configuration['items'] = items
-
-    results = dict()
-    results[target_uuid] = configuration
-
-    return results
-
-
-
-def _load_one(store, specific):
-    """ Similar to :func:`load`, except only ingesting a single file. A lot of
-        checks will be bypassed if *specific* is provided as an absolute path;
-        it is assumed the caller knows exactly which file they want, and have
-        provided the full and correct path.
-    """
-
-    store = store.lower()
-
-    # Some of these checks are redundant if we got here via the load() method,
-    # but it's unavoidable that we need the information in both places.
-
-    base_directory = directory()
-
-    if base_directory is None:
-        raise RuntimeError('cannot determine location of mKTL configuration files')
-
-    daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
-    cache_directory = os.path.join(base_directory, 'client', 'cache', store)
-
-
-    if os.path.isabs(specific):
-        if os.path.exists(specific):
-            if daemon_directory in specific:
-                return _load_daemon(store, specific)
-            elif cache_directory in specific:
-                return _load_client(store, specific)
-            else:
-                raise ValueError('file is not within ' + base_directory)
-        else:
-            raise ValueError('file not found: ' + repr(specific))
-
-    else:
-        if specific[-5:] != '.json':
-            base_filename = specific
-            json_filename = base_filename + '.json'
-        else:
-            base_filename = specific[:-5]
-            json_filename = specific
-
-        daemon_filename = os.path.join(daemon_directory, json_filename)
-        cache_filename = os.path.join(cache_directory, json_filename)
-
-        if os.path.exists(daemon_filename):
-            return _load_daemon(store, daemon_filename)
-        elif os.path.exists(cache_filename):
-            return _load_client(store, cache_filename)
-        else:
-            raise ValueError("file not found in %s: %s" % (base_directory, repr(specific)))
 
 
 
@@ -485,72 +710,6 @@ def match_provenance(full_provenance1, full_provenance2):
 
 
 
-def _rebuild(store):
-    """ Rebuild any/all secondary caches for the specified *store*.
-    """
-
-    config = get(store)
-    uuids = config.keys()
-    by_key = dict()
-
-    for uuid in uuids:
-        # Cache the reported hash of each configuration block. No attempt
-        # is made to verify the hash.
-
-        block = config[uuid]
-        hash = block['hash']
-
-        try:
-            cached = _hashes[store]
-        except KeyError:
-            cached = dict()
-            _hashes[store] = cached
-
-        cached[uuid] = hash
-
-        # Enforce case-insensitivity.
-
-        fixes = []  # list() is redefined in this file
-        items = block['items']
-        for key in items.keys():
-            lower = key.lower()
-            if key != lower:
-                fixes.append(key)
-
-        for key in fixes:
-            lower = key.lower()
-            item = items[key]
-            del items[key]
-            items[lower] = item
-
-        # Regenerate the by-key configuration cache, which is what gets
-        # used by mktl.Item instances.
-
-        items = block['items']
-        for key in items.keys():
-            item = items[key]
-
-            # A fresh dictionary is made here so we don't modify what's stored
-            # in the Cache, which is supposed to be representative of the
-            # on-the-wire representation. We want the daemon's UUID and
-            # provenance to be present in the per-item configuration for use
-            # within the Item class.
-
-            copied = dict(item)
-            copied['uuid'] = uuid
-
-            try:
-                ### Should this also be a copy?
-                copied['provenance'] = block['provenance']
-            except KeyError:
-                pass
-
-            by_key[key] = copied
-
-    _cache_by_key[store] = by_key
-
-
-
 def remove(store, uuid):
     """ Remove the cache file associated with this store name and UUID.
         Takes no action and throws no errors if the file does not exist.
@@ -559,7 +718,7 @@ def remove(store, uuid):
     base_directory = directory()
     json_filename = uuid + '.json'
 
-    cache_directory = os.path.join(base_directory, 'client', 'cache', name)
+    cache_directory = os.path.join(base_directory, 'client', 'cache', store)
     target_filename = os.path.join(cache_directory, json_filename)
 
     try:
@@ -569,60 +728,14 @@ def remove(store, uuid):
 
 
 
-def _remove_cache(store, data, cleanup=True):
-    """ Remove a configuration block from the local cache. Matches are
-        determined via UUID.
-    """
-
-    try:
-        blocks = _cache_by_uuid[store]
-    except KeyError:
-        raise KeyError('no local configuration for ' + repr(store))
-
-    target_uuid = data['uuid']
-
-    try:
-        del(blocks[target_uuid])
-    except KeyError:
-        raise KeyError('no matching block for UUID ' + repr(target_uuid))
-
-    if cleanup == True:
-        remove(store, target_uuid)
-        _rebuild(store)
-
-
-
-def save(store, configuration, alias=None):
-    """ Save a configuration block to the cache directory. If the *alias*
-        argument is set this method will instead save the configuration block
-        to the daemon directory, using *alias* as the base for the filename.
-    """
-
-    if alias is None:
-        _save_client(store, configuration)
-    else:
-        _save_daemon(store, configuration, alias)
-
-
-
-def _save_client(store, configuration):
+def _save_client(store, block):
     """ Save a configuration block to the cache directory.
     """
 
     try:
-        configuration['name']
+        block_uuid = block['uuid']
     except KeyError:
-        # Assume this is a dictionary of configuration blocks, as you might
-        # get() would return by default.
-        for uuid in configuration.keys():
-            block = configuration[uuid]
-            save(store, block)
-        return
-
-    try:
-        block_uuid = configuration['uuid']
-    except KeyError:
-        raise KeyError("the 'uuid' field must be in each configuration block")
+        raise KeyError("the 'uuid' field must be present")
 
     base_directory = directory()
     base_filename = block_uuid
@@ -638,49 +751,9 @@ def _save_client(store, configuration):
     if os.access(cache_directory, os.W_OK) != True:
         raise OSError('cannot write to cache directory: ' + cache_directory)
 
-    raw_json = json.dumps(configuration)
+    raw_json = json.dumps(block)
 
     target_filename = os.path.join(cache_directory, json_filename)
-
-    try:
-        os.remove(target_filename)
-    except FileNotFoundError:
-        pass
-
-    writer = open(target_filename, 'wb')
-    writer.write(raw_json)
-    writer.close()
-
-    os.chmod(target_filename, 0o664)
-
-
-
-def _save_daemon(store, configuration, alias):
-    """ Save a configuration block to the daemon directory. This is only
-        relevant if a daemon is generating its configuration at runtime,
-        or as an entry point for external tools that generate the configuration
-        contents and want it stored in the correct location.
-
-        The *configuration* should be a dictionary of items, matching the
-        expected structure of the daemon-side configuration contents.
-    """
-
-    base_directory = directory()
-    json_filename = alias + '.json'
-
-    daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
-
-    if os.path.exists(daemon_directory):
-        pass
-    else:
-        os.makedirs(daemon_directory, mode=0o775)
-
-    if os.access(daemon_directory, os.W_OK) != True:
-        raise OSError('cannot write to daemon directory: ' + daemon_directory)
-
-    raw_json = json.dumps(configuration)
-
-    target_filename = os.path.join(daemon_directory, json_filename)
 
     try:
         os.remove(target_filename)
