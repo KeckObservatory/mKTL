@@ -67,8 +67,7 @@ def main():
                     pass
                 else:
                     for uuid,block in blocks.items():
-                        ### This really should be 'store' instead of 'name'
-                        store = block['name']
+                        store = block['store']
                         config = mktl.config.get(store)
                         config.update(block)
 
@@ -123,10 +122,7 @@ class RequestServer(mktl.protocol.request.Server):
 
             new_keys.add(key)
 
-        ### This really should be changed to be 'store' in the configuration
-        ### syntax.
-
-        store = new['name']
+        store = new['store']
 
         try:
             config = mktl.config.get(store)
@@ -153,9 +149,8 @@ class RequestServer(mktl.protocol.request.Server):
 
     def processConfigurationBlock(self, new):
 
-        ### This should be a 'store' not a 'name'
-        name = new['name']
-        config = mktl.config.get(name)
+        store = new['store']
+        config = mktl.config.get(store)
 
         local_provenance = dict()
         local_provenance['hostname'] = self.hostname
@@ -202,7 +197,7 @@ class RequestServer(mktl.protocol.request.Server):
 
         for new in to_add:
             mktl.config.add_provenance(new, self.hostname, self.port)
-            config = mktl.config.get(name)
+            config = mktl.config.get(store)
             config.update(new)
 
 
