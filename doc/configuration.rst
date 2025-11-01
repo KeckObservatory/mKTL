@@ -24,15 +24,15 @@ spanning the full set of daemons composing that store.
 For example, the 'kpfguide' store may contain multiple daemons, and therefore
 multiple configuration blocks::
 
-	{'uuid1': {'name': 'kpfguide', 'time': 1724892333.924, ...},
-	 'uuid2': {'name': 'kpfguide', 'time': 1725892343.567, ...}}
+	{'uuid1': {'store': 'kpfguide', 'time': 1724892333.924, ...},
+	 'uuid2': {'store': 'kpfguide', 'time': 1725892343.567, ...}}
 
 A per-daemon configuration block will contain the following fields:
 
 =============== ===============================================================
 *Field*         *Description*
 =============== ===============================================================
-**name**	The name of the store. This is perhaps redundant,
+**store**	The name of the store. This is perhaps redundant,
 		being implied by the structure of the configuration
 		block, but the extra assertion is inexpensive and
 		convenient.
@@ -208,7 +208,7 @@ Here is a complete two-item example for what a configuration block may look
 like for a store named 'pie'::
 
       {
-        "name": "pie",
+        "store": "pie",
         "hash": 236000907473448652729473003892320198915,
         "uuid": "8017ad5b-07a7-5135-a024-c46a0b79b74e",
         "time": 1738177027.4993615,
