@@ -96,7 +96,7 @@ class Daemon:
 
         block = self.config.authoritative_block
         block['provenance'] = self.provenance
-        self.config.update(block, save=False)
+        self.config.update(block)
 
         # The cached configuration needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
@@ -121,6 +121,12 @@ class Daemon:
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
+
+        # The configuration should now be finalized. Make sure it is written
+        # out to disk so that subprocesses (if any) can load it before we're
+        # fully on the air.
+
+        self.config.save()
 
         # Apply any initial values according to the configuration contents.
 
