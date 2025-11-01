@@ -294,7 +294,7 @@ class Configuration:
         pass
 
 
-    def update(self, block, save=True, replace=False):
+    def update(self, block, save=True):
         """ Update the locally cached configuration to include any/all contents
             in the provided *block*. A configuration block is a Python
             dictionary in the on-disk client format, minimally including the
@@ -507,7 +507,7 @@ def authoritative(store, alias, items):
 
     config = get(store, alias)
     block = to_block(store, alias, config.authoritative_uuid, items)
-    config.update(block, save=True)
+    config.update(block)
 
 
 
