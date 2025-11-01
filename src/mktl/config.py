@@ -33,18 +33,13 @@ class Configuration:
         self._by_uuid = dict()
         self._by_key = dict()
 
-        _cache_lock.acquire()
         if store in _cache:
-            _cache_lock.release()
             raise ValueError('Configuration class is a singleton')
 
         try:
             self.load()
         except ValueError:
             pass
-
-        _cache[store] = self
-        _cache_lock.release()
 
 
     def __contains__(self, key):
@@ -136,8 +131,12 @@ class Configuration:
 
         if self.alias:
             filename = os.path.join(daemon_dir, self.alias + '.json')
-            block = self._load_daemon(filename)
-            self.update(block, save=False)
+
+            block,uuid = self._load_daemon(filename)
+            if block:
+                self.update(block, save=False)
+            else:
+                self.authoritative_uuid = uuid
 
         if os.path.isdir(cache_dir):
             pass
@@ -196,15 +195,18 @@ class Configuration:
             writer.write(target_uuid)
             writer.close()
 
-        configuration = dict()
+        try:
+            raw_json = open(filename, 'r').read()
+        except FileNotFoundError:
+            configuration = None
+        else:
+            configuration = dict()
 
-        raw_json = open(filename, 'r').read()
-        items = json.loads(raw_json)
+            configuration['store'] = self.store
+            configuration['uuid'] = target_uuid
+            configuration['items'] = json.loads(raw_json)
 
-        configuration['name'] = self.store
-        configuration['uuid'] = target_uuid
-        configuration['items'] = items
-        return configuration
+        return configuration,target_uuid
 
 
     def remove(self, uuid):
@@ -229,6 +231,56 @@ class Configuration:
         del self._by_uuid[uuid]
 
 
+    def save(self):
+        """ Save the contents of this :class:`Configuration` instance
+            to the local disk cache for future client access.
+        """
+
+        for uuid,block in self._by_uuid.items():
+            self._save_client(block)
+
+
+    def _save_client(self, block):
+        """ Save a configuration block to the cache directory.
+        """
+
+        store = self.store
+
+        try:
+            block_uuid = block['uuid']
+        except KeyError:
+            raise KeyError("the 'uuid' field must be present")
+
+        base_directory = directory()
+        base_filename = block_uuid
+        json_filename = base_filename + '.json'
+
+        cache_directory = os.path.join(base_directory, 'client', 'cache', store)
+
+        if os.path.exists(cache_directory):
+            pass
+        else:
+            os.makedirs(cache_directory, mode=0o775)
+
+        if os.access(cache_directory, os.W_OK) != True:
+            raise OSError('cannot write to cache directory: ' + cache_directory)
+
+        raw_json = json.dumps(block)
+
+        target_filename = os.path.join(cache_directory, json_filename)
+
+        try:
+            os.remove(target_filename)
+        except FileNotFoundError:
+            pass
+
+        writer = open(target_filename, 'wb')
+        writer.write(raw_json)
+        writer.close()
+
+        os.chmod(target_filename, 0o664)
+
+
     def unformat(self, key, value):
         """ Translate the provided *value* according to the configuration of
             the item identified by the supplied *key*. For example, if the
@@ -246,12 +298,10 @@ class Configuration:
         """ Update the locally cached configuration to include any/all contents
             in the provided *block*. A configuration block is a Python
             dictionary in the on-disk client format, minimally including the
-            keys 'name', 'uuid', and 'items'.
+            keys 'store', 'uuid', and 'items'.
         """
 
-        ### That should probably be 'store' instead of 'name'.
-
-        store = block['name']
+        store = block['store']
         items = block['items']
         uuid = block['uuid']
 
@@ -352,7 +402,10 @@ class Configuration:
         # Done with validity checks. The cache/save the block for future
         # reference.
 
-        self._by_uuid[uuid] = block
+        try:
+            self._by_uuid[uuid].update(block)
+        except KeyError:
+            self._by_uuid[uuid] = block
 
         # Regenerate the by-key configuration cache, which is what gets
         # used by mktl.Item instances.
@@ -378,7 +431,7 @@ class Configuration:
             self._by_key[key] = copied
 
         if save == True:
-            _save_client(self.store, block)
+            self._save_client(block)
 
 
     def uuids(self, authoritative=False):
@@ -400,38 +453,16 @@ class Configuration:
 
 
 
-def to_block(store, alias, items):
-    """ Generate a block dictionary appropriate for the store, alias, and
-        items provided. This is only relevant for a daemon, a client will
+def to_block(store, alias, uuid, items):
+    """ Generate a block dictionary appropriate for the store, alias, uuid,
+        and items provided. This is only relevant for a daemon, a client will
         always receive full blocks.
     """
 
     block = dict()
-    block['name'] = store ### this should be 'store', not 'name'
+    block['store'] = store
     block['alias'] = alias
-
-    # Use the locally cached UUID, if any. Create one if it does not exist,
-    # and save it for next time.
-
-    base_directory = directory()
-    daemon_directory = os.path.join(base_directory, 'daemon', 'store', store)
-    uuid_filename = os.path.join(daemon_directory, alias + '.uuid')
-
-    if os.path.exists(daemon_directory):
-        pass
-    else:
-        os.makedirs(daemon_directory, mode=0o775)
-
-    if os.path.exists(uuid_filename):
-        block_uuid = open(uuid_filename, 'r').read()
-        block_uuid = block_uuid.strip()
-    else:
-        block_uuid = str(uuid.uuid4())
-        writer = open(uuid_filename, 'w')
-        writer.write(block_uuid)
-        writer.close()
-
-    block['uuid'] = block_uuid
+    block['uuid'] = uuid
     block['time'] = time.time()
     block['hash'] = generate_hash(items)
     block['items'] = items
@@ -474,9 +505,9 @@ def authoritative(store, alias, items):
         authoritative daemon.
     """
 
-    block = to_block(store, alias, items)
     config = get(store, alias)
-    config.update(block, save=False)
+    block = to_block(store, alias, config.authoritative_uuid, items)
+    config.update(block, save=True)
 
 
 
@@ -604,21 +635,21 @@ def get(store, alias=None):
     """
 
     store = store.lower()
+    _cache_lock.acquire()
 
     try:
         config = _cache[store]
     except KeyError:
         config = Configuration(store, alias)
         _cache[store] = config
+        _cache_lock.release()
     else:
+        _cache_lock.release()
         if alias and config.alias is None:
             config.alias = alias
 
         elif alias and alias != config.alias:
             raise ValueError('not ready to handle two aliases in a single daemon')
-
-    if len(config) == 0:
-        raise KeyError('no local configuration for ' + repr(store))
 
     return config
 
@@ -659,13 +690,13 @@ def list():
     """ Return a list of all store names present in the local cache.
     """
 
-    names = _cache.keys()
+    stores = _cache.keys()
     results = py_list()
 
-    for name in names:
-        config = _cache[name]
+    for store in stores:
+        config = _cache[store]
         if len(config) > 0:
-            results.append(name)
+            results.append(store)
 
     return results
 
@@ -725,46 +756,6 @@ def remove(store, uuid):
         os.remove(target_filename)
     except FileNotFoundError:
         pass
-
-
-
-def _save_client(store, block):
-    """ Save a configuration block to the cache directory.
-    """
-
-    try:
-        block_uuid = block['uuid']
-    except KeyError:
-        raise KeyError("the 'uuid' field must be present")
-
-    base_directory = directory()
-    base_filename = block_uuid
-    json_filename = base_filename + '.json'
-
-    cache_directory = os.path.join(base_directory, 'client', 'cache', store)
-
-    if os.path.exists(cache_directory):
-        pass
-    else:
-        os.makedirs(cache_directory, mode=0o775)
-
-    if os.access(cache_directory, os.W_OK) != True:
-        raise OSError('cannot write to cache directory: ' + cache_directory)
-
-    raw_json = json.dumps(block)
-
-    target_filename = os.path.join(cache_directory, json_filename)
-
-    try:
-        os.remove(target_filename)
-    except FileNotFoundError:
-        pass
-
-    writer = open(target_filename, 'wb')
-    writer.write(raw_json)
-    writer.close()
-
-    os.chmod(target_filename, 0o664)
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
