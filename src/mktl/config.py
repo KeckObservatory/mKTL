@@ -130,6 +130,11 @@ class Configuration:
         daemon_dir = os.path.join(base_dir, 'daemon', 'store', self.store)
 
         if self.alias:
+            if os.path.exists(daemon_dir):
+                pass
+            else:
+                os.makedirs(daemon_dir, mode=0o775)
+
             filename = os.path.join(daemon_dir, self.alias + '.json')
 
             block,uuid = self._load_daemon(filename)
