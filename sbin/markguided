@@ -228,9 +228,13 @@ class RequestServer(mktl.protocol.request.Server):
             try:
                 config = mktl.config.get(store)
             except KeyError:
-                raise KeyError('no configuration available for ' + repr(store))
+                response = tuple()
             else:
                 response = config._by_uuid
+
+            if len(response) == 0:
+                raise KeyError('no configuration available for ' + repr(store))
+
 
         payload = mktl.Payload(response)
         return payload
