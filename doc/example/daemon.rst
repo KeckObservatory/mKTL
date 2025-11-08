@@ -182,16 +182,16 @@ description of every item; this forms the core of the configuration managed by
 that daemon, which is responsible for adding the metadata required for proper
 client interactions.
 
-The JSON contents can be generated at run time and 'saved' for future use by
-other mKTL calls. This is the approach taken by the KTL protocol translation,
-where the JSON is a repackaging of the configuration metadata supplied by
-KTL API calls; with a JSON-like dictionary in hand, the daemon would have
+The JSON contents can be generated at run time and registered for immediate use
+by the daemon. This is the approach taken by the KTL protocol translation
+daemon, where the JSON is a repackaging of the configuration metadata supplied
+by KTL API calls; with a JSON-like dictionary in hand, the daemon would have
 lines like the following in its initialization method::
 
     def __init__(self, *args, **kwargs):
 
         items = generate_config()
-        mktl.config.save('metal', items, 'precious')
+        mktl.config.authoritative('metal', 'precious', items)
         mktl.Daemon.__init__(self, *args, **kwargs)
 
 It's more likely that the JSON configuration is written out as a file, ready
