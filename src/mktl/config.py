@@ -84,8 +84,54 @@ class Configuration:
             This is the inverse of :func:`unformat`.
         """
 
-        key = key.lower()
-        pass
+        item = self[key]
+
+        try:
+            type = item['type']
+        except KeyError:
+            return value
+
+        if type == 'boolean' or type == 'enumerated':
+            return self.format_enumerated(item, value)
+
+        if type == 'mask':
+            return self.format_mask(item, value)
+
+        if type == 'numeric':
+            try:
+                item['format']
+            except KeyError:
+                return value
+            else:
+                return self.format_numeric(item, value)
+
+        return value
+
+
+    def format_enumerated(self, item, value):
+        ### TODO
+        return value
+
+
+    def format_mask(self, item, value):
+        ### TODO
+        return value
+
+
+    def format_numeric(self, item, value):
+        ### This is just a stub. The format handling needs to be richer than
+        ### this; there needs to be a way to convert between numeric types
+        ### (radians to degrees), and to more exotic formats like sexagesimal.
+
+        format = item['format']
+        value = float(value)
+
+        if 'd' in format:
+            value = int(value)
+
+        formatted = format % (value)
+
+        return formatted
 
 
     def hashes(self):
