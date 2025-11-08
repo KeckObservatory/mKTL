@@ -180,6 +180,13 @@ class Client:
 
     def _pub_incoming(self, parts):
 
+        if len(parts) < 4:
+            ### Malformed message. Not sure where these are coming from,
+            ### but here we are. This should be logged, or at least exposed
+            ### for future debugging. For now it's being dropped on the
+            ### floor.
+            return
+
         topic = parts[0]
         their_version = parts[1]
 
