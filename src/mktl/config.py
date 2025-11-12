@@ -10,9 +10,6 @@ from . import json
 
 _cache = dict()
 _cache_lock = threading.Lock()
-_cache_by_key = dict()
-_cache_by_uuid = dict()
-_hashes = dict()
 
 py_list = list
 
