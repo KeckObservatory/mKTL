@@ -111,40 +111,42 @@ class RequestServer(mktl.protocol.request.Server):
             not present in any other blocks.
         """
 
-        new_items = new['items']
-        new_keys = set()
-
-        for key in new_items:
-            item = new_items[key]
-
-            if key in new_keys:
-                raise KeyError('redundant key in configuration block: ' + key)
-
-            new_keys.add(key)
-
         store = new['store']
+        config = mktl.config.get(store)
 
-        try:
-            config = mktl.config.get(store)
-        except KeyError:
-            # No previously stored blocks to check against. That's a pass.
+        if len(config) == 0:
+            # No previously stored blocks to check against. That means all of
+            # the keys are unique, and there are no conflicts.
             return
 
-        for known_uuid in config.uuids():
+        items = new['items']
 
-            if new['uuid'] == known_uuid:
+        for old_uuid in config.uuids():
+
+            if new['uuid'] == old_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
-            known = config[known_uuid]
+            old = config[old_uuid]
 
-            old_items = known['items']
+            old_items = old['items']
             for key in old_items:
-                item = old_items[key]
-
-                if key in new_keys:
+                if key in items:
                     raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+
+
+    def checkProvenance(self, block):
+        """ Look for provenance loops, and potentially (in the future) other
+            problems with the provenance.
+        """
+
+        local_provenance = dict()
+        local_provenance['hostname'] = self.hostname
+        local_provenance['rep'] = self.port
+
+        if mktl.config.contains_provenance(block, local_provenance):
+            raise ProvenanceLoopError('circular provenance detected')
 
 
     def processConfigurationBlock(self, new):
@@ -152,79 +154,63 @@ class RequestServer(mktl.protocol.request.Server):
         store = new['store']
         config = mktl.config.get(store)
 
-        local_provenance = dict()
-        local_provenance['hostname'] = self.hostname
-        local_provenance['req'] = self.port
+        self.checkProvenance(new)
 
-        if mktl.config.contains_provenance(new, local_provenance):
-            raise ProvenanceLoopError('circular provenance detected')
+        # If the only provenance entry is stratum zero this new block
+        # is authoritative. If the daemon responsible for the block
+        # is requesting an override we have to apply some additional
+        # conditions to the checks embedded here.
 
-        to_add = list()
-        unique = True
+        if len(new['provenance']) == 1:
+            authoritative = True
+        else:
+            authoritative = False
 
-        for known_uuid in config.uuids():
+        ### This is where we need to check the block for an override.
 
-            new_uuid = new['uuid']
+        new_uuid = new['uuid']
 
-            if known_uuid != new['uuid']:
-                continue
+        try:
+            old = config[new_uuid]
+        except KeyError:
+            pass
+        else:
+            # We've already seen a block for this UUID. Accept the new block
+            # for processing if and only if it is different, or has a newer
+            # timestamp than what we know.
 
-            known = config[known_uuid]
-            unique = False
+            if old['hash'] == new['hash'] and old['time'] >= new['time']:
+                # We already know this block.
+                return
 
-            if known['hash'] == new['hash']:
-                continue
+        # Reject a configuration block if it contains keys that collide
+        # with another block in the cache. Not looking for a return
+        # value from checkKeys(), exceptions are raised when there are
+        # problems.
 
-            if known['time'] < new['time']:
-                to_add.append(new)
-
-        if unique == True:
-            # Reject a configuration block if it contains keys that collide
-            # with another block in the cache. Not looking for a return
-            # value here, exceptions are raised when there are problems.
-            self.checkKeys(new)
-
-            to_add.append(new)
+        self.checkKeys(new)
 
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
 
-        def get_stratum(provenance):
-            return provenance['stratum']
-
-        new['provenance'].sort(key=get_stratum)
-
-
-        for new in to_add:
-            mktl.config.add_provenance(new, self.hostname, self.port)
-            config = mktl.config.get(store)
-            config.update(new)
+        mktl.config.add_provenance(new, self.hostname, self.port)
+        config.update(new)
 
 
     def req_config(self, request):
-        """ When a daemon sets a configuration block it will include a 'value'
-            segment in the request; an empty response is expected upon receipt
-            of the configuration block. That 'value' segment is not present in a
-            client request; a client expects a sequence of configuration blobs
-            representing the full configuration of the store, one blob per
-            daemon in the store.
+        """ When a daemon announces a configuration block it will be the payload
+            of the request, otherwise, for a query the payload is empty. The
+            response for a payload is ignored, though the presence or absence of
+            exceptions is significant. The response to a configuration request
+            is a sequence of configuration blocks representing the full known
+            configuration for the specified store, with a single block
+            corresponding to a single daemon.
         """
 
         store = request.target
         payload = request.payload
 
-        if payload is not None:
-            response = True
-
-            new_blocks = payload.value
-            for uuid,new_block in new_blocks.items():
-                try:
-                    self.processConfigurationBlock(new_block)
-                except ProvenanceLoopError:
-                    # This configuration block came from us.
-                    continue
-
-        else:
+        if payload is None or payload.value is None:
             try:
                 config = mktl.config.get(store)
             except KeyError:
@@ -234,6 +220,15 @@ class RequestServer(mktl.protocol.request.Server):
 
             if len(response) == 0:
                 raise KeyError('no configuration available for ' + repr(store))
+
+        else:
+            response = True
+
+            try:
+                self.processConfigurationBlock(payload.value)
+            except ProvenanceLoopError:
+                # This configuration block came from us. Pay no mind.
+                pass
 
 
         payload = mktl.Payload(response)
