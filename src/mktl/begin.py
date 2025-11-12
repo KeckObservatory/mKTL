@@ -104,7 +104,8 @@ def get(store, key=None):
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         # If we made it this far the network came through with an answer.
-        configuration.update(new_config)
+        for uuid,block in new_config.items():
+            configuration.update(block)
 
 
     # If we made it this far we have something that the Store class can use.
