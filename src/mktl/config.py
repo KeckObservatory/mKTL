@@ -12,8 +12,6 @@ from . import protocol
 _cache = dict()
 _cache_lock = threading.Lock()
 
-py_list = list
-
 
 class Configuration:
     """ A convenience class to represent mKTL configuration data. To first
@@ -192,7 +190,7 @@ class Configuration:
         elif self.alias is None:
             raise ValueError('no locally stored configuration for ' + repr(self.store))
 
-        filenames = py_list()
+        filenames = list()
 
         # The contents of a store's cache directory will include a single file
         # for each UUID in the store. Load all such files.
@@ -373,7 +371,7 @@ class Configuration:
         # configuration block may not be necessary, it should only be
         # necessary for blocks originating with a daemon.
 
-        fixes = py_list()
+        fixes = list()
         for key in items.keys():
             lower = key.lower()
             if key != lower:
@@ -534,7 +532,7 @@ def add_provenance(block, hostname, rep, pub=None):
     try:
         existing_provenance = block['provenance']
     except KeyError:
-        existing_provenance = py_list()
+        existing_provenance = list()
         block['provenance'] = existing_provenance
 
     def get_stratum(provenance):
@@ -615,7 +613,7 @@ def contains_provenance(block, provenance):
     try:
         full_provenance = block['provenance']
     except KeyError:
-        full_provenance = py_list()
+        full_provenance = list()
         block['provenance'] = full_provenance
 
     # A simple 'if provenence in full' won't get the job done, because
@@ -779,22 +777,6 @@ def get_hashes(store=None):
         raise KeyError('no local configuration for ' + repr(requested_store))
 
     return dict(hashes)
-
-
-
-def list():
-    """ Return a list of all store names present in the local cache.
-    """
-
-    stores = _cache.keys()
-    results = py_list()
-
-    for store in stores:
-        config = _cache[store]
-        if len(config) > 0:
-            results.append(store)
-
-    return results
 
 
 
