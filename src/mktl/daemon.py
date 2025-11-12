@@ -78,15 +78,6 @@ class Daemon:
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
 
-        provenance = dict()
-        provenance['stratum'] = 0
-        provenance['hostname'] = self.rep.hostname
-        provenance['rep'] = self.rep.port
-        provenance['pub'] = self.pub.port
-
-        self.provenance = list()
-        self.provenance.append(provenance)
-
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
         # the listener ports without knowing our UUID; we don't know the UUID
@@ -95,7 +86,7 @@ class Daemon:
         # consistency.
 
         block = self.config.authoritative_block
-        block['provenance'] = self.provenance
+        config.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
         self.config.update(block)
 
         # The cached configuration needs to be in its final form before creating
@@ -147,10 +138,8 @@ class Daemon:
 
         # Ready to go on the air.
 
-        discovery = protocol.discover.DirectServer(self.rep.port)
-
-        guides = protocol.discover.search(wait=True)
-        self._publish_config(guides)
+        self._discovery = protocol.discover.DirectServer(self.rep.port)
+        config.announce(self.config, self.uuid)
 
 
     def add_item(self, item_class, key, **kwargs):
@@ -194,22 +183,6 @@ class Daemon:
 
         pipe = subprocess.PIPE
         self.persistence = subprocess.Popen(arguments)
-
-
-    def _publish_config(self, targets=tuple()):
-        """ Put our local configuration out on the wire, but only our local
-            configuration-- not for any other daemons in this store.
-        """
-
-        configuration = dict(self.config.authoritative_block)
-        payload = protocol.message.Payload(configuration)
-        message = protocol.message.Request('CONFIG', self.store.name, payload)
-
-        for address,port in targets:
-            try:
-                protocol.request.send(address, port, message)
-            except zmq.error.ZMQError:
-                pass
 
 
     def _restore(self):

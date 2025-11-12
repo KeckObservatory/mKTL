@@ -6,6 +6,7 @@ import time
 import uuid
 
 from . import json
+from . import protocol
 
 
 _cache = dict()
@@ -492,7 +493,7 @@ class Configuration:
             if self.authoritative_uuid:
                 return (self.authoritative_uuid,)
             else:
-                return ()
+                return tuple()
         else:
             return tuple(self._by_uuid.keys())
 
@@ -519,32 +520,79 @@ def to_block(store, alias, uuid, items):
 
 
 
-def add_provenance(block, hostname, req, pub=None):
+def add_provenance(block, hostname, rep, pub=None):
     """ Add the provenance of this daemon to the supplied configuration
         block. The block is provided as a Python dictionary; the hostname
         and port definitions provide potential clients with enough information
         to initiate connections with further requests.
 
-        The newly added provenance stratum is returned for convenient access,
-        though the provided configuration block has already been modified to
-        include the new stratum.
+        The newly added provenance entry is returned for convenient access,
+        though the provided configuration block will be modified to include
+        the new entry.
     """
 
     try:
-        full_provenance = block['provenance']
+        existing_provenance = block['provenance']
     except KeyError:
-        full_provenance = py_list()
-        block['provenance'] = full_provenance
+        existing_provenance = py_list()
+        block['provenance'] = existing_provenance
 
-    stratum = -1
-    for provenance in full_provenance:
-        if provenance['stratum'] > stratum:
-            stratum = provenance['stratum']
+    def get_stratum(provenance):
+        return provenance['stratum']
 
-    provenance = create(stratum + 1, hostname, req, pub)
+    existing_provenance.sort(key=get_stratum)
 
-    block['provenance'].append(provenance)
-    return provenance
+    # Stratum numbers must monotonically increase.
+
+    try:
+        last_provenance = existing_provenance[-1]
+    except IndexError:
+        stratum = 0
+    else:
+        stratum = last_provenance['stratum'] + 1
+
+    new_provenance = create_provenance(stratum, hostname, rep, pub)
+    existing_provenance.append(new_provenance)
+    return new_provenance
+
+
+
+def announce(config, uuid, override=False):
+    """ Announce an authoritative configuration to the local network.
+        Raise an exception if a conflict is detected. Setting *override*
+        to True will request any/all available recipients update their
+        local cache to clear any conflicting data.
+    """
+
+    store = config.store
+    block = config[uuid]
+    block = dict(block)
+
+    if override == True:
+        block['override'] = True
+
+    payload = protocol.message.Payload(block)
+    message = protocol.message.Request('CONFIG', store, payload)
+
+    ### This needs to receive errors from the remote guides; should we rely
+    ### on them to raise an exception, and we thus see it in the error response?
+    ### Or should the 'announce' process be proactive, and search configs before
+    ### putting them out there?
+
+    ### There needs to be an option for additional flags: some way to force the
+    ### receiving entity to clear its conflicting notions and adopt what we're
+    ### providing. This 'force' attempt should fail if the conflicting daemon
+    ### is still on the network.
+
+    ### Leaning towards the handling being on the guide side.
+
+    guides = protocol.discover.search(wait=True)
+
+    for address,port in guides:
+        try:
+            protocol.request.send(address, port, message)
+        except zmq.error.ZMQError:
+            pass
 
 
 
@@ -574,18 +622,18 @@ def contains_provenance(block, provenance):
     # the stratum may not be set in the provided provenance.
 
     hostname = provenance['hostname']
-    req = provenance['req']
+    rep = provenance['rep']
 
     for known in full_provenance:
-        if known['hostname'] == hostname and known['req'] == req:
+        if known['hostname'] == hostname and known['rep'] == rep:
             return True
 
     return False
 
 
 
-def create_provenance(stratum, hostname, req, pub=None):
-    """ Create a provenance entry, which is a dictionary.
+def create_provenance(stratum, hostname, rep, pub=None):
+    """ Create a new provenance entry.
     """
 
     provenance = dict()
@@ -596,7 +644,7 @@ def create_provenance(stratum, hostname, req, pub=None):
         provenance['stratum'] = stratum
 
     provenance['hostname'] = str(hostname)
-    provenance['req'] = int(req)
+    provenance['rep'] = int(rep)
     if pub is not None:
         provenance['pub'] = int(pub)
 
@@ -779,7 +827,7 @@ def match_provenance(full_provenance1, full_provenance2):
             return matched
 
         # This next dictionary comparison requires all fields to match:
-        # stratum, hostname, req, and pub (if present).
+        # stratum, hostname, rep, and pub (if present).
 
         if provenance1 != provenance2:
             return False
