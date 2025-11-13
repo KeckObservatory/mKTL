@@ -120,10 +120,11 @@ class RequestServer(mktl.protocol.request.Server):
             return
 
         items = new['items']
+        uuid = new['uuid']
 
         for old_uuid in config.uuids():
 
-            if new['uuid'] == old_uuid:
+            if uuid == old_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
@@ -149,6 +150,50 @@ class RequestServer(mktl.protocol.request.Server):
             raise ProvenanceLoopError('circular provenance detected')
 
 
+    def checkRunning(self, block):
+        """ Check to see whether the daemon associated with this
+            configuration block is still running.
+        """
+
+        # Take advantage of a built-in keyword to probe whether the
+        # remote daemon is online and answering questions.
+
+        store = block['store']
+        alias = block['alias']
+        clock = alias + 'clk'
+        key = store + '.' + clock
+
+        payload = mktl.protocol.message.Payload(None, refresh=True)
+        request = mktl.protocol.message.Request('GET', key, payload)
+
+        # Traverse the provenance by highest stratum number first.
+
+        provenance = block['provenance']
+        provenance = list(provenance)
+        provenance.reverse()
+
+        for stratum in provenance:
+            # Only an authoritative stratum will have a 'pub' entry.
+            try:
+                stratum['pub']
+            except KeyError:
+                continue
+
+            hostname = stratum['hostname']
+            port = stratum['rep']
+            request.response = None
+
+            try:
+                payload = mktl.protocol.request.send(hostname, port, request)
+            except zmq.ZMQError:
+                continue
+
+            if payload.value is not None:
+                return True
+
+        return False
+
+
     def processConfigurationBlock(self, new):
 
         store = new['store']
@@ -166,15 +211,48 @@ class RequestServer(mktl.protocol.request.Server):
         else:
             authoritative = False
 
-        ### This is where we need to check the block for an override.
+        try:
+            override = new['override']
+        except KeyError:
+            override = False
+        else:
+            # Won't be needing that going forward.
+            del new['override']
 
-        new_uuid = new['uuid']
+        uuid = new['uuid']
 
         try:
-            old = config[new_uuid]
+            old = config[uuid]
         except KeyError:
             pass
         else:
+            if authoritative == True:
+                # Does the provenance match? If not, we need an override to
+                # proceed, but even then we should only proceed if the previous
+                # daemon is offline.
+
+                match = mktl.config.match_provenance(old['provenance'], new['provenance'])
+                if match == False and override == False:
+                    alias = new['alias']
+                    old_port = old['provenance'][0]['rep']
+                    old_host = old['provenance'][0]['hostname']
+                    new_port = new['provenance'][0]['rep']
+                    new_host = new['provenance'][0]['hostname']
+
+                    raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
+
+                if match == False and override == True:
+                    running = self.checkRunning(old)
+
+                    if running == True:
+                        raise ValueError("daemon already running at %s:%s" % (host, port))
+
+                # Else the local configuration should be updated to reflect
+                # this new configuration block. Remove the old one to streamline
+                # further checks.
+
+                config.remove(uuid)
+
             # We've already seen a block for this UUID. Accept the new block
             # for processing if and only if it is different, or has a newer
             # timestamp than what we know.
