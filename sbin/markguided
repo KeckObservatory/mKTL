@@ -106,7 +106,7 @@ class RequestServer(mktl.protocol.request.Server):
         additional logic to locally handle requests.
     """
 
-    def checkKeys(self, new):
+    def check_keys(self, new):
         """ Confirm that any keys unique to this new configuration block are
             not present in any other blocks.
         """
@@ -137,7 +137,7 @@ class RequestServer(mktl.protocol.request.Server):
                     raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
 
 
-    def checkProvenance(self, block):
+    def check_provenance(self, block):
         """ Look for provenance loops, and potentially (in the future) other
             problems with the provenance.
         """
@@ -150,7 +150,7 @@ class RequestServer(mktl.protocol.request.Server):
             raise ProvenanceLoopError('circular provenance detected')
 
 
-    def checkRunning(self, block):
+    def check_running(self, block):
         """ Check to see whether the daemon associated with this
             configuration block is still running.
         """
@@ -194,12 +194,12 @@ class RequestServer(mktl.protocol.request.Server):
         return False
 
 
-    def processConfigurationBlock(self, new):
+    def process_block(self, new):
 
         store = new['store']
         config = mktl.config.get(store)
 
-        self.checkProvenance(new)
+        self.check_provenance(new)
 
         # If the only provenance entry is stratum zero this new block
         # is authoritative. If the daemon responsible for the block
@@ -242,7 +242,7 @@ class RequestServer(mktl.protocol.request.Server):
                     raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
                 if match == False and override == True:
-                    running = self.checkRunning(old)
+                    running = self.check_running(old)
 
                     if running == True:
                         raise ValueError("daemon already running at %s:%s" % (host, port))
@@ -263,10 +263,10 @@ class RequestServer(mktl.protocol.request.Server):
 
         # Reject a configuration block if it contains keys that collide
         # with another block in the cache. Not looking for a return
-        # value from checkKeys(), exceptions are raised when there are
+        # value from check_keys(), exceptions are raised when there are
         # problems.
 
-        self.checkKeys(new)
+        self.check_keys(new)
 
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
@@ -303,7 +303,7 @@ class RequestServer(mktl.protocol.request.Server):
             response = True
 
             try:
-                self.processConfigurationBlock(payload.value)
+                self.process_block(payload.value)
             except ProvenanceLoopError:
                 # This configuration block came from us. Pay no mind.
                 pass
