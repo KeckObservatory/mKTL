@@ -588,9 +588,29 @@ def announce(config, uuid, override=False):
 
     for address,port in guides:
         try:
-            protocol.request.send(address, port, message)
+            payload = protocol.request.send(address, port, message)
         except zmq.error.ZMQError:
+            continue
+
+        error = payload.error
+        if error is None or error == '':
+            continue
+
+        # The guide daemon will return errors for a variety of circumstances,
+        # but in every case the immediate meaning is the same: do not proceed.
+
+        e_type = error['type']
+        e_text = error['text']
+
+        ### This debug print should be removed.
+        try:
+            print(error['debug'])
+        except KeyError:
             pass
+
+        ### The exception type here could be something unique
+        ### instead of a RuntimeError.
+        raise RuntimeError("CONFIG announce failed: %s: %s" % (e_type, e_text))
 
 
 
