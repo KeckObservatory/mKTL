@@ -707,6 +707,15 @@ class PendingPersistence:
                 file.close()
 
 
+    def put(self, *args, **kwargs):
+        """ The reference to this method should be replaced when initialization
+            occurs, but once in a blue moon an AttributeError exception sneaks
+            through.
+        """
+
+        return self.queue.put(*args, **kwargs)
+
+
 # end of class PendingPersistence
 
 
