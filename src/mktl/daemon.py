@@ -4,6 +4,7 @@ import os
 import platform
 import queue
 import resource
+import socket
 import subprocess
 import sys
 import time
@@ -63,6 +64,11 @@ class Daemon:
 
         rep, pub = _load_port(store, self.uuid)
         avoid = _used_ports()
+
+        # Before we proceed let's take a moment to verify whether another
+        # instance of this daemon is already running on those ports.
+
+        self._test_port(store, rep)
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
@@ -320,7 +326,39 @@ class Daemon:
         pass
 
 
-# end of class Store
+    def _test_port(self, store, port):
+        """ Look to see whether an instance of this daemon is already
+            running on the cached port number, and if so, raise an
+            exception to stop execution.
+        """
+
+        hostname = socket.getfqdn()
+        request = protocol.message.Request('CONFIG', store)
+
+        try:
+            payload = protocol.request.send(hostname, port, request)
+        except zmq.ZMQError:
+            # Not running; perfect.
+            return
+
+        blocks = payload.value
+
+        # There should only be one UUID in this block, because we're asking
+        # a direct question of an authoritative daemon running on the same
+        # host we're trying to run on. But that assumption is not being checked.
+
+        for uuid,block in blocks.items():
+            alias = block['alias']
+
+            if alias == self.alias:
+                raise RuntimeError("another instance of %s is running, aborting" % (alias))
+
+        # Otherwise something _is_ running on that port, but it's not the
+        # same daemon; someone took our port number! That's unfortunate
+        # but they can have it, we'll be assigned a new one.
+
+
+# end of class Daemon
 
 
 
