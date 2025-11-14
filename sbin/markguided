@@ -107,7 +107,7 @@ class RequestServer(mktl.protocol.request.Server):
         additional logic to locally handle requests.
     """
 
-    def check_keys(self, new):
+    def check_keys(self, new, override):
         """ Confirm that any keys unique to this new configuration block are
             not present in any other blocks.
         """
@@ -122,6 +122,7 @@ class RequestServer(mktl.protocol.request.Server):
 
         items = new['items']
         uuid = new['uuid']
+        to_remove = set()
 
         for old_uuid in config.uuids():
 
@@ -131,13 +132,32 @@ class RequestServer(mktl.protocol.request.Server):
                 continue
 
             old = config[old_uuid]
+            running = None
 
             old_items = old['items']
             for key in old_items:
-                ### override needs to be respected here, along with a
-                ### checkRunning test.
                 if key in items:
-                    raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+                    if override == True:
+                        if running is None:
+                            running = self.check_running(old)
+
+                        if running == True:
+                            old_port = old['provenance'][0]['rep']
+                            old_host = old['provenance'][0]['hostname']
+                            raise RuntimeError("%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port))
+                        else:
+                            # Override requested, and the old daemon is not
+                            # running. Can't remove the UUID right now because
+                            # we're busy iterating on it.
+                            to_remove.add(uuid)
+
+                    else:
+                        raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+
+        # This set will be empty unless overrides were requested.
+
+        for uuid in to_remove:
+            config.remove(uuid)
 
 
     def check_provenance(self, block):
@@ -267,7 +287,9 @@ class RequestServer(mktl.protocol.request.Server):
                 running = self.check_running(old)
 
                 if running == True:
-                    raise ValueError("daemon already running at %s:%s" % (host, port))
+                    port = old['provenance'][0]['rep']
+                    host = old['provenance'][0]['hostname']
+                    raise ValueError("%s daemon already running at %s:%s" % (alias, host, port))
 
                 # Else the local configuration should be updated to reflect
                 # this new configuration block. Remove the old one to streamline
@@ -288,7 +310,7 @@ class RequestServer(mktl.protocol.request.Server):
         # value from check_keys(), exceptions are raised when there are
         # problems.
 
-        self.check_keys(new)
+        self.check_keys(new, override)
 
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
