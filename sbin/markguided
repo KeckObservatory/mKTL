@@ -216,36 +216,57 @@ class RequestServer(mktl.protocol.request.Server):
         except KeyError:
             override = False
         else:
-            # Won't be needing that going forward.
+            # Won't be needing that going forward. The presence of an
+            # override flag is only relevant right now, as part of these
+            # checks being performed right here for an 'announce' operation.
             del new['override']
 
         uuid = new['uuid']
+        alias = new['alias']
 
         try:
             old = config[uuid]
         except KeyError:
-            pass
-        else:
-            if authoritative == True:
-                # Does the provenance match? If not, we need an override to
-                # proceed, but even then we should only proceed if the previous
-                # daemon is offline.
+            old = None
 
-                match = mktl.config.match_provenance(old['provenance'], new['provenance'])
-                if match == False and override == False:
-                    alias = new['alias']
-                    old_port = old['provenance'][0]['rep']
-                    old_host = old['provenance'][0]['hostname']
-                    new_port = new['provenance'][0]['rep']
-                    new_host = new['provenance'][0]['hostname']
+        if old is None:
+            # Maybe it's a different UUID, but the same alias.
 
-                    raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
+            try:
+                old = config[alias]
+            except KeyError:
+                pass
 
-                if match == False and override == True:
+            if old and old['uuid'] != uuid and authoritative == True:
+                if override == True:
+                    print('check for running daemon (uuid mismatch)')
                     running = self.check_running(old)
-
                     if running == True:
-                        raise ValueError("daemon already running at %s:%s" % (host, port))
+                        old_port = old['provenance'][0]['rep']
+                        old_host = old['provenance'][0]['hostname']
+                        raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
+
+
+        if old and authoritative == True:
+            # Does the provenance match? If not, we need an override to
+            # proceed, but even then we should only proceed if the previous
+            # daemon is offline.
+
+            match = mktl.config.match_provenance(old['provenance'], new['provenance'])
+            if match == False and override == False:
+                old_port = old['provenance'][0]['rep']
+                old_host = old['provenance'][0]['hostname']
+                new_port = new['provenance'][0]['rep']
+                new_host = new['provenance'][0]['hostname']
+
+                raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
+
+            if match == False and override == True:
+                print('check for running daemon')
+                running = self.check_running(old)
+
+                if running == True:
+                    raise ValueError("daemon already running at %s:%s" % (host, port))
 
                 # Else the local configuration should be updated to reflect
                 # this new configuration block. Remove the old one to streamline
