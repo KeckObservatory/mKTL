@@ -749,21 +749,25 @@ def get(store, alias=None):
     """
 
     store = store.lower()
-    _cache_lock.acquire()
 
     try:
         config = _cache[store]
     except KeyError:
-        config = Configuration(store, alias)
-        _cache[store] = config
-        _cache_lock.release()
-    else:
-        _cache_lock.release()
-        if alias and config.alias is None:
-            config.alias = alias
+        _cache_lock.acquire()
 
-        elif alias and alias != config.alias:
-            raise ValueError('not ready to handle two aliases in a single daemon')
+        try:
+            config = _cache[store]
+        except KeyError:
+            config = Configuration(store, alias)
+            _cache[store] = config
+        finally:
+            _cache_lock.release()
+
+    if alias and config.alias is None:
+        config.alias = alias
+
+    elif alias and alias != config.alias:
+        raise ValueError('not ready to handle two aliases in a single daemon')
 
     return config
 
@@ -788,15 +792,13 @@ def get_hashes(store=None):
         config = get(store)
         config_hashes = config.hashes()
 
-        hashes[store] = config.hashes()
-
         if len(config_hashes) > 0:
             hashes[store] = config_hashes
 
     if requested_store and len(hashes) == 0:
         raise KeyError('no local configuration for ' + repr(requested_store))
 
-    return dict(hashes)
+    return hashes
 
 
 
