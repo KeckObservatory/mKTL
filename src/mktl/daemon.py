@@ -68,7 +68,8 @@ class Daemon:
         # Before we proceed let's take a moment to verify whether another
         # instance of this daemon is already running on those ports.
 
-        self._test_port(store, rep)
+        if rep:
+            self._test_port(store, rep)
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
