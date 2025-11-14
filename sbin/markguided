@@ -12,6 +12,7 @@ if they already know where to find a guide.
 
 import argparse
 import threading
+import zmq
 
 import mktl
 
