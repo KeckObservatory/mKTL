@@ -162,7 +162,11 @@ def refresh(configuration):
                 # to rely on the local disk cache.
                 continue
 
-            response = message.wait()
+            response = message.wait(timeout=5)
+
+            if response is None:
+                # No response from this daemon; it's broken somehow. Move on.
+                continue
 
             hashes = response.payload.value
             if hashes is None:
@@ -170,7 +174,7 @@ def refresh(configuration):
                 continue
 
             try:
-                remote_hash = hashes[uuid]
+                remote_hash = hashes[store][uuid]
             except KeyError:
                 # This block is not present on the remote side.
                 continue
@@ -183,7 +187,11 @@ def refresh(configuration):
                 ### previous request went through, so there shouldn't be a
                 ### a fresh exception here unless the remote daemon just
                 ### went offline.
-                response = message.wait()
+                response = message.wait(timeout=5)
+
+                if response is None:
+                    # No response available.
+                    continue
 
                 new_block = response.payload.value
 
