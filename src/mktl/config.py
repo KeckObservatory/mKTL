@@ -27,6 +27,7 @@ class Configuration:
         self.authoritative_block = None
         self.authoritative_items = None
         self._by_uuid = dict()
+        self._by_alias = dict()
         self._by_key = dict()
 
         if store in _cache:
@@ -39,7 +40,7 @@ class Configuration:
 
 
     def __contains__(self, key):
-        return key in self._by_uuid or key in self._by_key
+        return key in self._by_uuid or key in self._by_alias or key in self._by_key
 
 
     def __getitem__(self, key):
@@ -58,6 +59,13 @@ class Configuration:
 
         try:
             block = self._by_uuid[key]
+        except KeyError:
+            pass
+        else:
+            return block
+
+        try:
+            block = self._by_alias[key]
         except KeyError:
             pass
         else:
@@ -270,11 +278,13 @@ class Configuration:
         except KeyError:
             return
 
+        alias = block['alias']
         items = block['items']
 
         for key in items.keys():
             del self._by_key[key]
 
+        del self._by_alias[alias]
         del self._by_uuid[uuid]
 
 
@@ -349,23 +359,19 @@ class Configuration:
         """
 
         store = block['store']
+        alias = block['alias']
         items = block['items']
         uuid = block['uuid']
 
         if self.alias:
-            try:
-                alias = block['alias']
-            except KeyError:
-                pass
-            else:
-                if alias != self.alias:
-                    raise ValueError('not ready to handle two aliases in a single daemon')
-                if self.authoritative_uuid and self.authoritative_uuid != uuid:
-                    raise ValueError('UUID in our authoritative block changed')
+            if alias != self.alias:
+                raise ValueError('not ready to handle two aliases in a single daemon')
+            if self.authoritative_uuid and self.authoritative_uuid != uuid:
+                raise ValueError('UUID in our authoritative block changed')
 
-                self.authoritative_uuid = uuid
-                self.authoritative_block = block
-                self.authoritative_items = block['items']
+            self.authoritative_uuid = uuid
+            self.authoritative_block = block
+            self.authoritative_items = block['items']
 
         # Enforce case-insensitivity for keys. Doing this for every
         # configuration block may not be necessary, it should only be
@@ -453,6 +459,11 @@ class Configuration:
             self._by_uuid[uuid].update(block)
         except KeyError:
             self._by_uuid[uuid] = block
+
+        try:
+            self._by_alias[alias].update(block)
+        except KeyError:
+            self._by_alias[alias] = block
 
         # Regenerate the by-key configuration cache, which is what gets
         # used by mktl.Item instances.
