@@ -57,6 +57,7 @@ def parse_command_line():
     parser.add_argument('-s', '--subclass', help='Specific mktl.Daemon subclass to invoke; this is the bare class name (Daemon), not a fully qualified class name (mktl.Daemon).', default='Daemon')
     parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this store+alias.')
     parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the mktl.Daemon subclass. How this directive is used is entirely up to the application-specific subclass code.')
+    parser.add_argument('-o', '--override', default=False, action='store_true', help='Request that the local network clear any cached configuration conflicting with what this daemon will announce. The override will only be permitted if the conflicting daemons are all offline.')
 
 
     parsed = parser.parse_args()
@@ -91,6 +92,7 @@ def load_configuration(store, alias, filename):
 def start_daemon(config):
     store = config.store
     alias = config.alias
+    override = config.override
 
     if config.configuration is not None:
         load_configuration(store, alias, config.configuration)
@@ -105,7 +107,7 @@ def start_daemon(config):
         daemon_module = importlib.import_module(config.module)
 
     daemon_subclass = getattr(daemon_module, config.subclass)
-    started = daemon_subclass(store, alias, config)
+    started = daemon_subclass(store, alias, override, config)
 
     return started
 

@@ -44,7 +44,7 @@ class Daemon:
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, alias, arguments=None):
+    def __init__(self, store, alias, override=False, arguments=None):
 
         self.alias = alias
         self.config = None
@@ -66,7 +66,10 @@ class Daemon:
         avoid = _used_ports()
 
         # Before we proceed let's take a moment to verify whether another
-        # instance of this daemon is already running on those ports.
+        # instance of this daemon is already running on those ports. It's
+        # important to make this check before invoking the publish+request
+        # servers, as they will rewrite local cache files used to remember
+        # which port is being used by which UUID.
 
         if rep:
             self._test_port(store, rep)
@@ -146,7 +149,7 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        config.announce(self.config, self.uuid)
+        config.announce(self.config, self.uuid, override)
 
 
     def add_item(self, item_class, key, **kwargs):
