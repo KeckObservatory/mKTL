@@ -134,6 +134,8 @@ class RequestServer(mktl.protocol.request.Server):
 
             old_items = old['items']
             for key in old_items:
+                ### override needs to be respected here, along with a
+                ### checkRunning test.
                 if key in items:
                     raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
 
@@ -240,7 +242,6 @@ class RequestServer(mktl.protocol.request.Server):
 
             if old and old['uuid'] != uuid and authoritative == True:
                 if override == True:
-                    print('check for running daemon (uuid mismatch)')
                     running = self.check_running(old)
                     if running == True:
                         old_port = old['provenance'][0]['rep']
@@ -263,7 +264,6 @@ class RequestServer(mktl.protocol.request.Server):
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
             if match == False and override == True:
-                print('check for running daemon')
                 running = self.check_running(old)
 
                 if running == True:
