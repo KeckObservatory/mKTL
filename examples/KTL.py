@@ -8,16 +8,15 @@ import mktl
 
 class Daemon(mktl.Daemon):
 
-    def __init__(self, store, *args, **kwargs):
+    def __init__(self, store, alias, *args, **kwargs):
 
         # Generate the configuration matching this KTL service. Since this
         # configuration is not in the default location it must be declared
         # prior to initializing the Daemon.
 
-        alias = store
         items = describeService(store)
         mktl.config.authoritative(store, alias, items)
-        mktl.Daemon.__init__(self, store, alias)
+        mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
 
     def setup(self):
