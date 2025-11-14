@@ -750,6 +750,9 @@ def get(store, alias=None):
 
     store = store.lower()
 
+    if store == '':
+        raise ValueError('store name cannot be the empty string')
+
     try:
         config = _cache[store]
     except KeyError:
