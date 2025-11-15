@@ -1,4 +1,5 @@
 usage: marked [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
+              [-o]
               store alias
 
 This is a generic mKTL daemon. The real work is done in the subclass of
@@ -34,6 +35,10 @@ options:
                         by mKTL, but made available to the mktl.Daemon
                         subclass. How this directive is used is entirely up to
                         the application-specific subclass code.
+  -o, --override        Request that the local network clear any cached
+                        configuration conflicting with what this daemon will
+                        announce. The override will only be permitted if the
+                        conflicting daemons are all offline.
 
 For example, to run marked for the store 'rosebud', using the existing
 on-disk configuration identified as 'innocence', first using the default
