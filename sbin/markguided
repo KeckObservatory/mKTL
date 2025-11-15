@@ -50,8 +50,7 @@ def main():
             try:
                 payload = mktl.protocol.request.send(address, port, request)
             except:
-                ## This should probably be logged instead of going to stdout.
-                print("HASH request of %s:%d failed" % (address, port))
+                log("HASH request from %s:%d failed" % (address, port))
                 continue
 
             hashes = payload.value
@@ -61,11 +60,21 @@ def main():
                 payload = mktl.protocol.request.send(address, port, request)
 
                 blocks = payload.value
-                if blocks is None:
-                    ## No data; there's probably an error we could inspect
-                    ## and log here.
-                    pass
-                else:
+                error = payload.error
+
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+
+                    ### This debug print should be removed.
+                    try:
+                        print(error['debug'])
+                    except KeyError:
+                        pass
+
+                    log("CONFIG request failed: %s: %s" % (e_type, e_text))
+
+                if blocks:
                     for uuid,block in blocks.items():
                         block['override'] = True
                         main.req.process_block(block)
