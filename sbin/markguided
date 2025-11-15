@@ -11,7 +11,9 @@ if they already know where to find a guide.
 """
 
 import argparse
+import sys
 import threading
+import time
 import zmq
 
 import mktl
@@ -29,16 +31,13 @@ def main():
     main.beacon = mktl.protocol.discover.Server(main.req.port)
 
     delay = 30
-    ### It needs to be possible to manipulate this set from the
-    ### RequestServer on a CONFIG 'push' request.
-    known = set()
 
     while True:
-        not_seen = set(known)
+        not_seen = set(main.known)
         discovered = mktl.protocol.discover.search_direct()
 
         for seen in discovered:
-            if seen in known:
+            if seen in main.known:
                 not_seen.remove(seen)
                 continue
 
@@ -68,14 +67,13 @@ def main():
                     pass
                 else:
                     for uuid,block in blocks.items():
-                        store = block['store']
-                        config = mktl.config.get(store)
-                        config.update(block)
+                        block['override'] = True
+                        main.req.process_block(block)
 
-            known.add(seen)
+            main.known.add(seen)
 
         for missed in not_seen:
-            known.remove(missed)
+            main.known.remove(missed)
 
         try:
             main.shutdown.wait(delay)
@@ -83,8 +81,19 @@ def main():
             break
 
 
+main.known = set()
 main.shutdown = threading.Event()
 main.req = None
+
+
+
+def log(line):
+    """ Nothing special happening here, just sending output to stdout.
+        The idea is that perhaps in the future this will do something
+        more robust.
+    """
+
+    sys.stdout.write("%.3f: %s\n" % (time.time(), line))
 
 
 
@@ -152,11 +161,26 @@ class RequestServer(mktl.protocol.request.Server):
                             to_remove.add(uuid)
 
                     else:
+                        port = new['provenance'][0]['rep']
+                        host = new['provenance'][0]['hostname']
+                        log("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
                         raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
 
         # This set will be empty unless overrides were requested.
 
         for uuid in to_remove:
+            try:
+                block = config[uuid]
+            except KeyError:
+                # Already gone. Not entirely sure how that might have happened,
+                # but it does, and there's no sense trying to remove it twice.
+                continue
+
+            alias = block['alias']
+            port = block['provenance'][0]['rep']
+            host = block['provenance'][0]['hostname']
+
+            log("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
             config.remove(uuid)
 
 
@@ -266,6 +290,9 @@ class RequestServer(mktl.protocol.request.Server):
                     if running == True:
                         old_port = old['provenance'][0]['rep']
                         old_host = old['provenance'][0]['hostname']
+                        new_port = new['provenance'][0]['rep']
+                        new_host = new['provenance'][0]['hostname']
+                        log("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                         raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
@@ -281,6 +308,7 @@ class RequestServer(mktl.protocol.request.Server):
                 new_port = new['provenance'][0]['rep']
                 new_host = new['provenance'][0]['hostname']
 
+                log("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
             if match == False and override == True:
@@ -295,6 +323,9 @@ class RequestServer(mktl.protocol.request.Server):
                 # this new configuration block. Remove the old one to streamline
                 # further checks.
 
+                port = old['provenance'][0]['rep']
+                host = old['provenance'][0]['hostname']
+                log("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
                 config.remove(uuid)
 
             # We've already seen a block for this UUID. Accept the new block
@@ -316,6 +347,10 @@ class RequestServer(mktl.protocol.request.Server):
         # cache of configuration data.
 
         mktl.config.add_provenance(new, self.hostname, self.port)
+        port = new['provenance'][0]['rep']
+        host = new['provenance'][0]['hostname']
+
+        log("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
         config.update(new)
 
 
@@ -345,12 +380,17 @@ class RequestServer(mktl.protocol.request.Server):
 
         else:
             response = True
+            block = payload.value
 
             try:
-                self.process_block(payload.value)
+                self.process_block(block)
             except ProvenanceLoopError:
                 # This configuration block came from us. Pay no mind.
                 pass
+
+            provenance = block['provenance'][0]
+            seen = (provenance['hostname'], provenance['rep'])
+            main.known.add(seen)
 
 
         payload = mktl.Payload(response)
