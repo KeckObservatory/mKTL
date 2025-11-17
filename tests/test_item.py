@@ -2,13 +2,13 @@ import mktl
 import pytest
 import time
 
-def test_get(run_markguided, run_marked):
+def test_get(run_markbrokered, run_marked):
 
     integer = mktl.get('unittest.INTEGER')
     integer.get()
 
 
-def test_set(run_markguided, run_marked):
+def test_set(run_markbrokered, run_marked):
 
     integer = mktl.get('unittest.INTEGER')
     integer.set(-1)
@@ -29,7 +29,7 @@ def test_set(run_markguided, run_marked):
     string.set('')
 
 
-def test_logic(run_markguided, run_marked):
+def test_logic(run_markbrokered, run_marked):
 
     string = mktl.get('unittest.STRING')
 
@@ -71,7 +71,7 @@ def test_logic(run_markguided, run_marked):
     assert 1 ^ integer == 3
 
 
-def test_math(run_markguided, run_marked):
+def test_math(run_markbrokered, run_marked):
 
     integer = mktl.get('unittest.INTEGER')
 
@@ -115,7 +115,7 @@ def test_math(run_markguided, run_marked):
     assert integer == 50
 
 
-def test_callback(run_markguided, run_marked):
+def test_callback(run_markbrokered, run_marked):
 
     string = mktl.get('unittest.STRING')
 

@@ -31,14 +31,14 @@ The command line arguments describe its usage:
    :language: none
 
 
-.. _markguided:
+.. _markbrokered:
 
-markguided
-----------
+markbrokered
+------------
 
-The `markguided` persistent daemon is a discovery aid, listening for UDP
+The `markbrokered` persistent daemon is a discovery aid, listening for UDP
 broadcasts on a well-known port number so that clients can be directed to
 a specific mKTL daemon handling requests for a specific store, or fraction
-of a store. While having a `markguided` daemon running is not a strict
+of a store. While having a `markbrokered` daemon running is not a strict
 requirement it is a key component of automated discovery of mKTL stores on
 a local network.

@@ -583,21 +583,9 @@ def announce(config, uuid, override=False):
     payload = protocol.message.Payload(block)
     message = protocol.message.Request('CONFIG', store, payload)
 
-    ### This needs to receive errors from the remote guides; should we rely
-    ### on them to raise an exception, and we thus see it in the error response?
-    ### Or should the 'announce' process be proactive, and search configs before
-    ### putting them out there?
+    brokers = protocol.discover.search(wait=True)
 
-    ### There needs to be an option for additional flags: some way to force the
-    ### receiving entity to clear its conflicting notions and adopt what we're
-    ### providing. This 'force' attempt should fail if the conflicting daemon
-    ### is still on the network.
-
-    ### Leaning towards the handling being on the guide side.
-
-    guides = protocol.discover.search(wait=True)
-
-    for address,port in guides:
+    for address,port in brokers:
         try:
             payload = protocol.request.send(address, port, message)
         except zmq.error.ZMQError:
@@ -607,7 +595,7 @@ def announce(config, uuid, override=False):
         if error is None or error == '':
             continue
 
-        # The guide daemon will return errors for a variety of circumstances,
+        # The broker daemon will return errors for a variety of circumstances,
         # but in every case the immediate meaning is the same: do not proceed.
 
         e_type = error['type']

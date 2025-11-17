@@ -6,18 +6,18 @@ import time
 
 
 @pytest.fixture(scope="session")
-def run_markguided():
+def run_markbrokered():
 
     arguments = list()
     arguments.append(sys.executable)
-    arguments.append('../sbin/markguided')
+    arguments.append('../sbin/markbrokered')
 
     pipe = subprocess.PIPE
-    markguided = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+    markbrokered = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     yield
 
-    markguided.terminate()
+    markbrokered.terminate()
 
 
 @pytest.fixture(scope="session")

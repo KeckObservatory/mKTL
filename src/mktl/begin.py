@@ -89,11 +89,11 @@ def get(store, key=None):
 
     if len(configuration) == 0:
         # Nothing valid cached locally. Broadcast for responses.
-        guides = protocol.discover.search()
-        if len(guides) == 0:
+        brokers = protocol.discover.search()
+        if len(brokers) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
-        hostname,port = guides[0]
+        hostname,port = brokers[0]
         message = protocol.message.Request('CONFIG', store)
         protocol.request.send(hostname, port, message)
         response = message.wait()
