@@ -113,13 +113,60 @@ class Configuration:
 
 
     def format_enumerated(self, item, value):
-        ### TODO
-        return value
+        """ Return the string representation corresponding to the specified
+            integer value. Return the original value, potentially after being
+            cast to a string, if there is no matching enumerator.
+        """
+
+        enumerators = item['enumerators']
+
+        # The JSON representation of the enumerators has the integer keys as
+        # strings. For example:
+
+        # {"0": "No", "1": "Yes", "2": "Unknown"}
+
+        value = str(value)
+
+        try:
+            formatted = enumerators[value]
+        except KeyError:
+            formatted = value
+
+        return formatted
 
 
     def format_mask(self, item, value):
-        ### TODO
-        return value
+        """ Return a comma-separated list of active bits for the specified
+            integer value. If no bits are active, return the string representing
+            no bits being set.
+        """
+
+        enumerators = item['enumerators']
+
+        # Similar to the enumerated case, the mask bits are defined in the
+        # JSON as strings. But we have to treat the unformmatted value as
+        # an intger in order to do bit-wise operations. The expected value
+        # when none of the bits are active is represented by the 'None' key.
+        # For example:
+
+        # {"None": "OK", "0": "Timeout", "1": "Error", "2": "Warning"}
+
+        value = int(value)
+        formatted = list()
+
+        for bit,name in enumerators.items():
+            if value & bit:
+                formatted.append(name)
+
+        if len(formatted) == 0:
+            try:
+                formatted = enumerators['None']
+            except KeyError:
+                formatted = ''
+        else:
+            formatted = ', '.join(formatted)
+
+        return formatted
 
 
     def format_numeric(self, item, value):
