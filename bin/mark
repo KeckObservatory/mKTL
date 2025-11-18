@@ -246,6 +246,17 @@ def print_item(item, value, timestamp):
 
         ### Needs datetime formatting of timestamp.
 
+        ### There needs to be an option to choose the unformatted value
+        ### instead of assuming just the formatted representation. This
+        ### is the right place to select one or the other, since value
+        ### printing always comes through this method.
+
+        ### Using the Item instance to reformat the value passed as an
+        ### argument, instead of using the Item.formatted property,
+        ### allows us some flexibility in how to handle formatting.
+
+        value = item.format(value)
+
         if timestamp is None:
             timestamp = 0.0
 
