@@ -148,6 +148,17 @@ def parse_requests(requests):
 def execute_get_requests(requests):
 
     for key in requests.get:
+        ### This needs to include glob expansion, with additional support
+        ### for using % like * for backwards-compatiblity with gshow. The
+        ### fnmatch library is probably an easy way to get there.
+
+        ### Test with a 'if '*' in key or '?' in key or '%' in key...'
+        ### condition guarding the fnmatch, or just do the replace/fnmatch,
+        ### whichever is faster.
+
+        ### This should also treat a bare store name as equivalent to
+        ### asking for '*'.
+
         try:
             item = mktl.get(key)
         except Exception as e:
