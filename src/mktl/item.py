@@ -99,14 +99,28 @@ class Item:
             self.subscribe(prime=prime)
 
 
-    @property
-    def formatted(self):
-        """ The human-readable representation, if any, of an item value.
+    def format(self, value):
+        """ Convert the supplied value to its human-readable formatted
+            representation, if any. This conversion is driven by the
+            configuration for this item.
         """
 
-        ### Interpret self.value according to the item description
+        try:
+            formatted = self.store.config.format(self.key, value)
+        except:
+            formatted = str(self.value)
 
-        return str(self.value)
+        return formatted
+
+
+    @property
+    def formatted(self):
+        """ The human-readable representation, if any, of the current item
+            value.
+        """
+
+        formatted = self.format(self.value)
+        return formatted
 
 
     @formatted.setter
