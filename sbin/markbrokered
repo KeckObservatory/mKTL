@@ -161,6 +161,7 @@ class RequestServer(mktl.protocol.request.Server):
                             running = self.check_running(old)
 
                         if running == True:
+                            alias = old['alias']
                             old_port = old['provenance'][0]['rep']
                             old_host = old['provenance'][0]['hostname']
                             raise RuntimeError("%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port))
@@ -171,6 +172,7 @@ class RequestServer(mktl.protocol.request.Server):
                             to_remove.add(uuid)
 
                     else:
+                        alias = new['alias']
                         port = new['provenance'][0]['rep']
                         host = new['provenance'][0]['hostname']
                         log("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
