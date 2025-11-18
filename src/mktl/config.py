@@ -155,7 +155,12 @@ class Configuration:
         formatted = list()
 
         for bit,name in enumerators.items():
-            if value & bit:
+            if bit == 'None':
+                continue
+
+            bit = int(bit)
+            bit_value = 1 << bit
+            if value & bit_value:
                 formatted.append(name)
 
         if len(formatted) == 0:
