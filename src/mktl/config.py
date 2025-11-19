@@ -89,27 +89,31 @@ class Configuration:
         """
 
         item = self[key]
+        formatted = None
 
         try:
             type = item['type']
         except KeyError:
-            return value
+            type = None
 
         if type == 'boolean' or type == 'enumerated':
-            return self.format_enumerated(item, value)
+            formatted = self.format_enumerated(item, value)
 
-        if type == 'mask':
-            return self.format_mask(item, value)
+        elif type == 'mask':
+            formatted = self.format_mask(item, value)
 
-        if type == 'numeric':
+        elif type == 'numeric':
             try:
                 item['format']
             except KeyError:
-                return value
+                pass
             else:
-                return self.format_numeric(item, value)
+                formatted = self.format_numeric(item, value)
 
-        return value
+        if formatted is None:
+            return str(value)
+        else:
+            return formatted
 
 
     def format_enumerated(self, item, value):
@@ -399,8 +403,121 @@ class Configuration:
             This is the inverse of :func:`format`.
         """
 
-        key = key.lower()
-        pass
+        item = self[key]
+        unformatted = None
+
+        try:
+            type = item['type']
+        except KeyError:
+            type = None
+
+        if type == 'boolean' or type == 'enumerated':
+            unformatted = self.unformat_enumerated(item, value)
+
+        elif type == 'mask':
+            unformatted = self.unformat_mask(item, value)
+
+        elif type == 'numeric':
+            try:
+                item['format']
+            except KeyError:
+                pass
+            else:
+                unformatted = self.unformat_numeric(item, value)
+
+        if unformatted is None:
+            return value
+        else:
+            return unformatted
+
+
+    def unformat_enumerated(self, item, value):
+        """ Return the integer representation corresponding to the specified
+            formatted string value. Raise a KeyError if there is no matching
+            enumerator. This comparison will be done in a case-insensitive
+            fashion.
+        """
+
+        value = str(value)
+        value = value.lower()
+        enumerators = item['enumerators']
+
+        unformatted = None
+
+        # The mapping between keys and names could be established in advance
+        # to make this linear search unnecesary, enabling the use of a
+        # dictionary lookup instead. If there was a sensible place to store
+        # a derived mapping, perhaps it could be generated on a just-in-time
+        # basis.
+
+        for key,name in enumerators.items():
+            name = name.lower()
+            if value == name:
+                key = int(key)
+                unformatted = key
+                break
+
+        if unformatted is None:
+            raise KeyError('invalid enumerator: ' + repr(value))
+
+        return unformatted
+
+
+    def unformat_mask(self, item, value):
+        """ Return the integer representation for a comma-separated set of
+            active mask bits. The comparison will be done on a case-insensitive
+            basis.
+        """
+
+        value = str(value)
+        value = value.lower()
+
+        if value == '' or value == 'none':
+            return 0
+
+        enumerators = item['enumerators']
+        lowered = dict()
+
+        for bit,name in enumerators.items():
+            if bit == 'None':
+                continue
+
+            name = name.lower()
+            bit = int(bit)
+            bit_value = 1 << bit
+            lowered[name] = bit_value
+
+        unformatted = 0
+        bit_names = value.split(',')
+
+        for name in bit_names:
+            name = name.strip()
+            name = name.lower()
+
+            try:
+                bit_value = lowered[name]
+            except KeyError:
+                raise KeyError('invalid bit name in mask value: ' + repr(name))
+
+            unformatted = unformatted | bit_value
+
+        return unformatted
+
+
+    def unformat_numeric(self, item, value):
+        ### This is just a stub. The format handling needs to be richer than
+        ### this; there needs to be a way to convert between numeric types
+        ### (radians to degrees), and from more exotic formats like sexagesimal.
+
+        try:
+            unformatted = int(value)
+        except:
+            pass
+        else:
+            return unformatted
+
+        unformatted = float(value)
+        return unformatted
 
 
     def update(self, block, save=True):
