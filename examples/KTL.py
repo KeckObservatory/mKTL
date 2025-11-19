@@ -145,12 +145,23 @@ def describeKeyword(keyword):
     type = keyword['type']
     type = type_mapping[type]
     keyword_dict['type'] = type
+    enumerators = None
 
     try:
         enumerators = keyword['enumerators']
-    except ValueError:
-        enumerators = None
-    else:
+    except:
+        pass
+
+    if enumerators is None:
+        try:
+            enumerators = keyword['keys']
+        except:
+            pass
+        else:
+            if len(enumerators) == 0:
+                enumerators = None
+
+    if enumerators:
         rebuilt = dict()
         if type == 'mask':
            rebuilt['None'] = enumerators[0]
