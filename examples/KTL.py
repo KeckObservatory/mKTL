@@ -102,12 +102,16 @@ class Item(mktl.Item):
 
     def perform_set(self, new_value):
         """ Wrap an incoming SET request to a KTL keyword write. This method
-            is expected to block until completion of the request.
+            is expected to block until completion of the request. The values
+            presented at this level are the equivalent of the KTL binary
+            value, and this needs to be asserted explicitly at the KTL level
+            to ensure they are interpreted (or not interpreted, as the case
+            may be) properly.
         """
 
         keyword = self.full_key
         keyword = ktl.cache(keyword)
-        keyword.write(new_value)
+        keyword.write(new_value, binary=True)
 
 
 # end of class Item
