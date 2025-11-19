@@ -32,6 +32,9 @@ def main():
     requests = parse_command_line()
     requests = parse_requests(requests)
 
+    if requests.config:
+        execute_config_requests(requests)
+
     if requests.get:
         execute_get_requests(requests)
 
@@ -76,7 +79,7 @@ def parse_command_line():
         help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
-        choices=('get', 'set', 'watch', 'list'),
+        choices=('get', 'set', 'watch', 'config', 'list'),
         type=str.lower,
         help='Request type')
     parser.add_argument('requests',
@@ -114,6 +117,7 @@ def parse_requests(requests):
         requests.requests = expanded_requests
 
 
+    requests.config = tuple()
     requests.get = tuple()
     requests.list = list()
     requests.set = dict()
@@ -134,6 +138,9 @@ def parse_requests(requests):
     elif requests.type == 'watch':
         requests.watch = requests.requests
 
+    elif requests.type == 'config':
+        requests.config = requests.requests
+
     elif requests.type == 'list':
         if requests.store is not None:
             requests.list.append(requests.store)
@@ -142,6 +149,43 @@ def parse_requests(requests):
 
 
     return requests
+
+
+
+def execute_config_requests(requests):
+
+    # This import is only needed here, and might not be used by mKTL,
+    # so the import is only done inside this method to limit the runtime
+    # impact on the average case (a 'get' or 'set' request).
+
+    import json
+
+    config = dict()
+
+    for key in requests.config:
+        ### This needs to include glob expansion, with additional support
+        ### for using % like * for backwards-compatiblity with gshow. The
+        ### fnmatch library is probably an easy way to get there.
+
+        ### Test with a 'if '*' in key or '?' in key or '%' in key...'
+        ### condition guarding the fnmatch, or just do the replace/fnmatch,
+        ### whichever is faster.
+
+        ### This should also treat a bare store name as equivalent to
+        ### asking for '*'.
+
+        try:
+            item = mktl.get(key)
+        except Exception as e:
+            sys.stderr.write("%s failed: %s\n" % (key, str(e)))
+            sys.exit(1)
+
+        config[key] = item.config
+
+    # The presentation here could be improved, but for early debugging this
+    # will get the job done.
+
+    print(json.dumps(config, indent=4))
 
 
 
