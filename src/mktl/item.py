@@ -545,6 +545,10 @@ class Item:
             try:
                 self.get(refresh=True)
             except zmq.ZMQError:
+                # Connection errors on priming reads are thrown away; an error
+                # here means the remote daemon is not available to respond to
+                # requests, but despite that error the subscription will still
+                # be valid when the remote daemon returns to service.
                 pass
 
         ### If this Item is a leaf of a structured Item we may need to register
