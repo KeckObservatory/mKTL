@@ -103,6 +103,8 @@ class Item:
         """ Convert the supplied value to its human-readable formatted
             representation, if any. This conversion is driven by the
             configuration for this item.
+
+            This is the inverse of :func:`unformat`.
         """
 
         try:
@@ -126,9 +128,7 @@ class Item:
     @formatted.setter
     def formatted(self, new_value):
 
-        ### interpret new_value according to the item description
-        ### or punt, and let the daemon handle it
-
+        new_value = self.unformat(new_value)
         self.set(new_value)
 
 
@@ -592,6 +592,24 @@ class Item:
             payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
         return payload
+
+
+    def unformat(self, value):
+        """ Convert the supplied value from its human-readable formatted
+            representation, if any, to the on-the-wire representation for
+            this item. This conversion is driven by the configuration.
+
+            This is the inverse of :func:`format`.
+        """
+
+        try:
+            unformatted = self.store.config.unformat(self.key, value)
+        except:
+            ###
+            print(traceback.format_exc())
+            unformatted = value
+
+        return unformatted
 
 
     def validate(self, value):
