@@ -3,6 +3,7 @@ import queue
 import threading
 import time
 import traceback
+import zmq
 
 try:
     import numpy
@@ -495,7 +496,8 @@ class Item:
             locally cached values will always be current, regardless of any
             local polling behavior. If *prime* is True a call
             will be made to :func:`get` to refresh the locally cached value
-            before this method returns.
+            before this method returns. A failure on a priming call will be
+            caught and ignored, it will not be reported to the caller.
 
             A non-authoritative :class:`Item` will automatically call
             :func:`subscribe` upon being instantiated.
@@ -540,7 +542,10 @@ class Item:
         self.subscribed = True
 
         if prime == True:
-            self.get(refresh=True)
+            try:
+                self.get(refresh=True)
+            except zmq.ZMQError:
+                pass
 
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our key name.
