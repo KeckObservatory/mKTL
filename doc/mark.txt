@@ -1,5 +1,5 @@
 usage: mark [-h] [-s STORE] [--serial] [--no-wait]
-            {get,set,watch,config,list} [requests ...]
+            {get,set,watch,describe,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
 mktl Python library; this executable parses command-line flags, invokes
@@ -8,7 +8,7 @@ requests are complete. Note that the default is to execute all requests
 in parallel.
 
 positional arguments:
-  {get,set,watch,config,list}
+  {get,set,watch,describe,list}
                         Request type
   requests              Whitespace-separated sequence of requests. For a get
                         or a watch request, this is a sequence of keys; for a

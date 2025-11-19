@@ -32,8 +32,8 @@ def main():
     requests = parse_command_line()
     requests = parse_requests(requests)
 
-    if requests.config:
-        execute_config_requests(requests)
+    if requests.describe:
+        execute_describe_requests(requests)
 
     if requests.get:
         execute_get_requests(requests)
@@ -79,7 +79,7 @@ def parse_command_line():
         help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
-        choices=('get', 'set', 'watch', 'config', 'list'),
+        choices=('get', 'set', 'watch', 'describe', 'list'),
         type=str.lower,
         help='Request type')
     parser.add_argument('requests',
@@ -117,7 +117,7 @@ def parse_requests(requests):
         requests.requests = expanded_requests
 
 
-    requests.config = tuple()
+    requests.describe = tuple()
     requests.get = tuple()
     requests.list = list()
     requests.set = dict()
@@ -138,8 +138,8 @@ def parse_requests(requests):
     elif requests.type == 'watch':
         requests.watch = requests.requests
 
-    elif requests.type == 'config':
-        requests.config = requests.requests
+    elif requests.type == 'describe':
+        requests.describe = requests.requests
 
     elif requests.type == 'list':
         if requests.store is not None:
@@ -152,7 +152,7 @@ def parse_requests(requests):
 
 
 
-def execute_config_requests(requests):
+def execute_describe_requests(requests):
 
     # This import is only needed here, and might not be used by mKTL,
     # so the import is only done inside this method to limit the runtime
@@ -160,9 +160,9 @@ def execute_config_requests(requests):
 
     import json
 
-    config = dict()
+    description = dict()
 
-    for key in requests.config:
+    for key in requests.describe:
         ### This needs to include glob expansion, with additional support
         ### for using % like * for backwards-compatiblity with gshow. The
         ### fnmatch library is probably an easy way to get there.
@@ -180,12 +180,12 @@ def execute_config_requests(requests):
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             sys.exit(1)
 
-        config[key] = item.config
+        description[key] = item.config
 
     # The presentation here could be improved, but for early debugging this
     # will get the job done.
 
-    print(json.dumps(config, indent=4))
+    print(json.dumps(description, indent=4))
 
 
 
