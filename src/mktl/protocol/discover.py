@@ -38,23 +38,23 @@ direct_port = 10111
 
 class Server:
     """ Listen for any queries on the default port; respond to any queries
-        with our current IP address and the *request* port we were provided.
+        with our current IP address and the *rep* port we were provided.
         This allows clients to discover a valid location where they can issue
         real requests.
     """
 
     port = default_port
 
-    def __init__(self, request):
+    def __init__(self, rep):
         self.delay = 1
         self.seen = dict()
         self.socket = None
         self.thread = None
 
-        request = int(request)
-        request = str(request)
-        request = request.encode()
-        self.response = response + request
+        rep = int(rep)
+        rep = str(rep)
+        rep = rep.encode()
+        self.response = response + rep
 
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -122,8 +122,8 @@ class DirectServer(Server):
 
     port = direct_port
 
-    def __init__(self, request):
-        return Server.__init__(self, request)
+    def __init__(self, rep):
+        return Server.__init__(self, rep)
 
 
 # end of class DirectServer
@@ -185,9 +185,9 @@ def search(port=default_port, wait=False):
 
         data = data.strip()
         if response in data:
-            request = data[len(response):]
-            request = int(request)
-            found.append((server[0], request))
+            rep = data[len(response):]
+            rep = int(rep)
+            found.append((server[0], rep))
 
             if wait == True:
                 sock.settimeout(expiration - elapsed)
@@ -202,6 +202,9 @@ def search(port=default_port, wait=False):
                 sock.settimeout(0)
         else:
             sock.settimeout(expiration - elapsed)
+
+    if port == default_port:
+        remember_brokers(found)
 
     return found
 
@@ -228,18 +231,29 @@ def preload_brokers():
             brokers = ''
 
     directory = config.directory()
-    brokerfile = os.path.join(directory, 'client', 'brokers')
+    manual = os.path.join(directory, 'client', 'brokers')
+    cached = manual + '.cache'
+
+    lines = list()
 
     try:
-        filebound = open(brokerfile, 'r').read()
+        contents = open(manual, 'r').read()
     except FileNotFoundError:
         pass
     else:
-        lines = filebound.split('\n')
-        for line in lines:
-            line = line.split('#')[0]
-            brokers = brokers + ' ' + line
+        lines.extend(contents.split('\n'))
 
+    try:
+        contents = open(cached, 'r').read()
+    except FileNotFoundError:
+        pass
+    else:
+        lines.extend(contents.split('\n'))
+
+
+    for line in lines:
+        line = line.split('#')[0]
+        brokers = brokers + ' ' + line
 
     brokers = brokers.strip()
 
@@ -250,6 +264,54 @@ def preload_brokers():
 
     print(repr(brokers))
     return brokers
+
+
+def remember_brokers(found):
+    """ Cache any found brokers for future requests. There is no provision
+        for removing brokers that no longer respond, this may become necessary
+        in the future-- if the cached set grows unbounded there may become
+        a point where the occasional UDP broadcast becomes a burden rather
+        than a minor inefficiency.
+    """
+
+    directory = config.directory()
+    client = os.path.join(directory, 'client')
+    cached = os.path.join(client, 'brokers.cache')
+
+    if os.path.exists(client):
+        pass
+    else:
+        os.makedirs(client, mode=0o775)
+
+
+    lines = set()
+
+    try:
+        contents = open(cached, 'r').read()
+    except FileNotFoundError:
+        contents = tuple()
+    else:
+        contents = contents.split('\n')
+
+    for line in contents:
+        line = line.split('#')[0]
+        line = line.strip()
+
+        if line != '':
+            lines.add(line)
+
+    for address,rep in found:
+        lines.add(address)
+
+    lines = list(lines)
+    lines.sort()
+    lines.insert(0, '# This file is generated automatically.')
+    contents = '\n'.join(lines)
+
+
+    writer = open(cached, 'w')
+    writer.write(contents + '\n')
+    writer.close()
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
