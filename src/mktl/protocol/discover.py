@@ -8,6 +8,7 @@
     in answering those questions.
 """
 
+import os
 import socket
 import threading
 import time
@@ -23,12 +24,12 @@ response = response.encode()
 
 default_port = 10103
 
-# The default port is used for discovery of intermediaries, daemons that are
+# The default port is used for discovery of intermediaries, brokers that are
 # willing to cache and share second-hand information aggregated from one or
 # more authoritative daemons, and be the first stop for any new clients on
 # the network. The direct port is used by last-stop daemons, those that are
-# authoritative for their respective stores; the intermediaries will use this
-# direct port to find them.
+# authoritative for their respective stores; the brokers will use this direct
+# port to discover them.
 
 direct_port = 10111
 
@@ -139,9 +140,27 @@ def search(port=default_port, wait=False):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.settimeout(1)
 
-    broadcast_address = ('255.255.255.255', port)
+    # The direct queries are only relevant if we're looking for brokers,
+    # not for daemons.
 
+    if port == default_port:
+        try:
+            brokers = os.environ['MKTL_BROKERS']
+        except KeyError:
+            brokers = None
+
+        if brokers == '' or brokers is None:
+            brokers = tuple()
+        else:
+            brokers = brokers.split()
+
+        for broker in brokers:
+            targeted_address = (broker, port)
+            sock.sendto(call, targeted_address)
+
+    broadcast_address = ('255.255.255.255', port)
     sock.sendto(call, broadcast_address)
+
     start = time.time()
     expiration = 1
     elapsed = 0
@@ -152,7 +171,6 @@ def search(port=default_port, wait=False):
         timeouts = (TimeoutError, socket.timeout)
     except AttributeError:
         # socket.timeout was deprecated in 3.10, in favor of TimeoutError.
-        # Presumably at some point socket.timeout will go away.
         timeouts = (TimeoutError,)
 
     while elapsed < expiration:
