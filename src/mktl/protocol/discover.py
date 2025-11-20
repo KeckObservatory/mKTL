@@ -13,6 +13,8 @@ import socket
 import threading
 import time
 
+from .. import config
+
 call = 'I heard it'
 call = call.encode()
 
@@ -144,15 +146,7 @@ def search(port=default_port, wait=False):
     # not for daemons.
 
     if port == default_port:
-        try:
-            brokers = os.environ['MKTL_BROKERS']
-        except KeyError:
-            brokers = None
-
-        if brokers == '' or brokers is None:
-            brokers = tuple()
-        else:
-            brokers = brokers.split()
+        brokers = preload_brokers()
 
         for broker in brokers:
             targeted_address = (broker, port)
@@ -218,6 +212,44 @@ def search_direct(port=direct_port, wait=True):
     """
 
     return search(port, wait)
+
+
+def preload_brokers():
+    """ Helper method to parse environment variables and cached files on
+        disk to build a list of addresses to check for broker availability.
+    """
+
+    try:
+        brokers = os.environ['MKTL_BROKERS']
+    except KeyError:
+        brokers = ''
+    else:
+        if brokers is None:
+            brokers = ''
+
+    directory = config.directory()
+    brokerfile = os.path.join(directory, 'client', 'brokers')
+
+    try:
+        filebound = open(brokerfile, 'r').read()
+    except FileNotFoundError:
+        pass
+    else:
+        lines = filebound.split('\n')
+        for line in lines:
+            line = line.split('#')[0]
+            brokers = brokers + ' ' + line
+
+
+    brokers = brokers.strip()
+
+    if brokers == '' or brokers is None:
+        brokers = tuple()
+    else:
+        brokers = brokers.split()
+
+    print(repr(brokers))
+    return brokers
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
