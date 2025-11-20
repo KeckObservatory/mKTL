@@ -116,7 +116,12 @@ item.
 		If the value has multiple representations, there
 		could be a units value for each representation, for
 		example an angular value transmitted as radians but
-		also expressed in sexagesimal.
+		with optional formatting as sexagesimal.
+
+**format**	How to format the value for printing. This is expected
+		to be a printf-like expression, for example %d for
+		integers, or %.3f for three decimal places of a floating
+		point value.
 
 **initial**	Initial value for this item. This is only relevant
 		for the authoritative daemon, and is only used if
