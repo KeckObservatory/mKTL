@@ -220,6 +220,18 @@ def describeKeyword(keyword):
 
             keyword_dict[attribute] = value
 
+    if type == 'numeric':
+        # Some KTL client types abuse the 'units' field to include sprintf
+        # style formatting. Grab that if it is available; there is no KTL
+        # API call to get at this information directly.
+
+        unit_abuse = keyword.ktlc.units()
+
+        if len(unit_abuse) > 2:
+            format = unit_abuse[2]
+            if format != '':
+                keyword_dict['format'] = format
+
     for attribute in ('broadcasts', 'reads', 'writes'):
         try:
             value = keyword[attribute]
