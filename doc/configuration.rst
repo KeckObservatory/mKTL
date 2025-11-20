@@ -148,12 +148,13 @@ item.
 
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
-		meaningful for boolean, enumerated, and mask types.
-		An example set of enumerators for a boolean item
-		might be ``{'0': 'False', '1': 'True'}``. Note that
-		in JSON a dictionary key must be a string, these
-		keys can and should be cast back to integers
-		after the JSON is parsed.
+		meaningful for boolean, enumerated, and mask types,
+		though it is also overloaded for use with the legacy
+		numeric array type. An example set of enumerators for
+		a boolean item might be ``{'0': 'False', '1': 'True'}``.
+		In JSON a dictionary key must be a string, these keys
+		can and should be cast back to integers after the JSON
+		is parsed.
 =============== ===============================================================
 
 Item types
