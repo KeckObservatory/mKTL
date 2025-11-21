@@ -43,7 +43,7 @@ def discover(*targets):
         raise RuntimeError('no brokers available')
 
     for address,port in brokers:
-        request = protocol.message.Request('HASH', store)
+        request = protocol.message.Request('HASH')
         try:
             payload = protocol.request.send(address, port, request)
         except:
