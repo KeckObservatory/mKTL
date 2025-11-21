@@ -42,6 +42,12 @@ def discover(*targets):
     if len(brokers) == 0:
         raise RuntimeError('no brokers available')
 
+    # Hacking the timeout for discovery, this is not expected to throw
+    # errors with minimal delay.
+
+    old_timeout = protocol.request.Client.timeout
+    protocol.request.Client.timeout = 0.5
+
     for address,port in brokers:
         request = protocol.message.Request('HASH')
         try:
@@ -52,8 +58,8 @@ def discover(*targets):
         hashes = payload.value
 
         for store in hashes.keys():
-            request = mktl.protocol.message.Request('CONFIG', store)
-            payload = mktl.protocol.request.send(address, port, request)
+            request = protocol.message.Request('CONFIG', store)
+            payload = protocol.request.send(address, port, request)
 
             blocks = payload.value
 
@@ -62,6 +68,8 @@ def discover(*targets):
                 for uuid,block in blocks.items():
                     configuration.update(block)
 
+
+    protocol.request.Client.timeout = old_timeout
 
 
 def get(store, key=None):
