@@ -256,7 +256,6 @@ def preload_brokers():
     else:
         brokers = brokers.split()
 
-    print(repr(brokers))
     return brokers
 
 
