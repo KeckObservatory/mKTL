@@ -26,7 +26,7 @@ class Client:
         and *port* number must be specified.
     """
 
-    timeout = 0.05
+    timeout = 0.1
 
     def __init__(self, address, port):
 
