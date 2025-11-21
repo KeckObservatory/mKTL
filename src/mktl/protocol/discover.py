@@ -130,7 +130,7 @@ class DirectServer(Server):
 
 
 
-def search(port=default_port, wait=False):
+def search(port=default_port, wait=False, targets=tuple()):
     """ Find locally available :class:`Server` instances. If *wait* is True, the
         search will delay returning until multiple instances have an opportunity
         to respond; otherwise, the fastest responding instance will be included
@@ -142,15 +142,15 @@ def search(port=default_port, wait=False):
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
     sock.settimeout(1)
 
-    # The direct queries are only relevant if we're looking for brokers,
-    # not for daemons.
+    targets = list(targets)
 
     if port == default_port:
-        brokers = preload_brokers()
+        cached = preload_brokers()
+        targets.extend(cached)
 
-        for broker in brokers:
-            targeted_address = (broker, port)
-            sock.sendto(call, targeted_address)
+    for target in targets:
+        targeted_address = (target, port)
+        sock.sendto(call, targeted_address)
 
     broadcast_address = ('255.255.255.255', port)
     sock.sendto(call, broadcast_address)
