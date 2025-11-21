@@ -28,6 +28,42 @@ def _clear(store):
 
 
 
+def discover(*targets):
+    """ Look for mKTL brokers, both by broadcasting on the local network
+        and by directly querying any/all supplied addresses. The goal of
+        this discovery is to populate a local cache including any/all stores
+        known to these brokers, for all future queries. This is especially
+        helpful if the local client is not on the same network as the
+        brokers of interest.
+    """
+
+    brokers = protocol.discover.search(wait=True, targets=targets)
+
+    if len(brokers) == 0:
+        raise RuntimeError('no brokers available')
+
+    for address,port in brokers:
+        request = protocol.message.Request('HASH', store)
+        try:
+            payload = protocol.request.send(address, port, request)
+        except:
+            continue
+
+        hashes = payload.value
+
+        for store in hashes.keys():
+            request = mktl.protocol.message.Request('CONFIG', store)
+            payload = mktl.protocol.request.send(address, port, request)
+
+            blocks = payload.value
+
+            if blocks:
+                configuration = config.get(store)
+                for uuid,block in blocks.items():
+                    configuration.update(block)
+
+
+
 def get(store, key=None):
     """ The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store.
@@ -152,17 +188,17 @@ def refresh(configuration):
             rep = stratum['rep']
 
             client = protocol.request.client(hostname, rep)
-            message = protocol.message.Request('HASH', store)
+            request = protocol.message.Request('HASH', store)
 
             try:
-                client.send(message)
+                client.send(request)
             except zmq.ZMQError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
                 # to rely on the local disk cache.
                 continue
 
-            response = message.wait(timeout=5)
+            response = request.wait(timeout=5)
 
             if response is None:
                 # No response from this daemon; it's broken somehow. Move on.
