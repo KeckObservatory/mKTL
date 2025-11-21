@@ -19,6 +19,7 @@ home = config.directory
 
 from . import begin
 get = begin.get
+discover = begin.discover
 
 from .item import Item
 from .store import Store
