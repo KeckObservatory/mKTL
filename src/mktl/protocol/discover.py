@@ -222,14 +222,6 @@ def preload_brokers():
         disk to build a list of addresses to check for broker availability.
     """
 
-    try:
-        brokers = os.environ['MKTL_BROKERS']
-    except KeyError:
-        brokers = ''
-    else:
-        if brokers is None:
-            brokers = ''
-
     directory = config.directory()
     manual = os.path.join(directory, 'client', 'brokers')
     cached = manual + '.cache'
@@ -250,6 +242,8 @@ def preload_brokers():
     else:
         lines.extend(contents.split('\n'))
 
+
+    brokers = ''
 
     for line in lines:
         line = line.split('#')[0]
