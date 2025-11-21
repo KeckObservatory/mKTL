@@ -131,17 +131,15 @@ def get(store, key=None):
 
         hostname,port = brokers[0]
         message = protocol.message.Request('CONFIG', store)
-        protocol.request.send(hostname, port, message)
-        response = message.wait()
+        payload = protocol.request.send(hostname, port, message)
 
-        new_config = response.payload.value
+        blocks = payload.value
 
-        if new_config is None:
+        if blocks:
+            for uuid,block in blocks.items():
+                configuration.update(block)
+        else:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
-
-        # If we made it this far the network came through with an answer.
-        for uuid,block in new_config.items():
-            configuration.update(block)
 
 
     # If we made it this far we have something that the Store class can use.
