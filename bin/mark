@@ -23,6 +23,7 @@ Example usage:
 
 import argparse
 import mktl
+import os
 import sys
 import threading
 
@@ -34,6 +35,9 @@ def main():
 
     if requests.describe:
         execute_describe_requests(requests)
+
+    if requests.discover:
+        execute_discover_requests(requests)
 
     if requests.get:
         execute_get_requests(requests)
@@ -79,12 +83,12 @@ def parse_command_line():
         help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
     parser.add_argument('type',
-        choices=('get', 'set', 'watch', 'describe', 'list'),
+        choices=('get', 'set', 'watch', 'describe', 'discover', 'list'),
         type=str.lower,
         help='Request type')
     parser.add_argument('requests',
         nargs='*',
-        help='Whitespace-separated sequence of requests. For a get or a watch request, this is a sequence of keys; for a set request, this is a sequence of key=value statements. For a list request this is a sequence of stores.')
+        help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of broker addresses.')
 
 
     parsed = parser.parse_args()
@@ -118,6 +122,7 @@ def parse_requests(requests):
 
 
     requests.describe = tuple()
+    requests.discover = tuple()
     requests.get = tuple()
     requests.list = list()
     requests.set = dict()
@@ -140,6 +145,9 @@ def parse_requests(requests):
 
     elif requests.type == 'describe':
         requests.describe = requests.requests
+
+    elif requests.type == 'discover':
+        requests.discover = requests.requests
 
     elif requests.type == 'list':
         if requests.store is not None:
@@ -186,6 +194,18 @@ def execute_describe_requests(requests):
     # will get the job done.
 
     print(json.dumps(description, indent=4))
+
+
+
+def execute_discover_requests(requests):
+    mktl.discover(*requests.discover)
+    hashes = mktl.config.get_hashes()
+
+    stores = hashes.keys()
+    stores = list(stores)
+    stores.sort()
+
+    print("%d stores available: %s" % (len(stores), ' '.join(stores)))
 
 
 
