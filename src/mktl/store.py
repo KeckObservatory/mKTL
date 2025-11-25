@@ -15,7 +15,6 @@ class Store:
 
         self.name = name
         self.config = config.get(name)
-        self.bypass_priming_failures = False
         self._items = dict()
 
         self._update_config()
@@ -44,22 +43,7 @@ class Store:
             raise KeyError(error)
 
         if item is None:
-            if self.bypass_priming_failures == False:
-                item = Item(self, key)
-            else:
-                # Subscribe to future published broadcasts, but do not throw
-                # an exception (for any reason) if the priming read does not
-                # succeed.
-
-                item = Item(self, key, subscribe=False)
-
-                if item.authoritative == False:
-                    item.subscribe(prime=False)
-
-                try:
-                    item.get(refresh=True)
-                except:
-                    pass
+            item = Item(self, key)
 
             # The Item assigns itself to our self._items dictionary as the last
             # step in its initialization process.
