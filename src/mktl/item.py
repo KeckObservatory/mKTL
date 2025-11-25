@@ -555,6 +555,17 @@ class Item:
         ### a callback on a topic substring of our key name.
 
 
+    @property
+    def timestamp(self):
+        """ Get the timestamp associated with the current value of the item.
+        """
+
+        if self.authoritative == True:
+            return self._daemon_value_timestamp
+        else:
+            return self._value_timestamp
+
+
     def to_payload(self, value=None, timestamp=None):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
@@ -580,10 +591,7 @@ class Item:
             timestamp = time.time()
 
         if timestamp is None:
-            if self.authoritative == False:
-                timestamp = self._value_timestamp
-            else:
-                timestamp = self._daemon_value_timestamp
+            timestamp = self.timestamp
 
         # Perhaps there is a more declarative way to know whether a given
         # value is expected to be bulk data; perhaps reference the per-Item
