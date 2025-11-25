@@ -197,9 +197,12 @@ class Item:
 
             ### This debug print should be removed.
             try:
-                print(error['debug'])
+                error['debug']
             except KeyError:
                 pass
+            else:
+                print("DEBUG: remote GET error for %s:" % (self.full_key))
+                print(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -468,9 +471,12 @@ class Item:
 
             ### This debug print should be removed.
             try:
-                print(error['debug'])
+                error['debug']
             except KeyError:
                 pass
+            else:
+                print("DEBUG: remote SET error for %s:" % (self.full_key))
+                print(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -544,11 +550,15 @@ class Item:
         if prime == True:
             try:
                 self.get(refresh=True)
-            except zmq.ZMQError:
-                # Connection errors on priming reads are thrown away; an error
-                # here means the remote daemon is not available to respond to
-                # requests, but despite that error the subscription will still
-                # be valid when the remote daemon returns to service.
+            except (zmq.ZMQError, RuntimeError):
+                # Connection errors and remote errors on priming reads are
+                # thrown away; an error here means the remote daemon is not
+                # available to respond to requests, but despite that error
+                # the subscription will still be valid when the remote daemon
+                # returns to service.
+
+                # Other exception types indicate programming errors and should
+                # still be raised.
                 pass
 
         ### If this Item is a leaf of a structured Item we may need to register
