@@ -366,6 +366,22 @@ class Item:
         return payload
 
 
+    def req_initialize(self, request):
+        """ This is a sub-case of :func:`req_set` that bypasses some of the
+            normal checks, like whether an item is settable or valid.
+            :func:`perform_set` will not be called as a result of this
+            initialization; values initialized in this fashion are always
+            published.
+        """
+
+        payload = request.payload
+        if payload is None:
+            return
+
+        new_value = self.from_payload(payload)
+        self.publish(new_value)
+
+
     def req_poll(self, repeat=False):
         """ Handle a background poll request, established by calling
             :func:`poll`. :func:`perform_get` is where custom handling by
@@ -410,6 +426,15 @@ class Item:
             of any successful SET request. Custom subclasses can set this
             attribute to False to inhibit that behavior.
         """
+
+        try:
+            settable = self.config['settable']
+        except KeyError:
+            settable = True
+
+        if not settable:
+            raise TypeError(self.key + ' is not a settable item')
+
 
         payload = request.payload
         if payload is None:

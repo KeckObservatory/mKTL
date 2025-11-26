@@ -315,7 +315,7 @@ class Daemon:
             item = self.store[key]
             payload = protocol.message.Payload(initial)
             request = protocol.message.Request('SET', item.full_key, payload)
-            item.req_set(request)
+            item.req_initialize(request)
 
 
     def setup_final(self):
