@@ -25,18 +25,25 @@ def generate_config():
     items = dict()
 
     items['INTEGER'] = dict()
-    items['INTEGER']['description'] = 'A dummy keyword, ostensibly numeric.'
+    items['INTEGER']['description'] = 'A numeric item.'
     items['INTEGER']['units'] = 'meaningless units'
     items['INTEGER']['type'] = 'numeric'
 
     items['STRING'] = dict()
-    items['STRING']['description'] = 'A dummy keyword, ostensibly a string.'
+    items['STRING']['description'] = 'A string item.'
     items['STRING']['type'] = 'string'
 
     items['ANGLE'] = dict()
-    items['ANGLE']['description'] = 'A dummy keyword, ostensibly an angle.'
+    items['ANGLE']['description'] = 'An angular numeric item.'
     items['ANGLE']['units'] = 'radians'
     items['ANGLE']['type'] = 'numeric'
+
+    items['READONLY'] = dict()
+    items['READONLY']['description'] = 'A read-only numeric item.'
+    items['READONLY']['units'] = 'meaningless units'
+    items['READONLY']['type'] = 'numeric'
+    items['READONLY']['initial'] = 13
+    items['READONLY']['settable'] = False
 
     return items
 

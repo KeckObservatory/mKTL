@@ -28,6 +28,11 @@ def test_set(run_markbrokered, run_marked):
 
     string.set('')
 
+    readonly = mktl.get('unittest.READONLY')
+
+    with pytest.raises(RuntimeError):
+        readonly.set(44)
+
 
 def test_logic(run_markbrokered, run_marked):
 
