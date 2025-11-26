@@ -291,12 +291,9 @@ def execute_set_requests(requests):
 
 def execute_watch_requests(requests):
 
-    ### It should be possible to initiate a 'watch' request without
-    ### dying if the remote daemon is offline.
-
     for key in requests.watch:
         item = mktl.get(key)
-        item.register(print_item)
+        item.register(print_item, prime=True)
 
     while True:
         try:
