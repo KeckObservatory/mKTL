@@ -340,7 +340,7 @@ class Item:
 
         if self.subscribed == False:
             self.subscribe()
-        elif prime == True
+        elif prime == True:
             if self._value is not None or self._daemon_value is not None:
                 method(self, self.value, self.timestamp)
 
