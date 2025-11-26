@@ -249,7 +249,7 @@ def execute_list_requests(requests):
 
 def execute_set_requests(requests):
 
-    responses = list()
+    pending = list()
     failed = False
 
     for key,value in requests.set.items():
@@ -265,24 +265,31 @@ def execute_set_requests(requests):
             continue
 
         try:
-            response = item.set(value, wait=requests.serial)
+            request = item.set(value, wait=requests.serial)
         except Exception as e:
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             failed = True
             continue
 
-        responses.append(response)
+        pending.append(request)
 
         if requests.serial == True:
             print("Set %s to %s " % (key, value))
 
 
     if requests.serial == False and requests.wait == True:
-        for response in responses:
-            response.wait()
-            key = response.target
-            value = response.payload.value
-            print("Set %s to %s " % (key, value))
+        for request in pending:
+            request.wait()
+            key = request.target
+            value = request.payload.value
+            response = request.response
+            error = response.payload.error
+
+            if error is not None and error != '':
+                sys.stderr.write("%s failed: %s: %s\n" % (key, error['type'], error['text']))
+                failed = True
+            else:
+                print("Set %s to %s " % (key, value))
 
     if failed == True:
         sys.exit(1)
