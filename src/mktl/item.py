@@ -306,16 +306,17 @@ class Item:
             self._daemon_value_timestamp = timestamp
 
 
-        # The local call to manipulate the _update_queue is presently commented
-        # out because the daemon-aware handling in subscribe() is not enabled.
-        # This could be enabled if allowing client-facing updates to occur via
-        # the usual PUB/SUB machinery is too expensive.
-
         if changed == True or repeat == True:
             key = self.full_key
             message = protocol.message.Broadcast('PUB', key, payload)
 
-            ### self._update_queue.put(message)
+            # One could bypass the normal broadcast handling internally
+            # within a daemon by putting the message in self._update_queue
+            # instead of relying on the full ZeroMQ-based broadcast handling.
+            # This would be more efficient, but there is something to be said
+            # for fully exercising the normal handling chain in identical
+            # fashion for all pub/sub interactions.
+
             self.pub.publish(message)
 
 
@@ -538,11 +539,6 @@ class Item:
 
         self._update_queue_put = self._update_queue.put
         self._update_thread = _Updater(self._update, self._update_queue)
-
-        ### This subscription against self.sub could be omitted if the
-        ### Item is in a Daemon context. See the publish() method for the extra
-        ### call to the _update_queue that needs to be enabled to bypass that
-        ### machinery.
 
         self.sub.register(self._update_queue_put, self.full_key)
         self.subscribed = True
