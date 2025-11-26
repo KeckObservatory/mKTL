@@ -320,12 +320,14 @@ class Item:
             self.pub.publish(message)
 
 
-    def register(self, method):
+    def register(self, method, prime=False):
         """ Register a callback to be invoked whenever a new value is received
             from a remote daemon, regardless of how that new value arrived.
             :func:`subscribe` will automatically be invoked if it has not been
             invoked for this :class:`Item` instance, the client does not need
-            to call it separately.
+            to call it separately. If *prime* is set to True the callback will
+            be invoked using the current value of the item, if any, before
+            returning; no priming call will occur if the item has no value.
         """
 
         if callable(method):
@@ -338,6 +340,9 @@ class Item:
 
         if self.subscribed == False:
             self.subscribe()
+        elif prime == True
+            if self._value is not None or self._daemon_value is not None:
+                method(self, self.value, self.timestamp)
 
 
     def req_get(self, request):
