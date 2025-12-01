@@ -54,13 +54,24 @@ class Item:
         self._update_thread = None
         self._updated = threading.Event()
 
-        provenance = self.config['provenance']
+        # An Item is a singleton in practice; enforce that constraint.
+
+        try:
+            old = self.store._items[key]
+        except KeyError:
+            old = None
+
+        if old is not None:
+            raise RuntimeError('duplicate item not allowed: ' + self.full_key)
+
+        self.store._items[key] = self
 
         # Use the highest-numbered stratum that will handle a full range of
         # queries. This capability is implied by the presence of the 'pub'
         # field in the provenance; this may be made more declarative in the
         # future, instead of the implied role being assumed here.
 
+        provenance = self.config['provenance']
         hostname = None
 
         for stratum in provenance:
@@ -74,22 +85,28 @@ class Item:
                 break
 
         if hostname is None:
+            # This should never occur, it should not be possible to have a
+            # configuration that doesn't contain a provenance.
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
         self.sub = protocol.publish.client(hostname, pub)
         self.req = protocol.request.client(hostname, rep)
 
-        # An Item is a singleton in practice; enforce that constraint here.
+        try:
+            settable = self.config['settable']
+        except KeyError:
+            settable = True
+
+        if settable == False:
+            self.req_set = self.reject_set
 
         try:
-            old = self.store._items[key]
+            gettable = self.config['gettable']
         except KeyError:
-            old = None
+            gettable = True
 
-        if old is not None:
-            raise RuntimeError('duplicate item not allowed: ' + self.full_key)
-
-        self.store._items[key] = self
+        if gettable == False:
+            self.req_get = self.reject_get
 
         if subscribe == True:
             if self.authoritative == True:
@@ -345,6 +362,22 @@ class Item:
                 method(self, self.value, self.timestamp)
 
 
+    def reject_get(self, *args, **kwargs):
+        """ Reject a GET request. This method is only invoked if an Item
+            is not gettable (write-only).
+        """
+
+        raise TypeError(self.key + ' is not a gettable item')
+
+
+    def reject_set(self, *args, **kwargs):
+        """ Reject a SET request. This method is only invoked if an Item
+            is not settable (read-only).
+        """
+
+        raise TypeError(self.key + ' is not a settable item')
+
+
     def req_get(self, request):
         """ Handle a GET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
@@ -426,15 +459,6 @@ class Item:
             of any successful SET request. Custom subclasses can set this
             attribute to False to inhibit that behavior.
         """
-
-        try:
-            settable = self.config['settable']
-        except KeyError:
-            settable = True
-
-        if not settable:
-            raise TypeError(self.key + ' is not a settable item')
-
 
         payload = request.payload
         if payload is None:
