@@ -191,7 +191,6 @@ class Daemon:
         arguments.append(self.store.name)
         arguments.append(self.uuid)
 
-        pipe = subprocess.PIPE
         self.persistence = subprocess.Popen(arguments)
 
 
