@@ -94,19 +94,16 @@ def get(store, key=None):
         raise ValueError('the store name must be specified')
 
     store = str(store)
-
-    if key is None and '.' in store:
-        store, key = store.split('.', 1)
-
-    # Case-insensitivity is enforced:
-
     store = store.lower()
 
-    if key is not None:
+    if key is None:
+        if '.' in store:
+            store, key = store.split('.', 1)
+    else:
         key = str(key)
         key = key.lower()
 
-    # Work from the local cache of Store instances first. This sequence
+    # Work from the in-memory cache of Store instances first. This sequence
     # of checks is replicated at the end of the routine, after all the
     # handling of configuration data.
 
