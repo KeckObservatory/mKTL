@@ -2,6 +2,7 @@
     the principal entry point for users interacting with a key/value store.
 """
 
+import threading
 import zmq
 
 from . import config
@@ -10,6 +11,7 @@ from .store import Store
 
 
 _cache = dict()
+_cache_lock = threading.Lock()
 
 def _clear(store):
     """ Clear any cached :class:`mktl.Store` instances currently in the cache.
@@ -151,14 +153,19 @@ def get(store, key=None):
     # If we made it this far without raising an exception there must be a valid
     # configuration available for use.
 
-    store = Store(store)
-    _cache[store.name] = store
+    _cache_lock.acquire()
+    try:
+        store = _cache[store]
+    except KeyError:
+        store = Store(store)
+        _cache[store.name] = store
+    finally:
+        _cache_lock.release()
 
     if key is None:
         return store
     else:
-        key = store[key]
-        return key
+        return store[key]
 
 
 
