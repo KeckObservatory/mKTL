@@ -150,7 +150,8 @@ def get(store, key=None):
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
 
-    # If we made it this far we have something that the Store class can use.
+    # If we made it this far without raising an exception there must be a valid
+    # configuration available for use.
 
     store = Store(store)
     _cache[store.name] = store
