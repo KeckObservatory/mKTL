@@ -115,7 +115,7 @@ class Client:
         poller.register(self.socket, zmq.POLLIN)
 
         while True:
-            sockets = poller.poll(10000)
+            sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
@@ -407,7 +407,7 @@ class Server:
         poller.register(self.socket, zmq.POLLIN)
 
         while self.shutdown == False:
-            sockets = poller.poll(1000)
+            sockets = poller.poll(10000) # milliseconds
             for active,flag in sockets:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()

@@ -124,7 +124,7 @@ class Client:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN|zmq.POLLOUT)
-        poller.poll(timeout * 1000)
+        poller.poll(timeout * 1000) # milliseconds
 
 
     def register(self, callback, topic=None):
@@ -171,7 +171,7 @@ class Client:
         poller.register(self.socket, zmq.POLLIN)
 
         while self.shutdown == False:
-            sockets = poller.poll(1000)
+            sockets = poller.poll(10000) # milliseconds
             for active,flag in sockets:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
