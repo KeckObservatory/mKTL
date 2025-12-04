@@ -215,11 +215,11 @@ class Configuration:
 
         if authoritative == True:
             if self.authoritative_items is None:
-                return ()
+                return tuple()
             else:
                 return self.authoritative_items.keys()
         else:
-            return tuple(self._by_key.keys())
+            return self._by_key.keys()
 
 
     def load(self):
