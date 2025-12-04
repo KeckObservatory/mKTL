@@ -188,7 +188,16 @@ def execute_describe_requests(requests):
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             sys.exit(1)
 
-        description[key] = item.config
+        if isinstance(item, mktl.Store):
+            store = item
+            keys = store.config.keys()
+            keys = list(keys)
+            keys.sort()
+
+            for key in keys:
+                description[key] = store.config[key]
+        else:
+            description[key] = item.config
 
     # The presentation here could be improved, but for early debugging this
     # will get the job done.
