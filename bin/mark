@@ -238,7 +238,12 @@ def execute_get_requests(requests):
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             sys.exit(1)
 
-        print_item(item, item.value, item._value_timestamp)
+        if isinstance(item, mktl.Store):
+            store = item
+            for item in store:
+                print_item(item, item.value, item._value_timestamp)
+        else:
+            print_item(item, item.value, item._value_timestamp)
 
 
 
