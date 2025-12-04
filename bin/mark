@@ -190,7 +190,7 @@ def execute_describe_requests(requests):
 
         if isinstance(item, mktl.Store):
             store = item
-            keys = store.config.keys()
+            keys = store.keys()
             keys = list(keys)
             keys.sort()
 
