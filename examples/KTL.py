@@ -178,7 +178,11 @@ def describeKeyword(keyword):
     for attribute in ('units', 'range', 'help'):
         try:
             value = keyword[attribute]
-        except ValueError:
+        except:
+            # CAke throws a lot of nonsense exceptions when you ask it
+            # questions it isn't prepared to receive. Unfortunately,
+            # that means catching _all_ exceptions here, rather than a
+            # targeted set.
             value = None
 
         if attribute == 'units' and enumerators is not None:
