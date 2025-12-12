@@ -26,10 +26,10 @@ listener, operating on a unique port on that host.
 A given host providing connectivity for mKTL could have thousands of daemons
 running locally, each listening on a unique port number. Each daemon deploys
 a UDP listener on a predetermined port number (10111) to enable discovery of
-daemons on that host; a :ref:`dedicated "broker" process <markbrokered>` also
+daemons on that host; a :ref:`dedicated "broker" process <mkbrokerd>` also
 listens on a predetermined port number (10103) to streamline discovery from
 the client side. This usage pattern expects there to be a single
-:ref:`markbrokered` process running on every host running one or more mKTL
+:ref:`mkbrokerd` process running on every host running one or more mKTL
 daemons. The discovery exchange is :ref:`described below <discovery>`
 in more detail.
 
@@ -402,9 +402,9 @@ port, which greatly simplfies periodic discovery.
 
 The discovery of daemons is a two-part process; rather than ask every daemon
 to cache the configuration for every other daemon on its local network, the
-caching of configuration data is handled by :ref:`markbrokered`; when a client
+caching of configuration data is handled by :ref:`mkbrokerd`; when a client
 issues a discovery broadcast, it is not looking for responses from individual
-daemons, it is looking for responses from a :ref:`markbrokered` process.
+daemons, it is looking for responses from a :ref:`mkbrokerd` process.
 
 This two-step approach, of contacting the broker process, and subsequently
 contacting the authoritative daemon, could be avoided if every local daemon
@@ -421,11 +421,11 @@ There are four shared secrets used in the discovery exchange:
 *Secret*	*Description*
 ===============	===============================================================
 **broker port**	The UDP port used to discover locally accessible
-		:ref:`markbrokered` processes. Clients use this port to find
+		:ref:`mkbrokerd` processes. Clients use this port to find
 		all such processes. The port number is 10103.
 
 **daemon port**	The UDP port used to discover locally accessible mKTL daemons.
-		:ref:`markbrokered` uses this port to find all such daemons.
+		:ref:`mkbrokerd` uses this port to find all such daemons.
 		The port number is 10111.
 
 **call**	An arbitrary string used by the discoverer to trigger a

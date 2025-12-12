@@ -33,10 +33,10 @@ at run time.
 
 You may need to pre-populate your local cache with information from the
 brokers handling the configuration for the store(s) you wish to access.
-The :ref:`mark` command line tool will handle this process; for a given
+The :ref:`mk` command line tool will handle this process; for a given
 IP address or hostname, you would invoke::
 
-    mark discover 192.168.5.34
+    mk discover 192.168.5.34
 
 This discovery process will query that address for any available configurations,
 but more importantly, will cache the address of that broker and use it again in

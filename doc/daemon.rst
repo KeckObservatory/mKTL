@@ -71,14 +71,14 @@ explicitly set a new item value.
    :members: from_payload, perform_get, perform_set, poll, publish, req_get, req_poll, req_set, to_payload, validate
 
 
-marked executable
------------------
+mkd executable
+--------------
 
-The `marked` executable provides a command-line interface to invoke a
+The `mkd` executable provides a command-line interface to invoke a
 persistent daemon executing a :class:`mktl.Daemon` subclass as described above.
 It is the natural starting point for any persistent daemon implementing
 the scheme described in this document, since that is the precise purpose
 it is written for.
 
-Refer to the section covering :ref:`marked` in the :ref:`executables`
+Refer to the section covering :ref:`mkd` in the :ref:`executables`
 documentation for additional details.

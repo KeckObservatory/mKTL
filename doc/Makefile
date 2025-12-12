@@ -14,11 +14,11 @@ help:
 
 .PHONY: help Makefile
 
-mark.txt: ../bin/mark
-	PYTHONPATH=../src ../bin/mark -h > mark.txt
+mk.txt: ../bin/mk
+	PYTHONPATH=../src ../bin/mk -h > mk.txt
 
-marked.txt: ../sbin/marked
-	../sbin/marked -h > marked.txt
+mkd.txt: ../sbin/mkd
+	../sbin/mkd -h > mkd.txt
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).

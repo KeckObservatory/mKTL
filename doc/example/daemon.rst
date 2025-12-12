@@ -210,15 +210,15 @@ example:
 Starting the daemon
 -------------------
 
-The :ref:`markbrokered` executable is a persistent application that enables
+The :ref:`mkbrokerd` executable is a persistent application that enables
 clients to easily find authoritative mKTL daemons. Having one instance of
-:ref:`markbrokered` running on the local network is recommended.
+:ref:`mkbrokerd` running on the local network is recommended.
 
-The :ref:`marked` executable provides a common entry point for a persistent
+The :ref:`mkd` executable provides a common entry point for a persistent
 daemon. Assuming the default search path is set up correctly, for the example
 outlined here the invocation would resemble::
 
-    marked metal precious --module metal.precious -c precious_metals.json
+    mkd metal precious --module metal.precious -c precious_metals.json
 
-Both :ref:`markbrokered` and :ref:`marked` should be running before mKTL client
+Both :ref:`mkbrokerd` and :ref:`mkd` should be running before mKTL client
 interactions are attempted.

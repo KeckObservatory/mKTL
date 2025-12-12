@@ -3,42 +3,42 @@
 Executables
 ===========
 
-.. _mark:
+.. _mk:
 
-mark
-----
+mk
+--
 
-`mark` is intended to be the primary command line interface for client
+`mk` is intended to be the primary command line interface for client
 interactions with mKTL. The command line arguments describe its usage:
 
-.. literalinclude:: ./mark.txt
+.. literalinclude:: ./mk.txt
    :language: none
 
 
-.. _marked:
+.. _mkd:
 
-marked
-------
+mkd
+---
 
-The `marked` executable provides a command-line interface to invoke a
+The `mkd` executable provides a command-line interface to invoke a
 persistent daemon executing a :class:`mktl.Daemon` subclass to implement
-application-specific functionality. The `marked` executable is intended
+application-specific functionality. The `mkd` executable is intended
 to be the common point of entry for any Python-based mKTL daemon.
 
 The command line arguments describe its usage:
 
-.. literalinclude:: ./marked.txt
+.. literalinclude:: ./mkd.txt
    :language: none
 
 
-.. _markbrokered:
+.. _mkbrokerd:
 
-markbrokered
-------------
+mkbrokerd
+---------
 
-The `markbrokered` persistent daemon is a discovery aid, listening for UDP
+The `mkbrokerd` persistent daemon is a discovery aid, listening for UDP
 broadcasts on a well-known port number so that clients can be directed to
 a specific mKTL daemon handling requests for a specific store, or fraction
-of a store. While having a `markbrokered` daemon running is not a strict
+of a store. While having a `mkbrokerd` daemon running is not a strict
 requirement it is a key component of automated discovery of mKTL stores on
 a local network.
