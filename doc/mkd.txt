@@ -1,6 +1,6 @@
-usage: marked [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
-              [-o]
-              store alias
+usage: mkd [-h] [-m MODULE] [-s SUBCLASS] [-c CONFIGURATION] [-a APPCONFIG]
+           [-o]
+           store alias
 
 This is a generic mKTL daemon. The real work is done in the subclass of
 mktl.Daemon (if any); this executable parses command-line flags, invokes
@@ -40,10 +40,10 @@ options:
                         announce. The override will only be permitted if the
                         conflicting daemons are all offline.
 
-For example, to run marked for the store 'rosebud', using the existing
+For example, to run mkd for the store 'rosebud', using the existing
 on-disk configuration identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
 mktl.Daemon, one might invoke:
 
-    marked rosebud innocence
-    marked rosebud innocence --module Kane --subclass Sled
+    mkd rosebud innocence
+    mkd rosebud innocence --module Kane --subclass Sled

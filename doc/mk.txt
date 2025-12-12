@@ -1,5 +1,5 @@
-usage: mark [-h] [-s STORE] [--serial] [--no-wait]
-            {get,set,watch,describe,discover,list} [requests ...]
+usage: mk [-h] [-s STORE] [--serial] [--no-wait]
+          {get,set,watch,describe,discover,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
 mktl Python library; this executable parses command-line flags, invokes
@@ -29,11 +29,11 @@ options:
 
 Example usage:
 
-    mark get rosebud.model rosebud.length
-    mark get -s rosebud model length height color
-    mark set rosebud.speed=50
-    mark set -s rosebud speed=50 passengers=2 --no-wait
-    mark watch rosebud.model rosebud.length
-    mark watch -s rosebud model length height color
-    mark list -s rosebud
-    mark list rosebud redflyer
+    mk get rosebud.model rosebud.length
+    mk get -s rosebud model length height color
+    mk set rosebud.speed=50
+    mk set -s rosebud speed=50 passengers=2 --no-wait
+    mk watch rosebud.model rosebud.length
+    mk watch -s rosebud model length height color
+    mk list -s rosebud
+    mk list rosebud redflyer
