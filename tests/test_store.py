@@ -2,7 +2,7 @@ import mktl
 import pytest
 
 
-def test_store(run_markbrokered, run_marked):
+def test_store(run_mkbrokerd, run_mkd):
 
     store = mktl.get('unittest')
 

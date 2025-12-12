@@ -1,6 +1,6 @@
 """ This is a super-simple mktl.Daemon to act as a foil for any client-facing
-    unit tests. This file is used by the invocation of marked in the
-    run_marked() fixture defined in conftest.py.
+    unit tests. This file is used by the invocation of mkd in the run_mkd()
+    fixture defined in conftest.py.
 """
 
 import mktl

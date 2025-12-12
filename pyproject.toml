@@ -23,10 +23,10 @@ repository = "https://github.com/KeckObservatory/mKTL"
 "Bug Tracker" = "https://github.com/KeckObservatory/mKTL/issues"
 
 [tool.poetry.scripts]
-mark = { reference = "bin/mark", type = "file" }
-marked = { reference = "sbin/marked", type = "file" }
-markbrokered = { reference = "sbin/markbrokered", type = "file" }
-markpersisted = { reference = "sbin/markpersisted", type = "file" }
+mk = { reference = "bin/mk", type = "file" }
+mkd = { reference = "sbin/mkd", type = "file" }
+mkbrokerd = { reference = "sbin/mkbrokerd", type = "file" }
+mkpersistd = { reference = "sbin/mkpersistd", type = "file" }
 
 [build-system]
 requires = ["poetry-core"]

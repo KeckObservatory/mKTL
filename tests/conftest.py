@@ -6,35 +6,35 @@ import time
 
 
 @pytest.fixture(scope="session")
-def run_markbrokered():
+def run_mkbrokerd():
 
     arguments = list()
     arguments.append(sys.executable)
-    arguments.append('../sbin/markbrokered')
+    arguments.append('../sbin/mkbrokerd')
 
     pipe = subprocess.PIPE
-    markbrokered = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+    mkbrokerd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     yield
 
-    markbrokered.terminate()
+    mkbrokerd.terminate()
 
 
 @pytest.fixture(scope="session")
-def run_marked():
+def run_mkd():
 
     os.environ['PYTHONPATH'] = os.getcwd()
 
     arguments = list()
     arguments.append(sys.executable)
-    arguments.append('../sbin/marked')
+    arguments.append('../sbin/mkd')
     arguments.append('-m')
     arguments.append('unitdaemon')
     arguments.append('unittest')
     arguments.append('unittest')    # Yes, twice.
 
     pipe = subprocess.PIPE
-    marked = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+    mkd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     # Apparently it takes a smidge of time for things to come online. Hence
     # this arbitrary sleep before yielding to the test. 0.1 seconds is not
@@ -44,6 +44,6 @@ def run_marked():
 
     yield
 
-    marked.terminate()
+    mkd.terminate()
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
