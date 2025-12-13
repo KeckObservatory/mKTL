@@ -1,0 +1,261 @@
+# number of CA events to skip per event handled (now defaulted to 0 anyway)
+skip_num = 0
+
+# The "%" is replaced with the trailing character from the service (if it
+# is a digit). This file can therefore be used with dcs0, dcs1, dcs2 etc.
+
+prefix = fakedcs:
+simprefix = fakedcs:
+
+#                                     use prefix flag ------------------
+#                                                type ---------------  |
+#                                      asc2bin method -----------   |  |
+#                                      bin2asc method ------    |   |  |
+#                                                          |    |   |  |
+#   keyword   CA name for read      CA name for write      V    V   V  V
+#
+# -- in alphabetical order of KTL keyword name --
+
+  guider-active in {no,yes}
+    AUTACTIV   AUTACTIV             AUTACTIV              BOO  BOO  b  1
+
+  guider-go-flag in ""
+    AUTGO      AUTGO                AUTGO                 STR  STR  s  1
+
+  guider-pause in ""
+    AUTPAUSE   AUTPAUSE             AUTPAUSE              INT  INT  i  1
+
+  guider-resume in ""
+    AUTRESUM   AUTRESUM             AUTRESUM              INT  INT  i  1
+
+  guider-resumeX in arcsec
+    AUTRESX    AUTRESX              AUTRESX               R2A  A2R  d  1
+
+  guider-resumeY in arcsec
+    AUTRESY    AUTRESY              AUTRESY               R2A  A2R  d  1
+
+  guider-seqnum in ""
+    AUTSQNUM   AUTSQNUM             AUTSQNUM              INT  INT  i  1
+
+  guider-stop in ""
+    AUTSTOP    AUTSTOP              AUTSTOP               INT  INT  i  1
+
+  guider-Xcent in arcsec
+    AUTXCENT   AUTXCENT             AUTXCENT              R2A  A2R  d  1
+
+  guider-Ycent in arcsec
+    AUTYCENT   AUTYCENT             AUTYCENT              R2A  A2R  d  1
+
+  axes-control-status in {unknown,
+                          not controlling,
+                          halted,
+                          in position,
+                          in limit,
+                          slewing,
+                          acquiring,
+                          tracking}
+    AXESTAT   AXESTAT               AXESTAT               ENMM ENMM em 1
+
+  telescope-azimuth in deg
+    AZ        AZ                    AZ                    R2D2 D2R  d  1
+
+  current-instrument in ""
+    CURRINST  CURRINST              CURRINST              STR  STR  s  1
+
+  telescope-elevation in deg
+    EL        EL                    EL                    R2D2 D2R  d  1
+
+  instrument-name in ""
+    INSTRUME  CURRINST              CURRINST              STR  STR  s  1
+
+  parallactic-angle-astrometric in deg
+    PARANG    PARANG                PARANG                R2D2 D2R  d  1
+
+  rotator-base-angle in deg
+    ROTBASE   ROTBASE               ROTBASE               R2D2 D2R  d  1
+
+  rotator-user-destination in deg
+    ROTDEST   ROTDEST               ROTDEST               R2D  D2R  d  1
+
+# Note: timestamps are not specific to rotator but only use will be for rot?
+# Can always define additional keywords connected to these channels
+  rotator-destination-timestamp1-ut1-slow in ""
+    ROTDETS1  ROTDETS1              ROTDETS1              UTC  DBL  d  1
+
+  rotator-destination-timestamp2-ut1-slow in ""
+    ROTDETS2  ROTDETS2              ROTDETS2              UTC  DBL  d  1
+
+# Writable so external rotator can set it
+  rotator-error-string in ""
+    ROTERRS   ROTERRS               ROTERRS               STR  STR  s  1
+
+# Writable so external rotator can set it
+  rotator-error-status in ""
+    ROTERVL   ROTERVL               ROTERVL               INT  INT  i  1
+
+  rotator-halt-command in ""
+    ROTHALT   ROTHALT               ROTHALTC              BOO  BOO  b  1
+
+# Can be used by external rotator to intercept command
+  rotator-halt-command-complement in ""
+    ROTHALTC  ROTHALTC              ROTHALT               BOO  BOO  b  1
+
+  rotator-initialization-command in ""
+    ROTINIT   ROTINIT               ROTINITC              BOO  BOO  b  1
+
+# Can be used by external rotator to intercept command
+  rotator-initialization-command-complement in ""
+    ROTINITC  ROTINITC              ROTINIT               BOO  BOO  b  1
+
+  rotator-tracking-mode in {unknown,
+			    position angle,
+			    vertical angle,
+			    stationary}
+    ROTMODE   ROTMODE               ROTMODE               ENMM ENMM em 1
+
+  rotator-new-destination-slow in ""
+    ROTNEWS   ROTNEWS               ROTNEWS               INT  INT  i  1
+
+  rotator-physical-destination in deg
+    ROTPDEST  ROTPDEST              ROTPDEST              R2D  D2R  d  1
+
+  rotator-physical-destination-slow in deg
+    ROTPDSTS  ROTPDSTS              ROTPDSTS              R2D  D2R  d  1
+
+  rotator-user-position in deg
+    ROTPOSN   ROTPOSN               ROTPOSN               R2D  D2R  d  1
+
+ rotator-position-timestamp1-ut1-slow in ""
+    ROTPOTS1  ROTPOTS1              ROTPOTS1              UTC  DBL  d  1
+
+ rotator-position-timestamp2-ut1-slow in ""
+    ROTPOTS2  ROTPOTS2              ROTPOTS2              UTC  DBL  d  1
+
+  rotator-physical-position in deg
+    ROTPPOSN  ROTPPOSN              ROTPPOSN              R2D  D2R  d  1
+
+  rotator-select in {none,
+		     fcass (forward cass),
+		     cass (cassegrain),
+                     lbc (left bent cass),
+	             rbc (right bent cass)}
+    ROTSEL    ROTSEL                ROTSEL                ENM  ENM  e  1
+
+# This is not a real dcs keyword. The ROTSPEED allows the developer to
+# change the commanded speed from the nominal default of 0.1 deg/sec.
+
+  rotator-fake-speed in deg/sec
+    ROTSPEED  ROTSPEED              ROTSPEED              DBL  DBL  d  1
+
+  rotator-servo-error in arcsec
+    ROTSRVER  ROTSRVER              ROTSRVER              R2A3 A2R  d  1
+
+# Writable so external rotator can set it
+  rotator-state in  {unknown,
+                     off,
+                     initializing,
+                     standby,
+                     tracking,
+                     fault,
+                     manual,
+                     halted,
+                     disabled,
+                     in position,
+                     slewing,
+                     acquiring,
+                     in limit}
+    ROTSTAT   ROTSTAT               ROTSTAT               ENMM ENMM em 1
+
+  rotator-standby-command in ""
+    ROTSTBY   ROTSTBY               ROTSTBYC              BOO  BOO  b  1
+
+# Can be used by external rotator to intercept command
+  rotator-standby-command-complement in ""
+    ROTSTBYC  ROTSTBYC              ROTSTBY               BOO  BOO  b  1
+
+# Writable so external rotator can set it
+  rotator-state-string in ""
+    ROTSTST   ROTSTST               ROTSTST               STR  STR  s  1
+
+# rot IOC heartbeat
+  rotator-current-time in ""
+    ROTTIME   ROTTIME               ROTTIME               UTC  DBL  d  1
+
+  simulating-dcs in {false, true}
+    SIMULATE  SIMULATE              SIMULATE              BOO  BOO  b  1
+
+  tertiary-error-string in ""
+    TERTERRS  TERTERRS              TERTERRS              STR  STR  s  1
+
+  tertiary-error-status in ""
+    TERTERVL  TERTERVL              TERTERRS              INT  INT  i  1
+
+  tertiary-halt-command in ""
+    TERTHALT  TERTHALT              TERTHALTC             BOO  BOO  b  1
+
+  tertiary-halt-command-complement in ""
+    TERTHALTC TERTHALTC             TERTHALT              BOO  BOO  b  1
+
+  tertiary-initialization-command in ""
+    TERTINIT  TERTINIT              TERTINITC             BOO  BOO  b  1
+
+  tertiary-initialization-command-complement in ""
+    TERTINITC TERTINITC             TERTINIT              BOO  BOO  b  1
+
+  move-tertiary in no,yes
+    TERTMOVE  TERTMOVE              TERTMOVEC             BOO  BOO  b  1
+
+  move-tertiary-complement in no,yes
+    TERTMOVEC TERTMOVEC             TERTMOVE              BOO  BOO  b  1
+
+  tertiary-destination in {lnas,
+                           lbc1,
+                           lbc2,
+                           stowed,
+                           rbc2,
+                           rbc1,
+                           rnas,
+			   cass,
+			   mirrorup}
+    TERTDEST  TERTDEST              TERTDEST              ENM  ENM  e  1
+
+  tertiary-position in {lnas,
+                        lbc1,
+                        lbc2,
+                        stowed,
+                        rbc2,
+                        rbc1,
+                        rnas,
+                        unknown,
+			cass,
+			mirrorup}
+    TERTPOSN  TERTPOSN              TERTPOSN              ENM  ENM  e  1
+
+  tertiary-state in {unknown,
+                     off,
+                     initializing,
+                     standby,
+                     tracking,
+                     fault,
+                     manual,
+                     halted,
+                     disabled,
+                     in position,
+                     slewing,
+                     acquiring,
+                     in limit}
+    TERTSTAT  TERTSTAT             TERTSTAT               ENMM ENMM em 1
+
+  tertiary-standby-command in ""
+    TERTSTBY  TERTSTBY             TERTSTBYC              BOO  BOO  b  1
+
+  tertiary-standby-command-complement in ""
+    TERTSTBYC TERTSTBYC            TERTSTBY               BOO  BOO  b  1
+
+  tertiary-state-string in ""
+    TERTSTST  TERTSTST             TERTSTST               STR  STR  s  1
+
+# Note: is not UTC until timConvert dead-band handling is sorted out
+  coordinated-universal-time in h
+    UTC       UTC                   UTC                   UTC  DBL  d  1
+

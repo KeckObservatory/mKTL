@@ -1,0 +1,515 @@
+{
+  "autactiv": {
+    "read_channel": "AUTACTIV",
+    "write_channel": "AUTACTIV",
+    "description": "guider-active in {no,yes}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autgo": {
+    "read_channel": "AUTGO",
+    "write_channel": "AUTGO",
+    "description": "guider-go-flag in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autpause": {
+    "read_channel": "AUTPAUSE",
+    "write_channel": "AUTPAUSE",
+    "description": "guider-pause in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autresum": {
+    "read_channel": "AUTRESUM",
+    "write_channel": "AUTRESUM",
+    "description": "guider-resume in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autresx": {
+    "read_channel": "AUTRESX",
+    "write_channel": "AUTRESX",
+    "description": "guider-resumeX in arcsec",
+    "units": {
+      "base": "arcsec",
+      "formatted": "arcsec"
+    }
+  },
+  "autresy": {
+    "read_channel": "AUTRESY",
+    "write_channel": "AUTRESY",
+    "description": "guider-resumeY in arcsec",
+    "units": {
+      "base": "arcsec",
+      "formatted": "arcsec"
+    }
+  },
+  "autsqnum": {
+    "read_channel": "AUTSQNUM",
+    "write_channel": "AUTSQNUM",
+    "description": "guider-seqnum in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autstop": {
+    "read_channel": "AUTSTOP",
+    "write_channel": "AUTSTOP",
+    "description": "guider-stop in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "autxcent": {
+    "read_channel": "AUTXCENT",
+    "write_channel": "AUTXCENT",
+    "description": "guider-Xcent in arcsec",
+    "units": {
+      "base": "arcsec",
+      "formatted": "arcsec"
+    }
+  },
+  "autycent": {
+    "read_channel": "AUTYCENT",
+    "write_channel": "AUTYCENT",
+    "description": "guider-Ycent in arcsec",
+    "units": {
+      "base": "arcsec",
+      "formatted": "arcsec"
+    }
+  },
+  "axestat": {
+    "read_channel": "AXESTAT",
+    "write_channel": "AXESTAT",
+    "description": "axes-control-status in {unknown, not controlling, halted, in position, in limit, slewing, acquiring, tracking}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "az": {
+    "read_channel": "AZ",
+    "write_channel": "AZ",
+    "description": "telescope-azimuth in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "currinst": {
+    "read_channel": "CURRINST",
+    "write_channel": "CURRINST",
+    "description": "current-instrument in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "el": {
+    "read_channel": "EL",
+    "write_channel": "EL",
+    "description": "telescope-elevation in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "parang": {
+    "read_channel": "PARANG",
+    "write_channel": "PARANG",
+    "description": "parallactic-angle-astrometric in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotbase": {
+    "read_channel": "ROTBASE",
+    "write_channel": "ROTBASE",
+    "description": "rotator-base-angle in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotdest": {
+    "read_channel": "ROTDEST",
+    "write_channel": "ROTDEST",
+    "description": "rotator-user-destination in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotdets1": {
+    "read_channel": "ROTDETS1",
+    "write_channel": "ROTDETS1",
+    "description": "rotator-destination-timestamp1-ut1-slow in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotdets2": {
+    "read_channel": "ROTDETS2",
+    "write_channel": "ROTDETS2",
+    "description": "rotator-destination-timestamp2-ut1-slow in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "roterrs": {
+    "read_channel": "ROTERRS",
+    "write_channel": "ROTERRS",
+    "description": "rotator-error-string in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotervl": {
+    "read_channel": "ROTERVL",
+    "write_channel": "ROTERVL",
+    "description": "rotator-error-status in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rothalt": {
+    "read_channel": "ROTHALT",
+    "write_channel": "ROTHALTC",
+    "description": "rotator-halt-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rothaltc": {
+    "read_channel": "ROTHALTC",
+    "write_channel": "ROTHALT",
+    "description": "rotator-halt-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotinit": {
+    "read_channel": "ROTINIT",
+    "write_channel": "ROTINITC",
+    "description": "rotator-initialization-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotinitc": {
+    "read_channel": "ROTINITC",
+    "write_channel": "ROTINIT",
+    "description": "rotator-initialization-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotmode": {
+    "read_channel": "ROTMODE",
+    "write_channel": "ROTMODE",
+    "description": "rotator-tracking-mode in {unknown, position angle, vertical angle, stationary}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotnews": {
+    "read_channel": "ROTNEWS",
+    "write_channel": "ROTNEWS",
+    "description": "rotator-new-destination-slow in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotpdest": {
+    "read_channel": "ROTPDEST",
+    "write_channel": "ROTPDEST",
+    "description": "rotator-physical-destination in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotpdsts": {
+    "read_channel": "ROTPDSTS",
+    "write_channel": "ROTPDSTS",
+    "description": "rotator-physical-destination-slow in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotposn": {
+    "read_channel": "ROTPOSN",
+    "write_channel": "ROTPOSN",
+    "description": "rotator-user-position in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotpots1": {
+    "read_channel": "ROTPOTS1",
+    "write_channel": "ROTPOTS1",
+    "description": "rotator-position-timestamp1-ut1-slow in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotpots2": {
+    "read_channel": "ROTPOTS2",
+    "write_channel": "ROTPOTS2",
+    "description": "rotator-position-timestamp2-ut1-slow in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotpposn": {
+    "read_channel": "ROTPPOSN",
+    "write_channel": "ROTPPOSN",
+    "description": "rotator-physical-position in deg",
+    "units": {
+      "base": "deg",
+      "formatted": "deg"
+    }
+  },
+  "rotsel": {
+    "read_channel": "ROTSEL",
+    "write_channel": "ROTSEL",
+    "description": "rotator-select in {none, fcass (forward cass), cass (cassegrain), lbc (left bent cass), rbc (right bent cass)}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotspeed": {
+    "read_channel": "ROTSPEED",
+    "write_channel": "ROTSPEED",
+    "description": "rotator-fake-speed in deg/sec",
+    "units": {
+      "base": "deg/sec",
+      "formatted": "deg/sec"
+    }
+  },
+  "rotsrver": {
+    "read_channel": "ROTSRVER",
+    "write_channel": "ROTSRVER",
+    "description": "rotator-servo-error in arcsec",
+    "units": {
+      "base": "arcsec",
+      "formatted": "arcsec"
+    }
+  },
+  "rotstat": {
+    "read_channel": "ROTSTAT",
+    "write_channel": "ROTSTAT",
+    "description": "rotator-state in  {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotstby": {
+    "read_channel": "ROTSTBY",
+    "write_channel": "ROTSTBYC",
+    "description": "rotator-standby-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotstbyc": {
+    "read_channel": "ROTSTBYC",
+    "write_channel": "ROTSTBY",
+    "description": "rotator-standby-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rotstst": {
+    "read_channel": "ROTSTST",
+    "write_channel": "ROTSTST",
+    "description": "rotator-state-string in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "rottime": {
+    "read_channel": "ROTTIME",
+    "write_channel": "ROTTIME",
+    "description": "rotator-current-time in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "simulate": {
+    "read_channel": "SIMULATE",
+    "write_channel": "SIMULATE",
+    "description": "simulating-dcs in {false, true}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "terterrs": {
+    "read_channel": "TERTERRS",
+    "write_channel": "TERTERRS",
+    "description": "tertiary-error-string in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertervl": {
+    "read_channel": "TERTERVL",
+    "write_channel": "TERTERRS",
+    "description": "tertiary-error-status in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "terthalt": {
+    "read_channel": "TERTHALT",
+    "write_channel": "TERTHALTC",
+    "description": "tertiary-halt-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "terthaltc": {
+    "read_channel": "TERTHALTC",
+    "write_channel": "TERTHALT",
+    "description": "tertiary-halt-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertinit": {
+    "read_channel": "TERTINIT",
+    "write_channel": "TERTINITC",
+    "description": "tertiary-initialization-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertinitc": {
+    "read_channel": "TERTINITC",
+    "write_channel": "TERTINIT",
+    "description": "tertiary-initialization-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertmove": {
+    "read_channel": "TERTMOVE",
+    "write_channel": "TERTMOVEC",
+    "description": "move-tertiary in no,yes",
+    "units": {
+      "base": "no,yes",
+      "formatted": "no,yes"
+    }
+  },
+  "tertmovec": {
+    "read_channel": "TERTMOVEC",
+    "write_channel": "TERTMOVE",
+    "description": "move-tertiary-complement in no,yes",
+    "units": {
+      "base": "no,yes",
+      "formatted": "no,yes"
+    }
+  },
+  "tertdest": {
+    "read_channel": "TERTDEST",
+    "write_channel": "TERTDEST",
+    "description": "tertiary-destination in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, cass, mirrorup}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertposn": {
+    "read_channel": "TERTPOSN",
+    "write_channel": "TERTPOSN",
+    "description": "tertiary-position in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, unknown, cass, mirrorup}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertstat": {
+    "read_channel": "TERTSTAT",
+    "write_channel": "TERTSTAT",
+    "description": "tertiary-state in {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertstby": {
+    "read_channel": "TERTSTBY",
+    "write_channel": "TERTSTBYC",
+    "description": "tertiary-standby-command in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertstbyc": {
+    "read_channel": "TERTSTBYC",
+    "write_channel": "TERTSTBY",
+    "description": "tertiary-standby-command-complement in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "tertstst": {
+    "read_channel": "TERTSTST",
+    "write_channel": "TERTSTST",
+    "description": "tertiary-state-string in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    }
+  },
+  "utc": {
+    "read_channel": "UTC",
+    "write_channel": "UTC",
+    "description": "coordinated-universal-time in h",
+    "units": {
+      "base": "h",
+      "formatted": "h"
+    }
+  }
+}
