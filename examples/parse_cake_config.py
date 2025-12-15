@@ -65,23 +65,13 @@ def parse_cake_config(input_file, output_file=None):
             # Join all description parts
             full_description = ' '.join(description_parts)
             
-            # Extract units from the description (after "in")
-            units = ""
-            if ' in ' in full_description:
-                units_part = full_description.split(' in ', 1)[1]
-                # Remove curly braces and their contents if present
-                units = re.sub(r'\{[^}]*\}', '', units_part).strip()
-                # If units is empty or just quotes, set to empty string
-                if units in ['""', '']:
-                    units = ""
-            
-            # Move to the mapping line
+            # Move to the mapping line first to check if it's ENMM type
             i = j
             if i < len(lines):
                 mapping_line = lines[i].strip()
                 
                 # Parse the mapping line to extract the three channel names
-                # Format: KEYWORD  READ_CHANNEL  WRITE_CHANNEL  [other fields...]
+                # Format: KEYWORD  READ_CHANNEL  WRITE_CHANNEL  COL4  COL5  TYPE  ...
                 parts = mapping_line.split()
                 
                 if len(parts) >= 3:
@@ -89,15 +79,72 @@ def parse_cake_config(input_file, output_file=None):
                     read_channel = parts[1]      # Second column
                     write_channel = parts[2]     # Third column
                     
-                    result[keyword] = {
+                    # Check if column 4 (index 3) is ENMM to determine bitmask enumeration
+                    is_bitmask = len(parts) >= 4 and parts[3] == 'ENMM'
+                    
+                    # Extract enumerators if present (inside curly braces)
+                    enumerators = {}
+                    enum_match = re.search(r'\{([^}]+)\}', full_description)
+                    if enum_match:
+                        enum_content = enum_match.group(1)
+                        # Split by comma and clean up whitespace
+                        enum_values = [v.strip() for v in enum_content.split(',')]
+                        
+                        if is_bitmask:
+                            # For ENMM: use powers of 2 (0, 1, 2, 4, 8, 16, ...)
+                            # First value is 0, second is 1, then powers of 2
+                            for idx, val in enumerate(enum_values):
+                                if idx == 0:
+                                    key = "0"
+                                elif idx == 1:
+                                    key = "1"
+                                else:
+                                    key = str(2 ** (idx - 1))
+                                enumerators[key] = val
+                        else:
+                            # For ENM: use sequential indices (0, 1, 2, 3, ...)
+                            enumerators = {str(i): val for i, val in enumerate(enum_values)}
+                    
+                    # Extract units from the description (after "in")
+                    units = ""
+                    if ' in ' in full_description:
+                        units_part = full_description.split(' in ', 1)[1]
+                        # Remove curly braces and their contents if present
+                        units = re.sub(r'\{[^}]*\}', '', units_part).strip()
+                        # If units is empty or just quotes, set to empty string
+                        if units in ['""', '']:
+                            units = ""
+                    
+                    # Extract type from 6th column (index 5) if available
+                    type_code = parts[5] if len(parts) >= 6 else ""
+                    
+                    # Map type codes to type names
+                    type_map = {
+                        'b': 'boolean',
+                        'i': 'integer',
+                        'd': 'double',
+                        'em': 'enumerated',
+                        'e': 'enumerated',
+                        's': 'string'
+                    }
+                    data_type = type_map.get(type_code, type_code)
+                    
+                    entry = {
                         "read_channel": read_channel,
                         "write_channel": write_channel,
                         "description": full_description,
                         "units": {
                             "base": units,
                             "formatted": units
-                        }
+                        },
+                        "type": data_type
                     }
+                    
+                    # Add enumerators only if they exist
+                    if enumerators:
+                        entry["enumerators"] = enumerators
+                    
+                    result[keyword] = entry
         
         i += 1
     

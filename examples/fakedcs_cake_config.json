@@ -6,6 +6,11 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "boolean",
+    "enumerators": {
+      "0": "no",
+      "1": "yes"
     }
   },
   "autgo": {
@@ -15,7 +20,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "autpause": {
     "read_channel": "AUTPAUSE",
@@ -24,7 +30,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "autresum": {
     "read_channel": "AUTRESUM",
@@ -33,7 +40,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "autresx": {
     "read_channel": "AUTRESX",
@@ -42,7 +50,8 @@
     "units": {
       "base": "arcsec",
       "formatted": "arcsec"
-    }
+    },
+    "type": "double"
   },
   "autresy": {
     "read_channel": "AUTRESY",
@@ -51,7 +60,8 @@
     "units": {
       "base": "arcsec",
       "formatted": "arcsec"
-    }
+    },
+    "type": "double"
   },
   "autsqnum": {
     "read_channel": "AUTSQNUM",
@@ -60,7 +70,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "autstop": {
     "read_channel": "AUTSTOP",
@@ -69,7 +80,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "autxcent": {
     "read_channel": "AUTXCENT",
@@ -78,7 +90,8 @@
     "units": {
       "base": "arcsec",
       "formatted": "arcsec"
-    }
+    },
+    "type": "double"
   },
   "autycent": {
     "read_channel": "AUTYCENT",
@@ -87,7 +100,8 @@
     "units": {
       "base": "arcsec",
       "formatted": "arcsec"
-    }
+    },
+    "type": "double"
   },
   "axestat": {
     "read_channel": "AXESTAT",
@@ -96,6 +110,17 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "not controlling",
+      "2": "halted",
+      "4": "in position",
+      "8": "in limit",
+      "16": "slewing",
+      "32": "acquiring",
+      "64": "tracking"
     }
   },
   "az": {
@@ -105,7 +130,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "currinst": {
     "read_channel": "CURRINST",
@@ -114,7 +140,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "el": {
     "read_channel": "EL",
@@ -123,7 +150,18 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
+  },
+  "instrume": {
+    "read_channel": "CURRINST",
+    "write_channel": "CURRINST",
+    "description": "instrument-name in \"\"",
+    "units": {
+      "base": "",
+      "formatted": ""
+    },
+    "type": "string"
   },
   "parang": {
     "read_channel": "PARANG",
@@ -132,7 +170,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotbase": {
     "read_channel": "ROTBASE",
@@ -141,7 +180,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotdest": {
     "read_channel": "ROTDEST",
@@ -150,7 +190,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotdets1": {
     "read_channel": "ROTDETS1",
@@ -159,7 +200,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "double"
   },
   "rotdets2": {
     "read_channel": "ROTDETS2",
@@ -168,7 +210,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "double"
   },
   "roterrs": {
     "read_channel": "ROTERRS",
@@ -177,7 +220,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "rotervl": {
     "read_channel": "ROTERVL",
@@ -186,7 +230,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "rothalt": {
     "read_channel": "ROTHALT",
@@ -195,7 +240,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rothaltc": {
     "read_channel": "ROTHALTC",
@@ -204,7 +250,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rotinit": {
     "read_channel": "ROTINIT",
@@ -213,7 +260,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rotinitc": {
     "read_channel": "ROTINITC",
@@ -222,7 +270,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rotmode": {
     "read_channel": "ROTMODE",
@@ -231,6 +280,13 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "position angle",
+      "2": "vertical angle",
+      "4": "stationary"
     }
   },
   "rotnews": {
@@ -240,7 +296,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "rotpdest": {
     "read_channel": "ROTPDEST",
@@ -249,7 +306,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotpdsts": {
     "read_channel": "ROTPDSTS",
@@ -258,7 +316,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotposn": {
     "read_channel": "ROTPOSN",
@@ -267,7 +326,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotpots1": {
     "read_channel": "ROTPOTS1",
@@ -276,7 +336,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "double"
   },
   "rotpots2": {
     "read_channel": "ROTPOTS2",
@@ -285,7 +346,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "double"
   },
   "rotpposn": {
     "read_channel": "ROTPPOSN",
@@ -294,7 +356,8 @@
     "units": {
       "base": "deg",
       "formatted": "deg"
-    }
+    },
+    "type": "double"
   },
   "rotsel": {
     "read_channel": "ROTSEL",
@@ -303,6 +366,14 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "none",
+      "1": "fcass (forward cass)",
+      "2": "cass (cassegrain)",
+      "3": "lbc (left bent cass)",
+      "4": "rbc (right bent cass)"
     }
   },
   "rotspeed": {
@@ -312,7 +383,8 @@
     "units": {
       "base": "deg/sec",
       "formatted": "deg/sec"
-    }
+    },
+    "type": "double"
   },
   "rotsrver": {
     "read_channel": "ROTSRVER",
@@ -321,7 +393,8 @@
     "units": {
       "base": "arcsec",
       "formatted": "arcsec"
-    }
+    },
+    "type": "double"
   },
   "rotstat": {
     "read_channel": "ROTSTAT",
@@ -330,6 +403,22 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "off",
+      "2": "initializing",
+      "4": "standby",
+      "8": "tracking",
+      "16": "fault",
+      "32": "manual",
+      "64": "halted",
+      "128": "disabled",
+      "256": "in position",
+      "512": "slewing",
+      "1024": "acquiring",
+      "2048": "in limit"
     }
   },
   "rotstby": {
@@ -339,7 +428,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rotstbyc": {
     "read_channel": "ROTSTBYC",
@@ -348,7 +438,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "rotstst": {
     "read_channel": "ROTSTST",
@@ -357,7 +448,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "rottime": {
     "read_channel": "ROTTIME",
@@ -366,7 +458,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "double"
   },
   "simulate": {
     "read_channel": "SIMULATE",
@@ -375,6 +468,11 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "boolean",
+    "enumerators": {
+      "0": "false",
+      "1": "true"
     }
   },
   "terterrs": {
@@ -384,7 +482,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "tertervl": {
     "read_channel": "TERTERVL",
@@ -393,7 +492,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "integer"
   },
   "terthalt": {
     "read_channel": "TERTHALT",
@@ -402,7 +502,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "terthaltc": {
     "read_channel": "TERTHALTC",
@@ -411,7 +512,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "tertinit": {
     "read_channel": "TERTINIT",
@@ -420,7 +522,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "tertinitc": {
     "read_channel": "TERTINITC",
@@ -429,7 +532,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "tertmove": {
     "read_channel": "TERTMOVE",
@@ -438,7 +542,8 @@
     "units": {
       "base": "no,yes",
       "formatted": "no,yes"
-    }
+    },
+    "type": "boolean"
   },
   "tertmovec": {
     "read_channel": "TERTMOVEC",
@@ -447,7 +552,8 @@
     "units": {
       "base": "no,yes",
       "formatted": "no,yes"
-    }
+    },
+    "type": "boolean"
   },
   "tertdest": {
     "read_channel": "TERTDEST",
@@ -456,6 +562,18 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "lnas",
+      "1": "lbc1",
+      "2": "lbc2",
+      "3": "stowed",
+      "4": "rbc2",
+      "5": "rbc1",
+      "6": "rnas",
+      "7": "cass",
+      "8": "mirrorup"
     }
   },
   "tertposn": {
@@ -465,6 +583,19 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "lnas",
+      "1": "lbc1",
+      "2": "lbc2",
+      "3": "stowed",
+      "4": "rbc2",
+      "5": "rbc1",
+      "6": "rnas",
+      "7": "unknown",
+      "8": "cass",
+      "9": "mirrorup"
     }
   },
   "tertstat": {
@@ -474,6 +605,22 @@
     "units": {
       "base": "",
       "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "off",
+      "2": "initializing",
+      "4": "standby",
+      "8": "tracking",
+      "16": "fault",
+      "32": "manual",
+      "64": "halted",
+      "128": "disabled",
+      "256": "in position",
+      "512": "slewing",
+      "1024": "acquiring",
+      "2048": "in limit"
     }
   },
   "tertstby": {
@@ -483,7 +630,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "tertstbyc": {
     "read_channel": "TERTSTBYC",
@@ -492,7 +640,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "boolean"
   },
   "tertstst": {
     "read_channel": "TERTSTST",
@@ -501,7 +650,8 @@
     "units": {
       "base": "",
       "formatted": ""
-    }
+    },
+    "type": "string"
   },
   "utc": {
     "read_channel": "UTC",
@@ -510,6 +660,7 @@
     "units": {
       "base": "h",
       "formatted": "h"
-    }
+    },
+    "type": "double"
   }
 }

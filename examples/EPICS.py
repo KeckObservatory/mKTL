@@ -57,14 +57,6 @@ class Item(mktl.Item):
 
         self.publish_on_set = False
 
-    @classmethod
-    def convert_string_to_binary(cls, value, bits='08b'):
-        """ Convert a string to 8 bit binary value
-        """
-        return ''.join(f'{byte:08b}' for byte in value.encode('utf-8'))
-        # return int(''.join(format(ord(char), bits) for char in value), 2)
-
-
     def publish_broadcast(self, ):
         """ This method is registered as a KTL callback; take any/all KTL
             broadcast events and publish them as mKTL events.
@@ -89,8 +81,7 @@ class Item(mktl.Item):
         resp = pv.get_with_metadata(as_string=True) # get the value and metadata
         timestamp = resp.get('timestamp')
         value = resp.get('value')
-        bvalue = self.convert_string_to_binary(value)
-        payload = mktl.Payload(bvalue, timestamp)
+        payload = mktl.Payload(value, timestamp)
         return payload
 
 
@@ -102,7 +93,7 @@ class Item(mktl.Item):
             to ensure they are interpreted (or not interpreted, as the case
             may be) properly.
         """
-        pv = epics.PV(self.key)
+        pv = epics.PV(self.pvname)
         pv.put(new_value, wait=True)
 
 # end of class Item
