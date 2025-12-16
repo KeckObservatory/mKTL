@@ -206,7 +206,12 @@ class Daemon:
 
         for key in loaded.keys():
             faux_message = loaded[key]
-            item = self.store[key]
+            try:
+                item = self.store[key]
+            except KeyError:
+                # This item no longer exists, the previously stored value
+                # cannot be restored. Ignore it.
+                continue
             item.req_set(faux_message)
 
 
