@@ -25,9 +25,7 @@ class Daemon(mktl.Daemon):
             daemon, as opposed to letting them be the default mktl.Item.
         """
 
-        config = self.config[self.uuid]
-        items = config['items']
-        keys = items.keys()
+        keys = self.config.keys(authoritative=True)
 
         for key in keys:
             self.add_item(Item, key)
