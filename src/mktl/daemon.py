@@ -232,34 +232,34 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
-        key = self.alias + 'clk'
+        key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
 
-        key = self.alias + 'cpu'
+        key = '_' + self.alias + 'cpu'
         items[key] = dict()
         items[key]['description'] = 'Processor consumption by this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'percent'
         items[key]['settable'] = False
 
-        key = self.alias + 'dev'
+        key = '_' + self.alias + 'dev'
         items[key] = dict()
         items[key]['description'] = 'A terse description for the function of this daemon.'
         items[key]['type'] = 'string'
         items[key]['persist'] = True
         items[key]['initial'] = ''
 
-        key = self.alias + 'host'
+        key = '_' + self.alias + 'host'
         items[key] = dict()
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
         items[key]['initial'] = platform.node()
         items[key]['settable'] = False
 
-        key = self.alias + 'mem'
+        key = '_' + self.alias + 'mem'
         items[key] = dict()
         items[key]['description'] = 'Physical memory consumption by this daemon.'
         items[key]['type'] = 'numeric'
@@ -272,12 +272,12 @@ class Daemon:
 
         # Having updated the configuration, now instantiate the built-in items.
 
-        self.add_item(Uptime, self.alias + 'clk')
-        self.add_item(MemoryUsage, self.alias + 'mem')
-        self.add_item(ProcessorUsage, self.alias + 'cpu')
+        self.add_item(Uptime, '_' + self.alias + 'clk')
+        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
+        self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
 
         for suffix in ('dev', 'host'):
-            key = self.alias + suffix
+            key = '_' + self.alias + suffix
             self.add_item(item.Item, key)
 
 
