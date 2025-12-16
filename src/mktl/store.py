@@ -1,4 +1,6 @@
 
+import threading
+
 from . import config
 from .item import Item
 
@@ -16,6 +18,7 @@ class Store:
         self.name = name
         self.config = config.get(name)
         self._items = dict()
+        self._items_lock = threading.Lock()
 
         self._update_config()
 
@@ -43,10 +46,24 @@ class Store:
             raise KeyError(error)
 
         if item is None:
-            item = Item(self, key)
+            self._items_lock.acquire()
 
-            # The Item assigns itself to our self._items dictionary as the last
-            # step in its initialization process.
+            # Try again in case some other thread created it before this
+            # lock-protected attempt.
+
+            item = self._items[key]
+            if item is None:
+                try:
+                    item = Item(self, key)
+                except:
+                    self._items_lock.release()
+                    raise
+
+            self._items_lock.release()
+
+            # The Item assigns itself to our self._items dictionary as an early
+            # step in its initialization process, there is no need to manipulate
+            # it directly.
 
         return item
 
