@@ -171,7 +171,10 @@ class Daemon:
         if existing is None:
             kwargs['authoritative'] = True
             kwargs['pub'] = self.pub
-            new_item = item_class(self.store, key, **kwargs)
+            item_class(self.store, key, **kwargs)
+
+            # Instantiating the item results in a persistent reference in
+            # self.store._items, there is no need to manipulate it directly.
         else:
             raise RuntimeError('duplicate item not allowed: ' + key)
 
