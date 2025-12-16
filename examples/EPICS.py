@@ -36,7 +36,14 @@ class Daemon(mktl.Daemon):
         """ This is the last step before broadcasts go out. This is the
             right time to fire up monitoring of all EPICS PVs.
         """
-        pass
+        config = self.config[self.uuid]
+        items = config['items']
+        for key in items.keys():
+            item = self.store[key]
+            if isinstance(item, Item):
+                pvname = config['store'] + ':' + key.upper()
+                pv = epics.PV(pvname)
+                pv.add_callback(item.publish_broadcast) 
 
 
 # end of class Store
@@ -57,17 +64,29 @@ class Item(mktl.Item):
 
         self.publish_on_set = False
 
-    def publish_broadcast(self, ):
-        """ This method is registered as a KTL callback; take any/all KTL
+    def publish_broadcast(self, *args, **kwargs):
+        """ This method is registered as an EPICS callback; take any/all EPICS 
             broadcast events and publish them as mKTL events.
         """
-        pv = epics.PV(self.pvname)
-        slice = pv.get_with_metadata(as_string=True)
-        timestamp = slice.get('timestamp')
-        value = slice.get('value')
-        bvalue = self.convert_string_to_binary(value)
+        try:
+            timestamp = kwargs['timestamp']
+            value = kwargs['value']
+        except KeyError:
+            return
+        self.publish(value, timestamp)
 
-        self.publish(bvalue, timestamp)
+    def _get_pv_with_metadata(self):
+        """ Return the EPICS PV object associated with this item.
+        """
+        pv = epics.PV(self.pvname)
+        resp = None
+        tries = 0
+        while resp is None:  # try up to 5 times to get a valid response
+            resp = pv.get_with_metadata(as_string=True) # get the value and metadata
+            tries += 1
+            if tries >= 5:
+                raise RuntimeError(f"Could not get metadata for PV {self.pvname}")
+        return resp 
 
 
     def perform_get(self):
@@ -77,8 +96,7 @@ class Item(mktl.Item):
             relies on epics callbacks to receive asynchronous broadcasts
             (see :func:`publish_broadcast`).
         """
-        pv = epics.PV(self.pvname)
-        resp = pv.get_with_metadata(as_string=True) # get the value and metadata
+        resp = self._get_pv_with_metadata()
         timestamp = resp.get('timestamp')
         value = resp.get('value')
         payload = mktl.Payload(value, timestamp)
