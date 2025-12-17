@@ -69,7 +69,12 @@ class Store:
 
 
     def __iter__(self):
-        return _Iterator(self)
+        """ Iterating over the store will trigger just-in-time instantiation
+            of all local Item instances, which happens in :func:`__getitem__`.
+        """
+
+        for key in self.keys():
+            yield self[key]
 
 
     def __repr__(self):
@@ -110,35 +115,6 @@ class Store:
 
 
 # end of class Store
-
-
-
-class _Iterator:
-    """ Internal class for iteration over a :class:`Store` instance. The custom
-        iterator allows easier just-in-time instantiation of any missing Item
-        instances.
-    """
-
-    def __init__(self, store):
-        self.store = store
-        self.keys = list(store.keys())
-        self.keys.reverse()
-
-
-    def __next__(self):
-
-        try:
-            key = self.keys.pop()
-        except IndexError:
-            raise StopIteration
-
-        item = self.store[key]
-        return item
-
-    next = __next__
-
-
-# end of class _Iterator
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
