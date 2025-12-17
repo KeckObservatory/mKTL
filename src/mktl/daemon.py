@@ -245,6 +245,7 @@ class Daemon:
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
+        items[key]['format'] = '%.3f'
 
         key = '_' + self.alias + 'cpu'
         items[key] = dict()
@@ -252,6 +253,7 @@ class Daemon:
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'percent'
         items[key]['settable'] = False
+        items[key]['format'] = '%.2f'
 
         key = '_' + self.alias + 'dev'
         items[key] = dict()
