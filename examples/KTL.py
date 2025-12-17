@@ -42,7 +42,7 @@ class Daemon(mktl.Daemon):
 
             if keyword['broadcasts'] == True:
                 item = self.store[keyword.name]
-                keyword.callback(item.publish_broadcast)
+                keyword.callback(item.publish_ktl_broadcast)
                 keyword.monitor(wait=False)
 
 
@@ -62,7 +62,7 @@ class Item(mktl.Item):
         self.publish_on_set = False
 
 
-    def publish_broadcast(self, keyword):
+    def publish_ktl_broadcast(self, keyword):
         """ This method is registered as a KTL callback; take any/all KTL
             broadcast events and publish them as mKTL events.
         """
@@ -76,6 +76,10 @@ class Item(mktl.Item):
         #ascii = slice.ascii
         binary = slice.binary
 
+        # This method could assign self.value = binary, but that wouldn't
+        # preserve the timestamp. Call self.publish() instead to preserve
+        # both pieces of information.
+
         self.publish(binary, timestamp)
 
 
@@ -84,7 +88,7 @@ class Item(mktl.Item):
             is only invoked on synchronous GET requests, normally it would
             also be invoked when local polling occurs, but this wrapper
             relies on KTL callbacks to receive asynchronous broadcasts
-            (see :func:`publish_broadcast`).
+            (see :func:`publish_ktl_broadcast`).
         """
 
         keyword = ktl.cache(self.full_key)
