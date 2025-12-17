@@ -171,7 +171,10 @@ class Daemon:
         if existing is None:
             kwargs['authoritative'] = True
             kwargs['pub'] = self.pub
-            new_item = item_class(self.store, key, **kwargs)
+            item_class(self.store, key, **kwargs)
+
+            # Instantiating the item results in a persistent reference in
+            # self.store._items, there is no need to manipulate it directly.
         else:
             raise RuntimeError('duplicate item not allowed: ' + key)
 
@@ -203,7 +206,12 @@ class Daemon:
 
         for key in loaded.keys():
             faux_message = loaded[key]
-            item = self.store[key]
+            try:
+                item = self.store[key]
+            except KeyError:
+                # This item no longer exists, the previously stored value
+                # cannot be restored. Ignore it.
+                continue
             item.req_set(faux_message)
 
 
@@ -232,34 +240,36 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
-        key = self.alias + 'clk'
+        key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
+        items[key]['format'] = '%.3f'
 
-        key = self.alias + 'cpu'
+        key = '_' + self.alias + 'cpu'
         items[key] = dict()
         items[key]['description'] = 'Processor consumption by this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'percent'
         items[key]['settable'] = False
+        items[key]['format'] = '%.2f'
 
-        key = self.alias + 'dev'
+        key = '_' + self.alias + 'dev'
         items[key] = dict()
         items[key]['description'] = 'A terse description for the function of this daemon.'
         items[key]['type'] = 'string'
         items[key]['persist'] = True
         items[key]['initial'] = ''
 
-        key = self.alias + 'host'
+        key = '_' + self.alias + 'host'
         items[key] = dict()
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
         items[key]['initial'] = platform.node()
         items[key]['settable'] = False
 
-        key = self.alias + 'mem'
+        key = '_' + self.alias + 'mem'
         items[key] = dict()
         items[key]['description'] = 'Physical memory consumption by this daemon.'
         items[key]['type'] = 'numeric'
@@ -272,12 +282,12 @@ class Daemon:
 
         # Having updated the configuration, now instantiate the built-in items.
 
-        self.add_item(Uptime, self.alias + 'clk')
-        self.add_item(MemoryUsage, self.alias + 'mem')
-        self.add_item(ProcessorUsage, self.alias + 'cpu')
+        self.add_item(Uptime, '_' + self.alias + 'clk')
+        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
+        self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
 
         for suffix in ('dev', 'host'):
-            key = self.alias + suffix
+            key = '_' + self.alias + suffix
             self.add_item(item.Item, key)
 
 

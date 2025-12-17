@@ -14,6 +14,7 @@ is to lighten the resource load on the 'main' daemon process.
 import argparse
 import sys
 import mktl
+import select
 import time
 
 
@@ -55,11 +56,27 @@ def main():
         print('No persistent items found, mkpersistd subprocess exiting.')
         sys.exit(0)
 
+    mask = select.POLLIN | select.POLLPRI
+    poller = select.poll()
+    poller.register(sys.stdin, mask)
+
     while True:
         try:
-            time.sleep(30)
+            events = poller.poll(30000)
         except (KeyboardInterrupt, SystemExit):
             break
+
+        for descriptor,event in events:
+            if event & select.POLLERR:
+                # Can't print a message about closing, if stdin is gone that
+                # means stdout and stderr are gone too.
+                sys.exit(0)
+
+            if event & select.POLLIN:
+                data = sys.stdin.read(1024)
+                if data == '':
+                    sys.exit(0)
+
 
 
 def parse_command_line():

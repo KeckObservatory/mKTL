@@ -219,7 +219,7 @@ class RequestServer(mktl.protocol.request.Server):
 
         store = block['store']
         alias = block['alias']
-        clock = alias + 'clk'
+        clock = '_' + alias + 'clk'
         key = store + '.' + clock
 
         payload = mktl.protocol.message.Payload(None, refresh=True)

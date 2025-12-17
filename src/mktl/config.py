@@ -210,14 +210,20 @@ class Configuration:
     def keys(self, authoritative=False):
         """ Return an iterable sequence of keys for the items represented in
             this configuration. If *authoritative* is set to True, only
-            return the keys for locally authoritative items.
+            return the keys for locally authoritative items; any keys with
+            a leading underscore (built-in items) will be omitted from the
+            reported authoritative set.
         """
 
         if authoritative == True:
             if self.authoritative_items is None:
                 return tuple()
             else:
-                return self.authoritative_items.keys()
+                keys = list()
+                for key in self.authoritative_items.keys():
+                    if key[0] != '_':
+                        keys.append(key)
+                return keys
         else:
             return self._by_key.keys()
 
