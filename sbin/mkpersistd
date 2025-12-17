@@ -66,11 +66,16 @@ def main():
         except (KeyboardInterrupt, SystemExit):
             break
 
-        for descriptor,type in events:
-            if type == select.POLLERR:
+        for descriptor,event in events:
+            if event & select.POLLERR:
                 # Can't print a message about closing, if stdin is gone that
                 # means stdout and stderr are gone too.
                 sys.exit(0)
+
+            if event & select.POLLIN:
+                data = sys.stdin.read(1024)
+                if data == '':
+                    sys.exit(0)
 
 
 
