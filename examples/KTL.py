@@ -46,7 +46,7 @@ class Daemon(mktl.Daemon):
                 keyword.monitor(wait=False)
 
 
-# end of class Store
+# end of class Daemon
 
 
 
