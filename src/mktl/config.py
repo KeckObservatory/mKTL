@@ -219,7 +219,11 @@ class Configuration:
             if self.authoritative_items is None:
                 return tuple()
             else:
-                return _BlockIterator(self.authoritative_items)
+                keys = list()
+                for key in self.authoritative_items.keys():
+                    if key[0] != '_':
+                        keys.append(key)
+                return keys
         else:
             return self._by_key.keys()
 
@@ -680,28 +684,6 @@ class Configuration:
 
 # end of class Configuration
 
-
-
-class _BlockIterator:
-    """ Internal class for iteration over the authoritative items in a
-        configuration block, omitting any items with a leading underscore.
-    """
-
-    def __init__(self, block):
-        self.block = block
-        self.keys = block.keys()
-
-
-    def __next__(self):
-
-        key = None
-        while key is None:
-            key = next(self.keys)
-            if key[0] == '_':
-                key = None
-
-
-# end of class _BlockIterator
 
 
 def to_block(store, alias, uuid, items):
