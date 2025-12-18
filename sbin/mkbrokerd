@@ -409,12 +409,12 @@ class RequestServer(mktl.protocol.request.Server):
         return payload
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, socket, lock, request):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(socket, lock, request)
 
         type = request.type
         target = request.target

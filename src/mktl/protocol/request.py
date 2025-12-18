@@ -330,7 +330,7 @@ class Server:
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
 
 
-    def req_ack(self, socket, lock, ident, request):
+    def req_ack(self, socket, lock, request):
         """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
@@ -339,7 +339,8 @@ class Server:
 
         ack = message.Payload(None)
         response = message.Message('ACK', payload=ack, id=request.id)
-        parts = (ident,) + tuple(response)
+        response.prefix = request.prefix
+        parts = tuple(response)
 
         # The lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
@@ -350,7 +351,7 @@ class Server:
         lock.release()
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, socket, lock, request):
         """ The default request handler is for debug purposes only, and is
             effectively a no-op. :class:`mktl.Daemon` leverages a
             custom subclass of :class:`Server` that properly handles specific
@@ -358,11 +359,12 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(socket, lock, request)
 
         payload = message.Payload(None)
         response = message.Message('REP', target, payload, id=request.id)
-        parts = (ident,) + tuple(response)
+        response.prefix = request.prefix
+        parts = tuple(response)
 
         # The lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
@@ -423,11 +425,12 @@ class Server:
                 pass
 
         request = message.Request(req_type, target, payload, req_id)
+        request.prefix = (ident,)
         payload = None
         error = None
 
         try:
-            payload = self.req_handler(socket, lock, ident, request)
+            payload = self.req_handler(socket, lock, request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -448,7 +451,8 @@ class Server:
             payload.error = error
 
         response = message.Message('REP', target, payload, req_id)
-        parts = (ident,) + tuple(response)
+        response.prefix = request.prefix
+        parts = tuple(response)
 
         # The lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
@@ -476,7 +480,7 @@ class Server:
         self.workers.shutdown()
 
 
-    def send(self, ident, message):
+    def send(self, message):
         """ Convenience method for subclasses to fire off a message response.
             Any such subclasses are not using just the :func:`req_incoming`
             and :func:`req_handler` background thread machinery defined
@@ -484,7 +488,7 @@ class Server:
             that need to be relayed back to the original caller.
         """
 
-        parts = (ident,) + tuple(message)
+        parts = tuple(message)
 
         # The lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
