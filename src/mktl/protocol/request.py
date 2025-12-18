@@ -5,6 +5,7 @@
 import atexit
 import concurrent.futures
 import itertools
+import queue
 import socket
 import sys
 import threading
@@ -41,7 +42,24 @@ class Client:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
-        self.socket_lock = threading.Lock()
+
+        # This queue may need to come from the multiprocessing module in
+        # the future, but the message.Request class would need to be modified
+        # such that its notification mechanism is no longer a threading.Event.
+
+        try:
+            # Available in Python 3.7+.
+            self.requests = queue.SimpleQueue()
+        except AttributeError:
+            self.requests = queue.Queue()
+
+        internal = "inproc://request.Client:signal:%s:%d" % (address, port)
+        self.request_address = internal
+        self.request_receive = zmq_context.socket(zmq.PAIR)
+        self.request_receive.bind(internal)
+
+        self.request_signal = zmq_context.socket(zmq.PAIR)
+        self.request_signal.connect(internal)
 
         self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
@@ -109,10 +127,55 @@ class Client:
         del self.pending[response_id]
 
 
+    def _req_outgoing(self):
+        """ Clear one request notification and send one pending request.
+            No error is raised if either fails, as might occur if the
+            notifications and request queue are out of synch (but they
+            never should be).
+        """
+
+        try:
+            self.request_receive.recv(flags=zmq.NOBLOCK)
+        except:
+            pass
+
+        try:
+            message = self.requests.get(block=False)
+        except queue.Empty:
+            return
+
+        parts = tuple(message)
+        self.pending[message.id] = message
+
+        # A lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed
+        # together. However, this send_multipart() call is now only called
+        # from a single thread handling all send/recv calls, so the
+        # lock is no longer in place.
+
+        self.socket.send_multipart(parts)
+
+
     def run(self):
+        """ All send() and recv() calls are sequestered to this thread
+            in order to satisfy ZeroMQ. Even with a lock around the socket
+            it will sometimes seg fault when multiple threads act on a
+            single socket; in particular, if other threads (like client
+            operations) call send() while a background thread (like this
+            thread) is running poll() and recv(). Thus, all incoming local
+            requests are filtered through a queue, with notification happening
+            on a PAIR socket to allow a single poll() call to wake up the
+            thread for either type of event.
+
+            Example reference:
+
+            https://github.com/zeromq/libzmq/issues/1108
+        """
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
+        poller.register(self.request_receive, zmq.POLLIN)
 
         while True:
             sockets = poller.poll(10000) # milliseconds
@@ -120,6 +183,9 @@ class Client:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
+
+                if self.request_receive == active:
+                    self._req_outgoing()
 
 
     def send(self, message):
@@ -134,16 +200,8 @@ class Client:
             :class:`mktl.protocol.message.Request` instance.
         """
 
-        parts = tuple(message)
-        self.pending[message.id] = message
-
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        self.socket_lock.acquire()
-        self.socket.send_multipart(parts)
-        self.socket_lock.release()
+        self.requests.put(message)
+        self.request_signal.send(b'')
 
         ack = message.wait_ack(self.timeout)
 
@@ -408,7 +466,7 @@ class Server:
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
-            for active,flag in sockets:
+            for active, flag in sockets:
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
                     args = (self.socket, self.socket_lock, parts)
