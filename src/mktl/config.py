@@ -4,6 +4,7 @@ import os
 import threading
 import time
 import uuid
+import zmq
 
 from . import json
 from . import protocol
