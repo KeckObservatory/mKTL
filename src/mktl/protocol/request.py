@@ -341,7 +341,7 @@ class Server:
         # any better.
 
         # Using ZeroMQ sockets to implement a multithreaded queue was much
-        # slower (in the absence of multiprocessing).
+        # slower, it's not clear whether full multiprocessing would help.
 
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
 
@@ -500,11 +500,11 @@ class Server:
         self.socket.send_multipart(parts)
 
 
-    def send(self, message):
+    def send(self, response):
         """ Queue a response to be sent back to the original requestor.
         """
 
-        self.responses.put(message)
+        self.responses.put(response)
         self.response_signal.send(b'')
 
 
