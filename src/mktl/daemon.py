@@ -404,12 +404,12 @@ class RequestServer(protocol.request.Server):
         return payload
 
 
-    def req_handler(self, socket, lock, request):
+    def req_handler(self, socket, request):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, request)
+        self.req_ack(socket, request)
 
         type = request.type
         target = request.target
