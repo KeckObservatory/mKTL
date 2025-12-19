@@ -185,12 +185,13 @@ class Client:
         while True:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
-                if self.socket == active:
-                    parts = self.socket.recv_multipart()
-                    self._rep_incoming(parts)
 
                 if self.request_receive == active:
                     self._req_outgoing()
+
+                if self.socket == active:
+                    parts = self.socket.recv_multipart()
+                    self._rep_incoming(parts)
 
 
     def send(self, message):
@@ -467,6 +468,7 @@ class Server:
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
+
                 if self.response_receive == active:
                     self._rep_outgoing()
 
