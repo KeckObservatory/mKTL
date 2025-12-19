@@ -346,7 +346,7 @@ class Server:
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
 
 
-    def req_ack(self, socket, request):
+    def req_ack(self, request):
         """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
@@ -360,7 +360,7 @@ class Server:
         self.send(response)
 
 
-    def req_handler(self, socket, request):
+    def req_handler(self, request):
         """ The default request handler is for debug purposes only, and is
             effectively a no-op. :class:`mktl.Daemon` leverages a
             custom subclass of :class:`Server` that properly handles specific
@@ -368,7 +368,7 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(socket, request)
+        self.req_ack(request)
 
         payload = message.Payload(None)
         response = message.Message('REP', target, payload, id=request.id)
@@ -380,7 +380,7 @@ class Server:
         # that it should not issue a response of its own.
 
 
-    def req_incoming(self, socket, parts):
+    def req_incoming(self, parts):
         """ All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
@@ -432,7 +432,7 @@ class Server:
         error = None
 
         try:
-            payload = self.req_handler(socket, request)
+            payload = self.req_handler(request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -472,9 +472,8 @@ class Server:
 
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
-                    args = (self.socket, parts)
                     # Calling submit() will block if a worker is not available.
-                    self.workers.submit(self.req_incoming, *args)
+                    self.workers.submit(self.req_incoming, parts)
 
 
         self.workers.shutdown()
