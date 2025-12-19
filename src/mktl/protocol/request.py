@@ -53,6 +53,11 @@ class Client:
         except AttributeError:
             self.requests = queue.Queue()
 
+        # Similar to the above comment, this may need to be an ipc socket
+        # instead of inproc if there's a need to support full multiprocessing.
+        # That, or an additional background thread to sit on the multiprocessing
+        # queue, and use this inproc signal to trigger the send/recv thread.
+
         internal = "inproc://request.Client:signal:%s:%d" % (address, port)
         self.request_address = internal
         self.request_receive = zmq_context.socket(zmq.PAIR)
