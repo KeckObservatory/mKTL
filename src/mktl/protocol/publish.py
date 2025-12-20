@@ -223,19 +223,11 @@ class Client:
 
     def _sub_incoming(self):
         """ Clear one subscription notification and handle one subscription
-            request. No error is raised if either fails, as might occur if
-            the notifications and subscription queue are out of synch.
+            request.
         """
 
-        try:
-            self.subscription_receive.recv(flags=zmq.NOBLOCK)
-        except:
-            pass
-
-        try:
-            topic = self.subscriptions.get(block=False)
-        except queue.Empty:
-            return
+        self.subscription_receive.recv(flags=zmq.NOBLOCK)
+        topic = self.subscriptions.get(block=False)
 
         self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 

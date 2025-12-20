@@ -134,20 +134,10 @@ class Client:
 
     def _req_outgoing(self):
         """ Clear one request notification and send one pending request.
-            No error is raised if either fails, as might occur if the
-            notifications and request queue are out of synch (but they
-            never should be).
         """
 
-        try:
-            self.request_receive.recv(flags=zmq.NOBLOCK)
-        except:
-            pass
-
-        try:
-            message = self.requests.get(block=False)
-        except queue.Empty:
-            return
+        self.request_receive.recv(flags=zmq.NOBLOCK)
+        message = self.requests.get(block=False)
 
         parts = tuple(message)
         self.pending[message.id] = message
@@ -483,20 +473,10 @@ class Server:
 
     def _rep_outgoing(self):
         """ Clear one request notification and send one pending response.
-            No error is raised if either fails, as might occur if the
-            notifications and request queue are out of synch (but they
-            never should be).
         """
 
-        try:
-            self.response_receive.recv(flags=zmq.NOBLOCK)
-        except:
-            pass
-
-        try:
-            response = self.responses.get(block=False)
-        except queue.Empty:
-            return
+        self.response_receive.recv(flags=zmq.NOBLOCK)
+        response = self.responses.get(block=False)
 
         parts = tuple(response)
         self.socket.send_multipart(parts)
