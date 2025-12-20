@@ -81,7 +81,12 @@ class Client:
 
         their_version = parts[0]
 
-        if their_version != message.version:
+        if their_version == message.version:
+            response_type = parts[2]
+            target = parts[3]
+            payload = parts[4]
+            bulk = parts[5]
+        else:
             error = dict()
             error['type'] = 'RuntimeError'
             error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
@@ -90,11 +95,6 @@ class Client:
             response_type = 'REP'
             target = '???'
             bulk = None
-        else:
-            response_type = parts[2]
-            target = parts[3]
-            payload = parts[4]
-            bulk = parts[5]
 
         # This could still blow up if the version doesn't match-- the id may
         # be in a different message part-- but we have to try, otherwise
@@ -189,7 +189,7 @@ class Client:
                 if self.request_receive == active:
                     self._req_outgoing()
 
-                if self.socket == active:
+                elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
 
@@ -472,7 +472,7 @@ class Server:
                 if self.response_receive == active:
                     self._rep_outgoing()
 
-                if self.socket == active:
+                elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     # Calling submit() will block if a worker is not available.
                     self.workers.submit(self.req_incoming, parts)
