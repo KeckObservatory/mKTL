@@ -344,8 +344,7 @@ class Server:
             request.
         """
 
-        ack = message.Payload(None)
-        response = message.Message('ACK', payload=ack, id=request.id)
+        response = message.Message('ACK', id=request.id)
         response.prefix = request.prefix
 
         self.send(response)
@@ -361,8 +360,7 @@ class Server:
 
         self.req_ack(request)
 
-        payload = message.Payload(None)
-        response = message.Message('REP', target, payload, id=request.id)
+        response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
 
         self.send(response)
@@ -437,11 +435,12 @@ class Server:
             # other processing chain that will issue a proper response.
             return
 
-        if payload is None:
-            payload = message.Payload(None)
-
-        if error is not None and payload.error is None:
-            payload.error = error
+        if error is not None:
+            if payload is None:
+                payload = message.Payload(None)
+                payload.error = error
+            elif payload.error is None:
+                payload.error = error
 
         response = message.Message('REP', target, payload, req_id)
         response.prefix = request.prefix
