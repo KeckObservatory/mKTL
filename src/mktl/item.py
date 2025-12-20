@@ -197,14 +197,18 @@ class Item:
             else:
                 return self._value
 
-        request = dict()
+        elif refresh == False:
+            request = protocol.message.Request('GET', self.full_key)
+        elif refresh == True:
+            payload = protocol.message.Payload(None, refresh=True)
+            request = protocol.message.Request('GET', self.full_key, payload)
+        else:
+            raise TypeError('refresh argument must be a boolean')
 
-        request = protocol.message.Payload(None, refresh=refresh)
-        message = protocol.message.Request('GET', self.full_key, request)
-        self.req.send(message)
-        response = message.wait(self.timeout)
+        self.req.send(request)
+        response = request.wait(self.timeout)
 
-        if response == None:
+        if response is None:
             raise RuntimeError('GET failed: no response to request')
 
         error = response.payload.error
@@ -242,13 +246,14 @@ class Item:
 
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
-            'value'; this is not expected to be a common occurrence, but if the
+            'value'; this is not expected to be a common occurrence, but if a
             custom :func:`perform_get` implementation wants that to occur they
             need to instantiate and return the Payload instance directly rather
             than use :func:`to_payload`.
         """
 
-        # This implementation is strictly caching, there is nothing to refresh.
+        # This default implementation is strictly caching, there is nothing
+        # to refresh.
 
         payload = self.to_payload()
         return payload
@@ -266,29 +271,37 @@ class Item:
             request.
         """
 
+        # This default implementation is a no-op, there is nothing to set.
+        # the local cache of the new value will be updated when the value
+        # is published.
+
         pass
 
 
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero. Polling occurs
-            within a local background thread which will invoke :func:`req_poll`
-            at the requested interval.
+            discontinued if *period* is set to None or zero. Polling will
+            invoke :func:`req_poll`, and occurs at the requested interval
+            within a background thread unique to this item.
         """
 
         poll.start(self.req_poll, period)
 
 
     def publish(self, new_value, timestamp=None, repeat=False):
-        """ Publish a new value, which is expected to be the Python binary
-            representation of the new value.
-            If *timestamp* is set it is expected to be
-            a UNIX epoch timestamp; the current time will be used if it is not
-            provided. Newly published values are always cached locally.
+        """ Publish a new value, which is expected to be the Python native
+            representation of the new value. If *timestamp* is set it is
+            expected to be a UNIX epoch timestamp; the current time will be
+            used if it is not provided. Newly published values are always
+            cached locally.
 
             Note that, for simple cases, an authoritative daemon can set the
             :func:`value` property to publish a new value instead of calling
-            :func:`publish` directly.
+            :func:`publish` directly. In other words, these two calls are
+            equivalent::
+
+                item.value = new_value
+                item.publish(new_value)
         """
 
         if timestamp is None:
