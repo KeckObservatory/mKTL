@@ -565,10 +565,20 @@ class Configuration:
             del items[key]
             items[lower] = item
 
+
+        # It's possible the contents of the block changed. Update the
+        # hash and configuration timestamp if that is the case.
+
+        new_hash = generate_hash(items)
+
         try:
-            block['hash']
+            old_hash = block['hash']
         except KeyError:
-            block['hash'] = generate_hash(items)
+            old_hash = None
+
+        if old_hash != new_hash:
+            block['hash'] = new_hash
+            block['time'] = time.time()
 
 
         # Done with pre-processing. Look for potential conflicts before
@@ -604,9 +614,9 @@ class Configuration:
                 # Keep the most recent block if a collision occured.
 
                 try:
-                    time = block['time']
+                    new_time = block['time']
                 except KeyError:
-                    time = 0
+                    new_time = 0
 
                 try:
                     known_time = known_block['time']
@@ -619,7 +629,7 @@ class Configuration:
                     # are missing their timestamp should be vanishingly low.
                     known_time = 1
 
-                if time >= known_time:
+                if new_time >= known_time:
                     # Get rid of the previous block, and process the newer one.
                     self.remove(known_uuid)
                 else:
