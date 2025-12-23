@@ -566,19 +566,29 @@ class Configuration:
             items[lower] = item
 
 
-        # It's possible the contents of the block changed. Update the
-        # hash and configuration timestamp if that is the case.
+        # It's possible the contents of the local authoritative block changed.
+        # Update the hash and configuration timestamp if that is the case.
 
-        new_hash = generate_hash(items)
+        if uuid == self.authoritative_uuid:
+            new_hash = generate_hash(items)
 
-        try:
-            old_hash = block['hash']
-        except KeyError:
-            old_hash = None
+            try:
+                old_hash = block['hash']
+            except KeyError:
+                old_hash = None
 
-        if old_hash != new_hash:
-            block['hash'] = new_hash
-            block['time'] = time.time()
+            if old_hash != new_hash:
+                block['hash'] = new_hash
+                block['time'] = time.time()
+
+        else:
+            # The block should always have a hash; provide one if, for some
+            # unknown reason, it is not already present.
+
+            try:
+                block['hash']
+            except KeyError:
+                block['hash'] = generate_hash(items)
 
 
         # Done with pre-processing. Look for potential conflicts before
