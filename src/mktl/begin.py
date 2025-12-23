@@ -74,6 +74,7 @@ def discover(*targets):
     protocol.request.Client.timeout = old_timeout
 
 
+
 def get(store, key=None):
     """ The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store.
