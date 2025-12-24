@@ -112,11 +112,15 @@ item.
 		understand the intent and function of the key/value
 		pair.
 
-**units**	Terse description of the units for a numeric value.
+**units**	Terse description of the units for a numeric value;
+		a typical item with units will only have one units
+		string, assumed to be appropriate for all formats.
 		If the value has multiple representations, there
 		could be a units value for each representation, for
 		example an angular value transmitted as radians but
-		with optional formatting as sexagesimal.
+		with optional formatting as sexagesimal; in this case
+		the units field will be dictionary, with None and
+		'formatted' as keys.
 
 **format**	How to format the value for printing. This is expected
 		to be a printf-like expression, for example %d for
@@ -222,7 +226,7 @@ like for a store named 'pie'::
           {
             "stratum": 0,
             "hostname": "chonk",
-            "req": 10112,
+            "rep": 10112,
             "pub": 10139
           }
         ]
