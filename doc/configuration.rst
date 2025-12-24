@@ -156,9 +156,9 @@ item.
 		though it is also overloaded for use with the legacy
 		numeric array type. An example set of enumerators for
 		a boolean item might be ``{'0': 'False', '1': 'True'}``.
-		In JSON a dictionary key must be a string, these keys
-		can and should be cast back to integers after the JSON
-		is parsed.
+		In JSON a dictionary key must be a string, integer
+		handling of these keys can and should be supported;
+		this is particularly relevant for mask values.
 =============== ===============================================================
 
 Item types
