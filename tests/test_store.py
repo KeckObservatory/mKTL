@@ -9,10 +9,14 @@ def test_store(run_mkbrokerd, run_mkd):
     assert store.name == 'unittest'
 
     assert store.has_key('angle')
+    assert store.has_key('Angle')
+    assert store.has_key('ANGLE')
     assert store.has_key('integer')
     assert store.has_key('string')
 
     assert 'angle' in store
+    assert 'Angle' in store
+    assert 'ANGLE' in store
     assert 'integer' in store
     assert 'string' in store
 
