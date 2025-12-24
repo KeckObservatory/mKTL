@@ -119,8 +119,8 @@ item.
 		could be a units value for each representation, for
 		example an angular value transmitted as radians but
 		with optional formatting as sexagesimal; in this case
-		the units field will be dictionary, with the empty string
-		and 'formatted' as keys.
+		the units field will be a dictionary, with the empty
+		string and 'formatted' as keys for the different units.
 
 **format**	How to format the value for printing. This is expected
 		to be a printf-like expression, for example %d for
