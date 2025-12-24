@@ -225,7 +225,7 @@ def describeKeyword(keyword):
                 if binary_units is not None:
                     units = dict()
                     units['formatted'] = value
-                    units['base'] = binary_units
+                    units[None] = binary_units
 
                     value = units
 
