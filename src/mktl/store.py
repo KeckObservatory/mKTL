@@ -107,10 +107,14 @@ class Store:
 
 
     def keys(self):
+        """ Return a sequence of all keys in this store.
+        """
         return self._items.keys()
 
 
     def values(self):
+        """ Return a sequence of all :class:`mktl.Item` instances in this store.
+        """
         return self._items.values()
 
 
