@@ -1,10 +1,21 @@
 
 import hashlib
 import os
+import sys
 import threading
 import time
 import uuid
 import zmq
+
+# Importing pint is expensive, representing something like 30% of the
+# user runtime for a simple mKTL command. It will be imported on a
+# just-in-time basis for unit conversions. If it's already imported
+# there's no need for this extra handling.
+
+if 'pint' in sys.modules:
+    import pint
+else:
+    pint = None
 
 from . import json
 from . import protocol
@@ -33,6 +44,14 @@ class Configuration:
 
         if store in _cache:
             raise ValueError('Configuration class is a singleton')
+
+        if pint is None:
+            self._unit_registry = None
+            self.convert_units = self._convert_units_setup
+        else:
+            # Conversion setup is fast if the pint module is already imported.
+            # Might as well get it out of the way.
+            self._convert_units_setup()
 
         try:
             self.load()
@@ -77,6 +96,43 @@ class Configuration:
 
     def __len__(self):
         return len(self._by_uuid)
+
+
+    def _convert_units_setup(self, *args, **kwargs):
+        """ The pre-requisites for unit conversion are not part of the
+            standard library, nor are they inexpensive to import. Only
+            import them when actively being used.
+        """
+
+        global pint
+        import pint
+
+        self._unit_registry = pint.UnitRegistry()
+        self.convert_units = self._convert_units
+        return self._convert_units(*args, **kwargs)
+
+
+    def _convert_units(self, value, old, new):
+        """ Use the :mod:`pint` module to convert the provided *value* from
+            *old* units to *new* units.
+        """
+
+        old = self._unit_registry.parse_units(old)
+        new = self._unit_registry.parse_units(new)
+
+        value = value * old
+        converted = value.to(new)
+
+        # This method does not return the units-aware Quantity type, instead
+        # choosing to return the bare floating point number. There's an argument
+        # to be made for returning the Quantity instead, but it requires special
+        # handling; for example, float(quantity) returns the base value, not
+        # the converted value.
+
+        return converted.magnitude
+
+
+    convert_units = _convert_units
 
 
     def format(self, key, value):
@@ -180,9 +236,15 @@ class Configuration:
 
 
     def format_numeric(self, item, value):
-        ### This is just a stub. The format handling needs to be richer than
-        ### this; there needs to be a way to convert between numeric types
-        ### (radians to degrees), and to more exotic formats like sexagesimal.
+        """ Return a string representing the configured formatting for this
+            numeric value. This includes any printf-style directives about
+            decimal places and/or padding, as well as converting the number
+            to the units specific to the formatted value.
+        """
+
+        ### Support for sexagesimal formatting needs to go here.
+
+        value = self.format_units(item, value)
 
         format = item['format']
         value = float(value)
@@ -193,6 +255,29 @@ class Configuration:
         formatted = format % (value)
 
         return formatted
+
+
+    def format_units(self, item, value):
+        """ Convert a numeric value from its unformatted units to the formatted
+            units.
+        """
+
+        try:
+            units = item['units']
+        except KeyError:
+            return value
+
+        try:
+            formatted = units['formatted']
+        except KeyError:
+            return value
+
+        unformatted = units['']
+
+        if formatted == unformatted:
+            return value
+        else:
+            return self.convert_units(value, unformatted, formatted)
 
 
     def hashes(self):
@@ -325,6 +410,14 @@ class Configuration:
             configuration['items'] = json.loads(raw_json)
 
         return configuration,target_uuid
+
+
+    def _reject_units(self, *args, **kwargs):
+        """ The 'pint' Python module is required in order to translate between
+            units.
+        """
+
+        raise ImportError('pint module not available')
 
 
     def remove(self, uuid):
@@ -512,9 +605,15 @@ class Configuration:
 
 
     def unformat_numeric(self, item, value):
-        ### This is just a stub. The format handling needs to be richer than
-        ### this; there needs to be a way to convert between numeric types
-        ### (radians to degrees), and from more exotic formats like sexagesimal.
+        """ Return a Python-native number (either integer or floating point)
+            after undoing the configured formatting for this numeric value.
+            This includes converting the number to the units specific to the
+            unformatted value.
+        """
+
+        ### Support for sexagesimal formatting needs to go here.
+
+        value = self.unformat_units(item, value)
 
         try:
             unformatted = int(value)
@@ -525,6 +624,29 @@ class Configuration:
 
         unformatted = float(value)
         return unformatted
+
+
+    def unformat_units(self, item, value):
+        """ Convert a numeric value from its formatted units to the unformatted
+            units.
+        """
+
+        try:
+            units = item['units']
+        except KeyError:
+            return value
+
+        try:
+            formatted = units['formatted']
+        except KeyError:
+            return value
+
+        unformatted = units['']
+
+        if formatted == unformatted:
+            return value
+        else:
+            return self.convert_units(value, formatted, unformatted)
 
 
     def update(self, block, save=True):
