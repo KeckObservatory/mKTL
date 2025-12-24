@@ -12,6 +12,10 @@ def test_store(run_mkbrokerd, run_mkd):
     assert store.has_key('integer')
     assert store.has_key('string')
 
+    assert 'angle' in store
+    assert 'integer' in store
+    assert 'string' in store
+
     with pytest.raises(NotImplementedError):
         store['angle'] = 55
 
