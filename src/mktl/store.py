@@ -23,6 +23,16 @@ class Store:
         self._update_config()
 
 
+    def __contains__(self, key):
+
+        if isinstance(key, Item):
+            key = key.key
+        else:
+            key = key.lower()
+
+        return key in self._items
+
+
     def __delitem__(self, key):
         raise NotImplementedError("you cannot delete a Store's key directly")
 
@@ -89,8 +99,7 @@ class Store:
 
 
     def has_key(self, key):
-        key = key.lower()
-        return key in self._items
+        return key in self
 
 
     def keys(self):
