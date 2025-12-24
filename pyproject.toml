@@ -17,6 +17,7 @@ orjson = { version = ">=3.0", optional = true }
 msgspec = ["msgspec"]
 numpy = ["numpy"]
 orjson = ["orjson"]
+pint = ["pint"]
 
 [tool.poetry.urls]
 repository = "https://github.com/KeckObservatory/mKTL"
