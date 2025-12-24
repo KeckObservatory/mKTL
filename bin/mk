@@ -349,6 +349,13 @@ def print_item(item, value, timestamp):
         else:
             if units == '':
                 units = None
+            else:
+                try:
+                    units = units['formatted']
+                except KeyError:
+                    units = units['']
+                except TypeError:
+                    pass
 
         if units:
             print ("%.3f %s: %s %s" % (timestamp, item.key, value, units))

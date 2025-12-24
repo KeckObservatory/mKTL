@@ -119,8 +119,8 @@ item.
 		could be a units value for each representation, for
 		example an angular value transmitted as radians but
 		with optional formatting as sexagesimal; in this case
-		the units field will be dictionary, with None and
-		'formatted' as keys.
+		the units field will be dictionary, with the empty string
+		and 'formatted' as keys.
 
 **format**	How to format the value for printing. This is expected
 		to be a printf-like expression, for example %d for
@@ -234,7 +234,7 @@ like for a store named 'pie'::
           "ANGLE": {
             "type": "numeric",
             "units": {
-              null: "rad"
+              '': "rad"
               "formatted": "h",
             },
             "description": "Writable angle keyword.",
@@ -298,7 +298,7 @@ daemon-side .json file for the above two-item example::
           "ANGLE": {
             "type": "numeric",
             "units": {
-              null: "rad"
+              '': "rad"
               "formatted": "h",
             },
             "description": "Writable angle keyword.",
