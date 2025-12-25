@@ -255,6 +255,12 @@ def describeKeyword(keyword):
     if enumerators is not None:
         keyword_dict['enumerators'] = enumerators
 
+    if keyword['reads'] == False:
+        keyword_dict['gettable'] = False
+
+    if keyword['writes'] == False:
+        keyword_dict['settable'] = False
+
     return keyword_dict
 
 
