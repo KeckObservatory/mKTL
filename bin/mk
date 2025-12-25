@@ -288,12 +288,58 @@ def execute_list_requests(requests):
     for name in requests.list:
         store = mktl.get(name)
 
-        # It would be helpful to include additional metadata here besides
-        # just the key names.
+        # This inspection deliberately avoids using the Item class in order
+        # to minimize potential communication (pub/sub requests, mostly) with
+        # a remote daemon.
 
         keys = store.keys()
-        for key in store.keys():
-            print(name + '.' + key)
+        keys = list(keys)
+        keys.sort()
+
+        max_key_length = 0
+        for key in keys:
+            max_key_length = max(max_key_length, len(key))
+
+        max_key_length += len(name) + 1     # Include the 'name.' prefix
+        key_justify = max_key_length + 2
+
+        for key in keys:
+            line = list()
+            full_name = name + '.' + key
+            line.append(full_name.ljust(key_justify))
+
+            try:
+                type = store.config[key]['type']
+            except KeyError:
+                pass
+            else:
+                # Longest typical type is 'enumerated'. Justify accordingly.
+                line.append(type.ljust(11))
+
+            try:
+                gettable = store.config[key]['gettable']
+            except KeyError:
+                gettable = True
+
+            try:
+                settable = store.config[key]['settable']
+            except KeyError:
+                settable = True
+
+            if gettable and settable:
+                perms = 'rw'
+            elif gettable:
+                perms = 'r'
+            elif settable:
+                perms = ' w'
+            else:
+                perms = None
+
+            if perms:
+                line.append(perms)
+
+            line = ' '.join(line)
+            print(line)
 
 
 
