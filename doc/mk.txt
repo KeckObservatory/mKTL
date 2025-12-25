@@ -1,4 +1,4 @@
-usage: mk [-h] [-s STORE] [--serial] [--no-wait]
+usage: mk [-h] [-s STORE] [--serial] [--no-wait] [--formatted] [--unformatted]
           {get,set,watch,describe,discover,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
@@ -26,6 +26,12 @@ options:
   --no-wait             Do not wait until all set requests are complete before
                         exiting. The default is to wait. --no-wait is not
                         compatible with --serial.
+  --formatted           Show the formatted value for get requests, and
+                        interpret the provided value as formatted for set
+                        requests. This is the default behavior.
+  --unformatted         Show the unformatted value for get requests, and
+                        interpret the provided value as unformatted for set
+                        requests. The default is to use the formatted value.
 
 Example usage:
 
