@@ -22,6 +22,7 @@ Example usage:
 """
 
 import argparse
+import datetime
 import mktl
 import os
 import sys
@@ -360,10 +361,15 @@ def execute_watch_requests(requests):
 
 def print_item(item, value, timestamp):
 
-        ### Needs datetime formatting of timestamp.
-
         if timestamp is None:
             timestamp = 0.0
+
+        time_string = str(datetime.datetime.fromtimestamp(timestamp))
+
+        dot = time_string.index('.')
+        if dot > 0:
+            milliseconds = dot + 4
+            time_string = time_string[:milliseconds]
 
         try:
             units = item.config['units']
@@ -386,7 +392,7 @@ def print_item(item, value, timestamp):
                 else:
                     unformatted_units = units['']
 
-        line = "%.3f %s: " % (timestamp, item.key)
+        line = "%s %s: " % (time_string, item.key)
 
         if print_item.unformatted and print_item.formatted:
             if unformatted_units:
