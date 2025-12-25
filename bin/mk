@@ -34,6 +34,10 @@ def main():
     requests = parse_command_line()
     requests = parse_requests(requests)
 
+    if len(requests.requests) == 0:
+        print('No requests specified.')
+        sys.exit(1)
+
     if requests.describe:
         execute_describe_requests(requests)
 
