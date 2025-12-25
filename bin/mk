@@ -77,15 +77,27 @@ def parse_command_line():
         default=False,
         action='store_true',
         help='Process all requests serially. The default is to process requests in parallel.')
+
     parser.add_argument('--no-wait',
         default=False,
         action='store_true',
         help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
+    parser.add_argument('--formatted',
+        default=None,
+        action='store_true',
+        help='Show the formatted value for get requests, and interpret the provided value as formatted for set requests. This is the default behavior.')
+
+    parser.add_argument('--unformatted',
+        default=None,
+        action='store_true',
+        help='Show the unformatted value for get requests, and interpret the provided value as unformatted for set requests. The default is to use the formatted value.')
+
     parser.add_argument('type',
         choices=('get', 'set', 'watch', 'describe', 'discover', 'list'),
         type=str.lower,
         help='Request type')
+
     parser.add_argument('requests',
         nargs='*',
         help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of broker addresses.')
@@ -99,6 +111,25 @@ def parse_command_line():
 
     if len(parsed.requests) == 0 and parsed.type != 'list':
         raise ValueError('no requests specified')
+
+    if parsed.formatted is None and parsed.unformatted is None:
+        # Nothing specified, formatted is the default.
+        parsed.formatted = True
+    elif parsed.formatted is None:
+        # Unformatted was specified.
+        parsed.formatted = False
+    elif parsed.unformatted is None:
+        # Formatted was specified.
+        parsed.unformatted = False
+
+    if parsed.type == 'set':
+        if parsed.formatted == True and parsed.unformatted == True:
+            raise ValueError('cannot specify both formatted and unformatted for set requests')
+        elif parsed.formatted == False and parsed.unformatted == False:
+            raise ValueError('must select one of formatted or unformatted for set requests')
+
+    print_item.formatted = parsed.formatted
+    print_item.unformatted = parsed.unformatted
 
     return parsed
 
@@ -278,6 +309,9 @@ def execute_set_requests(requests):
             failed = True
             continue
 
+        if requests.formatted:
+            value = item.unformat(value)
+
         try:
             request = item.set(value, wait=requests.serial)
         except Exception as e:
@@ -328,40 +362,66 @@ def print_item(item, value, timestamp):
 
         ### Needs datetime formatting of timestamp.
 
-        ### There needs to be an option to choose the unformatted value
-        ### instead of assuming just the formatted representation. This
-        ### is the right place to select one or the other, since value
-        ### printing always comes through this method.
-
-        ### Using the Item instance to reformat the value passed as an
-        ### argument, instead of using the Item.formatted property,
-        ### allows us some flexibility in how to handle formatting.
-
-        value = item.format(value)
-
         if timestamp is None:
             timestamp = 0.0
 
         try:
             units = item.config['units']
         except KeyError:
-            units = None
+            unformatted_units = None
+            formatted_units = None
         else:
             if units == '':
-                units = None
+                unformatted_units = None
+                formatted_units = None
             else:
                 try:
-                    units = units['formatted']
+                    formatted_units = units['formatted']
                 except KeyError:
-                    units = units['']
+                    unformatted_units = units['']
+                    formatted_units = unformatted_units
                 except TypeError:
-                    pass
+                    unformatted_units = units
+                    formatted_units = units
+                else:
+                    unformatted_units = units['']
 
-        if units:
-            print ("%.3f %s: %s %s" % (timestamp, item.key, value, units))
+        line = "%.3f %s: " % (timestamp, item.key)
+
+        if print_item.unformatted and print_item.formatted:
+            if unformatted_units:
+                line = line + "%s %s => " % (value, unformatted_units)
+            else:
+                line = line + "%s => " % (value)
+
+            value = item.format(value)
+
+            if formatted_units:
+                line = line + "%s %s" % (value, formatted_units)
+            else:
+                line = line + str(value)
+
+        elif print_item.formatted:
+            value = item.format(value)
+            if formatted_units:
+                line = line + "%s %s" % (value, formatted_units)
+            else:
+                line = line + str(value)
+
+        elif print_item.unformatted:
+            if unformatted_units:
+                line = line + "%s %s" % (value, unformatted_units)
+            else:
+                line = line + str(value)
+
         else:
-            print ("%.3f %s: %s" % (timestamp, item.key, value))
+            raise RuntimeError("don't know how to print!")
 
+        print(line)
+
+
+print_item.formatted = None
+print_item.unformatted = None
 
 
 if __name__ == '__main__':
