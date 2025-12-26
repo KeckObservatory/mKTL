@@ -767,7 +767,7 @@ class Configuration:
                 else:
                     # Get rid of this block, and discontinue processing.
                     self.remove(uuid)
-                    raise ValueError(collision + ', and this block is older')
+                    raise ValueError(collision + " in store %s, and this block is older" % (store))
 
 
         # Done with validity checks. The cache/save the block for future
