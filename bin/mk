@@ -348,7 +348,7 @@ def execute_set_requests(requests):
     pending = list()
     failed = False
 
-    for key,value in requests.set.items():
+    for key,request in requests.set.items():
 
         if failed == True and requests.serial == True:
             sys.exit(1)
@@ -361,10 +361,12 @@ def execute_set_requests(requests):
             continue
 
         if requests.formatted:
-            value = item.unformat(value)
+            new_value = item.unformat(request)
+        else:
+            new_value = request
 
         try:
-            request = item.set(value, wait=requests.serial)
+            request = item.set(new_value, wait=requests.serial)
         except Exception as e:
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             failed = True
@@ -373,7 +375,7 @@ def execute_set_requests(requests):
         pending.append(request)
 
         if requests.serial == True:
-            print("Set %s to %s " % (key, value))
+            print("Set %s to %s " % (key, request))
 
 
     if requests.serial == False and requests.wait == True:
@@ -388,6 +390,9 @@ def execute_set_requests(requests):
                 sys.stderr.write("%s failed: %s: %s\n" % (key, error['type'], error['text']))
                 failed = True
             else:
+                if requests.formatted:
+                    item = mktl.get(key)
+                    value = item.format(value)
                 print("Set %s to %s " % (key, value))
 
     if failed == True:
