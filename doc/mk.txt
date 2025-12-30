@@ -1,4 +1,5 @@
 usage: mk [-h] [-s STORE] [--serial] [--no-wait] [--formatted] [--unformatted]
+          [-u UNITS]
           {get,set,watch,describe,discover,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
@@ -32,6 +33,10 @@ options:
   --unformatted         Show the unformatted value for get requests, and
                         interpret the provided value as unformatted for set
                         requests. The default is to use the formatted value.
+  -u, --units UNITS     Use the requested units for getting or setting tem
+                        values. Note that this option is applied to all
+                        requests, and is not practical when interacting with
+                        multiple items.
 
 Example usage:
 
