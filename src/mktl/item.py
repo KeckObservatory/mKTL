@@ -350,6 +350,23 @@ class Item:
             self.pub.publish(message)
 
 
+    @property
+    def quantity(self):
+        """ The :class:`pint.Quantity` representation, if possible, of the
+            current item value.
+        """
+
+        quantity = self.store.config.to_quantity(self.key, self.value)
+        return quantity
+
+
+    @quantity.setter
+    def quantity(self, new_quantity):
+
+        new_value = self.store.config.from_quantity(self.key, new_quantity)
+        self.set(new_value)
+
+
     def register(self, method, prime=False):
         """ Register a callback to be invoked whenever a new value is received
             from a remote daemon, regardless of how that new value arrived.
@@ -696,6 +713,7 @@ class Item:
             unformatted = self.store.config.unformat(self.key, value)
         except:
             ###
+            print("DEBUG: unit conversion failed for %s:" % (self.full_key))
             print(traceback.format_exc())
             unformatted = value
 
@@ -762,6 +780,7 @@ class Item:
                 callback(self, new_data, new_timestamp)
             except:
                 ### This should probably be logged in a more graceful fashion.
+                print("DEBUG: callback failed for %s:" % (self.full_key))
                 print(traceback.format_exc())
                 continue
 
