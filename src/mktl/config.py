@@ -671,16 +671,8 @@ class Configuration:
         ### Support for sexagesimal formatting needs to go here.
 
         value = float(value)
-        value = self.unformat_units(item, value)
 
-        try:
-            unformatted = int(value)
-        except:
-            pass
-        else:
-            return unformatted
-
-        unformatted = float(value)
+        unformatted = self.unformat_units(item, value)
         return unformatted
 
 
