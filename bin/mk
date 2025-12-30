@@ -414,7 +414,8 @@ def print_item(item, value, timestamp):
         if timestamp is None:
             timestamp = 0.0
 
-        time_string = str(datetime.datetime.fromtimestamp(timestamp))
+        timestamp = datetime.datetime.fromtimestamp(timestamp)
+        time_string = timestamp.strftime('%H:%M:%S.%f')
 
         dot = time_string.index('.')
         if dot > 0:
