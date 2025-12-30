@@ -119,13 +119,13 @@ class Configuration:
         """
 
         old = self._unit_registry.parse_units(old)
-        value = value * old
+        quantity = value * old
 
         if new is None:
-            return value
+            return quantity
 
         new = self._unit_registry.parse_units(new)
-        converted = value.to(new)
+        converted = quantity.to(new)
         return converted.magnitude
 
 
@@ -157,12 +157,7 @@ class Configuration:
             formatted = self.format_mask(item, value)
 
         elif type == 'numeric':
-            try:
-                item['format']
-            except KeyError:
-                pass
-            else:
-                formatted = self.format_numeric(item, value)
+            formatted = self.format_numeric(item, value)
 
         if formatted is None:
             return str(value)
@@ -241,16 +236,18 @@ class Configuration:
 
         ### Support for sexagesimal formatting needs to go here.
 
+        value = float(value)
         value = self.format_units(item, value)
 
-        format = item['format']
-        value = float(value)
+        try:
+            format = item['format']
+        except KeyError:
+            format = '%s'
 
         if 'd' in format:
             value = int(value)
 
         formatted = format % (value)
-
         return formatted
 
 
@@ -583,12 +580,7 @@ class Configuration:
             unformatted = self.unformat_mask(item, value)
 
         elif type == 'numeric':
-            try:
-                item['format']
-            except KeyError:
-                pass
-            else:
-                unformatted = self.unformat_numeric(item, value)
+            unformatted = self.unformat_numeric(item, value)
 
         if unformatted is None:
             return value
@@ -678,6 +670,7 @@ class Configuration:
 
         ### Support for sexagesimal formatting needs to go here.
 
+        value = float(value)
         value = self.unformat_units(item, value)
 
         try:
