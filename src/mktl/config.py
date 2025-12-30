@@ -114,21 +114,18 @@ class Configuration:
 
     def _convert_units(self, value, old, new):
         """ Use the :mod:`pint` module to convert the provided *value* from
-            *old* units to *new* units.
+            *old* units to *new* units. The value as a :class:`pint.Quantity`
+            instance will be returned if *new* is set to None.
         """
 
         old = self._unit_registry.parse_units(old)
-        new = self._unit_registry.parse_units(new)
-
         value = value * old
+
+        if new is None:
+            return value
+
+        new = self._unit_registry.parse_units(new)
         converted = value.to(new)
-
-        # This method does not return the units-aware Quantity type, instead
-        # choosing to return the bare floating point number. There's an argument
-        # to be made for returning the Quantity instead, but it requires special
-        # handling; for example, float(quantity) returns the base value, not
-        # the converted value.
-
         return converted.magnitude
 
 
@@ -267,17 +264,56 @@ class Configuration:
         except KeyError:
             return value
 
+        # Defining the 'formatted' units requires representing the units
+        # as a dictionary with both '' and 'formatted' as keys. A simple
+        # string representation of the units implies no additional unit
+        # specific formatting is available.
+
         try:
             formatted = units['formatted']
-        except KeyError:
+        except (TypeError, KeyError):
             return value
 
-        unformatted = units['']
+        try:
+            unformatted = units['']
+        except KeyError:
+            raise KeyError('unformatted units are not defined for ' + item.key)
 
         if formatted == unformatted:
             return value
         else:
             return self.convert_units(value, unformatted, formatted)
+
+
+    def from_quantity(self, key, quantity):
+        """ Translate the provided :class:`pint.Quantity` instance to the
+            unformatted representation appropriate for the item identified
+            by the supplied *key*. This is only relevant for numeric types
+            that have defined units; a TypeError exception will be raised
+            for items that do not have units.
+        """
+
+        item = self[key]
+
+        try:
+            units = item['units']
+        except:
+            units = None
+        else:
+            try:
+                unformatted = units['']
+            except (TypeError, KeyError):
+                pass
+            else:
+                units = unformatted
+
+        if units is None:
+            raise TypeError('item ' + repr(key) + ' does not have units')
+
+
+        units = self._unit_registry.parse_units(units)
+        converted = quantity.to(units)
+        return converted.magnitude
 
 
     def hashes(self):
@@ -492,6 +528,35 @@ class Configuration:
         writer.close()
 
         os.chmod(target_filename, 0o664)
+
+
+    def to_quantity(self, key, value):
+        """ Translate the provided *value* according to the configuraton of
+            the item identified by the supplied *key* to a
+            :class:`pint.Quantity` instance. This is only relevant for numeric
+            types that have defined units; a TypeError exception will be raised
+            for items that do not have units.
+        """
+
+        item = self[key]
+
+        try:
+            units = item['units']
+        except:
+            units = None
+        else:
+            try:
+                unformatted = units['']
+            except (TypeError, KeyError):
+                pass
+            else:
+                units = unformatted
+
+        if units is None:
+            raise TypeError('item ' + repr(key) + ' does not have units')
+
+        quantity = self.convert_units(value, units, None)
+        return quantity
 
 
     def unformat(self, key, value):
