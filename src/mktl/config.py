@@ -109,7 +109,9 @@ class Configuration:
 
         self._unit_registry = pint.UnitRegistry()
         self.convert_units = self._convert_units
-        return self._convert_units(*args, **kwargs)
+
+        if args or kwargs:
+            return self._convert_units(*args, **kwargs)
 
 
     def _convert_units(self, value, old, new):
@@ -300,6 +302,9 @@ class Configuration:
         if units is None:
             raise TypeError('item ' + repr(key) + ' does not have units')
 
+
+        if pint is None:
+            self._convert_units_setup()
 
         units = self._unit_registry.parse_units(units)
         converted = quantity.to(units)
