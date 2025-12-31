@@ -371,14 +371,14 @@ class Item:
             current item value.
         """
 
-        quantity = self.to_quantity(self.key, self.value)
+        quantity = self.to_quantity(self.value)
         return quantity
 
 
     @quantity.setter
     def quantity(self, new_quantity):
 
-        new_value = self.from_quantity(self.key, new_quantity)
+        new_value = self.from_quantity(new_quantity)
         self.set(new_value)
 
 
