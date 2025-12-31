@@ -186,6 +186,18 @@ class Item:
         return new_value
 
 
+    def from_quantity(self, quantity):
+        """ Convert the supplied quantity to a base numeric representation
+            if possible, appropriate to the base, unformatted units for this
+            item.
+
+            This is the inverse of :func:`to_quantity`.
+        """
+
+        value = self.store.config.from_quantity(self.key, quantity)
+        return value
+
+
     def get(self, refresh=False, formatted=False):
         """ Retrieve the current value. Set *refresh* to True to prompt
             the daemon handling the request to provide the most up-to-date
@@ -359,14 +371,14 @@ class Item:
             current item value.
         """
 
-        quantity = self.store.config.to_quantity(self.key, self.value)
+        quantity = self.to_quantity(self.key, self.value)
         return quantity
 
 
     @quantity.setter
     def quantity(self, new_quantity):
 
-        new_value = self.store.config.from_quantity(self.key, new_quantity)
+        new_value = self.from_quantity(self.key, new_quantity)
         self.set(new_value)
 
 
@@ -718,6 +730,20 @@ class Item:
             payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
         return payload
+
+
+    def to_quantity(self, value):
+        """ Convert the supplied value to a :class:`pint.Quantity`
+            representation, if possible, appropriate to the units,
+            if any, for this item. Exceptions will be raised if the
+            units are not recognized or the item value is not appropriate
+            for unit conversion.
+
+            This is the inverse of :func:`from_quantity`.
+        """
+
+        quantity = self.store.config.to_quantity(self.key, value)
+        return quantity
 
 
     def validate(self, value):
