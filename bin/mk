@@ -99,7 +99,7 @@ def parse_command_line():
         help='Show the unformatted value for get requests, and interpret the provided value as unformatted for set requests. The default is to use the formatted value.')
 
     parser.add_argument('--terse',
-        default=None,
+        default=False,
         action='store_true',
         help='For get and set requests, only output the requested value and no other metadata.')
 
@@ -384,6 +384,17 @@ def execute_set_requests(requests):
             failed = True
             continue
 
+        # The requests from the command line are always strings. Try to
+        # represent them as numbers, regardless of the underlying item type.
+
+        try:
+            request = int(request)
+        except:
+            try:
+                request = float(request)
+            except:
+                pass
+
         # Because the Item.set() call could be handled in a non-blocking manner,
         # any formatted requests need to be converted explicitly rather than
         # using a property to set the value.
@@ -400,7 +411,7 @@ def execute_set_requests(requests):
             units = item.config['units']['']
 
         elif requests.formatted:
-            new_value = item.unformat(request)
+            new_value = item.from_format(request)
             try:
                 units = item.config['units']['formatted']
             except KeyError:
@@ -457,7 +468,7 @@ def execute_set_requests(requests):
 
                 elif requests.formatted:
                     item = mktl.get(key)
-                    value = item.format(value)
+                    value = item.to_format(value)
                     try:
                         units = item.config['units']['formatted']
                     except KeyError:
@@ -558,7 +569,7 @@ def print_item(item, value, timestamp):
                 quantity = item.quantity.to(print_item.units)
                 value = quantity.magnitude
             else:
-                value = item.format(value)
+                value = item.to_format(value)
 
             if formatted_units:
                 line = line + "%s %s" % (value, formatted_units)
@@ -572,7 +583,7 @@ def print_item(item, value, timestamp):
                 quantity = item.quantity.to(print_item.units)
                 value = quantity.magnitude
             else:
-                value = item.format(value)
+                value = item.to_format(value)
 
             if formatted_units:
                 line = line + "%s %s" % (value, formatted_units)
