@@ -675,32 +675,36 @@ class Configuration:
             return self.convert_units(value, unformatted, formatted)
 
 
-    def to_quantity(self, key, value):
+    def to_quantity(self, key, value, units=None):
         """ Translate the provided *value* according to the configuraton of
             the item identified by the supplied *key* to a
             :class:`pint.Quantity` instance. This is only relevant for numeric
             types that have defined units; a TypeError exception will be raised
-            for items that do not have units.
+            for items that do not have units. The returned quantity will
+            be translated to the specified *units*, if any, otherwise the
+            default 'unformatted' units are used.
         """
 
         item = self[key]
 
         try:
-            units = item['units']
+            default = item['units']
         except:
-            units = None
+            default = None
         else:
             try:
-                unformatted = units['']
+                default = default['']
             except (TypeError, KeyError):
                 pass
-            else:
-                units = unformatted
 
-        if units is None:
+        if default is None:
             raise TypeError('item ' + repr(key) + ' does not have units')
 
-        quantity = self.convert_units(value, units, None)
+        quantity = self.convert_units(value, default, None)
+
+        if units:
+            quantity = quantity.to(units)
+
         return quantity
 
 

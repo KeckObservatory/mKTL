@@ -732,17 +732,20 @@ class Item:
         return payload
 
 
-    def to_quantity(self, value):
+    def to_quantity(self, value, units=None):
         """ Convert the supplied value to a :class:`pint.Quantity`
             representation, if possible, appropriate to the units,
-            if any, for this item. Exceptions will be raised if the
-            units are not recognized or the item value is not appropriate
-            for unit conversion.
+            if any, for this item. The default units of the item can be
+            overridden by providing a *units* argument, which is either a
+            :class:`pint.Unit` instance or a string acceptable to the
+            :func:`pint.UnitRegistry.parse_units` method. Exceptions will
+            be raised if the units are not recognized or the item doesn't
+            have units at all.
 
             This is the inverse of :func:`from_quantity`.
         """
 
-        quantity = self.store.config.to_quantity(self.key, value)
+        quantity = self.store.config.to_quantity(self.key, value, units)
         return quantity
 
 
