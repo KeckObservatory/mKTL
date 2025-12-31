@@ -1,5 +1,5 @@
 usage: mk [-h] [-s STORE] [--serial] [--no-wait] [--formatted] [--unformatted]
-          [--terse] [--no-timestamp] [-u UNITS]
+          [--terse] [--timestamp] [--no-timestamp] [-u UNITS]
           {get,set,watch,describe,discover,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
@@ -35,8 +35,12 @@ options:
                         requests. The default is to use the formatted value.
   --terse               For get and set requests, only output the requested
                         value and no other metadata.
-  --no-timestamp        Omit the timestamp from the output of 'get' and
-                        'watch' requests.
+  --timestamp           Include the timestamp with the output of 'get'
+                        requests. The default is to include the timestamp for
+                        'watch' requests, and omit it from 'get' requests.
+  --no-timestamp        Omit the timestamp from the output of 'watch'
+                        requests. The default is to include the timestamp for
+                        'watch' requests, and omit it from 'get' requests.
   -u, --units UNITS     Use the requested units for getting or setting tem
                         values. Note that this option is applied to all
                         requests, and is not practical when interacting with
