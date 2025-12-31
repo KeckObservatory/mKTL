@@ -461,8 +461,7 @@ def execute_set_requests(requests):
                 if requests.units:
                     units = requests.units
                     item = mktl.get(key)
-                    base_units = item.quantity.u
-                    quantity = value * base_units
+                    quantity = item.to_quantity(value)
                     quantity = quantity.to(target_units)
                     value = quantity.magnitude
 
@@ -565,7 +564,8 @@ def print_item(item, value, timestamp):
             # supported for this item.
 
             if print_item.units:
-                formatted_units = print_item.units
+                if print_item.terse == False:
+                    formatted_units = print_item.units
                 quantity = item.quantity.to(print_item.units)
                 value = quantity.magnitude
             else:
