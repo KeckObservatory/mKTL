@@ -98,6 +98,11 @@ def parse_command_line():
         action='store_true',
         help='Show the unformatted value for get requests, and interpret the provided value as unformatted for set requests. The default is to use the formatted value.')
 
+    parser.add_argument('--no-timestamp',
+        default=None,
+        action='store_true',
+        help="Omit the timestamp from the output of 'get' and 'watch' requests.")
+
     parser.add_argument('-u', '--units',
         default=None,
         help='Use the requested units for getting or setting tem values. Note that this option is applied to all requests, and is not practical when interacting with multiple items.')
@@ -114,6 +119,7 @@ def parse_command_line():
 
     parsed = parser.parse_args()
     parsed.wait = not parsed.no_wait
+    parsed.timestamp = not parsed.no_timestamp
 
     if parsed.serial == True and parsed.no_wait == True:
         raise ValueError('--serial is incompatible with --no-wait')
@@ -138,6 +144,7 @@ def parse_command_line():
             raise ValueError('must select one of formatted or unformatted for set requests')
 
     print_item.formatted = parsed.formatted
+    print_item.timestamp = parsed.timestamp
     print_item.unformatted = parsed.unformatted
     print_item.units = parsed.units
 
@@ -477,16 +484,19 @@ def execute_watch_requests(requests):
 
 def print_item(item, value, timestamp):
 
+        # Manipulate metadata as necessary before printing any output.
+
         if timestamp is None:
             timestamp = 0.0
 
-        timestamp = datetime.datetime.fromtimestamp(timestamp)
-        time_string = timestamp.strftime('%H:%M:%S.%f')
+        if print_item.timestamp:
+            timestamp = datetime.datetime.fromtimestamp(timestamp)
+            time_string = timestamp.strftime('%H:%M:%S.%f')
 
-        dot = time_string.index('.')
-        if dot > 0:
-            milliseconds = dot + 4
-            time_string = time_string[:milliseconds]
+            dot = time_string.index('.')
+            if dot > 0:
+                milliseconds = dot + 4
+                time_string = time_string[:milliseconds]
 
         try:
             units = item.config['units']
@@ -510,7 +520,12 @@ def print_item(item, value, timestamp):
                     unformatted_units = units['']
 
 
-        line = "%s %s: " % (time_string, item.key)
+        # Put the line together, depending on various options.
+
+        if print_item.timestamp:
+            line = "%s %s: " % (time_string, item.key)
+        else:
+            line = "%s: " % (item.key)
 
         if print_item.unformatted and print_item.formatted:
             if unformatted_units:
@@ -559,6 +574,7 @@ def print_item(item, value, timestamp):
 
 
 print_item.formatted = None
+print_item.timestamp = None
 print_item.unformatted = None
 print_item.units = None
 
