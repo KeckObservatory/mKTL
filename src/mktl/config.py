@@ -132,18 +132,17 @@ class Configuration:
     convert_units = _convert_units
 
 
-    def format(self, key, value):
+    def from_format(self, key, value):
         """ Translate the provided *value* according to the configuration of
             the item identified by the supplied *key*. For example, if the
             item is enumerated, this method will enable one-way mapping from
-            integer values to representative strings; for example, 0 to 'Off',
-            1 to 'On', etc.
+            string values to integers; for example, 'Off' to 0, 'On' to 1, etc.
 
-            This is the inverse of :func:`unformat`.
+            This is the inverse of :func:`to_format`.
         """
 
         item = self[key]
-        formatted = None
+        unformatted = None
 
         try:
             type = item['type']
@@ -151,108 +150,110 @@ class Configuration:
             type = None
 
         if type == 'boolean' or type == 'enumerated':
-            formatted = self.format_enumerated(item, value)
+            unformatted = self.from_format_enumerated(item, value)
 
         elif type == 'mask':
-            formatted = self.format_mask(item, value)
+            unformatted = self.from_format_mask(item, value)
 
         elif type == 'numeric':
-            formatted = self.format_numeric(item, value)
+            unformatted = self.from_format_numeric(item, value)
 
-        if formatted is None:
-            return str(value)
+        if unformatted is None:
+            return value
         else:
-            return formatted
+            return unformatted
 
 
-    def format_enumerated(self, item, value):
-        """ Return the string representation corresponding to the specified
-            integer value. Return the original value, potentially after being
-            cast to a string, if there is no matching enumerator.
+    def from_format_enumerated(self, item, value):
+        """ Return the integer representation corresponding to the specified
+            formatted string value. Raise a KeyError if there is no matching
+            enumerator. This comparison will be done in a case-insensitive
+            fashion.
         """
-
-        enumerators = item['enumerators']
-
-        # The JSON representation of the enumerators has the integer keys as
-        # strings. For example:
-
-        # {"0": "No", "1": "Yes", "2": "Unknown"}
 
         value = str(value)
-
-        try:
-            formatted = enumerators[value]
-        except KeyError:
-            formatted = value
-
-        return formatted
-
-
-    def format_mask(self, item, value):
-        """ Return a comma-separated list of active bits for the specified
-            integer value. If no bits are active, return the string representing
-            no bits being set.
-        """
-
+        value = value.lower()
         enumerators = item['enumerators']
 
-        # Similar to the enumerated case, the mask bits are defined in the
-        # JSON as strings. But we have to treat the unformmatted value as
-        # an intger in order to do bit-wise operations. The expected value
-        # when none of the bits are active is represented by the 'None' key.
-        # For example:
+        unformatted = None
 
-        # {"None": "OK", "0": "Timeout", "1": "Error", "2": "Warning"}
+        # The mapping between keys and names could be established in advance
+        # to make this linear search unnecesary, enabling the use of a
+        # dictionary lookup instead. If there was a sensible place to store
+        # a derived mapping, perhaps it could be generated on a just-in-time
+        # basis.
 
-        value = int(value)
-        formatted = list()
+        for key,name in enumerators.items():
+            name = name.lower()
+            if value == name:
+                key = int(key)
+                unformatted = key
+                break
+
+        if unformatted is None:
+            raise KeyError('invalid enumerator: ' + repr(value))
+
+        return unformatted
+
+
+    def from_format_mask(self, item, value):
+        """ Return the integer representation for a comma-separated set of
+            active mask bits. The comparison will be done on a case-insensitive
+            basis.
+        """
+
+        value = str(value)
+        value = value.lower()
+
+        if value == '' or value == 'none':
+            return 0
+
+        enumerators = item['enumerators']
+        lowered = dict()
 
         for bit,name in enumerators.items():
             if bit == 'None':
                 continue
 
+            name = name.lower()
             bit = int(bit)
             bit_value = 1 << bit
-            if value & bit_value:
-                formatted.append(name)
+            lowered[name] = bit_value
 
-        if len(formatted) == 0:
+        unformatted = 0
+        bit_names = value.split(',')
+
+        for name in bit_names:
+            name = name.strip()
+            name = name.lower()
+
             try:
-                formatted = enumerators['None']
+                bit_value = lowered[name]
             except KeyError:
-                formatted = ''
-        else:
-            formatted = ', '.join(formatted)
+                raise KeyError('invalid bit name in mask value: ' + repr(name))
 
-        return formatted
+            unformatted = unformatted | bit_value
+
+        return unformatted
 
 
-    def format_numeric(self, item, value):
-        """ Return a string representing the configured formatting for this
-            numeric value. This includes any printf-style directives about
-            decimal places and/or padding, as well as converting the number
-            to the units specific to the formatted value.
+    def from_format_numeric(self, item, value):
+        """ Return a Python-native number (either integer or floating point)
+            after undoing the configured formatting for this numeric value.
+            This includes converting the number to the units specific to the
+            unformatted value.
         """
 
         ### Support for sexagesimal formatting needs to go here.
 
         value = float(value)
-        value = self.format_units(item, value)
 
-        try:
-            format = item['format']
-        except KeyError:
-            format = '%s'
-
-        if 'd' in format:
-            value = int(value)
-
-        formatted = format % (value)
-        return formatted
+        unformatted = self.from_format_units(item, value)
+        return unformatted
 
 
-    def format_units(self, item, value):
-        """ Convert a numeric value from its unformatted units to the formatted
+    def from_format_units(self, item, value):
+        """ Convert a numeric value from its formatted units to the unformatted
             units.
         """
 
@@ -261,25 +262,17 @@ class Configuration:
         except KeyError:
             return value
 
-        # Defining the 'formatted' units requires representing the units
-        # as a dictionary with both '' and 'formatted' as keys. A simple
-        # string representation of the units implies no additional unit
-        # specific formatting is available.
-
         try:
             formatted = units['formatted']
-        except (TypeError, KeyError):
+        except KeyError:
             return value
 
-        try:
-            unformatted = units['']
-        except KeyError:
-            raise KeyError('unformatted units are not defined for ' + item.key)
+        unformatted = units['']
 
         if formatted == unformatted:
             return value
         else:
-            return self.convert_units(value, unformatted, formatted)
+            return self.convert_units(value, formatted, unformatted)
 
 
     def from_quantity(self, key, quantity):
@@ -527,6 +520,156 @@ class Configuration:
         os.chmod(target_filename, 0o664)
 
 
+    def to_format(self, key, value):
+        """ Translate the provided *value* according to the configuration of
+            the item identified by the supplied *key*. For example, if the
+            item is enumerated, this method will enable one-way mapping from
+            integer values to representative strings; for example, 0 to 'Off',
+            1 to 'On', etc.
+
+            This is the inverse of :func:`from_format`.
+        """
+
+        item = self[key]
+        formatted = None
+
+        try:
+            type = item['type']
+        except KeyError:
+            type = None
+
+        if type == 'boolean' or type == 'enumerated':
+            formatted = self.to_format_enumerated(item, value)
+
+        elif type == 'mask':
+            formatted = self.to_format_mask(item, value)
+
+        elif type == 'numeric':
+            formatted = self.to_format_numeric(item, value)
+
+        if formatted is None:
+            return str(value)
+        else:
+            return formatted
+
+
+    def to_format_enumerated(self, item, value):
+        """ Return the string representation corresponding to the specified
+            integer value. Return the original value, potentially after being
+            cast to a string, if there is no matching enumerator.
+        """
+
+        enumerators = item['enumerators']
+
+        # The JSON representation of the enumerators has the integer keys as
+        # strings. For example:
+
+        # {"0": "No", "1": "Yes", "2": "Unknown"}
+
+        value = str(value)
+
+        try:
+            formatted = enumerators[value]
+        except KeyError:
+            formatted = value
+
+        return formatted
+
+
+    def to_format_mask(self, item, value):
+        """ Return a comma-separated list of active bits for the specified
+            integer value. If no bits are active, return the string representing
+            no bits being set.
+        """
+
+        enumerators = item['enumerators']
+
+        # Similar to the enumerated case, the mask bits are defined in the
+        # JSON as strings. But we have to treat the unformmatted value as
+        # an intger in order to do bit-wise operations. The expected value
+        # when none of the bits are active is represented by the 'None' key.
+        # For example:
+
+        # {"None": "OK", "0": "Timeout", "1": "Error", "2": "Warning"}
+
+        value = int(value)
+        formatted = list()
+
+        for bit,name in enumerators.items():
+            if bit == 'None':
+                continue
+
+            bit = int(bit)
+            bit_value = 1 << bit
+            if value & bit_value:
+                formatted.append(name)
+
+        if len(formatted) == 0:
+            try:
+                formatted = enumerators['None']
+            except KeyError:
+                formatted = ''
+        else:
+            formatted = ', '.join(formatted)
+
+        return formatted
+
+
+    def to_format_numeric(self, item, value):
+        """ Return a string representing the configured formatting for this
+            numeric value. This includes any printf-style directives about
+            decimal places and/or padding, as well as converting the number
+            to the units specific to the formatted value.
+        """
+
+        ### Support for sexagesimal formatting needs to go here.
+
+        value = float(value)
+        value = self.to_format_units(item, value)
+
+        try:
+            format = item['format']
+        except KeyError:
+            format = '%s'
+
+        if 'd' in format:
+            value = int(value)
+
+        formatted = format % (value)
+        return formatted
+
+
+    def to_format_units(self, item, value):
+        """ Convert a numeric value from its unformatted units to the formatted
+            units.
+        """
+
+        try:
+            units = item['units']
+        except KeyError:
+            return value
+
+        # Defining the 'formatted' units requires representing the units
+        # as a dictionary with both '' and 'formatted' as keys. A simple
+        # string representation of the units implies no additional unit
+        # specific formatting is available.
+
+        try:
+            formatted = units['formatted']
+        except (TypeError, KeyError):
+            return value
+
+        try:
+            unformatted = units['']
+        except KeyError:
+            raise KeyError('unformatted units are not defined for ' + item.key)
+
+        if formatted == unformatted:
+            return value
+        else:
+            return self.convert_units(value, unformatted, formatted)
+
+
     def to_quantity(self, key, value):
         """ Translate the provided *value* according to the configuraton of
             the item identified by the supplied *key* to a
@@ -554,149 +697,6 @@ class Configuration:
 
         quantity = self.convert_units(value, units, None)
         return quantity
-
-
-    def unformat(self, key, value):
-        """ Translate the provided *value* according to the configuration of
-            the item identified by the supplied *key*. For example, if the
-            item is enumerated, this method will enable one-way mapping from
-            string values to integers; for example, 'Off' to 0, 'On' to 1, etc.
-
-            This is the inverse of :func:`format`.
-        """
-
-        item = self[key]
-        unformatted = None
-
-        try:
-            type = item['type']
-        except KeyError:
-            type = None
-
-        if type == 'boolean' or type == 'enumerated':
-            unformatted = self.unformat_enumerated(item, value)
-
-        elif type == 'mask':
-            unformatted = self.unformat_mask(item, value)
-
-        elif type == 'numeric':
-            unformatted = self.unformat_numeric(item, value)
-
-        if unformatted is None:
-            return value
-        else:
-            return unformatted
-
-
-    def unformat_enumerated(self, item, value):
-        """ Return the integer representation corresponding to the specified
-            formatted string value. Raise a KeyError if there is no matching
-            enumerator. This comparison will be done in a case-insensitive
-            fashion.
-        """
-
-        value = str(value)
-        value = value.lower()
-        enumerators = item['enumerators']
-
-        unformatted = None
-
-        # The mapping between keys and names could be established in advance
-        # to make this linear search unnecesary, enabling the use of a
-        # dictionary lookup instead. If there was a sensible place to store
-        # a derived mapping, perhaps it could be generated on a just-in-time
-        # basis.
-
-        for key,name in enumerators.items():
-            name = name.lower()
-            if value == name:
-                key = int(key)
-                unformatted = key
-                break
-
-        if unformatted is None:
-            raise KeyError('invalid enumerator: ' + repr(value))
-
-        return unformatted
-
-
-    def unformat_mask(self, item, value):
-        """ Return the integer representation for a comma-separated set of
-            active mask bits. The comparison will be done on a case-insensitive
-            basis.
-        """
-
-        value = str(value)
-        value = value.lower()
-
-        if value == '' or value == 'none':
-            return 0
-
-        enumerators = item['enumerators']
-        lowered = dict()
-
-        for bit,name in enumerators.items():
-            if bit == 'None':
-                continue
-
-            name = name.lower()
-            bit = int(bit)
-            bit_value = 1 << bit
-            lowered[name] = bit_value
-
-        unformatted = 0
-        bit_names = value.split(',')
-
-        for name in bit_names:
-            name = name.strip()
-            name = name.lower()
-
-            try:
-                bit_value = lowered[name]
-            except KeyError:
-                raise KeyError('invalid bit name in mask value: ' + repr(name))
-
-            unformatted = unformatted | bit_value
-
-        return unformatted
-
-
-    def unformat_numeric(self, item, value):
-        """ Return a Python-native number (either integer or floating point)
-            after undoing the configured formatting for this numeric value.
-            This includes converting the number to the units specific to the
-            unformatted value.
-        """
-
-        ### Support for sexagesimal formatting needs to go here.
-
-        value = float(value)
-
-        unformatted = self.unformat_units(item, value)
-        return unformatted
-
-
-    def unformat_units(self, item, value):
-        """ Convert a numeric value from its formatted units to the unformatted
-            units.
-        """
-
-        try:
-            units = item['units']
-        except KeyError:
-            return value
-
-        try:
-            formatted = units['formatted']
-        except KeyError:
-            return value
-
-        unformatted = units['']
-
-        if formatted == unformatted:
-            return value
-        else:
-            return self.convert_units(value, formatted, unformatted)
 
 
     def update(self, block, save=True):

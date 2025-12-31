@@ -117,37 +117,40 @@ class Item:
             self.subscribe(prime=prime)
 
 
-    def format(self, value):
-        """ Convert the supplied value to its human-readable formatted
-            representation, if any. This conversion is driven by the
-            configuration for this item.
-
-            This is the inverse of :func:`unformat`.
-        """
-
-        try:
-            formatted = self.store.config.format(self.key, value)
-        except:
-            formatted = str(self.value)
-
-        return formatted
-
-
     @property
     def formatted(self):
         """ The human-readable representation, if any, of the current item
             value.
         """
 
-        formatted = self.format(self.value)
+        formatted = self.to_format(self.value)
         return formatted
 
 
     @formatted.setter
     def formatted(self, new_value):
 
-        new_value = self.unformat(new_value)
+        new_value = self.from_format(new_value)
         self.set(new_value)
+
+
+    def from_format(self, value):
+        """ Convert the supplied value from its human-readable formatted
+            representation, if any, to the on-the-wire representation for
+            this item. This conversion is driven by the configuration.
+
+            This is the inverse of :func:`to_format`.
+        """
+
+        try:
+            unformatted = self.store.config.from_format(self.key, value)
+        except:
+            ###
+            print("DEBUG: format conversion failed for %s:" % (self.full_key))
+            print(traceback.format_exc())
+            unformatted = value
+
+        return unformatted
 
 
     def from_payload(self, payload):
@@ -656,6 +659,22 @@ class Item:
             return self._value_timestamp
 
 
+    def to_format(self, value):
+        """ Convert the supplied value to its human-readable formatted
+            representation, if any. This conversion is driven by the
+            configuration for this item.
+
+            This is the inverse of :func:`from_format`.
+        """
+
+        try:
+            formatted = self.store.config.to_format(self.key, value)
+        except:
+            formatted = str(self.value)
+
+        return formatted
+
+
     def to_payload(self, value=None, timestamp=None):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
@@ -699,25 +718,6 @@ class Item:
             payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
         return payload
-
-
-    def unformat(self, value):
-        """ Convert the supplied value from its human-readable formatted
-            representation, if any, to the on-the-wire representation for
-            this item. This conversion is driven by the configuration.
-
-            This is the inverse of :func:`format`.
-        """
-
-        try:
-            unformatted = self.store.config.unformat(self.key, value)
-        except:
-            ###
-            print("DEBUG: unit conversion failed for %s:" % (self.full_key))
-            print(traceback.format_exc())
-            unformatted = value
-
-        return unformatted
 
 
     def validate(self, value):
