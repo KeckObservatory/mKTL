@@ -98,8 +98,13 @@ def parse_command_line():
         action='store_true',
         help='Show the unformatted value for get requests, and interpret the provided value as unformatted for set requests. The default is to use the formatted value.')
 
-    parser.add_argument('--no-timestamp',
+    parser.add_argument('--terse',
         default=None,
+        action='store_true',
+        help='For get and set requests, only output the requested value and no other metadata.')
+
+    parser.add_argument('--no-timestamp',
+        default=False,
         action='store_true',
         help="Omit the timestamp from the output of 'get' and 'watch' requests.")
 
@@ -120,6 +125,9 @@ def parse_command_line():
     parsed = parser.parse_args()
     parsed.wait = not parsed.no_wait
     parsed.timestamp = not parsed.no_timestamp
+
+    if parsed.terse:
+        parsed.timestamp = False
 
     if parsed.serial == True and parsed.no_wait == True:
         raise ValueError('--serial is incompatible with --no-wait')
@@ -144,6 +152,7 @@ def parse_command_line():
             raise ValueError('must select one of formatted or unformatted for set requests')
 
     print_item.formatted = parsed.formatted
+    print_item.terse = parsed.terse
     print_item.timestamp = parsed.timestamp
     print_item.unformatted = parsed.unformatted
     print_item.units = parsed.units
@@ -414,7 +423,9 @@ def execute_set_requests(requests):
         pending.append(request)
 
         if requests.serial == True:
-            if units:
+            if requests.terse:
+                print(request)
+            elif units:
                 print("Set %s to %s %s" % (key, request, units))
             else:
                 print("Set %s to %s" % (key, request))
@@ -458,7 +469,9 @@ def execute_set_requests(requests):
                     except KeyError:
                         units = None
 
-                if units:
+                if requests.terse:
+                    print(value)
+                elif units:
                     print("Set %s to %s %s" % (key, value, units))
                 else:
                     print("Set %s to %s" % (key, value))
@@ -524,6 +537,10 @@ def print_item(item, value, timestamp):
 
         if print_item.timestamp:
             line = "%s %s: " % (time_string, item.key)
+        elif print_item.terse:
+            formatted_units = None
+            unformatted_units = None
+            line = ''
         else:
             line = "%s: " % (item.key)
 
@@ -550,7 +567,8 @@ def print_item(item, value, timestamp):
 
         elif print_item.formatted:
             if print_item.units:
-                formatted_units = print_item.units
+                if print_item.terse == False:
+                    formatted_units = print_item.units
                 quantity = item.quantity.to(print_item.units)
                 value = quantity.magnitude
             else:
@@ -574,6 +592,7 @@ def print_item(item, value, timestamp):
 
 
 print_item.formatted = None
+print_item.terse = None
 print_item.timestamp = None
 print_item.unformatted = None
 print_item.units = None
