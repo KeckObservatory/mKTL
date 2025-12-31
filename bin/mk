@@ -424,13 +424,14 @@ def execute_set_requests(requests):
         if requests.units:
             import pint
             registry = pint.UnitRegistry()
-            target_units = registry.parse_units(requests.units)
             request = float(request)
-            quantity = request * target_units
-            base_units = item.quantity.u
-            quantity = quantity.to(base_units)
+            request_units = registry.parse_units(requests.units)
+            item_units = item.quantity.u
+
+            quantity = request * request_units
+            quantity = quantity.to(item_units)
             new_value = quantity.magnitude
-            units = item.config['units']['']
+            units = requests.units
 
         elif requests.formatted:
             new_value = item.from_format(request)
@@ -457,13 +458,13 @@ def execute_set_requests(requests):
                     pass
 
         try:
-            request = item.set(new_value, wait=requests.serial)
+            requested = item.set(new_value, wait=requests.serial)
         except Exception as e:
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             failed = True
             continue
 
-        pending.append(request)
+        pending.append(requested)
 
         if requests.serial == True:
             if requests.terse:
@@ -491,11 +492,10 @@ def execute_set_requests(requests):
                 # in the request instance is always the unformatted base units.
 
                 if requests.units:
-                    units = requests.units
                     item = mktl.get(key)
-                    quantity = item.to_quantity(value)
-                    quantity = quantity.to(target_units)
+                    quantity = item.to_quantity(value, requests.units)
                     value = quantity.magnitude
+                    units = requests.units
 
                 elif requests.formatted:
                     item = mktl.get(key)
