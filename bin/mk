@@ -103,10 +103,15 @@ def parse_command_line():
         action='store_true',
         help='For get and set requests, only output the requested value and no other metadata.')
 
-    parser.add_argument('--no-timestamp',
-        default=False,
+    parser.add_argument('--timestamp',
+        default=None,
         action='store_true',
-        help="Omit the timestamp from the output of 'get' and 'watch' requests.")
+        help="Include the timestamp with the output of 'get' requests. The default is to include the timestamp for 'watch' requests, and omit it from 'get' requests.")
+
+    parser.add_argument('--no-timestamp',
+        default=None,
+        action='store_true',
+        help="Omit the timestamp from the output of 'watch' requests. The default is to include the timestamp for 'watch' requests, and omit it from 'get' requests.")
 
     parser.add_argument('-u', '--units',
         default=None,
@@ -124,10 +129,17 @@ def parse_command_line():
 
     parsed = parser.parse_args()
     parsed.wait = not parsed.no_wait
-    parsed.timestamp = not parsed.no_timestamp
+
+    if parsed.timestamp and parsed.no_timestamp:
+        raise ValueError('--timestamp is incompatible with --no-timestamp')
+    elif parsed.timestamp:
+        parsed.no_timestamp = False
+    elif parsed.no_timestamp:
+        parsed.timestamp = False
 
     if parsed.terse:
         parsed.timestamp = False
+        parsed.no_timestamp = True
 
     if parsed.serial == True and parsed.no_wait == True:
         raise ValueError('--serial is incompatible with --no-wait')
@@ -145,11 +157,21 @@ def parse_command_line():
         # Formatted was specified.
         parsed.unformatted = False
 
-    if parsed.type == 'set':
+
+    if parsed.type == 'get':
+        if parsed.timestamp is None:
+            parsed.timestamp = False
+    elif parsed.type == 'watch':
+        if parsed.no_timestamp:
+            parsed.timestamp = False
+        else:
+            parsed.timestamp = True
+    elif parsed.type == 'set':
         if parsed.formatted == True and parsed.unformatted == True:
             raise ValueError('cannot specify both formatted and unformatted for set requests')
         elif parsed.formatted == False and parsed.unformatted == False:
             raise ValueError('must select one of formatted or unformatted for set requests')
+
 
     print_item.formatted = parsed.formatted
     print_item.terse = parsed.terse
@@ -413,16 +435,26 @@ def execute_set_requests(requests):
         elif requests.formatted:
             new_value = item.from_format(request)
             try:
-                units = item.config['units']['formatted']
+                units = item.config['units']
             except KeyError:
                 units = None
+            else:
+                try:
+                    units = units['formatted']
+                except TypeError:
+                    pass
 
         else:
             new_value = request
             try:
-                units = item.config['units']['']
+                units = item.config['units']
             except KeyError:
                 units = None
+            else:
+                try:
+                    units = units['']
+                except TypeError:
+                    pass
 
         try:
             request = item.set(new_value, wait=requests.serial)
@@ -469,15 +501,25 @@ def execute_set_requests(requests):
                     item = mktl.get(key)
                     value = item.to_format(value)
                     try:
-                        units = item.config['units']['formatted']
+                        units = item.config['units']
                     except KeyError:
                         units = None
+                    else:
+                        try:
+                            units = units['formatted']
+                        except TypeError:
+                            pass
 
                 else:
                     try:
-                        units = item.config['units']['']
+                        units = item.config['units']
                     except KeyError:
                         units = None
+                    else:
+                        try:
+                            units = units['']
+                        except TypeError:
+                            pass
 
                 if requests.terse:
                     print(value)
