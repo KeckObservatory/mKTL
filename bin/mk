@@ -179,8 +179,25 @@ def parse_command_line():
     print_item.unformatted = parsed.unformatted
     print_item.units = parsed.units
 
-    if print_item.units and print_item.formatted == False:
-        raise ValueError('can only specify units for formatted values')
+    if parsed.units:
+        if print_item.formatted == False:
+            raise ValueError('can only specify units for formatted values')
+
+        # Cache the pint.Unit instance for potential repeated use.
+
+        try:
+            import pint
+        except ImportError:
+            raise ImportError('pint module required for unit conversions')
+
+        registry = pint.UnitRegistry()
+        units = registry.parse_units(parsed.units)
+        parsed.units_pint = units
+    else:
+        parsed.units_pint = None
+
+    print_item.units_pint = parsed.units_pint
+
 
     return parsed
 
@@ -608,7 +625,7 @@ def print_item(item, value, timestamp):
             if print_item.units:
                 if print_item.terse == False:
                     formatted_units = print_item.units
-                quantity = item.quantity.to(print_item.units)
+                quantity = item.quantity.to(print_item.units_pint)
                 value = quantity.magnitude
             else:
                 value = item.to_format(value)
@@ -622,7 +639,7 @@ def print_item(item, value, timestamp):
             if print_item.units:
                 if print_item.terse == False:
                     formatted_units = print_item.units
-                quantity = item.quantity.to(print_item.units)
+                quantity = item.quantity.to(print_item.units_pint)
                 value = quantity.magnitude
             else:
                 value = item.to_format(value)
@@ -649,6 +666,7 @@ print_item.terse = None
 print_item.timestamp = None
 print_item.unformatted = None
 print_item.units = None
+print_item.units_pint = None
 
 
 if __name__ == '__main__':
