@@ -266,7 +266,7 @@ class Configuration:
 
         try:
             formatted = units['formatted']
-        except KeyError:
+        except (KeyError, TypeError):
             return value
 
         unformatted = units['']
