@@ -41,11 +41,17 @@ Referencing the :py:attr:`Item.value` property is the preferred approach to
 retrieve the current value of an item. The getter method behind the property
 will retrieve the value if one is not already available, though this is not
 expected to be the average case-- a client-side :class:`Item` instance will
-automatically call :func:`Item.subscribe` when it is instantiated.
+automatically call :func:`Item.subscribe` when it is instantiated, and should
+thus always have a value.
 
 The property is used directly::
 
     current = crazy.value
+
+There are two variants of the :py:attr:`Item.value` property:
+:py:attr:`Item.formatted`, and :py:attr:`Item.quantity`. They behave in the same
+fashion as :py:attr:`Item.value`, but work with different representations of
+the value.
 
 
 Calling :func:`Item.get`
