@@ -157,14 +157,17 @@ case it is not necessary, or desired-- and adds extra overhead.
 
 Updating the value for an authoritative :class:`Item` is done via the
 :func:`Item.publish` method. The :py:attr:`Item.value` property, for
-authoritative items, will map to this method. These two calls are
-equivalent, only one is necessary::
+authoritative items, will map to this method, as will using
+:py:attr:`Item.formatted` or :py:attr:`Item.quantity`. The following
+two calls are equivalent in a daemon context::
 
     self.value = 102.45
     self.publish(102.45)
 
-Likewise, for other authoritative items within a daemon, with two equivalent
-ways to retrieve the local authoritative item instance::
+The same calling semantics are available for other authoritative items within
+a daemon. The following block shows two equivalent ways to retrieve a reference
+to a locally authoriative item, and similar to the above, two equivalent calls
+to publish a new value::
 
     other = self.store['OTHER_ITEM']
     other = mktl.get('metal.OTHER_ITEM')
