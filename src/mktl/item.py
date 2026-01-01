@@ -129,7 +129,7 @@ class Item:
             This property can also be used to set the new value of the item
             using the formatted representation.
 
-            See also :func:`quantity` and :func:`value`.
+            See also :py:attr:`quantity` and :py:attr:`value`.
         """
 
         formatted = self.to_format(self.value)
@@ -441,7 +441,7 @@ class Item:
             quantity will be translated to the base units of the item before
             proceeding.
 
-            See also :func:`formatted` and :func:`value`.
+            See also :py:attr:`formatted` and :py:attr:`value`.
         """
 
         quantity = self.to_quantity(self.value)
@@ -842,7 +842,7 @@ class Item:
             how these respective calls are handled, the handling invoked here
             relies on default values for all optional arguments.
 
-            See also :func:`formatted` and :func:`quantity`.
+            See also :py:attr:`formatted` and :py:attr:`quantity`.
         """
 
         if self.authoritative == True:
