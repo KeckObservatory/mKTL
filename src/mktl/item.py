@@ -119,8 +119,8 @@ class Item:
 
     @property
     def formatted(self):
-        """ The human-readable representation, if any, of the current item
-            value. For example, the formatted variant of an enumerated type
+        """ Get and set the human-readable representation of the item.
+            For example, the formatted variant of an enumerated type
             is the string string representation, as opposed to the integer
             reported as the current item value. These permutations are driven
             by the JSON configuration of the item. The current value will be
@@ -128,6 +128,8 @@ class Item:
 
             This property can also be used to set the new value of the item
             using the formatted representation.
+
+            See also :func:`quantity` and :func:`value`.
         """
 
         formatted = self.to_format(self.value)
@@ -138,7 +140,7 @@ class Item:
     def formatted(self, new_value):
 
         new_value = self.from_format(new_value)
-        self.set(new_value)
+        self.value = new_value
 
 
     def from_format(self, value):
@@ -212,7 +214,7 @@ class Item:
             *formatted* to True to receive the human-readable formatting
             of the value, if any such formatting is available; similarly,
             set *quantity* to true to receive the value as a
-            :class:pint.Quantity` instance, which will only work if the
+            :class:`pint.Quantity` instance, which will only work if the
             item is configured to have physical units.
         """
 
@@ -431,8 +433,15 @@ class Item:
 
     @property
     def quantity(self):
-        """ The :class:`pint.Quantity` representation, if possible, of the
-            current item value.
+        """ Get and set the current value of the item as a
+            :class:`pint.Quantity` instance.
+
+            This property can also be used to set the new value of the item
+            using a valid :class:`pint.Quantity` instance; the provided
+            quantity will be translated to the base units of the item before
+            proceeding.
+
+            See also :func:`formatted` and :func:`value`.
         """
 
         quantity = self.to_quantity(self.value)
@@ -443,7 +452,7 @@ class Item:
     def quantity(self, new_quantity):
 
         new_value = self.from_quantity(new_quantity)
-        self.set(new_value)
+        self.value = new_value
 
 
     def register(self, method, prime=False):
@@ -828,10 +837,12 @@ class Item:
 
     @property
     def value(self):
-        """ Get and set the current value of the item. Invoke :func:`get` and
-            :func:`set` directly for additional control over how these
-            respective calls are handled, the handling invoked here relies on
-            default values for all optional arguments.
+        """ Get and set the current value of the item. The caller should use
+            :func:`get` and :func:`set` directly for additional control over
+            how these respective calls are handled, the handling invoked here
+            relies on default values for all optional arguments.
+
+            See also :func:`formatted` and :func:`quantity`.
         """
 
         if self.authoritative == True:
