@@ -120,7 +120,14 @@ class Item:
     @property
     def formatted(self):
         """ The human-readable representation, if any, of the current item
-            value.
+            value. For example, the formatted variant of an enumerated type
+            is the string string representation, as opposed to the integer
+            reported as the current item value. These permutations are driven
+            by the JSON configuration of the item. The current value will be
+            returned as a string in the absence of any configured formatting.
+
+            This property can also be used to set the new value of the item
+            using the formatted representation.
         """
 
         formatted = self.to_format(self.value)
@@ -198,19 +205,49 @@ class Item:
         return value
 
 
-    def get(self, refresh=False, formatted=False):
+    def get(self, refresh=False, formatted=False, quantity=False):
         """ Retrieve the current value. Set *refresh* to True to prompt
-            the daemon handling the request to provide the most up-to-date
+            the daemon responding to the request to return the most up-to-date
             value available, potentially bypassing any local cache. Set
             *formatted* to True to receive the human-readable formatting
-            of the value, if any such formatting is available.
+            of the value, if any such formatting is available; similarly,
+            set *quantity* to true to receive the value as a
+            :class:pint.Quantity` instance, which will only work if the
+            item is configured to have physical units.
         """
 
         if refresh == False and self.subscribed == True and self._value is not None:
-            if formatted == True:
+            # This is expected to be the average case: the item already has
+            # a value because we always subscribe, so a non-refresh get()
+            # request can just return the current value.
+
+            if formatted == False and quantity == False:
+                # This is expected to be the average case.
+                return self.value
+            elif formatted == True and quantity == True:
+                # A little extra work to honor the intent of getting the
+                # quantity with the units specific to the 'formatted'
+                # representation. For example, the formatted value could
+                # be degrees instead of radians.
+
+                try:
+                    units = self.config['units']
+                except KeyError:
+                    units = None
+                else:
+                    try:
+                        units = units['formatted']
+                    except (KeyError, TypeError):
+                        pass
+
+                quantity = self.to_quantity(self._value, units)
+                return quantity
+            elif quantity == True:
+                return self.quantity
+            elif formatted == True:
                 return self.formatted
             else:
-                return self._value
+                raise ValueError('formatted+quantity arguments must be boolean')
 
         elif refresh == False:
             request = protocol.message.Request('GET', self.full_key)
@@ -246,10 +283,37 @@ class Item:
 
         self._update(response)
 
-        if formatted == True:
+        # This explicit check for None eliminates the possibility of subsequent
+        # use of properties resulting in an infinite loop, where get() is called
+        # because there is no cached value.
+
+        if self._value is None:
+            return None
+
+        # This block duplicates the check at the beginning of this method.
+
+        if formatted == False and quantity == False:
+            return self.value
+        elif formatted == True and quantity == True:
+            try:
+                units = self.config['units']
+            except KeyError:
+                units = None
+            else:
+                try:
+                    units = units['formatted']
+                except (KeyError, TypeError):
+                    pass
+
+            quantity = self.to_quantity(self._value, units)
+            return quantity
+
+        elif quantity == True:
+            return self.quantity
+        elif formatted == True:
             return self.formatted
         else:
-            return self._value
+            raise ValueError('formatted+quantity arguments must be boolean')
 
 
     def perform_get(self):
