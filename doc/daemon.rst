@@ -64,8 +64,9 @@ The key methods to override when implementing custom behavior are
 :func:`mktl.Item.perform_set`, and
 :func:`mktl.Item.validate`.
 In addition, :func:`mktl.Item.req_poll` will be of interest, used in combination
-with :func:`mktl.Item.register`, and the :func:`mktl.Item.value` property to
-explicitly set a new item value.
+with :func:`mktl.Item.register`, and the :py:attr:`mktl.Item.value` property,
+as well as the :py:attr:`mktl.Item.formatted` and :py:attr:`mktl.Item.quantity`
+variants, to explicitly set a new item value.
 
 .. autoclass:: mktl.Item
    :members: from_payload, perform_get, perform_set, poll, publish, req_get, req_poll, req_set, to_payload, validate
