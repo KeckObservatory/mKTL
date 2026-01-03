@@ -691,14 +691,18 @@ class Configuration:
             default = item['units']
         except:
             default = None
-        else:
+
+        if default is not None:
             try:
                 default = default['']
             except (TypeError, KeyError):
-                pass
+                try:
+                    default = default['formatted']
+                except (TypeError, KeyError):
+                    pass
 
         if default is None:
-            raise TypeError('item ' + repr(key) + ' does not have units')
+            default = 'dimensionless'
 
         quantity = self.convert_units(value, default, None)
 
