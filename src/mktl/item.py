@@ -216,6 +216,10 @@ class Item:
             set *quantity* to true to receive the value as a
             :class:`pint.Quantity` instance, which will only work if the
             item is configured to have physical units.
+
+            Use of the :py:attr:`formatted`, :py:attr:`quantity`, and
+            :py:attr:`value` properties is encouraged in the case where
+            a synchronous refresh is not required.
         """
 
         if refresh == False and self.subscribed == True and self._value is not None:
@@ -612,7 +616,7 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True):
+    def set(self, new_value, wait=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
@@ -621,9 +625,33 @@ class Item:
             the request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed
             requests will raise exceptions.
+
+            The optional *formatted* and *quantity* options enable calling
+            :func:`set` with either the string-formatted representation or
+            the :class:`pint.Quantity` representation of the item; the new
+            value is still the first argument, but set one of *formatted*
+            or *quantity* to True to indicate it should be interpreted.
+
+            Use of the :py:attr:`formatted`, :py:attr:`quantity`, and
+            :py:attr:`value` properties is encouraged in the case where
+            a blocking set operation is desired.
         """
 
         self._updated.clear()
+
+        # This next set of conditions mirrors what occurs in the get() method,
+        # but no additional special handling is required for the case where
+        # both formatted and quantity are True: a quantity is a quantity,
+        # regardless of the actual units.
+
+        if formatted == False and quantity == False:
+            pass
+        elif quantity == True:
+            new_value = self.from_quantity(new_value)
+        elif formatted == True:
+            new_value = self.from_format(new_value)
+        else:
+            raise ValueError('formatted+quantity arguments must be boolean')
 
         payload = self.to_payload(new_value)
         message = protocol.message.Request('SET', self.full_key, payload)
@@ -679,7 +707,9 @@ class Item:
             caught and ignored, it will not be reported to the caller.
 
             A non-authoritative :class:`Item` will automatically call
-            :func:`subscribe` upon being instantiated.
+            this method` upon being instantiated; an authoritative variant
+            will do so upon a call to :func:`register`. In other words, it
+            should never be necessary to call this method directly.
         """
 
         if self.subscribed == True:
