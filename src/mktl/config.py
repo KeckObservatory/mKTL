@@ -248,7 +248,17 @@ class Configuration:
 
         ### Support for sexagesimal formatting needs to go here.
 
-        value = float(value)
+        # Try to preserve integers whenever possible.
+
+        if isinstance(value, int):
+            pass
+        elif isinstance(value, str):
+            try:
+                value = int(value)
+            except:
+                value = float(value)
+        else:
+            value = float(value)
 
         unformatted = self.from_format_units(item, value)
         return unformatted
@@ -629,7 +639,11 @@ class Configuration:
 
         ### Support for sexagesimal formatting needs to go here.
 
-        value = float(value)
+        if isinstance(value, int):
+            pass
+        else:
+            value = float(value)
+
         value = self.to_format_units(item, value)
 
         try:
@@ -638,7 +652,9 @@ class Configuration:
             format = '%s'
 
         if 'd' in format:
-            value = int(value)
+            # Eliminate floating point uncertainty by rounding. Reporting 34
+            # if the value is 34.999999 is not desirable.
+            value = int(value + 0.5)
 
         formatted = format % (value)
         return formatted
