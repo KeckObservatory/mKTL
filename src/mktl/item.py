@@ -132,6 +132,10 @@ class Item:
             See also :py:attr:`quantity` and :py:attr:`value`.
         """
 
+        # Use self.value as the preferred way to access the value; this
+        # ensures it is handled in the appropriate way regardless of whether
+        # this specific item is in an authoritative context.
+
         formatted = self.to_format(self.value)
         return formatted
 
@@ -447,6 +451,10 @@ class Item:
 
             See also :py:attr:`formatted` and :py:attr:`value`.
         """
+
+        # Use self.value as the preferred way to access the value; this
+        # ensures it is handled in the appropriate way regardless of whether
+        # this specific item is in an authoritative context.
 
         quantity = self.to_quantity(self.value)
         return quantity
