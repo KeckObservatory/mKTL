@@ -243,15 +243,6 @@ def describe_keyword(keyword):
             if format != '':
                 keyword_dict['format'] = format
 
-    for attribute in ('broadcasts', 'reads', 'writes'):
-        try:
-            value = keyword[attribute]
-        except ValueError:
-            value = None
-
-        if value is False:
-            keyword_dict[attribute] = value
-
     if enumerators is not None:
         keyword_dict['enumerators'] = enumerators
 
