@@ -24,12 +24,17 @@ Assigning a new value to the :py:attr:`Item.value` property will call
 :func:`Item.set` with default arguments, in particular, the call will
 block until the set operation is complete. This is considered the
 "Pythonic" approach to change the value of an mKTL item, though there
-are many circumstances (such as graphical user interfaces) where a
-blocking call is not desired.
+are many circumstances (such as graphical user interfaces) where the
+default blocking call is not desired.
 
 The property is assigned directly::
 
     score.value = 44
+
+There are two variants of the :py:attr:`Item.value` property:
+:py:attr:`Item.formatted`, and :py:attr:`Item.quantity`. They behave in the same
+fashion as :py:attr:`Item.value`, but work with different representations of
+the value.
 
 
 Calling :func:`Item.set`

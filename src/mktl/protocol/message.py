@@ -49,12 +49,13 @@ class Message:
             raise ValueError('invalid request type: ' + type)
 
         # There are some message types where the id is allowed to be None;
-        # in particular, publish messages do not have or need an identification
-        # number.
+        # for example, publish messages do not have or need an identification
+        # number or a prefix.
 
         self.id = id
         self.type = type
         self.payload = payload
+        self.prefix = None
         self.target = target
         self.timestamp = timemodule.time()
 
@@ -119,7 +120,12 @@ class Message:
                 bulk = b''
             payload = payload.encapsulate()
 
-        self._parts = (version, id, type, target, payload, bulk)
+        if self.prefix:
+            parts = self.prefix + (version, id, type, target, payload, bulk)
+        else:
+            parts = (version, id, type, target, payload, bulk)
+
+        self._parts = parts
 
 
 # end of class Message
@@ -158,6 +164,7 @@ class Broadcast(Message):
                 bulk = b''
             payload = payload.encapsulate()
 
+        # The prefix is ignored for broadcast messages; it should not be set.
         self._parts = (target, version, payload, bulk)
 
 

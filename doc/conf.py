@@ -19,7 +19,8 @@ extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
-intersphinx_mapping = {'python': ('https://docs.python.org/3', None)}
+intersphinx_mapping = {'pint': ('https://pint.readthedocs.io/en/stable', None),
+			'python': ('https://docs.python.org/3', None)}
 
 
 # -- Options for HTML output -------------------------------------------------

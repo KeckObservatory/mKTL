@@ -1,4 +1,5 @@
-usage: mk [-h] [-s STORE] [--serial] [--no-wait]
+usage: mk [-h] [-s STORE] [--serial] [--no-wait] [--formatted] [--unformatted]
+          [--terse] [--timestamp] [--no-timestamp] [-u UNITS]
           {get,set,watch,describe,discover,list} [requests ...]
 
 This is the mKTL command line interface. The real work is done in the
@@ -26,6 +27,24 @@ options:
   --no-wait             Do not wait until all set requests are complete before
                         exiting. The default is to wait. --no-wait is not
                         compatible with --serial.
+  --formatted           Show the formatted value for get requests, and
+                        interpret the provided value as formatted for set
+                        requests. This is the default behavior.
+  --unformatted         Show the unformatted value for get requests, and
+                        interpret the provided value as unformatted for set
+                        requests. The default is to use the formatted value.
+  --terse               For get and set requests, only output the requested
+                        value and no other metadata.
+  --timestamp           Include the timestamp with the output of 'get'
+                        requests. The default is to include the timestamp for
+                        'watch' requests, and omit it from 'get' requests.
+  --no-timestamp        Omit the timestamp from the output of 'watch'
+                        requests. The default is to include the timestamp for
+                        'watch' requests, and omit it from 'get' requests.
+  -u, --units UNITS     Use the requested units for getting or setting tem
+                        values. Note that this option is applied to all
+                        requests, and is not practical when interacting with
+                        multiple items.
 
 Example usage:
 

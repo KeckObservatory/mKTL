@@ -23,17 +23,18 @@ class Store:
         self._update_config()
 
 
-    def _update_config(self):
+    def __contains__(self, key):
 
-        for key in self.config.keys():
-            try:
-                self._items[key]
-            except KeyError:
-                self._items[key] = None
+        if isinstance(key, Item):
+            key = key.key
+        else:
+            key = key.lower()
+
+        return key in self._items
 
 
-    def __setitem__(self, name, value):
-        raise NotImplementedError('you cannot assign a key to a Store directly')
+    def __delitem__(self, key):
+        raise NotImplementedError("you cannot delete a Store's key directly")
 
 
     def __getitem__(self, key):
@@ -77,16 +78,16 @@ class Store:
             yield self[key]
 
 
-    def __repr__(self):
-        return 'store.Store: ' + repr(self._items)
-
-
     def __len__(self):
         return len(self._items)
 
 
-    def __delitem__(self, key):
-        raise NotImplementedError("you cannot delete a Store's key directly")
+    def __repr__(self):
+        return 'store.Store: ' + repr(self._items)
+
+
+    def __setitem__(self, name, value):
+        raise NotImplementedError('you cannot assign a key to a Store directly')
 
 
     def clear(self):
@@ -98,19 +99,31 @@ class Store:
 
 
     def has_key(self, key):
-        key = key.lower()
-        return key in self._items
+        return key in self
+
+
+    def keys(self):
+        """ Return a sequence of all keys in this store.
+        """
+        return self._items.keys()
 
 
     def update(self, *args, **kwargs):
         raise NotImplementedError("you cannot update a Store's keys directly")
 
 
-    def keys(self):
-        return self._items.keys()
+    def _update_config(self):
+
+        for key in self.config.keys():
+            try:
+                self._items[key]
+            except KeyError:
+                self._items[key] = None
 
 
     def values(self):
+        """ Return a sequence of all :class:`mktl.Item` instances in this store.
+        """
         return self._items.values()
 
 

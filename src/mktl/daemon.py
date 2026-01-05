@@ -387,6 +387,9 @@ class RequestServer(protocol.request.Server):
         target = request.target
         response = dict()
 
+        if self.daemon.store is None:
+            raise RuntimeError('daemon not ready to accept CONFIG request')
+
         if target == self.daemon.store.name:
             uuid = self.daemon.uuid
             configuration = dict(self.daemon.config[uuid])
@@ -401,12 +404,12 @@ class RequestServer(protocol.request.Server):
         return payload
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, request):
         """ Inspect the incoming request type and decide how a response
             will be generated.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(request)
 
         type = request.type
         target = request.target

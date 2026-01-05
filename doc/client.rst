@@ -80,4 +80,4 @@ would raise a TypeError exception; however, ``test.BAR + '5'`` would return
 the string value '125', just like you would expect for string concatenation.
 
 .. autoclass:: mktl.Item
-   :members: get, register, set, subscribe, value
+   :members: formatted, get, quantity, register, set, subscribe, value

@@ -74,6 +74,7 @@ def discover(*targets):
     protocol.request.Client.timeout = old_timeout
 
 
+
 def get(store, key=None):
     """ The :func:`get` method is intended to be the primary entry point for
         all interactions with a key/value store.
@@ -224,7 +225,13 @@ def refresh(configuration):
             try:
                 remote_hash = hashes[store][uuid]
             except KeyError:
-                # This block is not present on the remote side.
+                # This block is not present on the remote side. This implies
+                # our local cache is bad, either because the provenance is no
+                # longer correct, or the UUID has changed. Clear the cache and
+                # keep looking for a better answer; we're still iterating over
+                # the previously known provenance.
+
+                configuration.remove(uuid)
                 continue
 
             if local_hash != remote_hash:
@@ -241,12 +248,17 @@ def refresh(configuration):
                     # No response available.
                     continue
 
-                new_block = response.payload.value
+                new_config = response.payload.value
 
-                if new_block is None:
+                if new_config is None:
                     # No response available.
                     continue
 
+                # This is not checking to see whether the UUID is present in the
+                # results-- it is assumed, because the UUID was present in the
+                # response to the HASH query prior to reaching this point.
+
+                new_block = new_config[uuid]
                 configuration.update(new_block)
                 break
 

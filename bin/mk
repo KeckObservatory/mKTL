@@ -22,6 +22,7 @@ Example usage:
 """
 
 import argparse
+import datetime
 import mktl
 import os
 import sys
@@ -32,6 +33,10 @@ def main():
 
     requests = parse_command_line()
     requests = parse_requests(requests)
+
+    if len(requests.requests) == 0:
+        print('No requests specified.')
+        sys.exit(1)
 
     if requests.describe:
         execute_describe_requests(requests)
@@ -77,15 +82,46 @@ def parse_command_line():
         default=False,
         action='store_true',
         help='Process all requests serially. The default is to process requests in parallel.')
+
     parser.add_argument('--no-wait',
         default=False,
         action='store_true',
         help='Do not wait until all set requests are complete before exiting. The default is to wait. --no-wait is not compatible with --serial.')
 
+    parser.add_argument('--formatted',
+        default=None,
+        action='store_true',
+        help='Show the formatted value for get requests, and interpret the provided value as formatted for set requests. This is the default behavior.')
+
+    parser.add_argument('--unformatted',
+        default=None,
+        action='store_true',
+        help='Show the unformatted value for get requests, and interpret the provided value as unformatted for set requests. The default is to use the formatted value.')
+
+    parser.add_argument('--terse',
+        default=False,
+        action='store_true',
+        help='For get and set requests, only output the requested value and no other metadata.')
+
+    parser.add_argument('--timestamp',
+        default=None,
+        action='store_true',
+        help="Include the timestamp with the output of 'get' requests. The default is to include the timestamp for 'watch' requests, and omit it from 'get' requests.")
+
+    parser.add_argument('--no-timestamp',
+        default=None,
+        action='store_true',
+        help="Omit the timestamp from the output of 'watch' requests. The default is to include the timestamp for 'watch' requests, and omit it from 'get' requests.")
+
+    parser.add_argument('-u', '--units',
+        default=None,
+        help='Use the requested units for getting or setting tem values. Note that this option is applied to all requests, and is not practical when interacting with multiple items.')
+
     parser.add_argument('type',
         choices=('get', 'set', 'watch', 'describe', 'discover', 'list'),
         type=str.lower,
         help='Request type')
+
     parser.add_argument('requests',
         nargs='*',
         help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of broker addresses.')
@@ -94,11 +130,74 @@ def parse_command_line():
     parsed = parser.parse_args()
     parsed.wait = not parsed.no_wait
 
+    if parsed.timestamp and parsed.no_timestamp:
+        raise ValueError('--timestamp is incompatible with --no-timestamp')
+    elif parsed.timestamp:
+        parsed.no_timestamp = False
+    elif parsed.no_timestamp:
+        parsed.timestamp = False
+
+    if parsed.terse:
+        parsed.timestamp = False
+        parsed.no_timestamp = True
+
     if parsed.serial == True and parsed.no_wait == True:
         raise ValueError('--serial is incompatible with --no-wait')
 
     if len(parsed.requests) == 0 and parsed.type != 'list':
         raise ValueError('no requests specified')
+
+    if parsed.formatted is None and parsed.unformatted is None:
+        # Nothing specified, formatted is the default.
+        parsed.formatted = True
+    elif parsed.formatted is None:
+        # Unformatted was specified.
+        parsed.formatted = False
+    elif parsed.unformatted is None:
+        # Formatted was specified.
+        parsed.unformatted = False
+
+
+    if parsed.type == 'get':
+        if parsed.timestamp is None:
+            parsed.timestamp = False
+    elif parsed.type == 'watch':
+        if parsed.no_timestamp:
+            parsed.timestamp = False
+        else:
+            parsed.timestamp = True
+    elif parsed.type == 'set':
+        if parsed.formatted == True and parsed.unformatted == True:
+            raise ValueError('cannot specify both formatted and unformatted for set requests')
+        elif parsed.formatted == False and parsed.unformatted == False:
+            raise ValueError('must select one of formatted or unformatted for set requests')
+
+
+    print_item.formatted = parsed.formatted
+    print_item.terse = parsed.terse
+    print_item.timestamp = parsed.timestamp
+    print_item.unformatted = parsed.unformatted
+    print_item.units = parsed.units
+
+    if parsed.units:
+        if print_item.formatted == False:
+            raise ValueError('can only specify units for formatted values')
+
+        # Cache the pint.Unit instance for potential repeated use.
+
+        try:
+            import pint
+        except ImportError:
+            raise ImportError('pint module required for unit conversions')
+
+        registry = pint.UnitRegistry()
+        units = registry.parse_units(parsed.units)
+        parsed.units_pint = units
+    else:
+        parsed.units_pint = None
+
+    print_item.units_pint = parsed.units_pint
+
 
     return parsed
 
@@ -252,12 +351,58 @@ def execute_list_requests(requests):
     for name in requests.list:
         store = mktl.get(name)
 
-        # It would be helpful to include additional metadata here besides
-        # just the key names.
+        # This inspection deliberately avoids using the Item class in order
+        # to minimize potential communication (pub/sub requests, mostly) with
+        # a remote daemon.
 
         keys = store.keys()
-        for key in store.keys():
-            print(name + '.' + key)
+        keys = list(keys)
+        keys.sort()
+
+        max_key_length = 0
+        for key in keys:
+            max_key_length = max(max_key_length, len(key))
+
+        max_key_length += len(name) + 1     # Include the 'name.' prefix
+        key_justify = max_key_length + 2
+
+        for key in keys:
+            line = list()
+            full_name = name + '.' + key
+            line.append(full_name.ljust(key_justify))
+
+            try:
+                type = store.config[key]['type']
+            except KeyError:
+                pass
+            else:
+                # Longest typical type is 'enumerated'. Justify accordingly.
+                line.append(type.ljust(11))
+
+            try:
+                gettable = store.config[key]['gettable']
+            except KeyError:
+                gettable = True
+
+            try:
+                settable = store.config[key]['settable']
+            except KeyError:
+                settable = True
+
+            if gettable and settable:
+                perms = 'rw'
+            elif gettable:
+                perms = 'r'
+            elif settable:
+                perms = ' w'
+            else:
+                perms = None
+
+            if perms:
+                line.append(perms)
+
+            line = ' '.join(line)
+            print(line)
 
 
 
@@ -266,7 +411,7 @@ def execute_set_requests(requests):
     pending = list()
     failed = False
 
-    for key,value in requests.set.items():
+    for key,request in requests.set.items():
 
         if failed == True and requests.serial == True:
             sys.exit(1)
@@ -278,17 +423,73 @@ def execute_set_requests(requests):
             failed = True
             continue
 
+        # The requests from the command line are always strings. Try to
+        # represent them as numbers, regardless of the underlying item type.
+
         try:
-            request = item.set(value, wait=requests.serial)
+            request = int(request)
+        except:
+            try:
+                request = float(request)
+            except:
+                pass
+
+        # Because the Item.set() call could be handled in a non-blocking manner,
+        # any formatted requests need to be converted explicitly rather than
+        # using a property to set the value.
+
+        if requests.units:
+            import pint
+            registry = pint.UnitRegistry()
+            request = float(request)
+            request_units = registry.parse_units(requests.units)
+            item_units = item.quantity.u
+
+            quantity = request * request_units
+            quantity = quantity.to(item_units)
+            new_value = quantity.magnitude
+            units = requests.units
+
+        elif requests.formatted:
+            new_value = item.from_format(request)
+            try:
+                units = item.config['units']
+            except KeyError:
+                units = None
+            else:
+                try:
+                    units = units['formatted']
+                except TypeError:
+                    pass
+
+        else:
+            new_value = request
+            try:
+                units = item.config['units']
+            except KeyError:
+                units = None
+            else:
+                try:
+                    units = units['']
+                except TypeError:
+                    pass
+
+        try:
+            requested = item.set(new_value, wait=requests.serial)
         except Exception as e:
             sys.stderr.write("%s failed: %s\n" % (key, str(e)))
             failed = True
             continue
 
-        pending.append(request)
+        pending.append(requested)
 
         if requests.serial == True:
-            print("Set %s to %s " % (key, value))
+            if requests.terse:
+                print(request)
+            elif units:
+                print("Set %s to %s %s" % (key, request, units))
+            else:
+                print("Set %s to %s" % (key, request))
 
 
     if requests.serial == False and requests.wait == True:
@@ -303,7 +504,46 @@ def execute_set_requests(requests):
                 sys.stderr.write("%s failed: %s: %s\n" % (key, error['type'], error['text']))
                 failed = True
             else:
-                print("Set %s to %s " % (key, value))
+                # The conditions here are strictly to reformat the set request
+                # in the originally requested units, whereas the value embedded
+                # in the request instance is always the unformatted base units.
+
+                if requests.units:
+                    item = mktl.get(key)
+                    quantity = item.to_quantity(value, requests.units)
+                    value = quantity.magnitude
+                    units = requests.units
+
+                elif requests.formatted:
+                    item = mktl.get(key)
+                    value = item.to_format(value)
+                    try:
+                        units = item.config['units']
+                    except KeyError:
+                        units = None
+                    else:
+                        try:
+                            units = units['formatted']
+                        except TypeError:
+                            pass
+
+                else:
+                    try:
+                        units = item.config['units']
+                    except KeyError:
+                        units = None
+                    else:
+                        try:
+                            units = units['']
+                        except TypeError:
+                            pass
+
+                if requests.terse:
+                    print(value)
+                elif units:
+                    print("Set %s to %s %s" % (key, value, units))
+                else:
+                    print("Set %s to %s" % (key, value))
 
     if failed == True:
         sys.exit(1)
@@ -326,35 +566,107 @@ def execute_watch_requests(requests):
 
 def print_item(item, value, timestamp):
 
-        ### Needs datetime formatting of timestamp.
-
-        ### There needs to be an option to choose the unformatted value
-        ### instead of assuming just the formatted representation. This
-        ### is the right place to select one or the other, since value
-        ### printing always comes through this method.
-
-        ### Using the Item instance to reformat the value passed as an
-        ### argument, instead of using the Item.formatted property,
-        ### allows us some flexibility in how to handle formatting.
-
-        value = item.format(value)
+        # Manipulate metadata as necessary before printing any output.
 
         if timestamp is None:
             timestamp = 0.0
 
+        if print_item.timestamp:
+            timestamp = datetime.datetime.fromtimestamp(timestamp)
+            time_string = timestamp.strftime('%H:%M:%S.%f')
+
+            dot = time_string.index('.')
+            if dot > 0:
+                milliseconds = dot + 4
+                time_string = time_string[:milliseconds]
+
         try:
             units = item.config['units']
         except KeyError:
-            units = None
+            unformatted_units = None
+            formatted_units = None
         else:
             if units == '':
-                units = None
+                unformatted_units = None
+                formatted_units = None
+            else:
+                try:
+                    formatted_units = units['formatted']
+                except KeyError:
+                    unformatted_units = units['']
+                    formatted_units = unformatted_units
+                except TypeError:
+                    unformatted_units = units
+                    formatted_units = units
+                else:
+                    unformatted_units = units['']
 
-        if units:
-            print ("%.3f %s: %s %s" % (timestamp, item.key, value, units))
+
+        # Put the line together, depending on various options.
+
+        if print_item.timestamp:
+            line = "%s %s: " % (time_string, item.key)
+        elif print_item.terse:
+            formatted_units = None
+            unformatted_units = None
+            line = ''
         else:
-            print ("%.3f %s: %s" % (timestamp, item.key, value))
+            line = "%s: " % (item.key)
 
+        if print_item.unformatted and print_item.formatted:
+            if unformatted_units:
+                line = line + "%s %s => " % (value, unformatted_units)
+            else:
+                line = line + "%s => " % (value)
+
+            # Override the default formatted units if unit conversion is
+            # supported for this item.
+
+            if print_item.units:
+                if print_item.terse == False:
+                    formatted_units = print_item.units
+                quantity = item.quantity.to(print_item.units_pint)
+                value = quantity.magnitude
+            else:
+                value = item.to_format(value)
+
+            if formatted_units:
+                line = line + "%s %s" % (value, formatted_units)
+            else:
+                line = line + str(value)
+
+        elif print_item.formatted:
+            if print_item.units:
+                if print_item.terse == False:
+                    formatted_units = print_item.units
+                quantity = item.quantity.to(print_item.units_pint)
+                value = quantity.magnitude
+            else:
+                value = item.to_format(value)
+
+            if formatted_units:
+                line = line + "%s %s" % (value, formatted_units)
+            else:
+                line = line + str(value)
+
+        elif print_item.unformatted:
+            if unformatted_units:
+                line = line + "%s %s" % (value, unformatted_units)
+            else:
+                line = line + str(value)
+
+        else:
+            raise RuntimeError("don't know how to print!")
+
+        print(line)
+
+
+print_item.formatted = None
+print_item.terse = None
+print_item.timestamp = None
+print_item.unformatted = None
+print_item.units = None
+print_item.units_pint = None
 
 
 if __name__ == '__main__':

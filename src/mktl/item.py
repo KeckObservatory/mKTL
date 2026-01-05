@@ -117,37 +117,53 @@ class Item:
             self.subscribe(prime=prime)
 
 
-    def format(self, value):
-        """ Convert the supplied value to its human-readable formatted
-            representation, if any. This conversion is driven by the
-            configuration for this item.
-
-            This is the inverse of :func:`unformat`.
-        """
-
-        try:
-            formatted = self.store.config.format(self.key, value)
-        except:
-            formatted = str(self.value)
-
-        return formatted
-
-
     @property
     def formatted(self):
-        """ The human-readable representation, if any, of the current item
-            value.
+        """ Get and set the human-readable representation of the item.
+            For example, the formatted variant of an enumerated type
+            is the string string representation, as opposed to the integer
+            reported as the current item value. These permutations are driven
+            by the JSON configuration of the item. The current value will be
+            returned as a string in the absence of any configured formatting.
+
+            This property can also be used to set the new value of the item
+            using the formatted representation.
+
+            See also :py:attr:`quantity` and :py:attr:`value`.
         """
 
-        formatted = self.format(self.value)
+        # Use self.value as the preferred way to access the value; this
+        # ensures it is handled in the appropriate way regardless of whether
+        # this specific item is in an authoritative context.
+
+        formatted = self.to_format(self.value)
         return formatted
 
 
     @formatted.setter
     def formatted(self, new_value):
 
-        new_value = self.unformat(new_value)
-        self.set(new_value)
+        new_value = self.from_format(new_value)
+        self.value = new_value
+
+
+    def from_format(self, value):
+        """ Convert the supplied value from its human-readable formatted
+            representation, if any, to the on-the-wire representation for
+            this item. This conversion is driven by the configuration.
+
+            This is the inverse of :func:`to_format`.
+        """
+
+        try:
+            unformatted = self.store.config.from_format(self.key, value)
+        except:
+            ###
+            print("DEBUG: format conversion failed for %s:" % (self.full_key))
+            print(traceback.format_exc())
+            unformatted = value
+
+        return unformatted
 
 
     def from_payload(self, payload):
@@ -183,28 +199,78 @@ class Item:
         return new_value
 
 
-    def get(self, refresh=False, formatted=False):
+    def from_quantity(self, quantity):
+        """ Convert the supplied quantity to a base numeric representation
+            if possible, appropriate to the base, unformatted units for this
+            item.
+
+            This is the inverse of :func:`to_quantity`.
+        """
+
+        value = self.store.config.from_quantity(self.key, quantity)
+        return value
+
+
+    def get(self, refresh=False, formatted=False, quantity=False):
         """ Retrieve the current value. Set *refresh* to True to prompt
-            the daemon handling the request to provide the most up-to-date
+            the daemon responding to the request to return the most up-to-date
             value available, potentially bypassing any local cache. Set
             *formatted* to True to receive the human-readable formatting
-            of the value, if any such formatting is available.
+            of the value, if any such formatting is available; similarly,
+            set *quantity* to true to receive the value as a
+            :class:`pint.Quantity` instance, which will only work if the
+            item is configured to have physical units.
+
+            Use of the :py:attr:`formatted`, :py:attr:`quantity`, and
+            :py:attr:`value` properties is encouraged in the case where
+            a synchronous refresh is not required.
         """
 
         if refresh == False and self.subscribed == True and self._value is not None:
-            if formatted == True:
+            # This is expected to be the average case: the item already has
+            # a value because we always subscribe, so a non-refresh get()
+            # request can just return the current value.
+
+            if formatted == False and quantity == False:
+                # This is expected to be the average case.
+                return self.value
+            elif formatted == True and quantity == True:
+                # A little extra work to honor the intent of getting the
+                # quantity with the units specific to the 'formatted'
+                # representation. For example, the formatted value could
+                # be degrees instead of radians.
+
+                try:
+                    units = self.config['units']
+                except KeyError:
+                    units = None
+                else:
+                    try:
+                        units = units['formatted']
+                    except (KeyError, TypeError):
+                        pass
+
+                quantity = self.to_quantity(self._value, units)
+                return quantity
+            elif quantity == True:
+                return self.quantity
+            elif formatted == True:
                 return self.formatted
             else:
-                return self._value
+                raise ValueError('formatted+quantity arguments must be boolean')
 
-        request = dict()
+        elif refresh == False:
+            request = protocol.message.Request('GET', self.full_key)
+        elif refresh == True:
+            payload = protocol.message.Payload(None, refresh=True)
+            request = protocol.message.Request('GET', self.full_key, payload)
+        else:
+            raise TypeError('refresh argument must be a boolean')
 
-        request = protocol.message.Payload(None, refresh=refresh)
-        message = protocol.message.Request('GET', self.full_key, request)
-        self.req.send(message)
-        response = message.wait(self.timeout)
+        self.req.send(request)
+        response = request.wait(self.timeout)
 
-        if response == None:
+        if response is None:
             raise RuntimeError('GET failed: no response to request')
 
         error = response.payload.error
@@ -227,10 +293,37 @@ class Item:
 
         self._update(response)
 
-        if formatted == True:
+        # This explicit check for None eliminates the possibility of subsequent
+        # use of properties resulting in an infinite loop, where get() is called
+        # because there is no cached value.
+
+        if self._value is None:
+            return None
+
+        # This block duplicates the check at the beginning of this method.
+
+        if formatted == False and quantity == False:
+            return self.value
+        elif formatted == True and quantity == True:
+            try:
+                units = self.config['units']
+            except KeyError:
+                units = None
+            else:
+                try:
+                    units = units['formatted']
+                except (KeyError, TypeError):
+                    pass
+
+            quantity = self.to_quantity(self._value, units)
+            return quantity
+
+        elif quantity == True:
+            return self.quantity
+        elif formatted == True:
             return self.formatted
         else:
-            return self._value
+            raise ValueError('formatted+quantity arguments must be boolean')
 
 
     def perform_get(self):
@@ -242,13 +335,14 @@ class Item:
 
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
-            'value'; this is not expected to be a common occurrence, but if the
+            'value'; this is not expected to be a common occurrence, but if a
             custom :func:`perform_get` implementation wants that to occur they
             need to instantiate and return the Payload instance directly rather
             than use :func:`to_payload`.
         """
 
-        # This implementation is strictly caching, there is nothing to refresh.
+        # This default implementation is strictly caching, there is nothing
+        # to refresh.
 
         payload = self.to_payload()
         return payload
@@ -266,29 +360,37 @@ class Item:
             request.
         """
 
+        # This default implementation is a no-op, there is nothing to set.
+        # the local cache of the new value will be updated when the value
+        # is published.
+
         pass
 
 
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero. Polling occurs
-            within a local background thread which will invoke :func:`req_poll`
-            at the requested interval.
+            discontinued if *period* is set to None or zero. Polling will
+            invoke :func:`req_poll`, and occurs at the requested interval
+            within a background thread unique to this item.
         """
 
         poll.start(self.req_poll, period)
 
 
     def publish(self, new_value, timestamp=None, repeat=False):
-        """ Publish a new value, which is expected to be the Python binary
-            representation of the new value.
-            If *timestamp* is set it is expected to be
-            a UNIX epoch timestamp; the current time will be used if it is not
-            provided. Newly published values are always cached locally.
+        """ Publish a new value, which is expected to be the Python native
+            representation of the new value. If *timestamp* is set it is
+            expected to be a UNIX epoch timestamp; the current time will be
+            used if it is not provided. Newly published values are always
+            cached locally.
 
             Note that, for simple cases, an authoritative daemon can set the
             :func:`value` property to publish a new value instead of calling
-            :func:`publish` directly.
+            :func:`publish` directly. In other words, these two calls are
+            equivalent::
+
+                item.value = new_value
+                item.publish(new_value)
         """
 
         if timestamp is None:
@@ -335,6 +437,34 @@ class Item:
             # fashion for all pub/sub interactions.
 
             self.pub.publish(message)
+
+
+    @property
+    def quantity(self):
+        """ Get and set the current value of the item as a
+            :class:`pint.Quantity` instance.
+
+            This property can also be used to set the new value of the item
+            using a valid :class:`pint.Quantity` instance; the provided
+            quantity will be translated to the base units of the item before
+            proceeding.
+
+            See also :py:attr:`formatted` and :py:attr:`value`.
+        """
+
+        # Use self.value as the preferred way to access the value; this
+        # ensures it is handled in the appropriate way regardless of whether
+        # this specific item is in an authoritative context.
+
+        quantity = self.to_quantity(self.value)
+        return quantity
+
+
+    @quantity.setter
+    def quantity(self, new_quantity):
+
+        new_value = self.from_quantity(new_quantity)
+        self.value = new_value
 
 
     def register(self, method, prime=False):
@@ -494,7 +624,7 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True):
+    def set(self, new_value, wait=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
@@ -503,9 +633,33 @@ class Item:
             the request; the wait will return immediately once the request is
             satisfied. There is no return value for a blocking request; failed
             requests will raise exceptions.
+
+            The optional *formatted* and *quantity* options enable calling
+            :func:`set` with either the string-formatted representation or
+            the :class:`pint.Quantity` representation of the item; the new
+            value is still the first argument, but set one of *formatted*
+            or *quantity* to True to indicate it should be interpreted.
+
+            Use of the :py:attr:`formatted`, :py:attr:`quantity`, and
+            :py:attr:`value` properties is encouraged in the case where
+            a blocking set operation is desired.
         """
 
         self._updated.clear()
+
+        # This next set of conditions mirrors what occurs in the get() method,
+        # but no additional special handling is required for the case where
+        # both formatted and quantity are True: a quantity is a quantity,
+        # regardless of the actual units.
+
+        if formatted == False and quantity == False:
+            pass
+        elif quantity == True:
+            new_value = self.from_quantity(new_value)
+        elif formatted == True:
+            new_value = self.from_format(new_value)
+        else:
+            raise ValueError('formatted+quantity arguments must be boolean')
 
         payload = self.to_payload(new_value)
         message = protocol.message.Request('SET', self.full_key, payload)
@@ -561,7 +715,9 @@ class Item:
             caught and ignored, it will not be reported to the caller.
 
             A non-authoritative :class:`Item` will automatically call
-            :func:`subscribe` upon being instantiated.
+            this method` upon being instantiated; an authoritative variant
+            will do so upon a call to :func:`register`. In other words, it
+            should never be necessary to call this method directly.
         """
 
         if self.subscribed == True:
@@ -626,6 +782,22 @@ class Item:
             return self._value_timestamp
 
 
+    def to_format(self, value):
+        """ Convert the supplied value to its human-readable formatted
+            representation, if any. This conversion is driven by the
+            configuration for this item.
+
+            This is the inverse of :func:`from_format`.
+        """
+
+        try:
+            formatted = self.store.config.to_format(self.key, value)
+        except:
+            formatted = str(self.value)
+
+        return formatted
+
+
     def to_payload(self, value=None, timestamp=None):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
@@ -671,22 +843,21 @@ class Item:
         return payload
 
 
-    def unformat(self, value):
-        """ Convert the supplied value from its human-readable formatted
-            representation, if any, to the on-the-wire representation for
-            this item. This conversion is driven by the configuration.
+    def to_quantity(self, value, units=None):
+        """ Convert the supplied value to a :class:`pint.Quantity`
+            representation, if possible, appropriate to the units,
+            if any, for this item. The default units of the item can be
+            overridden by providing a *units* argument, which is either a
+            :class:`pint.Unit` instance or a string acceptable to the
+            :func:`pint.UnitRegistry.parse_units` method. Exceptions will
+            be raised if the units are not recognized or the item doesn't
+            have units at all.
 
-            This is the inverse of :func:`format`.
+            This is the inverse of :func:`from_quantity`.
         """
 
-        try:
-            unformatted = self.store.config.unformat(self.key, value)
-        except:
-            ###
-            print(traceback.format_exc())
-            unformatted = value
-
-        return unformatted
+        quantity = self.store.config.to_quantity(self.key, value, units)
+        return quantity
 
 
     def validate(self, value):
@@ -704,10 +875,12 @@ class Item:
 
     @property
     def value(self):
-        """ Get and set the current value of the item. Invoke :func:`get` and
-            :func:`set` directly for additional control over how these
-            respective calls are handled, the handling invoked here relies on
-            default values for all optional arguments.
+        """ Get and set the current value of the item. The caller should use
+            :func:`get` and :func:`set` directly for additional control over
+            how these respective calls are handled, the handling invoked here
+            relies on default values for all optional arguments.
+
+            See also :py:attr:`formatted` and :py:attr:`quantity`.
         """
 
         if self.authoritative == True:
@@ -749,6 +922,7 @@ class Item:
                 callback(self, new_data, new_timestamp)
             except:
                 ### This should probably be logged in a more graceful fashion.
+                print("DEBUG: callback failed for %s:" % (self.full_key))
                 print(traceback.format_exc())
                 continue
 

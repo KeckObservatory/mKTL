@@ -12,11 +12,13 @@ pyzmq = ">=4.0"
 msgspec = { version = ">=0.18", optional = true }
 numpy = { version = ">=1.6", optional = true }
 orjson = { version = ">=3.0", optional = true }
+pint = { version = ">=0.17", optional = true }
 
 [tool.poetry.extras]
 msgspec = ["msgspec"]
 numpy = ["numpy"]
 orjson = ["orjson"]
+pint = ["pint"]
 
 [tool.poetry.urls]
 repository = "https://github.com/KeckObservatory/mKTL"

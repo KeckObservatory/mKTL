@@ -14,7 +14,7 @@ class Daemon(mktl.Daemon):
         # configuration is not in the default location it must be declared
         # prior to initializing the Daemon.
 
-        items = describeService(store)
+        items = describe_service(store)
         mktl.config.authoritative(store, alias, items)
         mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
@@ -72,15 +72,20 @@ class Item(mktl.Item):
         except IndexError:
             return
 
-        timestamp = slice.time
-        #ascii = slice.ascii
-        binary = slice.binary
+        # The KTL 'binary' representation is aligned with the mKTL concept
+        # of an unformatted value. The KTL 'ascii' representation is ignored,
+        # because it would only have value on the client side, and we must
+        # rely on the mKTL formatting routines to approximate the translations
+        # that would normally occur via KTL asc2bin and bin2asc ioctl calls.
 
-        # This method could assign self.value = binary, but that wouldn't
+        timestamp = slice.time
+        unformatted = slice.binary
+
+        # This method could assign self.value = unformatted, but that wouldn't
         # preserve the timestamp. Call self.publish() instead to preserve
         # both pieces of information.
 
-        self.publish(binary, timestamp)
+        self.publish(unformatted, timestamp)
 
 
     def perform_get(self):
@@ -96,19 +101,19 @@ class Item(mktl.Item):
 
         slice = keyword.history[-1]
         timestamp = slice.time
-        binary = slice.binary
+        unformatted = slice.binary
 
-        payload = mktl.Payload(binary, timestamp)
+        payload = mktl.Payload(unformatted, timestamp)
         return payload
 
 
     def perform_set(self, new_value):
         """ Wrap an incoming SET request to a KTL keyword write. This method
-            is expected to block until completion of the request. The values
-            presented at this level are the equivalent of the KTL binary
-            value, and this needs to be asserted explicitly at the KTL level
-            to ensure they are interpreted (or not interpreted, as the case
-            may be) properly.
+            is expected to block until completion of the request. The
+            unformatted values passed to this method are the equivalent of
+            the KTL binary value, and this needs to be asserted explicitly
+            when calling ktl.Keyword.write() to ensure they are interpreted
+            (or not interpreted, as the case may be) properly.
         """
 
         keyword = self.full_key
@@ -120,7 +125,7 @@ class Item(mktl.Item):
 
 
 
-def describeService(name):
+def describe_service(name):
     """ Construct an mKTL configuration block to describe the named KTL service.
     """
 
@@ -131,13 +136,13 @@ def describeService(name):
         # The KTL.Service iterates in alphabetical order, there is no need
         # for additional sorting in order for it to be predictable and/or
         # repeatable.
-        keyword_dict = describeKeyword(keyword)
+        keyword_dict = describe_keyword(keyword)
         keywords[keyword.name] = keyword_dict
 
     return keywords
 
 
-def describeKeyword(keyword):
+def describe_keyword(keyword):
     """ Construct an item-specific mKTL configuration block for a single
         KTL keyword.
     """
@@ -220,7 +225,7 @@ def describeKeyword(keyword):
                 if binary_units is not None:
                     units = dict()
                     units['formatted'] = value
-                    units['base'] = binary_units
+                    units[''] = binary_units
 
                     value = units
 
@@ -238,17 +243,14 @@ def describeKeyword(keyword):
             if format != '':
                 keyword_dict['format'] = format
 
-    for attribute in ('broadcasts', 'reads', 'writes'):
-        try:
-            value = keyword[attribute]
-        except ValueError:
-            value = None
-
-        if value is False:
-            keyword_dict[attribute] = value
-
     if enumerators is not None:
         keyword_dict['enumerators'] = enumerators
+
+    if keyword['reads'] == False:
+        keyword_dict['gettable'] = False
+
+    if keyword['writes'] == False:
+        keyword_dict['settable'] = False
 
     return keyword_dict
 

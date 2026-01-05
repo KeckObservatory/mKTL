@@ -5,6 +5,7 @@
 import atexit
 import concurrent.futures
 import itertools
+import queue
 import socket
 import sys
 import threading
@@ -41,7 +42,29 @@ class Client:
         self.socket.setsockopt(zmq.LINGER, 0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
-        self.socket_lock = threading.Lock()
+
+        # This queue may need to come from the multiprocessing module in
+        # the future, but the message.Request class would need to be modified
+        # such that its notification mechanism is no longer a threading.Event.
+
+        try:
+            # Available in Python 3.7+.
+            self.requests = queue.SimpleQueue()
+        except AttributeError:
+            self.requests = queue.Queue()
+
+        # Similar to the above comment, this may need to be an ipc socket
+        # instead of inproc if there's a need to support full multiprocessing.
+        # That, or an additional background thread to sit on the multiprocessing
+        # queue, and use this inproc signal to trigger the send/recv thread.
+
+        internal = "inproc://request.Client:signal:%s:%d" % (address, port)
+        self.request_address = internal
+        self.request_receive = zmq_context.socket(zmq.PAIR)
+        self.request_receive.bind(internal)
+
+        self.request_signal = zmq_context.socket(zmq.PAIR)
+        self.request_signal.connect(internal)
 
         self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
@@ -58,7 +81,12 @@ class Client:
 
         their_version = parts[0]
 
-        if their_version != message.version:
+        if their_version == message.version:
+            response_type = parts[2]
+            target = parts[3]
+            payload = parts[4]
+            bulk = parts[5]
+        else:
             error = dict()
             error['type'] = 'RuntimeError'
             error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
@@ -67,11 +95,6 @@ class Client:
             response_type = 'REP'
             target = '???'
             bulk = None
-        else:
-            response_type = parts[2]
-            target = parts[3]
-            payload = parts[4]
-            bulk = parts[5]
 
         # This could still blow up if the version doesn't match-- the id may
         # be in a different message part-- but we have to try, otherwise
@@ -109,15 +132,54 @@ class Client:
         del self.pending[response_id]
 
 
+    def _req_outgoing(self):
+        """ Clear one request notification and send one pending request.
+        """
+
+        self.request_receive.recv(flags=zmq.NOBLOCK)
+        message = self.requests.get(block=False)
+
+        parts = tuple(message)
+        self.pending[message.id] = message
+
+        # A lock around the ZeroMQ socket is necessary in a multithreaded
+        # application; otherwise, if two different threads both invoke
+        # send_multipart(), the message parts can and will get mixed
+        # together. However, this send_multipart() call is now only called
+        # from a single thread handling all send/recv calls, so the
+        # lock is no longer in place.
+
+        self.socket.send_multipart(parts)
+
+
     def run(self):
+        """ All send() and recv() calls are sequestered to this thread
+            in order to satisfy ZeroMQ. Even with a lock around the socket
+            it will sometimes seg fault when multiple threads act on a
+            single socket; in particular, if other threads (like client
+            operations) call send() while a background thread (like this
+            thread) is running poll() and recv(). Thus, all incoming local
+            requests are filtered through a queue, with notification happening
+            on a PAIR socket to allow a single poll() call to wake up the
+            thread for either type of event.
+
+            Example reference:
+
+            https://github.com/zeromq/libzmq/issues/1108
+        """
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
+        poller.register(self.request_receive, zmq.POLLIN)
 
         while True:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
-                if self.socket == active:
+
+                if self.request_receive == active:
+                    self._req_outgoing()
+
+                elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
 
@@ -134,16 +196,8 @@ class Client:
             :class:`mktl.protocol.message.Request` instance.
         """
 
-        parts = tuple(message)
-        self.pending[message.id] = message
-
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        self.socket_lock.acquire()
-        self.socket.send_multipart(parts)
-        self.socket_lock.release()
+        self.requests.put(message)
+        self.request_signal.send(b'')
 
         ack = message.wait_ack(self.timeout)
 
@@ -186,7 +240,6 @@ class Server:
         self.hostname = hostname
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket_lock = threading.Lock()
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
@@ -246,6 +299,20 @@ class Server:
 
         self.port = trial
 
+        try:
+            # Available in Python 3.7+.
+            self.responses = queue.SimpleQueue()
+        except AttributeError:
+            self.responses = queue.Queue()
+
+        internal = "inproc://request.Server:signal:%s:%d" % (hostname, self.port)
+        self.response_address = internal
+        self.response_receive = zmq_context.socket(zmq.PAIR)
+        self.response_receive.bind(internal)
+
+        self.response_signal = zmq_context.socket(zmq.PAIR)
+        self.response_signal.connect(internal)
+
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -265,34 +332,25 @@ class Server:
         # any better.
 
         # Using ZeroMQ sockets to implement a multithreaded queue was much
-        # slower (in the absence of multiprocessing). The use of a lock is
-        # necessary when sharing a ZeroMQ socket across threads as ZeroMQ
-        # makes no attempt to be thread-safe.
+        # slower, it's not clear whether full multiprocessing would help.
 
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
 
 
-    def req_ack(self, socket, lock, ident, request):
+    def req_ack(self, request):
         """ Acknowledge the incoming request. The client is expecting an
             immediate ACK for all request types, including errors; this is
             how a client knows whether a daemon is online to respond to its
             request.
         """
 
-        ack = message.Payload(None)
-        response = message.Message('ACK', payload=ack, id=request.id)
-        parts = (ident,) + tuple(response)
+        response = message.Message('ACK', id=request.id)
+        response.prefix = request.prefix
 
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        lock.acquire()
-        socket.send_multipart(parts)
-        lock.release()
+        self.send(response)
 
 
-    def req_handler(self, socket, lock, ident, request):
+    def req_handler(self, request):
         """ The default request handler is for debug purposes only, and is
             effectively a no-op. :class:`mktl.Daemon` leverages a
             custom subclass of :class:`Server` that properly handles specific
@@ -300,25 +358,18 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(socket, lock, ident, request)
+        self.req_ack(request)
 
-        payload = message.Payload(None)
-        response = message.Message('REP', target, payload, id=request.id)
-        parts = (ident,) + tuple(response)
+        response = message.Message('REP', target, id=request.id)
+        response.prefix = request.prefix
 
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        lock.acquire()
-        socket.send_multipart(parts)
-        lock.release()
+        self.send(response)
 
         # This default handler returns None, which indicates to req_incoming()
         # that it should not issue a response of its own.
 
 
-    def req_incoming(self, socket, lock, parts):
+    def req_incoming(self, parts):
         """ All inbound requests are filtered through this method. It will
             parse the request as JSON into a Python dictionary, and hand it
             off to :func:`req_handler` for further processing. Error handling
@@ -365,11 +416,12 @@ class Server:
                 pass
 
         request = message.Request(req_type, target, payload, req_id)
+        request.prefix = (ident,)
         payload = None
         error = None
 
         try:
-            payload = self.req_handler(socket, lock, ident, request)
+            payload = self.req_handler(request)
         except:
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
@@ -383,58 +435,58 @@ class Server:
             # other processing chain that will issue a proper response.
             return
 
-        if payload is None:
-            payload = message.Payload(None)
-
-        if error is not None and payload.error is None:
-            payload.error = error
+        if error is not None:
+            if payload is None:
+                payload = message.Payload(None)
+                payload.error = error
+            elif payload.error is None:
+                payload.error = error
 
         response = message.Message('REP', target, payload, req_id)
-        parts = (ident,) + tuple(response)
+        response.prefix = request.prefix
 
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        lock.acquire()
-        self.socket.send_multipart(parts)
-        lock.release()
+        self.send(response)
 
 
     def run(self):
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
+        poller.register(self.response_receive, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
-            for active,flag in sockets:
-                if self.socket == active:
+            for active, flag in sockets:
+
+                if self.response_receive == active:
+                    self._rep_outgoing()
+
+                elif self.socket == active:
                     parts = self.socket.recv_multipart()
-                    args = (self.socket, self.socket_lock, parts)
                     # Calling submit() will block if a worker is not available.
-                    self.workers.submit(self.req_incoming, *args)
+                    self.workers.submit(self.req_incoming, parts)
+
 
         self.workers.shutdown()
 
 
-    def send(self, ident, message):
-        """ Convenience method for subclasses to fire off a message response.
-            Any such subclasses are not using just the :func:`req_incoming`
-            and :func:`req_handler` background thread machinery defined
-            here to handle requests, and are handling asynchronous responses
-            that need to be relayed back to the original caller.
+    def _rep_outgoing(self):
+        """ Clear one request notification and send one pending response.
         """
 
-        parts = (ident,) + tuple(message)
+        self.response_receive.recv(flags=zmq.NOBLOCK)
+        response = self.responses.get(block=False)
 
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
-
-        self.socket_lock.acquire()
+        parts = tuple(response)
         self.socket.send_multipart(parts)
-        self.socket_lock.release()
+
+
+    def send(self, response):
+        """ Queue a response to be sent back to the original requestor.
+        """
+
+        self.responses.put(response)
+        self.response_signal.send(b'')
 
 
 # end of class Server

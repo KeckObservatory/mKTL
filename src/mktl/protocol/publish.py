@@ -4,6 +4,7 @@
 
 import atexit
 import itertools
+import queue
 import threading
 import traceback
 import zmq
@@ -31,11 +32,24 @@ class Client:
 
         self.socket = zmq_context.socket(zmq.SUB)
         self.socket.connect(server)
-        self._poll_flush()
 
         self.callback_all = list()
         self.callback_specific = dict()
         self.shutdown = False
+
+        try:
+            # Available in Python 3.7+.
+            self.subscriptions = queue.SimpleQueue()
+        except AttributeError:
+            self.subscriptions = queue.Queue()
+
+        internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
+        self.subscription_address = internal
+        self.subscription_receive = zmq_context.socket(zmq.PAIR)
+        self.subscription_receive.bind(internal)
+
+        self.subscription_signal = zmq_context.socket(zmq.PAIR)
+        self.subscription_signal.connect(internal)
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -113,20 +127,6 @@ class Client:
             del self.callback_specific[topic]
 
 
-    def _poll_flush(self, timeout=0.01):
-        """ Poll the subscribe socket in an effort to make sure we're fully
-            connected before proceeding. This is not necessarily deterministic,
-            but is considered a PUB/SUB best practice, and has been observed
-            to fix odd PUB/SUB subscription 'misses' where the client never
-            receives any broadcast messages, despite having subscribed
-            normally. The *timeout* specified here is in seconds.
-        """
-
-        poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN|zmq.POLLOUT)
-        poller.poll(timeout * 1000) # milliseconds
-
-
     def register(self, callback, topic=None):
         """ Register a callback that will be invoked every time a new broadcast
             message arrives. If no topic is specified the callback will be
@@ -169,13 +169,18 @@ class Client:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
+        poller.register(self.subscription_receive, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active,flag in sockets:
+
                 if self.socket == active:
                     parts = self.socket.recv_multipart()
                     self._pub_incoming(parts)
+
+                elif self.subscription_receive == active:
+                    self._sub_incoming()
 
 
     def _pub_incoming(self, parts):
@@ -216,6 +221,17 @@ class Client:
         self.propagate(topic, broadcast)
 
 
+    def _sub_incoming(self):
+        """ Clear one subscription notification and handle one subscription
+            request.
+        """
+
+        self.subscription_receive.recv(flags=zmq.NOBLOCK)
+        topic = self.subscriptions.get(block=False)
+
+        self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+
+
     def subscribe(self, topic):
         """ ZeroMQ subscriptions are based on a topic. Filtering of messages
             happens on the server side, depending on what a client is subscribed
@@ -229,8 +245,8 @@ class Client:
             topic = str(topic)
             topic = topic.encode()
 
-        self.socket.setsockopt(zmq.SUBSCRIBE, topic)
-        self._poll_flush()
+        self.subscriptions.put(topic)
+        self.subscription_signal.send(b'')
 
 
 # end of class Client
