@@ -153,16 +153,6 @@
     },
     "type": "double"
   },
-  "instrume": {
-    "read_channel": "CURRINST",
-    "write_channel": "CURRINST",
-    "description": "instrument-name in \"\"",
-    "units": {
-      "base": "",
-      "formatted": ""
-    },
-    "type": "string"
-  },
   "parang": {
     "read_channel": "PARANG",
     "write_channel": "PARANG",

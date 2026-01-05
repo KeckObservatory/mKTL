@@ -12,7 +12,7 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, store, alias=None, *args, **kwargs):
 
-        # Generate the configuration matching this KTL service. Since this
+        # Generate the configuration matching this set of EPICS channels. Since this
         # configuration is not in the default location it must be declared
         # prior to initializing the Daemon.
         # store is the mktl store name for the epics object (i.e. k1:mySystem:myDevice)
@@ -61,7 +61,6 @@ class Item(mktl.Item):
         self.pvname = self.full_key.replace('.', ':')
         service = "".join(self.full_key.split('.')[:-1])
         self.pvname = service + ':' + self.key.upper()
-
         self.publish_on_set = False
 
     def publish_broadcast(self, *args, **kwargs):
