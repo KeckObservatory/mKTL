@@ -16,16 +16,14 @@ For example, to run ktl2mktl for the KTL service 'kpfpower', one might invoke:
 import argparse
 import json
 import ktl
+import sys
 
 try:
-    import mktl
-except ImportError:
-    mktl = None
-
-try:
-    KTL = mktl.KTL
-except AttributeError:
+    import mktl.KTL
+except ModuleNotFoundError:
     KTL = None
+else:
+    KTL = mktl.KTL
 
 if KTL is None:
     # Try a local import, in case this tool is being tested adjacent to the
