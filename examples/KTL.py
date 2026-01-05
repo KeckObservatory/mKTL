@@ -14,7 +14,7 @@ class Daemon(mktl.Daemon):
         # configuration is not in the default location it must be declared
         # prior to initializing the Daemon.
 
-        items = describeService(store)
+        items = describe_service(store)
         mktl.config.authoritative(store, alias, items)
         mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
@@ -125,7 +125,7 @@ class Item(mktl.Item):
 
 
 
-def describeService(name):
+def describe_service(name):
     """ Construct an mKTL configuration block to describe the named KTL service.
     """
 
@@ -136,13 +136,13 @@ def describeService(name):
         # The KTL.Service iterates in alphabetical order, there is no need
         # for additional sorting in order for it to be predictable and/or
         # repeatable.
-        keyword_dict = describeKeyword(keyword)
+        keyword_dict = describe_keyword(keyword)
         keywords[keyword.name] = keyword_dict
 
     return keywords
 
 
-def describeKeyword(keyword):
+def describe_keyword(keyword):
     """ Construct an item-specific mKTL configuration block for a single
         KTL keyword.
     """
