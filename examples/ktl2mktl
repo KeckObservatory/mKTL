@@ -1,0 +1,76 @@
+#! /usr/bin/env kpython3
+
+description = """
+Generate a mKTL JSON configuration for a designated KTL service name. This tool
+requires a working kroot environment with the service installed locally in order
+to function. The generated JSON configuration will be written to standard
+output.
+"""
+
+epilog = """
+For example, to run ktl2mktl for the KTL service 'kpfpower', one might invoke:
+
+    ktl2mktl kpfpower
+"""
+
+import argparse
+import json
+import ktl
+
+try:
+    import mktl
+except ImportError:
+    mktl = None
+
+try:
+    KTL = mktl.KTL
+except AttributeError:
+    KTL = None
+
+if KTL is None:
+    # Try a local import, in case this tool is being tested adjacent to the
+    # KTL.py file.
+
+    try:
+        import KTL
+    except ImportError:
+        raise ImportError('unable to import either mktl or KTL.py')
+
+
+def main():
+
+    config = parse_command_line()
+    print_configuration(config.service)
+
+
+
+def parse_command_line():
+
+    arguments = dict()
+    arguments['formatter_class'] = argparse.RawDescriptionHelpFormatter
+    arguments['description'] = description
+    arguments['epilog'] = epilog
+
+    parser = argparse.ArgumentParser(**arguments)
+
+    parser.add_argument('service', help='Name of the KTL service to query.')
+
+    parsed = parser.parse_args()
+    return parsed
+
+
+
+def print_configuration(service):
+
+    description = KTL.describe_service(service)
+    description = json.dumps(description, indent=4)
+
+    sys.stdout.write(description + '\n')
+
+
+
+if __name__ == '__main__':
+    main()
+
+
+# vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
