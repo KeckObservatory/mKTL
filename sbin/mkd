@@ -36,6 +36,8 @@ def main():
         except (KeyboardInterrupt, SystemExit):
             break
 
+    daemon.cleanup()
+
 
 main.shutdown = threading.Event()
 
