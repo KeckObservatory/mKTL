@@ -187,13 +187,11 @@ class Daemon:
             # It's possible that some other item registered callbacks against
             # this item before the local, authoritative variant could be
             # established; we'll want to preserve the callbacks established
-            # on that previous item, but it needs to be replaced with the
-            # authoritative variant.
+            # on that previous item while replacing it with the authoritative
+            # variant.
 
             preserved_callbacks = existing.callbacks
-            existing.callbacks = list()
-            existing = None
-            self.store._items[key] = None
+            existing._cleanup()
         else:
             preserved_callbacks = tuple()
 
