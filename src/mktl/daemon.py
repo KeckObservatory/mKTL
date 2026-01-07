@@ -110,9 +110,9 @@ class Daemon:
 
         # The cached configuration needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
-        # to be sure that there are no existing instances in the cache, the
-        # daemon needs to always get back the instance containing authoritative
-        # items.
+        # to be sure that there are no existing instances in the cache, all
+        # local calls to mktl.get() need to retrun the instance containing
+        # authoritative items.
 
         existing = begin._clear(store)
 
@@ -120,9 +120,10 @@ class Daemon:
             pass
         else:
             # It's possible this should be a warning as opposed to a hard error.
-            raise RuntimeError('the Daemon needs to be started before any client requests against its store name')
+            raise RuntimeError('the Daemon needs to be started before any client requests against its store name occur')
 
         self.store = begin.get(store)
+        self.store._daemon = self
 
         # Local machinery is intact. Invoke the setup() method, which is the
         # hook for the developer to establish their own custom Item classes
