@@ -48,6 +48,7 @@ class Daemon:
     def __init__(self, store, alias, override=False, arguments=None):
 
         self.alias = alias
+        self.arguments = arguments
         self.config = None
         self.store = None
         self.uuid = None
