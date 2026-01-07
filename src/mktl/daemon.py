@@ -7,6 +7,7 @@ import resource
 import socket
 import subprocess
 import sys
+import threading
 import time
 import zmq
 
@@ -57,6 +58,7 @@ class Daemon:
         self._cleanup_invoked = False
         self._cleanup = self.cleanup
         self.cleanup = self._cleanup_wrapper
+        self.shutdown = threading.Event()
 
         self.config = config.get(store, alias)
         self.uuid = self.config.authoritative_uuid
@@ -369,6 +371,13 @@ class Daemon:
         """
 
         pass
+
+
+    def stop(self):
+        """ Request that this daemon stop execution.
+        """
+
+        self.shutdown.set()
 
 
     def _test_port(self, store, port):
