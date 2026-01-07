@@ -36,19 +36,19 @@ class Daemon:
         and is used to locate the configuration file that defines the items
         for which this daemon is authoritative.
 
-        *arguments* is expected to be an :class:`argparse.ArgumentParser`
+        *options* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
-        *arguments* argument is not required. This is intended to be a vehicle
+        *options* argument is not required. This is intended to be a vehicle
         for custom subclasses to receive key information from command-line
-        arguments, such as the location of an auxiliary configuration file
+        options, such as the location of an auxiliary configuration file
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, alias, override=False, arguments=None):
+    def __init__(self, store, alias, override=False, options=None):
 
         self.alias = alias
-        self.arguments = arguments
+        self.options = options
         self.config = None
         self.store = None
         self.uuid = None
