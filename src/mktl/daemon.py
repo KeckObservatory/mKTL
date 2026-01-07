@@ -51,6 +51,13 @@ class Daemon:
         self.store = None
         self.uuid = None
 
+        # Use a wrapper method to ensure the actual cleanup() only gets
+        # invoked once.
+
+        self._cleanup_invoked = False
+        self._cleanup = self.cleanup
+        self.cleanup = self._cleanup_wrapper
+
         self.config = config.get(store, alias)
         self.uuid = self.config.authoritative_uuid
 
@@ -119,6 +126,7 @@ class Daemon:
         # hook for the developer to establish their own custom Item classes
         # before filling in with empty caching Item classes.
 
+        atexit.register(self.cleanup)
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -213,6 +221,30 @@ class Daemon:
                 # cannot be restored. Ignore it.
                 continue
             item.req_set(faux_message)
+
+
+    def cleanup(self, *args, **kwargs):
+        """ Subclasses should override the :func:`cleanup` method to perform
+            any/all actions prior to shutting down the daemon, such as
+            publishing a "shutting down" message, or cleanly terminating a
+            connection with a hardware device. This method is guaranteed to
+            only be invoked a single time. The default implementation of this
+            method takes no actions.
+        """
+
+        pass
+
+
+    def _cleanup_wrapper(self, *args, **kwargs):
+        """ Wrapper method to ensure the :func:`Daemon.cleanup` method is only
+            invoked a single time.
+        """
+
+        if self._cleanup_invoked:
+            return
+        else:
+            self._cleanup_invoked = True
+            return self._cleanup(*args, **kwargs)
 
 
     def setup(self):
@@ -488,7 +520,6 @@ class RequestServer(protocol.request.Server):
 
 
 # end of class RequestServer
-
 
 
 
