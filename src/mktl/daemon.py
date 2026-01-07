@@ -180,15 +180,36 @@ class Daemon:
 
         existing = self.store._items[key]
 
-        if existing is None:
-            kwargs['authoritative'] = True
-            kwargs['pub'] = self.pub
-            item_class(self.store, key, **kwargs)
+        if existing is not None:
+            if existing.authoritative:
+                raise RuntimeError('duplicate item not allowed: ' + key)
 
-            # Instantiating the item results in a persistent reference in
-            # self.store._items, there is no need to manipulate it directly.
+            # It's possible that some other item registered callbacks against
+            # this item before the local, authoritative variant could be
+            # established; we'll want to preserve the callbacks established
+            # on that previous item, but it needs to be replaced with the
+            # authoritative variant.
+
+            preserved_callbacks = existing.callbacks
+            existing.callbacks = list()
+            existing = None
+            self.store._items[key] = None
         else:
-            raise RuntimeError('duplicate item not allowed: ' + key)
+            preserved_callbacks = tuple()
+
+
+        kwargs['authoritative'] = True
+        kwargs['pub'] = self.pub
+        created = item_class(self.store, key, **kwargs)
+
+        # Instantiating the item results in a persistent reference in
+        # self.store._items, there is no need to manipulate it directly.
+
+        for reference in preserved_callbacks:
+            callback = reference()
+
+            if callback:
+                created.register(callback)
 
 
     def _begin_persistence(self):
@@ -337,7 +358,7 @@ class Daemon:
         for key in self.config.authoritative_items.keys():
             existing = self.store._items[key]
 
-            if existing is None:
+            if existing is None or existing.authoritative == False:
                 self.add_item(item.Item, key)
 
 
