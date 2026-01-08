@@ -192,6 +192,7 @@ class Daemon:
 
             preserved_callbacks = existing.callbacks
             existing._cleanup()
+            del existing
         else:
             preserved_callbacks = tuple()
 
@@ -201,7 +202,8 @@ class Daemon:
         created = item_class(self.store, key, **kwargs)
 
         # Instantiating the item results in a persistent reference in
-        # self.store._items, there is no need to manipulate it directly.
+        # self.store._items, there is no need to manipulate that dictionary
+        # directly.
 
         for reference in preserved_callbacks:
             callback = reference()
