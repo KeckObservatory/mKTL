@@ -17,6 +17,7 @@ class Store:
 
         self.name = name
         self.config = config.get(name)
+        self._daemon = None
         self._items = dict()
         self._items_lock = threading.Lock()
 

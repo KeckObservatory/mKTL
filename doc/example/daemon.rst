@@ -138,6 +138,14 @@ might establish all of the :class:`Item` instances, and the in the
 in the foreign protocol to subscribe to event broadcasts.
 
 
+:func:`Daemon.cleanup` method
+---------------------------------
+
+The :func:`Daemon.cleanup` method will be invoked just prior to shutting down
+the daemon; this provides an opportunity for any application-specific cleanup
+actions to occur.
+
+
 Setting values of other items
 -----------------------------
 

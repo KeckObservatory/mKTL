@@ -7,6 +7,7 @@ import resource
 import socket
 import subprocess
 import sys
+import threading
 import time
 import zmq
 
@@ -35,21 +36,30 @@ class Daemon:
         and is used to locate the configuration file that defines the items
         for which this daemon is authoritative.
 
-        *arguments* is expected to be an :class:`argparse.ArgumentParser`
+        *options* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
-        *arguments* argument is not required. This is intended to be a vehicle
+        *options* argument is not required. This is intended to be a vehicle
         for custom subclasses to receive key information from command-line
-        arguments, such as the location of an auxiliary configuration file
+        options, such as the location of an auxiliary configuration file
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, alias, override=False, arguments=None):
+    def __init__(self, store, alias, override=False, options=None):
 
         self.alias = alias
+        self.options = options
         self.config = None
         self.store = None
         self.uuid = None
+
+        # Use a wrapper method to ensure the actual cleanup() only gets
+        # invoked once.
+
+        self._cleanup_invoked = False
+        self._cleanup = self.cleanup
+        self.cleanup = self._cleanup_wrapper
+        self.shutdown = threading.Event()
 
         self.config = config.get(store, alias)
         self.uuid = self.config.authoritative_uuid
@@ -101,9 +111,9 @@ class Daemon:
 
         # The cached configuration needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
-        # to be sure that there are no existing instances in the cache, the
-        # daemon needs to always get back the instance containing authoritative
-        # items.
+        # to be sure that there are no existing instances in the cache, all
+        # local calls to mktl.get() need to retrun the instance containing
+        # authoritative items.
 
         existing = begin._clear(store)
 
@@ -111,14 +121,16 @@ class Daemon:
             pass
         else:
             # It's possible this should be a warning as opposed to a hard error.
-            raise RuntimeError('the Daemon needs to be started before any client requests against its store name')
+            raise RuntimeError('the Daemon needs to be started before any client requests against its store name occur')
 
         self.store = begin.get(store)
+        self.store._daemon = self
 
         # Local machinery is intact. Invoke the setup() method, which is the
         # hook for the developer to establish their own custom Item classes
         # before filling in with empty caching Item classes.
 
+        atexit.register(self.cleanup)
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -168,15 +180,36 @@ class Daemon:
 
         existing = self.store._items[key]
 
-        if existing is None:
-            kwargs['authoritative'] = True
-            kwargs['pub'] = self.pub
-            item_class(self.store, key, **kwargs)
+        if existing is not None:
+            if existing.authoritative:
+                raise RuntimeError('duplicate item not allowed: ' + key)
 
-            # Instantiating the item results in a persistent reference in
-            # self.store._items, there is no need to manipulate it directly.
+            # It's possible that some other item registered callbacks against
+            # this item before the local, authoritative variant could be
+            # established; we'll want to preserve the callbacks established
+            # on that previous item while replacing it with the authoritative
+            # variant.
+
+            preserved_callbacks = existing.callbacks
+            existing._cleanup()
+            del existing
         else:
-            raise RuntimeError('duplicate item not allowed: ' + key)
+            preserved_callbacks = tuple()
+
+
+        kwargs['authoritative'] = True
+        kwargs['pub'] = self.pub
+        created = item_class(self.store, key, **kwargs)
+
+        # Instantiating the item results in a persistent reference in
+        # self.store._items, there is no need to manipulate that dictionary
+        # directly.
+
+        for reference in preserved_callbacks:
+            callback = reference()
+
+            if callback:
+                created.register(callback)
 
 
     def _begin_persistence(self):
@@ -213,6 +246,30 @@ class Daemon:
                 # cannot be restored. Ignore it.
                 continue
             item.req_set(faux_message)
+
+
+    def cleanup(self, *args, **kwargs):
+        """ Subclasses should override the :func:`cleanup` method to perform
+            any/all actions prior to shutting down the daemon, such as
+            publishing a "shutting down" message, or cleanly terminating a
+            connection with a hardware device. This method is guaranteed to
+            only be invoked a single time. The default implementation of this
+            method takes no actions.
+        """
+
+        pass
+
+
+    def _cleanup_wrapper(self, *args, **kwargs):
+        """ Wrapper method to ensure the :func:`Daemon.cleanup` method is only
+            invoked a single time.
+        """
+
+        if self._cleanup_invoked:
+            return
+        else:
+            self._cleanup_invoked = True
+            return self._cleanup(*args, **kwargs)
 
 
     def setup(self):
@@ -301,7 +358,7 @@ class Daemon:
         for key in self.config.authoritative_items.keys():
             existing = self.store._items[key]
 
-            if existing is None:
+            if existing is None or existing.authoritative == False:
                 self.add_item(item.Item, key)
 
 
@@ -337,6 +394,13 @@ class Daemon:
         """
 
         pass
+
+
+    def stop(self):
+        """ Request that this daemon stop execution.
+        """
+
+        self.shutdown.set()
 
 
     def _test_port(self, store, port):
@@ -488,7 +552,6 @@ class RequestServer(protocol.request.Server):
 
 
 # end of class RequestServer
-
 
 
 

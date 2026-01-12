@@ -117,6 +117,22 @@ class Item:
             self.subscribe(prime=prime)
 
 
+    def _cleanup(self):
+        """ Shut down any background processing involved with this item.
+            In the general case this is not required; :class:`Item` instances
+            are singletons, and should persist for the lifetime of the
+            application. But there are some corner cases where they need
+            to be replaced; this method facilitates that procedure.
+        """
+
+        if self._update_thread is not None:
+            self._update_thread.stop()
+            self._update_thread = None
+
+        self.callbacks = tuple()
+        self.store._items[self.key] = None
+
+
     @property
     def formatted(self):
         """ Get and set the human-readable representation of the item.

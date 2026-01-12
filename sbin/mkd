@@ -22,7 +22,6 @@ mktl.Daemon, one might invoke:
 
 import argparse
 import importlib
-import threading
 
 
 def main():
@@ -32,12 +31,11 @@ def main():
 
     while True:
         try:
-            main.shutdown.wait(30)
+            daemon.shutdown.wait(30)
         except (KeyboardInterrupt, SystemExit):
             break
 
-
-main.shutdown = threading.Event()
+    daemon.cleanup()
 
 
 
