@@ -41,7 +41,7 @@ class Daemon(mktl.Daemon):
         for key in items.keys():
             item = self.store[key]
             if isinstance(item, Item):
-                pvname = config['store'] + ':' + key.upper()
+                pvname = config['store'] + ':' + key
                 pv = epics.PV(pvname)
                 pv.add_callback(item.publish_broadcast) 
 
