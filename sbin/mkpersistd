@@ -73,7 +73,11 @@ def main():
                 sys.exit(0)
 
             if event & select.POLLIN:
-                data = sys.stdin.read(1024)
+                try:
+                    data = sys.stdin.read(1024)
+                except OSError:
+                    data = ''
+
                 if data == '':
                     sys.exit(0)
 
