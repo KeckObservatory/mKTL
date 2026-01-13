@@ -41,7 +41,7 @@ class Daemon(mktl.Daemon):
         for key in items.keys():
             item = self.store[key]
             if isinstance(item, Item):
-                pvname = config['store'] + ':' + key
+                pvname = self.config[self.uuid]['items'][key]['read_channel'] 
                 pv = epics.PV(pvname)
                 pv.add_callback(item.publish_broadcast) 
 
@@ -58,9 +58,6 @@ class Item(mktl.Item):
         # We want the EPICS channels to be the sole source of broadcast
         # events. mKTL defaults to publishing a new value when a SET operation
         # completes successfully; this attribute inhibits that behavior.
-        self.pvname = self.full_key.replace('.', ':')
-        service = "".join(self.full_key.split('.')[:-1])
-        self.pvname = service + ':' + self.key
         self.publish_on_set = False
 
     def publish_broadcast(self, *args, **kwargs):
@@ -77,14 +74,14 @@ class Item(mktl.Item):
     def _get_pv_with_metadata(self):
         """ Return the EPICS PV object associated with this item.
         """
-        pv = epics.PV(self.pvname)
+        pv = epics.PV(self.config['read_channel'])
         resp = None
         tries = 0
         while resp is None:  # try up to 5 times to get a valid response
             resp = pv.get_with_metadata(as_string=True) # get the value and metadata
             tries += 1
             if tries >= 5:
-                raise RuntimeError(f"Could not get metadata for PV {self.pvname}")
+                raise RuntimeError(f"Could not get metadata for PV {self.config['read_channel']}")
         return resp 
 
 
@@ -110,7 +107,7 @@ class Item(mktl.Item):
             to ensure they are interpreted (or not interpreted, as the case
             may be) properly.
         """
-        pv = epics.PV(self.pvname)
+        pv = epics.PV(self.config['write_channel'])
         pv.put(new_value, wait=True)
 
 # end of class Item
@@ -181,7 +178,7 @@ def describePV(pv: epics.PV):
     for attribute in ('key', 'read_access', 'write_access'):
         try:
             if attribute == 'key':
-                value = pv.pvname
+                value = pv.config['read_channel']
             else:
                 value = getattr(pv, attribute)
         except ValueError:
