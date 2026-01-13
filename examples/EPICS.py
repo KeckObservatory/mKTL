@@ -60,7 +60,7 @@ class Item(mktl.Item):
         # completes successfully; this attribute inhibits that behavior.
         self.pvname = self.full_key.replace('.', ':')
         service = "".join(self.full_key.split('.')[:-1])
-        self.pvname = service + ':' + self.key.upper()
+        self.pvname = service + ':' + self.key
         self.publish_on_set = False
 
     def publish_broadcast(self, *args, **kwargs):
