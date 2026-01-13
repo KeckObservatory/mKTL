@@ -4,7 +4,7 @@
     "write_channel": "AUTACTIV",
     "description": "guider-active in {no,yes}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean",
@@ -18,7 +18,7 @@
     "write_channel": "AUTGO",
     "description": "guider-go-flag in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -28,7 +28,7 @@
     "write_channel": "AUTPAUSE",
     "description": "guider-pause in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -38,7 +38,7 @@
     "write_channel": "AUTRESUM",
     "description": "guider-resume in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -48,7 +48,7 @@
     "write_channel": "AUTRESX",
     "description": "guider-resumeX in arcsec",
     "units": {
-      "base": "arcsec",
+      "": "arcsec",
       "formatted": "arcsec"
     },
     "type": "double"
@@ -58,7 +58,7 @@
     "write_channel": "AUTRESY",
     "description": "guider-resumeY in arcsec",
     "units": {
-      "base": "arcsec",
+      "": "arcsec",
       "formatted": "arcsec"
     },
     "type": "double"
@@ -68,7 +68,7 @@
     "write_channel": "AUTSQNUM",
     "description": "guider-seqnum in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -78,7 +78,7 @@
     "write_channel": "AUTSTOP",
     "description": "guider-stop in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -88,7 +88,7 @@
     "write_channel": "AUTXCENT",
     "description": "guider-Xcent in arcsec",
     "units": {
-      "base": "arcsec",
+      "": "arcsec",
       "formatted": "arcsec"
     },
     "type": "double"
@@ -98,7 +98,7 @@
     "write_channel": "AUTYCENT",
     "description": "guider-Ycent in arcsec",
     "units": {
-      "base": "arcsec",
+      "": "arcsec",
       "formatted": "arcsec"
     },
     "type": "double"
@@ -108,7 +108,7 @@
     "write_channel": "AXESTAT",
     "description": "axes-control-status in {unknown, not controlling, halted, in position, in limit, slewing, acquiring, tracking}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -128,7 +128,7 @@
     "write_channel": "AZ",
     "description": "telescope-azimuth in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -138,7 +138,7 @@
     "write_channel": "CURRINST",
     "description": "current-instrument in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -148,7 +148,7 @@
     "write_channel": "EL",
     "description": "telescope-elevation in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -158,7 +158,7 @@
     "write_channel": "PARANG",
     "description": "parallactic-angle-astrometric in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -168,7 +168,7 @@
     "write_channel": "ROTBASE",
     "description": "rotator-base-angle in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -178,7 +178,7 @@
     "write_channel": "ROTDEST",
     "description": "rotator-user-destination in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -188,7 +188,7 @@
     "write_channel": "ROTDETS1",
     "description": "rotator-destination-timestamp1-ut1-slow in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "double"
@@ -198,7 +198,7 @@
     "write_channel": "ROTDETS2",
     "description": "rotator-destination-timestamp2-ut1-slow in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "double"
@@ -208,7 +208,7 @@
     "write_channel": "ROTERRS",
     "description": "rotator-error-string in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -218,7 +218,7 @@
     "write_channel": "ROTERVL",
     "description": "rotator-error-status in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -228,7 +228,7 @@
     "write_channel": "ROTHALTC",
     "description": "rotator-halt-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -238,7 +238,7 @@
     "write_channel": "ROTHALT",
     "description": "rotator-halt-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -248,7 +248,7 @@
     "write_channel": "ROTINITC",
     "description": "rotator-initialization-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -258,7 +258,7 @@
     "write_channel": "ROTINIT",
     "description": "rotator-initialization-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -268,7 +268,7 @@
     "write_channel": "ROTMODE",
     "description": "rotator-tracking-mode in {unknown, position angle, vertical angle, stationary}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -284,7 +284,7 @@
     "write_channel": "ROTNEWS",
     "description": "rotator-new-destination-slow in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -294,7 +294,7 @@
     "write_channel": "ROTPDEST",
     "description": "rotator-physical-destination in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -304,7 +304,7 @@
     "write_channel": "ROTPDSTS",
     "description": "rotator-physical-destination-slow in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -314,7 +314,7 @@
     "write_channel": "ROTPOSN",
     "description": "rotator-user-position in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -324,7 +324,7 @@
     "write_channel": "ROTPOTS1",
     "description": "rotator-position-timestamp1-ut1-slow in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "double"
@@ -334,7 +334,7 @@
     "write_channel": "ROTPOTS2",
     "description": "rotator-position-timestamp2-ut1-slow in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "double"
@@ -344,7 +344,7 @@
     "write_channel": "ROTPPOSN",
     "description": "rotator-physical-position in deg",
     "units": {
-      "base": "deg",
+      "": "deg",
       "formatted": "deg"
     },
     "type": "double"
@@ -354,7 +354,7 @@
     "write_channel": "ROTSEL",
     "description": "rotator-select in {none, fcass (forward cass), cass (cassegrain), lbc (left bent cass), rbc (right bent cass)}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -371,7 +371,7 @@
     "write_channel": "ROTSPEED",
     "description": "rotator-fake-speed in deg/sec",
     "units": {
-      "base": "deg/sec",
+      "": "deg/sec",
       "formatted": "deg/sec"
     },
     "type": "double"
@@ -381,7 +381,7 @@
     "write_channel": "ROTSRVER",
     "description": "rotator-servo-error in arcsec",
     "units": {
-      "base": "arcsec",
+      "": "arcsec",
       "formatted": "arcsec"
     },
     "type": "double"
@@ -391,7 +391,7 @@
     "write_channel": "ROTSTAT",
     "description": "rotator-state in  {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -416,7 +416,7 @@
     "write_channel": "ROTSTBYC",
     "description": "rotator-standby-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -426,7 +426,7 @@
     "write_channel": "ROTSTBY",
     "description": "rotator-standby-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -436,7 +436,7 @@
     "write_channel": "ROTSTST",
     "description": "rotator-state-string in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -446,7 +446,7 @@
     "write_channel": "ROTTIME",
     "description": "rotator-current-time in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "double"
@@ -456,7 +456,7 @@
     "write_channel": "SIMULATE",
     "description": "simulating-dcs in {false, true}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean",
@@ -470,7 +470,7 @@
     "write_channel": "TERTERRS",
     "description": "tertiary-error-string in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -480,7 +480,7 @@
     "write_channel": "TERTERRS",
     "description": "tertiary-error-status in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "integer"
@@ -490,7 +490,7 @@
     "write_channel": "TERTHALTC",
     "description": "tertiary-halt-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -500,7 +500,7 @@
     "write_channel": "TERTHALT",
     "description": "tertiary-halt-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -510,7 +510,7 @@
     "write_channel": "TERTINITC",
     "description": "tertiary-initialization-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -520,7 +520,7 @@
     "write_channel": "TERTINIT",
     "description": "tertiary-initialization-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -530,7 +530,7 @@
     "write_channel": "TERTMOVEC",
     "description": "move-tertiary in no,yes",
     "units": {
-      "base": "no,yes",
+      "": "no,yes",
       "formatted": "no,yes"
     },
     "type": "boolean"
@@ -540,7 +540,7 @@
     "write_channel": "TERTMOVE",
     "description": "move-tertiary-complement in no,yes",
     "units": {
-      "base": "no,yes",
+      "": "no,yes",
       "formatted": "no,yes"
     },
     "type": "boolean"
@@ -550,7 +550,7 @@
     "write_channel": "TERTDEST",
     "description": "tertiary-destination in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, cass, mirrorup}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -571,7 +571,7 @@
     "write_channel": "TERTPOSN",
     "description": "tertiary-position in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, unknown, cass, mirrorup}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -593,7 +593,7 @@
     "write_channel": "TERTSTAT",
     "description": "tertiary-state in {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "enumerated",
@@ -618,7 +618,7 @@
     "write_channel": "TERTSTBYC",
     "description": "tertiary-standby-command in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -628,7 +628,7 @@
     "write_channel": "TERTSTBY",
     "description": "tertiary-standby-command-complement in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "boolean"
@@ -638,7 +638,7 @@
     "write_channel": "TERTSTST",
     "description": "tertiary-state-string in \"\"",
     "units": {
-      "base": "",
+      "": "",
       "formatted": ""
     },
     "type": "string"
@@ -648,7 +648,7 @@
     "write_channel": "UTC",
     "description": "coordinated-universal-time in h",
     "units": {
-      "base": "h",
+      "": "h",
       "formatted": "h"
     },
     "type": "double"
