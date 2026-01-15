@@ -4,7 +4,7 @@
 
 import mktl
 import epics
-from itertools import product
+import itertools
 import pdb
 
 
@@ -24,9 +24,7 @@ class Daemon(mktl.Daemon):
             instance for each and every channel being proxied by this
             daemon, as opposed to letting them be the default mktl.Item.
         """
-        config = self.config[self.uuid]
-        items = config['items']
-        keys = items.keys()
+        keys = self.config.keys(authoritative=True)
 
         for key in keys:
             self.add_item(Item, key)
@@ -36,14 +34,14 @@ class Daemon(mktl.Daemon):
         """ This is the last step before broadcasts go out. This is the
             right time to fire up monitoring of all EPICS PVs.
         """
-        config = self.config[self.uuid]
-        items = config['items']
-        for key in items.keys():
+        keys = self.config.keys(authoritative=True)
+        for key in keys:
+            if key.startswith('_'):
+                continue
             item = self.store[key]
-            if isinstance(item, Item):
-                pvname = self.config[self.uuid]['items'][key]['read_channel'] 
-                pv = epics.PV(pvname)
-                pv.add_callback(item.publish_broadcast) 
+            pvname = self.config[key]['read_channel'] 
+            pv = epics.PV(pvname)
+            pv.add_callback(item.publish_broadcast) 
 
 
 # end of class Store
@@ -63,13 +61,25 @@ class Item(mktl.Item):
     def publish_broadcast(self, *args, **kwargs):
         """ This method is registered as an EPICS callback; take any/all EPICS 
             broadcast events and publish them as mKTL events.
+
+            TODO: add an epics callback example. See pyepics for example...etc.
         """
-        try:
-            timestamp = kwargs['timestamp']
+        try: 
             value = kwargs['value']
         except KeyError:
             return
-        self.publish(value, timestamp)
+        timestamp = self._get_timestamp(kwargs.get('timestamp'))
+        self.publish(value, timestamp) # Publish will pick up the timestamp value if it is None.
+
+    def _get_timestamp(self, timestamp, minlim=915184800):
+        """TODO: ADD ME
+        """
+        if timestamp is None: 
+            return None
+        elif timestamp < minlim: # this is unix timestamp for 1999-01-01
+            return None
+        else: 
+            return timestamp
 
     def _get_pv_with_metadata(self):
         """ Return the EPICS PV object associated with this item.
@@ -92,8 +102,9 @@ class Item(mktl.Item):
             relies on epics callbacks to receive asynchronous broadcasts
             (see :func:`publish_broadcast`).
         """
+        #TODO: check if readable from config.
         resp = self._get_pv_with_metadata()
-        timestamp = resp.get('timestamp')
+        timestamp = _get_timestamp(resp.get('timestamp'))
         value = resp.get('value')
         payload = mktl.Payload(value, timestamp)
         return payload
@@ -107,7 +118,8 @@ class Item(mktl.Item):
             to ensure they are interpreted (or not interpreted, as the case
             may be) properly.
         """
-        pv = epics.PV(self.config['write_channel'])
+        #TODO: check if writable from config.
+        pv = epics.PV(self.config['write_channel']) #TODO: can we just have a channel? read/write is on anoyther layer
         pv.put(new_value, wait=True)
 
 # end of class Item
@@ -126,11 +138,11 @@ def describePV(pv: epics.PV):
         Epics channel.
     """
 
-    keyword_dict = dict()
+    channel_dict = dict()
 
     type = pv.type
     type = type_mapping[type.upper()]
-    keyword_dict['type'] = type
+    channel_dict['type'] = type
     enumerators = None
 
     try:
@@ -164,7 +176,7 @@ def describePV(pv: epics.PV):
         if value is not None:
             if attribute == 'help':
                 attribute = 'description'
-            keyword_dict[attribute] = value
+            channel_dict[attribute] = value
 
     # make range attribute
     try:
@@ -173,7 +185,7 @@ def describePV(pv: epics.PV):
     except ValueError:
         pass
     else:
-        keyword_dict['range'] = {"minimum": lower, "maximum": upper}
+        channel_dict['range'] = {"minimum": lower, "maximum": upper}
 
     for attribute in ('key', 'read_access', 'write_access'):
         try:
@@ -185,27 +197,26 @@ def describePV(pv: epics.PV):
             value = None
 
         if value is False:
-            keyword_dict[attribute] = value
+            channel_dict[attribute] = value
 
     if enumerators is not None:
-        keyword_dict['enumerators'] = enumerators
+        channel_dict['enumerators'] = enumerators
 
-    return keyword_dict
+    return channel_dict
 
 
 # Translate Epics data types to mKTL types.
 
 type_mapping = dict()
 epics_types = ['double', 'float', 'int', 'string', 'short', 'enum', 'char', 'long']
+numeric_types = set(('double', 'float', 'short', 'int', 'char', 'long'))
 epics_variants = ['', 'ctrl', 'time']
-for v, t in product(epics_variants, epics_types):
+for v, t in intertools.product(epics_variants, epics_types):
     if v == '':
         epics_type = t.upper()
     else:
         epics_type = f'{v.upper()}_{t.upper()}'
-    if t in ['double', 'float']:
-        mktl_type = 'numeric'
-    elif t in ['int', 'char', 'long']:
+    if t in numeric_types:
         mktl_type = 'numeric'
     elif t == 'string':
         mktl_type = 'string'
