@@ -763,7 +763,7 @@ class Configuration:
         format = item_config['format']
         fields = format.split(':')
 
-        results = list()
+        values = list()
 
         if formatted in degrees:
             pass
@@ -773,13 +773,23 @@ class Configuration:
             raise ValueError('unrecognized target units: ' + formatted)
 
         remainder = value % 1
-        results.append(fields[0] % (value))
-        fields = fields[1:]
+        values.append(value)
 
-        for field in fields:
+        for field in fields[1:]:
             value = remainder * 60
             remainder = value % 1
-            results.append(field % value)
+            values.append(value)
+
+        if len(fields) > 2 and remainder < 1.000001 and remainder > 0.999999:
+            # Possible floating point underflow.
+
+            if values[-1] > 59.999:
+                values[-1] = 0
+                values[-2] += 1
+
+        results = list()
+        for index in range(len(fields)):
+            results.append(fields[index] % (values[index]))
 
         return ':'.join(results)
 
