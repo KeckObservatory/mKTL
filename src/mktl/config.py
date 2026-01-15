@@ -780,12 +780,16 @@ class Configuration:
             remainder = value % 1
             values.append(value)
 
-        if len(fields) > 2 and remainder < 1.000001 and remainder > 0.999999:
+        if remainder < 1.000001 and remainder > 0.999999 and len(fields) > 2:
             # Possible floating point underflow.
 
             if values[-1] > 59.999:
                 values[-1] = 0
                 values[-2] += 1
+
+                if values[-2] >= 60:
+                    values[-2] -= 60
+                    values[-3] += 1
 
         results = list()
         for index in range(len(fields)):
