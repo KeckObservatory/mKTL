@@ -143,22 +143,22 @@ class Configuration:
             This is the inverse of :func:`to_format`.
         """
 
-        item = self[key]
+        item_config = self[key]
         unformatted = None
 
         try:
-            type = item['type']
+            type = item_config['type']
         except KeyError:
             type = None
 
         if type == 'boolean' or type == 'enumerated':
-            unformatted = self.from_format_enumerated(item, value)
+            unformatted = self.from_format_enumerated(key, value)
 
         elif type == 'mask':
-            unformatted = self.from_format_mask(item, value)
+            unformatted = self.from_format_mask(key, value)
 
         elif type == 'numeric':
-            unformatted = self.from_format_numeric(item, value)
+            unformatted = self.from_format_numeric(key, value)
 
         if unformatted is None:
             return value
@@ -166,16 +166,17 @@ class Configuration:
             return unformatted
 
 
-    def from_format_enumerated(self, item, value):
+    def from_format_enumerated(self, key, value):
         """ Return the integer representation corresponding to the specified
             formatted string value. Raise a KeyError if there is no matching
             enumerator. This comparison will be done in a case-insensitive
             fashion.
         """
 
+        item_config = self.config[key]
         value = str(value)
         value = value.lower()
-        enumerators = item['enumerators']
+        enumerators = item_config['enumerators']
 
         unformatted = None
 
@@ -198,19 +199,20 @@ class Configuration:
         return unformatted
 
 
-    def from_format_mask(self, item, value):
+    def from_format_mask(self, key, value):
         """ Return the integer representation for a comma-separated set of
             active mask bits. The comparison will be done on a case-insensitive
             basis.
         """
 
+        item_config = self.config[key]
         value = str(value)
         value = value.lower()
 
         if value == '' or value == 'none':
             return 0
 
-        enumerators = item['enumerators']
+        enumerators = item_config['enumerators']
         lowered = dict()
 
         for bit,name in enumerators.items():
@@ -239,7 +241,7 @@ class Configuration:
         return unformatted
 
 
-    def from_format_numeric(self, item, value):
+    def from_format_numeric(self, key, value):
         """ Return a Python-native number (either integer or floating point)
             after undoing the configured formatting for this numeric value.
             This includes converting the number to the units specific to the
@@ -260,17 +262,19 @@ class Configuration:
         else:
             value = float(value)
 
-        unformatted = self.from_format_units(item, value)
+        unformatted = self.from_format_units(key, value)
         return unformatted
 
 
-    def from_format_units(self, item, value):
+    def from_format_units(self, key, value):
         """ Convert a numeric value from its formatted units to the unformatted
             units.
         """
 
+        item_config = self[key]
+
         try:
-            units = item['units']
+            units = item_config['units']
         except KeyError:
             return value
 
@@ -295,10 +299,10 @@ class Configuration:
             for items that do not have units.
         """
 
-        item = self[key]
+        item_config = self[key]
 
         try:
-            units = item['units']
+            units = item_config['units']
         except:
             units = None
         else:
