@@ -644,7 +644,6 @@ class Configuration:
         """
 
         item_config = self[key]
-        ### Support for sexagesimal formatting needs to go here.
 
         if isinstance(value, int):
             pass
@@ -695,9 +694,8 @@ class Configuration:
         degrees = set(('d', 'deg', 'degs', 'degree', 'degrees'))
         hours = set(('h', 'hour', 'hours'))
 
-        ### This fails, we don't have the key.
-        quantity = self.to_quantity(item_config['key'], value)
-        degrees = quantity.to('degrees').magnitude
+        quantity = self.to_quantity(key, value)
+        value = quantity.to('degrees').magnitude
 
         formatted = formatted.lower()
         format = item_config['format']
@@ -708,7 +706,7 @@ class Configuration:
         if formatted in degrees:
             pass
         elif formatted in hours:
-            value = value * 360 / 24
+            value = value * 24 / 360
         else:
             raise ValueError('unrecognized target units: ' + formatted)
 
