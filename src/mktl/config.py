@@ -644,20 +644,75 @@ class Configuration:
         else:
             value = float(value)
 
-        value = self.to_format_units(item, value)
-
         try:
             format = item['format']
         except KeyError:
             format = '%s'
 
-        if 'd' in format:
-            # Eliminate floating point uncertainty by rounding. Reporting 34
-            # if the value is 34.999999 is not desirable.
-            value = int(value + 0.5)
+        if ':' in format:
+            formatted = self.to_format_sexagesimal(item, value)
+        else:
+            value = self.to_format_units(item, value)
 
-        formatted = format % (value)
+            if 'd' in format:
+                # Eliminate floating point uncertainty by rounding. Reporting
+                # 34 if the value is 34.999999 is not desirable.
+                value = int(value + 0.5)
+
+            formatted = format % (value)
+
         return formatted
+
+
+    def to_format_sexagesimal(self, item, value):
+        """ Convert a numeric value from its unformatted units to a sexagesimal
+            representation. Both hours-minutes-seconds and
+            degrees-minutes-seconds representations are handled.
+        """
+
+        try:
+            units = item['units']
+        except KeyError:
+            return str(value)
+
+        try:
+            formatted = units['formatted']
+            unformatted = units['']
+        except (TypeError, KeyError):
+            return str(value)
+
+        value = float(value)
+
+        degrees = set(('d', 'deg', 'degs', 'degree', 'degrees'))
+        hours = set(('h', 'hour', 'hours'))
+
+        ### This fails, we don't have the key.
+        quantity = self.to_quantity(item['key'], value)
+        degrees = quantity.to('degrees').magnitude
+
+        formatted = formatted.lower()
+        format = item['format']
+        fields = format.split(':')
+
+        results = list()
+
+        if formatted in degrees:
+            pass
+        elif formatted in hours:
+            value = value * 360 / 24
+        else:
+            raise ValueError('unrecognized target units: ' + formatted)
+
+        remainder = value % 1
+        results.append(fields[0] % (value))
+        fields = fields[1:]
+
+        for field in fields:
+            value = remainder * 60
+            remainder = value % 1
+            results.append(field % value)
+
+        return ':'.join(results)
 
 
     def to_format_units(self, item, value):
