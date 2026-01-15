@@ -248,21 +248,83 @@ class Configuration:
             unformatted value.
         """
 
-        ### Support for sexagesimal formatting needs to go here.
+        item_config = self[key]
 
-        # Try to preserve integers whenever possible.
+        try:
+            format = item_config['format']
+        except KeyError:
+            format = '%s'
 
-        if isinstance(value, int):
-            pass
-        elif isinstance(value, str):
-            try:
-                value = int(value)
-            except:
-                value = float(value)
+        if ':' in format:
+            unformatted = self.from_format_sexagesimal(key, value)
         else:
-            value = float(value)
+            # An integer is preferred whenever an integer is appropriate.
 
-        unformatted = self.from_format_units(key, value)
+            if isinstance(value, int):
+                pass
+            elif isinstance(value, str):
+                try:
+                    value = int(value)
+                except:
+                    value = float(value)
+            else:
+                value = float(value)
+
+            unformatted = self.from_format_units(key, value)
+
+        return unformatted
+
+
+    def from_format_sexagesimal(self, key, value):
+        """ Convert a numeric value from a sexagesimal representation to
+            a numeric value corresponding to the unformatted units. Both
+            hours-minutes-seconds and degrees-minutes-seconds representations
+            are handled.
+        """
+
+        item_config = self[key]
+
+        try:
+            units = item_config['units']
+        except KeyError:
+            return value
+
+        try:
+            formatted = units['formatted']
+            unformatted = units['']
+        except (TypeError, KeyError):
+            return value
+
+        value = str(value)
+        fields = value.split(':')
+
+        result = 0
+        exponent = 0
+
+        for field in fields:
+            field = float(field)
+            contribution = field / (60 ** exponent)
+            exponent += 1
+            result += contribution
+
+        degrees = set(('d', 'deg', 'degs', 'degree', 'degrees'))
+        hours = set(('h', 'hour', 'hours'))
+
+        formatted = formatted.lower()
+
+        if formatted in degrees:
+            pass
+        elif formatted in hours:
+            result = result * 360 / 24
+        else:
+            raise ValueError('unrecognized target units: ' + formatted)
+
+        if pint is None:
+            self._convert_units_setup()
+
+        degrees = self._unit_registry.parse_units('degrees')
+        quantity = result * degrees
+        unformatted = self.from_quantity(key, quantity)
         return unformatted
 
 
