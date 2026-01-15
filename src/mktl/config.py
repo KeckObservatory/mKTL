@@ -549,22 +549,22 @@ class Configuration:
             This is the inverse of :func:`from_format`.
         """
 
-        item = self[key]
+        item_config = self[key]
         formatted = None
 
         try:
-            type = item['type']
+            type = item_config['type']
         except KeyError:
             type = None
 
         if type == 'boolean' or type == 'enumerated':
-            formatted = self.to_format_enumerated(item, value)
+            formatted = self.to_format_enumerated(key, value)
 
         elif type == 'mask':
-            formatted = self.to_format_mask(item, value)
+            formatted = self.to_format_mask(key, value)
 
         elif type == 'numeric':
-            formatted = self.to_format_numeric(item, value)
+            formatted = self.to_format_numeric(key, value)
 
         if formatted is None:
             return str(value)
@@ -572,13 +572,14 @@ class Configuration:
             return formatted
 
 
-    def to_format_enumerated(self, item, value):
+    def to_format_enumerated(self, key, value):
         """ Return the string representation corresponding to the specified
             integer value. Return the original value, potentially after being
             cast to a string, if there is no matching enumerator.
         """
 
-        enumerators = item['enumerators']
+        item_config = self[key]
+        enumerators = item_config['enumerators']
 
         # The JSON representation of the enumerators has the integer keys as
         # strings. For example:
@@ -595,13 +596,14 @@ class Configuration:
         return formatted
 
 
-    def to_format_mask(self, item, value):
+    def to_format_mask(self, key, value):
         """ Return a comma-separated list of active bits for the specified
             integer value. If no bits are active, return the string representing
             no bits being set.
         """
 
-        enumerators = item['enumerators']
+        item_config = self[key]
+        enumerators = item_config['enumerators']
 
         # Similar to the enumerated case, the mask bits are defined in the
         # JSON as strings. But we have to treat the unformmatted value as
@@ -634,13 +636,14 @@ class Configuration:
         return formatted
 
 
-    def to_format_numeric(self, item, value):
+    def to_format_numeric(self, key, value):
         """ Return a string representing the configured formatting for this
             numeric value. This includes any printf-style directives about
             decimal places and/or padding, as well as converting the number
             to the units specific to the formatted value.
         """
 
+        item_config = self[key]
         ### Support for sexagesimal formatting needs to go here.
 
         if isinstance(value, int):
@@ -649,14 +652,14 @@ class Configuration:
             value = float(value)
 
         try:
-            format = item['format']
+            format = item_config['format']
         except KeyError:
             format = '%s'
 
         if ':' in format:
-            formatted = self.to_format_sexagesimal(item, value)
+            formatted = self.to_format_sexagesimal(key, value)
         else:
-            value = self.to_format_units(item, value)
+            value = self.to_format_units(key, value)
 
             if 'd' in format:
                 # Eliminate floating point uncertainty by rounding. Reporting
@@ -668,14 +671,16 @@ class Configuration:
         return formatted
 
 
-    def to_format_sexagesimal(self, item, value):
+    def to_format_sexagesimal(self, key, value):
         """ Convert a numeric value from its unformatted units to a sexagesimal
             representation. Both hours-minutes-seconds and
             degrees-minutes-seconds representations are handled.
         """
 
+        item_config = self[key]
+
         try:
-            units = item['units']
+            units = item_config['units']
         except KeyError:
             return str(value)
 
@@ -691,11 +696,11 @@ class Configuration:
         hours = set(('h', 'hour', 'hours'))
 
         ### This fails, we don't have the key.
-        quantity = self.to_quantity(item['key'], value)
+        quantity = self.to_quantity(item_config['key'], value)
         degrees = quantity.to('degrees').magnitude
 
         formatted = formatted.lower()
-        format = item['format']
+        format = item_config['format']
         fields = format.split(':')
 
         results = list()
@@ -719,13 +724,15 @@ class Configuration:
         return ':'.join(results)
 
 
-    def to_format_units(self, item, value):
+    def to_format_units(self, key, value):
         """ Convert a numeric value from its unformatted units to the formatted
             units.
         """
 
+        item_config = self[key]
+
         try:
-            units = item['units']
+            units = item_config['units']
         except KeyError:
             return value
 
@@ -742,7 +749,7 @@ class Configuration:
         try:
             unformatted = units['']
         except KeyError:
-            raise KeyError('unformatted units are not defined for ' + item.key)
+            raise KeyError('unformatted units are not defined for ' + key)
 
         if formatted == unformatted:
             return value
@@ -760,10 +767,10 @@ class Configuration:
             default 'unformatted' units are used.
         """
 
-        item = self[key]
+        item_config = self[key]
 
         try:
-            default = item['units']
+            default = item_config['units']
         except:
             default = None
 
