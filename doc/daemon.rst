@@ -72,6 +72,27 @@ variants, to explicitly set a new item value.
    :members: from_payload, perform_get, perform_set, poll, publish, req_get, req_poll, req_set, to_payload, validate
 
 
+Configuration management
+------------------------
+
+Largely for internal use, there are some aspects of the
+:class:`mktl.config.Configuration` class that are directly relevant for use
+within a daemon. A reference to the appropriate Configuration instance can
+be accesssed as an attribute of the :class:`mktl.Store`, or via the
+:func:`mktl.config.get` method; :class:`mktl.config.Configuration` instances
+are singletons.
+
+.. autoclass:: mktl.config.Configuration
+   :members: convert_units, from_format, from_quantity, keys, to_format, to_quantity, update, uuids
+
+In addition to the class itself there are an assortment of helper methods,
+two of which are potentially relevant in a daemon context:
+
+.. autofunction:: mktl.config.authoritative
+
+.. autofunction:: mktl.config.get
+
+
 mkd executable
 --------------
 
