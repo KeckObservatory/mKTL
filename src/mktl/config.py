@@ -785,11 +785,11 @@ class Configuration:
 
             if values[-1] > 59.999:
                 values[-1] = 0
-                values[-2] += 1
+                values[-2] += 1/60
 
                 if values[-2] >= 60:
-                    values[-2] -= 60
-                    values[-3] += 1
+                    values[-2] = 0
+                    values[-3] += 1/60
 
         results = list()
         for index in range(len(fields)):
