@@ -301,11 +301,21 @@ class Configuration:
         result = 0
         exponent = 0
 
+        first = float(fields[0])
+        if first < 0:
+            negative = True
+            fields[0] = abs(first)
+        else:
+            negative = False
+
         for field in fields:
             field = float(field)
             contribution = field / (60 ** exponent)
             exponent += 1
             result += contribution
+
+        if negative:
+            result = -result
 
         degrees = set(('d', 'deg', 'degs', 'degree', 'degrees'))
         hours = set(('h', 'hour', 'hours'))
@@ -753,6 +763,11 @@ class Configuration:
 
         value = float(value)
 
+        if value < 0:
+            negative = True
+        else:
+            negative = False
+
         degrees = set(('d', 'deg', 'degs', 'degree', 'degrees'))
         hours = set(('h', 'hour', 'hours'))
 
@@ -772,28 +787,53 @@ class Configuration:
         else:
             raise ValueError('unrecognized target units: ' + formatted)
 
-        remainder = value % 1
+        if value < 0:
+            remainder = value % -1
+        elif value > 0:
+            remainder = value % 1
+        else:
+            remainder = 0
+
         values.append(value)
 
         for field in fields[1:]:
             value = remainder * 60
-            remainder = value % 1
-            values.append(value)
+            if value < 0:
+                remainder = value % -1
+            elif value > 0:
+                remainder = value % 1
+            else:
+                value = 0
+            values.append(abs(value))
 
-        if remainder < 1.000001 and remainder > 0.999999 and len(fields) > 2:
+        remainder = abs(remainder)
+        if remainder < 1.000001 and remainder > 0.999999 and len(fields) == 3:
             # Possible floating point underflow.
 
-            if values[-1] > 59.999:
-                values[-1] = 0
-                values[-2] += 1/60
+            if negative:
+                if values[2] > 59.999:
+                    values[2] = 0
+                    values[1] += 1/60
 
-                if values[-2] >= 60:
-                    values[-2] = 0
-                    values[-3] += 1/60
+                    if values[1] >= 60:
+                        values[1] = 0
+                        values[0] -= 1/60
+            else:
+                if values[2] > 59.999:
+                    values[2] = 0
+                    values[1] += 1/60
+
+                    if values[1] >= 60:
+                        values[1] = 0
+                        values[0] += 1/60
 
         results = list()
         for index in range(len(fields)):
             results.append(fields[index] % (values[index]))
+
+        if negative:
+            if results[0][0] != '-':
+                results[0] = '-' + results[0].strip()
 
         return ':'.join(results)
 
