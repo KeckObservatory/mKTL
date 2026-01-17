@@ -28,7 +28,14 @@ _cache_lock = threading.Lock()
 class Configuration:
     """ A convenience class to represent mKTL configuration data. To first
         order an instance acts like a dictionary, returning the configuration
-        block for a single key at a time.
+        for a single key, or the full configuration block for a single UUID or
+        unique alias.
+
+        In addition to acting as a repository for the description of all items,
+        the Configuration instance also provides translation routines for some
+        item values; the behavior of these translations is fully driven by the
+        configuration, and does not depend on custom :class:`mktl.Item`
+        subclasses.
     """
 
     def __init__(self, store, alias=None):
@@ -1012,7 +1019,9 @@ def announce(config, uuid, override=False):
 
 def authoritative(store, alias, items):
     """ Declare an authoritative configuration block for use by a local
-        authoritative daemon.
+        authoritative daemon. This is the expected entry point for a daemon
+        that generates or otherwise provides its own JSON configuration via
+        custom routines.
     """
 
     config = get(store, alias)

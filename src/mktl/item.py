@@ -23,6 +23,12 @@ class Item:
 
         A non-authoritative Item will automatically :func:`subscribe` itself to
         any available updates.
+
+        :ivar key: The key (name) for this item.
+        :ivar full_key: The store and key for this item, in `store.key` format.
+        :ivar store: The :class:`mktl.Store` instance containing this item.
+        :ivar config: The JSON description of this item.
+        :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
@@ -139,8 +145,9 @@ class Item:
             For example, the formatted variant of an enumerated type
             is the string string representation, as opposed to the integer
             reported as the current item value. These permutations are driven
-            by the JSON configuration of the item. The current value will be
-            returned as a string in the absence of any configured formatting.
+            by the JSON configuration of the item. In the absence of any
+            configured formatting the current value will be returned as a
+            string.
 
             This property can also be used to set the new value of the item
             using the formatted representation.
@@ -150,7 +157,7 @@ class Item:
 
         # Use self.value as the preferred way to access the value; this
         # ensures it is handled in the appropriate way regardless of whether
-        # this specific item is in an authoritative context.
+        # this specific item is authoritative.
 
         formatted = self.to_format(self.value)
         return formatted
@@ -470,7 +477,7 @@ class Item:
 
         # Use self.value as the preferred way to access the value; this
         # ensures it is handled in the appropriate way regardless of whether
-        # this specific item is in an authoritative context.
+        # this specific item is authoritative.
 
         quantity = self.to_quantity(self.value)
         return quantity
