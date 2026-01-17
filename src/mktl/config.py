@@ -810,21 +810,15 @@ class Configuration:
         if remainder < 1.000001 and remainder > 0.999999 and len(fields) == 3:
             # Possible floating point underflow.
 
-            if negative:
-                if values[2] > 59.999:
-                    values[2] = 0
-                    values[1] += 1/60
+            if values[2] > 59.999:
+                values[2] = 0
+                values[1] += 1/60
 
-                    if values[1] >= 60:
-                        values[1] = 0
+                if values[1] >= 60:
+                    values[1] = 0
+                    if negative:
                         values[0] -= 1/60
-            else:
-                if values[2] > 59.999:
-                    values[2] = 0
-                    values[1] += 1/60
-
-                    if values[1] >= 60:
-                        values[1] = 0
+                    else:
                         values[0] += 1/60
 
         results = list()
