@@ -115,7 +115,7 @@ def parse_command_line():
 
     parser.add_argument('-u', '--units',
         default=None,
-        help='Use the requested units for getting or setting tem values. Note that this option is applied to all requests, and is not practical when interacting with multiple items.')
+        help='Use the requested units for getting or setting item values. Note that this option is applied to all requests, and is not practical when interacting with multiple items.')
 
     parser.add_argument('type',
         choices=('get', 'set', 'watch', 'describe', 'discover', 'list'),
