@@ -11,6 +11,9 @@ class Store:
         within the local mKTL context; which daemons will be contacted to handle
         further requests is determined on a per-Item basis, re-use of
         connections is managed in the :mod:`mktl.protocol` submodule, not here.
+
+        :ivar name: The name of this store.
+        :ivar config: The :class:`mktl.config.Configuration` instance for this store.
     """
 
     def __init__(self, name):
