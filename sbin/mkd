@@ -83,7 +83,7 @@ def load_configuration(store, alias, filename):
 
     contents = open(filename, 'r').read()
     items = mktl.json.loads(contents)
-    mktl.config.save(store, items, alias)
+    mktl.config.authoritative(store, items, alias)
 
 
 
