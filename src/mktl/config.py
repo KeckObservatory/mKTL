@@ -947,6 +947,36 @@ class Configuration:
             del items[key]
             items[lower] = item
 
+        # Allow for the possibility that a boolean item does not include
+        # enumerators in its description. This check is only necessary
+        # for authoritative blocks.
+
+        if uuid == self.authoritative_uuid:
+            for key in items.keys():
+                item_config = items[key]
+
+                try:
+                    type = item_config['type']
+                except KeyError:
+                    continue
+
+                if type == 'boolean':
+                    try:
+                        enumerators = item_config['enumerators']
+                    except KeyError:
+                        enumerators = dict()
+                        item_config['enumerators'] = enumerators
+
+                    try:
+                        enumerators['0']
+                    except:
+                        enumerators['0'] = 'False'
+
+                    try:
+                        enumerators['1']
+                    except:
+                        enumerators['1'] = 'True'
+
 
         # It's possible the contents of the local authoritative block changed.
         # Update the hash and configuration timestamp if that is the case.
