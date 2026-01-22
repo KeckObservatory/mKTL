@@ -5,7 +5,6 @@
 import mktl
 import epics
 import itertools
-import pdb
 
 
 class Daemon(mktl.Daemon):
@@ -36,10 +35,10 @@ class Daemon(mktl.Daemon):
         """
         keys = self.config.keys(authoritative=True)
         for key in keys:
-            if key.startswith('_'):
+            if key.startswith('_'): # may not need this anymore
                 continue
             item = self.store[key]
-            pvname = self.config[key]['read_channel'] 
+            pvname = self.config[key]['channel'] 
             pv = epics.PV(pvname)
             pv.add_callback(item.publish_broadcast) 
 
@@ -62,7 +61,15 @@ class Item(mktl.Item):
         """ This method is registered as an EPICS callback; take any/all EPICS 
             broadcast events and publish them as mKTL events.
 
-            TODO: add an epics callback example. See pyepics for example...etc.
+            Epics callback functions are called with several keyword arguments. 
+            you should always include **kwargs in your callback definition to
+            capture all of them. Here are some example callback arguments:
+                pvname   : Name of the PV that triggered the callback
+                value    : Current value of the PV
+                type:    : the Python type for the data
+                units    : string for PV units
+            See https://pyepics.github.io/pyepics/pv.html#user-supplied-callback-functions 
+            for an exhaustive list of callback arguments.
         """
         try: 
             value = kwargs['value']
@@ -72,7 +79,8 @@ class Item(mktl.Item):
         self.publish(value, timestamp) # Publish will pick up the timestamp value if it is None.
 
     def _get_timestamp(self, timestamp, minlim=915184800):
-        """TODO: ADD ME
+        """Check if there is a timestamp. If it is None or before 1999-01-01,
+           return None to let mKTL handle it. Otherwise return the timestamp.
         """
         if timestamp is None: 
             return None
@@ -84,14 +92,14 @@ class Item(mktl.Item):
     def _get_pv_with_metadata(self):
         """ Return the EPICS PV object associated with this item.
         """
-        pv = epics.PV(self.config['read_channel'])
+        pv = epics.PV(self.config['channel'])
         resp = None
         tries = 0
         while resp is None:  # try up to 5 times to get a valid response
             resp = pv.get_with_metadata(as_string=True) # get the value and metadata
             tries += 1
             if tries >= 5:
-                raise RuntimeError(f"Could not get metadata for PV {self.config['read_channel']}")
+                raise RuntimeError(f"Could not get metadata for PV {self.config['channel']}")
         return resp 
 
 
@@ -102,9 +110,10 @@ class Item(mktl.Item):
             relies on epics callbacks to receive asynchronous broadcasts
             (see :func:`publish_broadcast`).
         """
-        #TODO: check if readable from config.
+        if 'channel' not in self.config.keys():
+            return None
         resp = self._get_pv_with_metadata()
-        timestamp = _get_timestamp(resp.get('timestamp'))
+        timestamp = self._get_timestamp(resp.get('timestamp'))
         value = resp.get('value')
         payload = mktl.Payload(value, timestamp)
         return payload
@@ -118,8 +127,9 @@ class Item(mktl.Item):
             to ensure they are interpreted (or not interpreted, as the case
             may be) properly.
         """
-        #TODO: check if writable from config.
-        pv = epics.PV(self.config['write_channel']) #TODO: can we just have a channel? read/write is on anoyther layer
+        if not self.config.get('settable'):
+            return None
+        pv = epics.PV(self.config['channel'])
         pv.put(new_value, wait=True)
 
 # end of class Item
@@ -190,7 +200,7 @@ def describePV(pv: epics.PV):
     for attribute in ('key', 'read_access', 'write_access'):
         try:
             if attribute == 'key':
-                value = pv.config['read_channel']
+                value = pv.config['channel']
             else:
                 value = getattr(pv, attribute)
         except ValueError:
@@ -211,7 +221,7 @@ type_mapping = dict()
 epics_types = ['double', 'float', 'int', 'string', 'short', 'enum', 'char', 'long']
 numeric_types = set(('double', 'float', 'short', 'int', 'char', 'long'))
 epics_variants = ['', 'ctrl', 'time']
-for v, t in intertools.product(epics_variants, epics_types):
+for v, t in itertools.product(epics_variants, epics_types):
     if v == '':
         epics_type = t.upper()
     else:

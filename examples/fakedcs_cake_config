@@ -65,9 +65,6 @@ simprefix = fakedcs:
   telescope-elevation in deg
     EL        EL                    EL                    R2D2 D2R  d  1
 
-  instrument-name in ""
-    INSTRUME  CURRINST              CURRINST              STR  STR  s  1
-
   parallactic-angle-astrometric in deg
     PARANG    PARANG                PARANG                R2D2 D2R  d  1
 

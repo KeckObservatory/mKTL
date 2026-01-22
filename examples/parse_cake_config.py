@@ -1,14 +1,193 @@
 #!/usr/bin/env python3
 """
-Parser to convert fakedcs_cake_config file to JSON format.
+Parser to convert cake files to mktl JSON config format.
 
-The parser extracts keyword definitions from the config file and creates
+The parser extracts keyword definitions from the cake file and creates
 a JSON object mapping each keyword to its read and write channels.
 """
 
 import json
 import re
 from pathlib import Path
+
+
+CAKE_BIN2ASCII_METHODS = bin2asc_mapping = {
+    "R2D": {
+        "function": "r2d_bin2asc",
+        "description": "Radians to degrees",
+        "bin_units": "Radians"
+    },
+    "R2D1": {
+        "function": "r2d_bin2asc",
+        "description": "Radians to degrees",
+        "bin_units": "Radians"
+    },
+    "R2D2": {
+        "function": "r2d_bin2asc",
+        "description": "Radians to degrees",
+        "bin_units": "Radians"
+    },
+    "RXD": {
+        "function": "rxd_bin2asc",
+        "description": "Radians to DMS",
+        "bin_units": "Radians"
+    },
+    "RXH": {
+        "function": "rxh_bin2asc",
+        "description": "Radians to HMS",
+        "bin_units": "Radians"
+    },
+    "RXH1": {
+        "function": "rxh1_bin2asc",
+        "description": "Radians to HMS with sign",
+        "bin_units": "Radians"
+    },
+    "A2R": {
+        "function": "a2r_bin2asc",
+        "description": "Arcseconds to radians",
+        "bin_units": "Arcseconds"
+    },
+    "M2A": {
+        "function": "m2a_bin2asc",
+        "description": "Meters to arcseconds (assumes f/15)",
+        "bin_units": "Meters"
+    },
+    "M2A3": {
+        "function": "m2a_bin2asc",
+        "description": "Meters to arcseconds (assumes f/15)",
+        "bin_units": "Meters"
+    },
+    "R2A": {
+        "function": "r2a_bin2asc",
+        "description": "Radians to arcseconds",
+        "bin_units": "Radians"
+    },
+    "R2A2": {
+        "function": "r2a_bin2asc",
+        "description": "Radians to arcseconds",
+        "bin_units": "Radians"
+    },
+    "R2A3": {
+        "function": "r2a_bin2asc",
+        "description": "Radians to arcseconds",
+        "bin_units": "Radians"
+    },
+    "R2A4": {
+        "function": "r2a_bin2asc",
+        "description": "Radians to arcseconds",
+        "bin_units": "Radians"
+    },
+    "R2S": {
+        "function": "r2s_bin2asc",
+        "description": "Radians to seconds of time",
+        "bin_units": "Radians"
+    },
+    "R2S4": {
+        "function": "r2s_bin2asc",
+        "description": "Radians to seconds of time",
+        "bin_units": "Radians"
+    },
+    "INT": {
+        "function": "int_bin2asc",
+        "description": "convert integer",
+        "bin_units": "integer"
+    },
+    "BOO": {
+        "function": "boo_bin2asc",
+        "description": "convert boolean",
+        "bin_units": "boolean"
+    },
+    "FLT": {
+        "function": "flt_bin2asc",
+        "description": "convert float",
+        "bin_units": "float"
+    },
+    "DBL": {
+        "function": "dbl_bin2asc",
+        "description": "convert double",
+        "bin_units": "double"
+    },
+    "DBL1": {
+        "function": "dbl_bin2asc",
+        "description": "convert double",
+        "bin_units": "double"
+    },
+    "DBL2": {
+        "function": "dbl_bin2asc",
+        "description": "convert double",
+        "bin_units": "double"
+    },
+    "DBL3": {
+        "function": "dbl_bin2asc",
+        "description": "convert double",
+        "bin_units": "double"
+    },
+    "DBL4": {
+        "function": "dbl_bin2asc",
+        "description": "convert double",
+        "bin_units": "double"
+    },
+    "M2CM": {
+        "function": "m2cm_bin2asc",
+        "description": "convert meters to centimeters",
+        "bin_units": "meters"
+    },
+    "M2MM": {
+        "function": "m2mm_bin2asc",
+        "description": "convert meters to millimeters",
+        "bin_units": "meters"
+    },
+    "M2UM": {
+        "function": "m2um_bin2asc",
+        "description": "convert meters to microns",
+        "bin_units": "meters"
+    },
+    "STR": {
+        "function": "str_bin2asc",
+        "description": "convert string",
+        "bin_units": "string"
+    },
+    "UTC": {
+        "function": "utc_bin2asc",
+        "description": "Seconds since 1970 to UT time of day (hh:mm:ss.ss)",
+        "bin_units": "Seconds"
+    },
+    "DATE": {
+        "function": "date_bin2asc",
+        "description": "Seconds since 1970 to UT date (yyyy-mm-dd)",
+        "bin_units": "Seconds"
+    },
+    "NOP": {
+        "function": "nop_bin2asc",
+        "description": "No conversion",
+        "bin_units": ""
+    },
+    "ENM": {
+        "function": "enm_bin2asc",
+        "description": "convert binary to enumeration string",
+        "bin_units": "binary"
+    },
+    "ENMM": {
+        "function": "enmm_bin2asc",
+        "description": "converts a single binary bit to the enumeration",
+        "bin_units": "binary"
+    },
+    "MASK": {
+        "function": "mask_bin2asc",
+        "description": "convert binary to multiple bit mask",
+        "bin_units": "binary"
+    },
+    "DT1": {
+        "function": "dt1_bin2asc",
+        "description": "rad-per-sec-to_s/hr",
+        "bin_units": "rad-per-sec"
+    },
+    "DT2": {
+        "function": "dt2_bin2asc",
+        "description": "rad-per-sec-to-arcsec/hr",
+        "bin_units": "rad-per-sec"
+    }
+}
 
 
 def parse_cake_config(input_file, output_file=None):
@@ -23,6 +202,7 @@ def parse_cake_config(input_file, output_file=None):
         dict: Parsed configuration as a dictionary
     """
     result = {}
+    prefix = ""
     
     with open(input_file, 'r') as f:
         lines = f.readlines()
@@ -30,6 +210,12 @@ def parse_cake_config(input_file, output_file=None):
     i = 0
     while i < len(lines):
         line = lines[i].strip()
+
+        # find prefix line
+        if line.startswith('prefix = '):
+            prefix = line.split('=', 1)[1].strip()
+            i += 1
+            continue
         
         # Skip empty lines and comments
         if not line or line.startswith('#'):
@@ -67,17 +253,19 @@ def parse_cake_config(input_file, output_file=None):
             
             # Move to the mapping line first to check if it's ENMM type
             i = j
+
             if i < len(lines):
                 mapping_line = lines[i].strip()
                 
                 # Parse the mapping line to extract the three channel names
-                # Format: KEYWORD  READ_CHANNEL  WRITE_CHANNEL  COL4  COL5  TYPE  ...
+                # Format: KEYWORD  READ_CHANNEL  WRITE_CHANNEL  BIN2ASCII_method ASCII2BIN_method TYPE  ...
                 parts = mapping_line.split()
                 
                 if len(parts) >= 3:
                     keyword = parts[0].lower()  # First column (lowercase)
-                    read_channel = parts[1]      # Second column
-                    write_channel = parts[2]     # Third column
+            
+                    read_channel = prefix + parts[1]      # Second column
+                    write_channel = prefix + parts[2]     # Third column
                     
                     # Check if column 4 (index 3) is ENMM to determine bitmask enumeration
                     is_bitmask = len(parts) >= 4 and parts[3] == 'ENMM'
@@ -106,14 +294,20 @@ def parse_cake_config(input_file, output_file=None):
                             enumerators = {str(i): val for i, val in enumerate(enum_values)}
                     
                     # Extract units from the description (after "in")
-                    units = ""
+                    f_units = ""
                     if ' in ' in full_description:
                         units_part = full_description.split(' in ', 1)[1]
                         # Remove curly braces and their contents if present
-                        units = re.sub(r'\{[^}]*\}', '', units_part).strip()
+                        f_units = re.sub(r'\{[^}]*\}', '', units_part).strip()
                         # If units is empty or just quotes, set to empty string
-                        if units in ['""', '']:
-                            units = ""
+                        if f_units in ['""', '']:
+                            f_units = ""
+
+                    bin2ascii_method = parts[3] if len(parts) >= 4 else ""
+                    bin_units = ""
+                    if bin2ascii_method in CAKE_BIN2ASCII_METHODS:
+                        bin_units = CAKE_BIN2ASCII_METHODS[bin2ascii_method]['bin_units']
+
                     
                     # Extract type from 6th column (index 5) if available
                     type_code = parts[5] if len(parts) >= 6 else ""
@@ -129,32 +323,105 @@ def parse_cake_config(input_file, output_file=None):
                     }
                     data_type = type_map.get(type_code, type_code)
                     
-                    entry = {
-                        "read_channel": read_channel,
-                        "write_channel": write_channel,
-                        "description": full_description,
-                        "units": {
-                            "base": units,
-                            "formatted": units
-                        },
-                        "type": data_type
-                    }
+                    # Determine if we need to create separate entries
+                    has_read = read_channel and read_channel.strip()
+                    has_write = write_channel and write_channel.strip()
+                    same_channel = has_read and has_write and read_channel == write_channel
                     
-                    # Add enumerators only if they exist
-                    if enumerators:
-                        entry["enumerators"] = enumerators
+                    if same_channel:
+                        # Same read/write channel - create one entry
+                        entry = {
+                            "channel": read_channel,
+                            "gettable": True,
+                            "settable": True,
+                            "description": full_description,
+                            "units": {
+                                "": bin_units,
+                                "formatted": f_units
+                            },
+                            "type": data_type
+                        }
+                        
+                        # Add enumerators only if they exist
+                        if enumerators:
+                            entry["enumerators"] = enumerators
+                        
+                        result[keyword] = entry
                     
-                    result[keyword] = entry
+                    else:
+                        # Different read/write channels - create separate entries
+                        if has_read:
+                            read_entry = {
+                                "channel": read_channel,
+                                "gettable": True,
+                                "settable": False,
+                                "description": full_description,
+                                "units": {
+                                    "": bin_units,
+                                    "formatted": f_units
+                                },
+                                "type": data_type
+                            }
+                            
+                            # Add enumerators only if they exist
+                            if enumerators:
+                                read_entry["enumerators"] = enumerators
+                            
+                            result[f"{keyword}:read"] = read_entry
+                        
+                        if has_write:
+                            write_entry = {
+                                "channel": write_channel,
+                                "gettable": False,
+                                "settable": True,
+                                "description": full_description,
+                                "units": {
+                                    "": bin_units,
+                                    "formatted": f_units
+                                },
+                                "type": data_type
+                            }
+                            
+                            # Add enumerators only if they exist
+                            if enumerators:
+                                write_entry["enumerators"] = enumerators
+                            
+                            result[f"{keyword}:write"] = write_entry
         
         i += 1
-    
+
+    # Now we are going to merge duplicate channels (same channel name) into single entries. 
+    # The name will be the channel name, and gettable/settable will be True if any of the duplicates had it True.
+
+    merged_result = {}
+    channels = [x['channel'] for x in result.values()]
+    for key, entry in result.items():
+        channel = entry['channel']
+        if channels.count(channel) > 1:
+            # Duplcate channel found - merge entries
+            if channel in merged_result: # already merged
+                continue
+            # Find all entries with this channel
+            same_channel_entries = [v for v in result.values() if v['channel'] == channel]
+            merged_entry = {
+                "channel": channel,
+                "gettable": any(e.get('gettable', False) for e in same_channel_entries),
+                "settable": any(e.get('settable', False) for e in same_channel_entries),
+                "description": same_channel_entries[0]['description'], # take from first entry
+                "units": same_channel_entries[0]['units'], # take from first entry
+                "type": same_channel_entries[0]['type'] # take from first entry
+            }
+            merged_result[channel] = merged_entry
+        else: # unique channel, just copy over
+            merged_result[channel] = entry
+
     # Write to output file if specified
     if output_file:
         with open(output_file, 'w') as f:
-            json.dump(result, f, indent=2)
+            json.dump(merged_result, f, indent=2)
         print(f"Wrote {len(result)} entries to {output_file}")
     
-    return result
+    return merged_result 
 
 
 def main():

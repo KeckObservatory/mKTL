@@ -1,10 +1,11 @@
 {
-  "autactiv": {
-    "read_channel": "AUTACTIV",
-    "write_channel": "AUTACTIV",
+  "fakedcs:AUTACTIV": {
+    "channel": "fakedcs:AUTACTIV",
+    "gettable": true,
+    "settable": true,
     "description": "guider-active in {no,yes}",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean",
@@ -13,102 +14,112 @@
       "1": "yes"
     }
   },
-  "autgo": {
-    "read_channel": "AUTGO",
-    "write_channel": "AUTGO",
+  "fakedcs:AUTGO": {
+    "channel": "fakedcs:AUTGO",
+    "gettable": true,
+    "settable": true,
     "description": "guider-go-flag in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "autpause": {
-    "read_channel": "AUTPAUSE",
-    "write_channel": "AUTPAUSE",
+  "fakedcs:AUTPAUSE": {
+    "channel": "fakedcs:AUTPAUSE",
+    "gettable": true,
+    "settable": true,
     "description": "guider-pause in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "autresum": {
-    "read_channel": "AUTRESUM",
-    "write_channel": "AUTRESUM",
+  "fakedcs:AUTRESUM": {
+    "channel": "fakedcs:AUTRESUM",
+    "gettable": true,
+    "settable": true,
     "description": "guider-resume in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "autresx": {
-    "read_channel": "AUTRESX",
-    "write_channel": "AUTRESX",
+  "fakedcs:AUTRESX": {
+    "channel": "fakedcs:AUTRESX",
+    "gettable": true,
+    "settable": true,
     "description": "guider-resumeX in arcsec",
     "units": {
-      "": "arcsec",
+      "": "Radians",
       "formatted": "arcsec"
     },
     "type": "double"
   },
-  "autresy": {
-    "read_channel": "AUTRESY",
-    "write_channel": "AUTRESY",
+  "fakedcs:AUTRESY": {
+    "channel": "fakedcs:AUTRESY",
+    "gettable": true,
+    "settable": true,
     "description": "guider-resumeY in arcsec",
     "units": {
-      "": "arcsec",
+      "": "Radians",
       "formatted": "arcsec"
     },
     "type": "double"
   },
-  "autsqnum": {
-    "read_channel": "AUTSQNUM",
-    "write_channel": "AUTSQNUM",
+  "fakedcs:AUTSQNUM": {
+    "channel": "fakedcs:AUTSQNUM",
+    "gettable": true,
+    "settable": true,
     "description": "guider-seqnum in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "autstop": {
-    "read_channel": "AUTSTOP",
-    "write_channel": "AUTSTOP",
+  "fakedcs:AUTSTOP": {
+    "channel": "fakedcs:AUTSTOP",
+    "gettable": true,
+    "settable": true,
     "description": "guider-stop in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "autxcent": {
-    "read_channel": "AUTXCENT",
-    "write_channel": "AUTXCENT",
+  "fakedcs:AUTXCENT": {
+    "channel": "fakedcs:AUTXCENT",
+    "gettable": true,
+    "settable": true,
     "description": "guider-Xcent in arcsec",
     "units": {
-      "": "arcsec",
+      "": "Radians",
       "formatted": "arcsec"
     },
     "type": "double"
   },
-  "autycent": {
-    "read_channel": "AUTYCENT",
-    "write_channel": "AUTYCENT",
+  "fakedcs:AUTYCENT": {
+    "channel": "fakedcs:AUTYCENT",
+    "gettable": true,
+    "settable": true,
     "description": "guider-Ycent in arcsec",
     "units": {
-      "": "arcsec",
+      "": "Radians",
       "formatted": "arcsec"
     },
     "type": "double"
   },
-  "axestat": {
-    "read_channel": "AXESTAT",
-    "write_channel": "AXESTAT",
+  "fakedcs:AXESTAT": {
+    "channel": "fakedcs:AXESTAT",
+    "gettable": true,
+    "settable": true,
     "description": "axes-control-status in {unknown, not controlling, halted, in position, in limit, slewing, acquiring, tracking}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -123,152 +134,167 @@
       "64": "tracking"
     }
   },
-  "az": {
-    "read_channel": "AZ",
-    "write_channel": "AZ",
+  "fakedcs:AZ": {
+    "channel": "fakedcs:AZ",
+    "gettable": true,
+    "settable": true,
     "description": "telescope-azimuth in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "currinst": {
-    "read_channel": "CURRINST",
-    "write_channel": "CURRINST",
+  "fakedcs:CURRINST": {
+    "channel": "fakedcs:CURRINST",
+    "gettable": true,
+    "settable": true,
     "description": "current-instrument in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "el": {
-    "read_channel": "EL",
-    "write_channel": "EL",
+  "fakedcs:EL": {
+    "channel": "fakedcs:EL",
+    "gettable": true,
+    "settable": true,
     "description": "telescope-elevation in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "parang": {
-    "read_channel": "PARANG",
-    "write_channel": "PARANG",
+  "fakedcs:PARANG": {
+    "channel": "fakedcs:PARANG",
+    "gettable": true,
+    "settable": true,
     "description": "parallactic-angle-astrometric in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotbase": {
-    "read_channel": "ROTBASE",
-    "write_channel": "ROTBASE",
+  "fakedcs:ROTBASE": {
+    "channel": "fakedcs:ROTBASE",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-base-angle in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotdest": {
-    "read_channel": "ROTDEST",
-    "write_channel": "ROTDEST",
+  "fakedcs:ROTDEST": {
+    "channel": "fakedcs:ROTDEST",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-user-destination in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotdets1": {
-    "read_channel": "ROTDETS1",
-    "write_channel": "ROTDETS1",
+  "fakedcs:ROTDETS1": {
+    "channel": "fakedcs:ROTDETS1",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-destination-timestamp1-ut1-slow in \"\"",
     "units": {
-      "": "",
+      "": "Seconds",
       "formatted": ""
     },
     "type": "double"
   },
-  "rotdets2": {
-    "read_channel": "ROTDETS2",
-    "write_channel": "ROTDETS2",
+  "fakedcs:ROTDETS2": {
+    "channel": "fakedcs:ROTDETS2",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-destination-timestamp2-ut1-slow in \"\"",
     "units": {
-      "": "",
+      "": "Seconds",
       "formatted": ""
     },
     "type": "double"
   },
-  "roterrs": {
-    "read_channel": "ROTERRS",
-    "write_channel": "ROTERRS",
+  "fakedcs:ROTERRS": {
+    "channel": "fakedcs:ROTERRS",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-error-string in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "rotervl": {
-    "read_channel": "ROTERVL",
-    "write_channel": "ROTERVL",
+  "fakedcs:ROTERVL": {
+    "channel": "fakedcs:ROTERVL",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-error-status in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "rothalt": {
-    "read_channel": "ROTHALT",
-    "write_channel": "ROTHALTC",
+  "fakedcs:ROTHALT": {
+    "channel": "fakedcs:ROTHALT",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-halt-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rothaltc": {
-    "read_channel": "ROTHALTC",
-    "write_channel": "ROTHALT",
-    "description": "rotator-halt-command-complement in \"\"",
+  "fakedcs:ROTHALTC": {
+    "channel": "fakedcs:ROTHALTC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-halt-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rotinit": {
-    "read_channel": "ROTINIT",
-    "write_channel": "ROTINITC",
+  "fakedcs:ROTINIT": {
+    "channel": "fakedcs:ROTINIT",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-initialization-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rotinitc": {
-    "read_channel": "ROTINITC",
-    "write_channel": "ROTINIT",
-    "description": "rotator-initialization-command-complement in \"\"",
+  "fakedcs:ROTINITC": {
+    "channel": "fakedcs:ROTINITC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-initialization-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rotmode": {
-    "read_channel": "ROTMODE",
-    "write_channel": "ROTMODE",
+  "fakedcs:ROTMODE": {
+    "channel": "fakedcs:ROTMODE",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-tracking-mode in {unknown, position angle, vertical angle, stationary}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -279,82 +305,90 @@
       "4": "stationary"
     }
   },
-  "rotnews": {
-    "read_channel": "ROTNEWS",
-    "write_channel": "ROTNEWS",
+  "fakedcs:ROTNEWS": {
+    "channel": "fakedcs:ROTNEWS",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-new-destination-slow in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "rotpdest": {
-    "read_channel": "ROTPDEST",
-    "write_channel": "ROTPDEST",
+  "fakedcs:ROTPDEST": {
+    "channel": "fakedcs:ROTPDEST",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-physical-destination in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotpdsts": {
-    "read_channel": "ROTPDSTS",
-    "write_channel": "ROTPDSTS",
+  "fakedcs:ROTPDSTS": {
+    "channel": "fakedcs:ROTPDSTS",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-physical-destination-slow in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotposn": {
-    "read_channel": "ROTPOSN",
-    "write_channel": "ROTPOSN",
+  "fakedcs:ROTPOSN": {
+    "channel": "fakedcs:ROTPOSN",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-user-position in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotpots1": {
-    "read_channel": "ROTPOTS1",
-    "write_channel": "ROTPOTS1",
+  "fakedcs:ROTPOTS1": {
+    "channel": "fakedcs:ROTPOTS1",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-position-timestamp1-ut1-slow in \"\"",
     "units": {
-      "": "",
+      "": "Seconds",
       "formatted": ""
     },
     "type": "double"
   },
-  "rotpots2": {
-    "read_channel": "ROTPOTS2",
-    "write_channel": "ROTPOTS2",
+  "fakedcs:ROTPOTS2": {
+    "channel": "fakedcs:ROTPOTS2",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-position-timestamp2-ut1-slow in \"\"",
     "units": {
-      "": "",
+      "": "Seconds",
       "formatted": ""
     },
     "type": "double"
   },
-  "rotpposn": {
-    "read_channel": "ROTPPOSN",
-    "write_channel": "ROTPPOSN",
+  "fakedcs:ROTPPOSN": {
+    "channel": "fakedcs:ROTPPOSN",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-physical-position in deg",
     "units": {
-      "": "deg",
+      "": "Radians",
       "formatted": "deg"
     },
     "type": "double"
   },
-  "rotsel": {
-    "read_channel": "ROTSEL",
-    "write_channel": "ROTSEL",
+  "fakedcs:ROTSEL": {
+    "channel": "fakedcs:ROTSEL",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-select in {none, fcass (forward cass), cass (cassegrain), lbc (left bent cass), rbc (right bent cass)}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -366,32 +400,35 @@
       "4": "rbc (right bent cass)"
     }
   },
-  "rotspeed": {
-    "read_channel": "ROTSPEED",
-    "write_channel": "ROTSPEED",
+  "fakedcs:ROTSPEED": {
+    "channel": "fakedcs:ROTSPEED",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-fake-speed in deg/sec",
     "units": {
-      "": "deg/sec",
+      "": "double",
       "formatted": "deg/sec"
     },
     "type": "double"
   },
-  "rotsrver": {
-    "read_channel": "ROTSRVER",
-    "write_channel": "ROTSRVER",
+  "fakedcs:ROTSRVER": {
+    "channel": "fakedcs:ROTSRVER",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-servo-error in arcsec",
     "units": {
-      "": "arcsec",
+      "": "Radians",
       "formatted": "arcsec"
     },
     "type": "double"
   },
-  "rotstat": {
-    "read_channel": "ROTSTAT",
-    "write_channel": "ROTSTAT",
+  "fakedcs:ROTSTAT": {
+    "channel": "fakedcs:ROTSTAT",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-state in  {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -411,52 +448,57 @@
       "2048": "in limit"
     }
   },
-  "rotstby": {
-    "read_channel": "ROTSTBY",
-    "write_channel": "ROTSTBYC",
+  "fakedcs:ROTSTBY": {
+    "channel": "fakedcs:ROTSTBY",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-standby-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rotstbyc": {
-    "read_channel": "ROTSTBYC",
-    "write_channel": "ROTSTBY",
-    "description": "rotator-standby-command-complement in \"\"",
+  "fakedcs:ROTSTBYC": {
+    "channel": "fakedcs:ROTSTBYC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-standby-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "rotstst": {
-    "read_channel": "ROTSTST",
-    "write_channel": "ROTSTST",
+  "fakedcs:ROTSTST": {
+    "channel": "fakedcs:ROTSTST",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-state-string in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "rottime": {
-    "read_channel": "ROTTIME",
-    "write_channel": "ROTTIME",
+  "fakedcs:ROTTIME": {
+    "channel": "fakedcs:ROTTIME",
+    "gettable": true,
+    "settable": true,
     "description": "rotator-current-time in \"\"",
     "units": {
-      "": "",
+      "": "Seconds",
       "formatted": ""
     },
     "type": "double"
   },
-  "simulate": {
-    "read_channel": "SIMULATE",
-    "write_channel": "SIMULATE",
+  "fakedcs:SIMULATE": {
+    "channel": "fakedcs:SIMULATE",
+    "gettable": true,
+    "settable": true,
     "description": "simulating-dcs in {false, true}",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean",
@@ -465,92 +507,101 @@
       "1": "true"
     }
   },
-  "terterrs": {
-    "read_channel": "TERTERRS",
-    "write_channel": "TERTERRS",
+  "fakedcs:TERTERRS": {
+    "channel": "fakedcs:TERTERRS",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-error-string in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "tertervl": {
-    "read_channel": "TERTERVL",
-    "write_channel": "TERTERRS",
+  "fakedcs:TERTERVL": {
+    "channel": "fakedcs:TERTERVL",
+    "gettable": true,
+    "settable": false,
     "description": "tertiary-error-status in \"\"",
     "units": {
-      "": "",
+      "": "integer",
       "formatted": ""
     },
     "type": "integer"
   },
-  "terthalt": {
-    "read_channel": "TERTHALT",
-    "write_channel": "TERTHALTC",
+  "fakedcs:TERTHALT": {
+    "channel": "fakedcs:TERTHALT",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-halt-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "terthaltc": {
-    "read_channel": "TERTHALTC",
-    "write_channel": "TERTHALT",
-    "description": "tertiary-halt-command-complement in \"\"",
+  "fakedcs:TERTHALTC": {
+    "channel": "fakedcs:TERTHALTC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-halt-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "tertinit": {
-    "read_channel": "TERTINIT",
-    "write_channel": "TERTINITC",
+  "fakedcs:TERTINIT": {
+    "channel": "fakedcs:TERTINIT",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-initialization-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "tertinitc": {
-    "read_channel": "TERTINITC",
-    "write_channel": "TERTINIT",
-    "description": "tertiary-initialization-command-complement in \"\"",
+  "fakedcs:TERTINITC": {
+    "channel": "fakedcs:TERTINITC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-initialization-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "tertmove": {
-    "read_channel": "TERTMOVE",
-    "write_channel": "TERTMOVEC",
+  "fakedcs:TERTMOVE": {
+    "channel": "fakedcs:TERTMOVE",
+    "gettable": true,
+    "settable": true,
     "description": "move-tertiary in no,yes",
     "units": {
-      "": "no,yes",
+      "": "boolean",
       "formatted": "no,yes"
     },
     "type": "boolean"
   },
-  "tertmovec": {
-    "read_channel": "TERTMOVEC",
-    "write_channel": "TERTMOVE",
-    "description": "move-tertiary-complement in no,yes",
+  "fakedcs:TERTMOVEC": {
+    "channel": "fakedcs:TERTMOVEC",
+    "gettable": true,
+    "settable": true,
+    "description": "move-tertiary in no,yes",
     "units": {
-      "": "no,yes",
+      "": "boolean",
       "formatted": "no,yes"
     },
     "type": "boolean"
   },
-  "tertdest": {
-    "read_channel": "TERTDEST",
-    "write_channel": "TERTDEST",
+  "fakedcs:TERTDEST": {
+    "channel": "fakedcs:TERTDEST",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-destination in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, cass, mirrorup}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -566,12 +617,13 @@
       "8": "mirrorup"
     }
   },
-  "tertposn": {
-    "read_channel": "TERTPOSN",
-    "write_channel": "TERTPOSN",
+  "fakedcs:TERTPOSN": {
+    "channel": "fakedcs:TERTPOSN",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-position in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, unknown, cass, mirrorup}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -588,12 +640,13 @@
       "9": "mirrorup"
     }
   },
-  "tertstat": {
-    "read_channel": "TERTSTAT",
-    "write_channel": "TERTSTAT",
+  "fakedcs:TERTSTAT": {
+    "channel": "fakedcs:TERTSTAT",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-state in {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
     "units": {
-      "": "",
+      "": "binary",
       "formatted": ""
     },
     "type": "enumerated",
@@ -613,42 +666,46 @@
       "2048": "in limit"
     }
   },
-  "tertstby": {
-    "read_channel": "TERTSTBY",
-    "write_channel": "TERTSTBYC",
+  "fakedcs:TERTSTBY": {
+    "channel": "fakedcs:TERTSTBY",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-standby-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "tertstbyc": {
-    "read_channel": "TERTSTBYC",
-    "write_channel": "TERTSTBY",
-    "description": "tertiary-standby-command-complement in \"\"",
+  "fakedcs:TERTSTBYC": {
+    "channel": "fakedcs:TERTSTBYC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-standby-command in \"\"",
     "units": {
-      "": "",
+      "": "boolean",
       "formatted": ""
     },
     "type": "boolean"
   },
-  "tertstst": {
-    "read_channel": "TERTSTST",
-    "write_channel": "TERTSTST",
+  "fakedcs:TERTSTST": {
+    "channel": "fakedcs:TERTSTST",
+    "gettable": true,
+    "settable": true,
     "description": "tertiary-state-string in \"\"",
     "units": {
-      "": "",
+      "": "string",
       "formatted": ""
     },
     "type": "string"
   },
-  "utc": {
-    "read_channel": "UTC",
-    "write_channel": "UTC",
+  "fakedcs:UTC": {
+    "channel": "fakedcs:UTC",
+    "gettable": true,
+    "settable": true,
     "description": "coordinated-universal-time in h",
     "units": {
-      "": "h",
+      "": "Seconds",
       "formatted": "h"
     },
     "type": "double"
