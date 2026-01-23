@@ -1,0 +1,3 @@
+<unknown>:1: WARNING: duplicate object description of mktl.Item, other instance in client, use :no-index: for one of them
+<unknown>:1: WARNING: duplicate object description of mktl.item.Item, other instance in client, use :no-index: for one of them
+/home/runner/work/mKTL/mKTL/doc/README.md: WARNING: document isn't included in any toctree [toc.not_included]
