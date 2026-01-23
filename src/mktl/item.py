@@ -184,7 +184,7 @@ class Item:
             ###
             print("DEBUG: format conversion failed for %s:" % (self.full_key))
             print(traceback.format_exc())
-            unformatted = value
+            raise
 
         return unformatted
 
