@@ -41,7 +41,7 @@ options:
   --no-timestamp        Omit the timestamp from the output of 'watch'
                         requests. The default is to include the timestamp for
                         'watch' requests, and omit it from 'get' requests.
-  -u, --units UNITS     Use the requested units for getting or setting tem
+  -u, --units UNITS     Use the requested units for getting or setting item
                         values. Note that this option is applied to all
                         requests, and is not practical when interacting with
                         multiple items.
