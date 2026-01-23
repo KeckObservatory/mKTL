@@ -333,6 +333,13 @@ class Daemon:
         items[key]['units'] = 'kilobytes'
         items[key]['settable'] = False
 
+        key = '_' + self.alias + 'pid'
+        items[key] = dict()
+        items[key]['description'] = 'Process identifier (PID) for this daemon.'
+        items[key]['type'] = 'numeric'
+        items[key]['initial'] = os.getpid()
+        items[key]['settable'] = False
+
         self.config.update(block, save=False)
         self.store._update_config()
 

@@ -180,7 +180,7 @@ class Configuration:
             fashion.
         """
 
-        item_config = self.config[key]
+        item_config = self[key]
         value = str(value)
         value = value.lower()
         enumerators = item_config['enumerators']
@@ -212,7 +212,7 @@ class Configuration:
             basis.
         """
 
-        item_config = self.config[key]
+        item_config = self[key]
         value = str(value)
         value = value.lower()
 
