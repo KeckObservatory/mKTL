@@ -451,7 +451,12 @@ def execute_set_requests(requests):
             units = requests.units
 
         elif requests.formatted:
-            new_value = item.from_format(request)
+            try:
+                new_value = item.from_format(request)
+            except KeyError:
+                sys.stderr.write("%s failed: invalid formatted value: %s\n" % (key, repr(request)))
+                sys.exit(1)
+
             try:
                 units = item.config['units']
             except KeyError:
