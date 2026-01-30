@@ -405,7 +405,9 @@ class Item:
             representation of the new value. If *timestamp* is set it is
             expected to be a UNIX epoch timestamp; the current time will be
             used if it is not provided. Newly published values are always
-            cached locally.
+            cached locally. If *repeat* is set to True the value will be
+            published regardless of whether it is a repeat of the previously
+            published value.
 
             Note that, for simple cases, an authoritative daemon can set the
             :func:`value` property to publish a new value instead of calling
