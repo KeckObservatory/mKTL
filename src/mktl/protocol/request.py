@@ -40,6 +40,7 @@ class Client:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
 
@@ -168,18 +169,28 @@ class Client:
             https://github.com/zeromq/libzmq/issues/1108
         """
 
-        poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.request_receive, zmq.POLLIN)
+        incoming = zmq.Poller()
+        incoming.register(self.socket, zmq.POLLIN)
+        incoming.register(self.request_receive, zmq.POLLIN)
+
+        outgoing = zmq.Poller()
+        outgoing.register(self.socket, zmq.POLLOUT)
 
         while True:
-            sockets = poller.poll(10000) # milliseconds
-            for active, flag in sockets:
+            inbound_sockets = incoming.poll(10000) # milliseconds
+            for inbound, flag in inbound_sockets:
 
-                if self.request_receive == active:
+                if self.request_receive == inbound:
+                    # Success is assumed on this next polling request.
+                    # A failure will result in lost data on the outbound
+                    # socket; any polling delays here should only occur
+                    # in super high throughput cases, presumably because
+                    # a transmission buffer is full.
+
+                    outbound_sockets = outgoing.poll(1000)
                     self._req_outgoing()
 
-                elif self.socket == active:
+                elif self.socket == inbound:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
 
@@ -199,7 +210,15 @@ class Client:
         self.requests.put(message)
         self.request_signal.send(b'')
 
-        ack = message.wait_ack(self.timeout)
+        try:
+            ack_requested = message.payload.ack
+        except:
+            ack_requested = True
+
+        if ack_requested:
+            ack = message.wait_ack(self.timeout)
+        else:
+            return
 
         if ack == False:
             error = '%s @ %s:%d: no response received in %.2f sec'
@@ -240,6 +259,7 @@ class Server:
         self.hostname = hostname
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
@@ -358,7 +378,13 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(request)
+        try:
+            ack_requested = request.payload.ack
+        except:
+            ack_requested = True
+
+        if ack_requested:
+            self.req_ack(request)
 
         response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
