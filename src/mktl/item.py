@@ -685,6 +685,7 @@ class Item:
             raise ValueError('formatted+quantity arguments must be boolean')
 
         payload = self.to_payload(new_value)
+        payload.identify()
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
