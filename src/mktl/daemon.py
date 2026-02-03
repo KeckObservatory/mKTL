@@ -480,7 +480,13 @@ class RequestServer(protocol.request.Server):
             will be generated.
         """
 
-        self.req_ack(request)
+        try:
+            ack_requested = request.payload.ack
+        except:
+            ack_requested = True
+
+        if ack_requested:
+            self.req_ack(request)
 
         type = request.type
         target = request.target
