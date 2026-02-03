@@ -18,10 +18,32 @@ from .. import json
 
 version = b'a'
 
-# The identity cache is used by the Payload class to (optionally) provide
-# information used to determine the origin of a message.
+# The cached origin information is used by the Payload class to (optionally)
+# provide information used to determine the origin of a message. The call to
+# os.getlogin() appears to be more expensive than the others. For that reason
+# alone we cache the return values from function calls where those values won't
+# change for the duration of program execution.
 
-_identity_cache = dict()
+try:
+    _origin_user = os.getlogin()
+except:
+    _origin_user = None
+
+try:
+    _origin_hostname = platform.node()
+except:
+    _origin_hostname = None
+
+try:
+    _origin_pid = os.getpid()
+except:
+    _origin_pid = None
+
+try:
+    _origin_ppid = os.getppid()
+except:
+    _origin_ppid = None
+
 
 
 class Message:
@@ -383,38 +405,16 @@ class Payload:
         return payload
 
 
-    def identify(self):
-        """ Add fields to this payload to provide identity information
-            to the recipient. The primary intent of this information is
-            for debugging or logging, as opposed to uniquely identifying
-            the sender.
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
         """
 
-        # The call to os.getlogin() appears to be more expensive than the
-        # others. For that reason alone we cache the return values from
-        # function calls where those values won't change for the duration
-        # of program execution.
-
-        try:
-            _user = _identity_cache['_user']
-            _hostname = _identity_cache['_hostname']
-            _pid = _identity_cache['_pid']
-            _ppid = _identity_cache['_ppid']
-        except KeyError:
-            _user = os.getlogin()
-            _hostname = platform.node()
-            _pid = os.getpid()
-            _ppid = os.getppid()
-
-            _identity_cache['_user'] = _user
-            _identity_cache['_hostname'] = _hostname
-            _identity_cache['_pid'] = _pid
-            _identity_cache['_ppid'] = _ppid
-
-        self._user = _user
-        self._hostname = _hostname
-        self._pid = _pid
-        self._ppid = _ppid
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
         self._executable = sys.executable
         self._argv = sys.argv
 
