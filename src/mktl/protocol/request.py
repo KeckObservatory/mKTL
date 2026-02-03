@@ -169,28 +169,18 @@ class Client:
             https://github.com/zeromq/libzmq/issues/1108
         """
 
-        incoming = zmq.Poller()
-        incoming.register(self.socket, zmq.POLLIN)
-        incoming.register(self.request_receive, zmq.POLLIN)
-
-        outgoing = zmq.Poller()
-        outgoing.register(self.socket, zmq.POLLOUT)
+        poller = zmq.Poller()
+        poller.register(self.socket, zmq.POLLIN)
+        poller.register(self.request_receive, zmq.POLLIN)
 
         while True:
-            inbound_sockets = incoming.poll(10000) # milliseconds
-            for inbound, flag in inbound_sockets:
+            sockets = poller.poll(10000) # milliseconds
+            for socket, flag in sockets:
 
-                if self.request_receive == inbound:
-                    # Success is assumed on this next polling request.
-                    # A failure will result in lost data on the outbound
-                    # socket; any polling delays here should only occur
-                    # in super high throughput cases, presumably because
-                    # a transmission buffer is full.
-
-                    outbound_sockets = outgoing.poll(1000)
+                if self.request_receive == socket:
                     self._req_outgoing()
 
-                elif self.socket == inbound:
+                elif self.socket == socket:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
 
