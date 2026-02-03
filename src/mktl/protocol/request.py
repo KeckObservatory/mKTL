@@ -127,7 +127,7 @@ class Client:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        response = message.Message('REP', target, payload, response_id)
+        response = message.Message('REP', target, payload, id=response_id)
         pending._complete(response)
         del self.pending[response_id]
 
@@ -415,7 +415,7 @@ class Server:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        request = message.Request(req_type, target, payload, req_id)
+        request = message.Request(req_type, target, payload, id=req_id)
         request.prefix = (ident,)
         payload = None
         error = None
@@ -442,7 +442,7 @@ class Server:
             elif payload.error is None:
                 payload.error = error
 
-        response = message.Message('REP', target, payload, req_id)
+        response = message.Message('REP', target, payload, id=req_id)
         response.prefix = request.prefix
 
         self.send(response)
