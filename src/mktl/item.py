@@ -684,7 +684,11 @@ class Item:
         else:
             raise ValueError('formatted+quantity arguments must be boolean')
 
-        payload = self.to_payload(new_value)
+        if wait == False:
+            payload = self.to_payload(new_value, ack=False)
+        else:
+            payload = self.to_payload(new_value)
+
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
@@ -821,7 +825,7 @@ class Item:
         return formatted
 
 
-    def to_payload(self, value=None, timestamp=None):
+    def to_payload(self, value=None, timestamp=None, **kwargs):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
             not specified the current value of this :class:`Item` will be
@@ -857,11 +861,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value, timestamp, **kwargs)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype, **kwargs)
 
         return payload
 
