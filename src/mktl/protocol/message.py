@@ -18,6 +18,11 @@ from .. import json
 
 version = b'a'
 
+# The identity cache is used by the Payload class to (optionally) provide
+# information used to determine the origin of a message.
+
+_identity_cache = dict()
+
 
 class Message:
     """ The :class:`Message` provides a very thin encapsulation of what it
@@ -385,9 +390,31 @@ class Payload:
             the sender.
         """
 
-        self._hostname = platform.node()
-        self._pid = os.getpid()
-        self._ppid = os.getppid()
+        # The call to os.getlogin() appears to be more expensive than the
+        # others. For that reason alone we cache the return values from
+        # function calls where those values won't change for the duration
+        # of program execution.
+
+        try:
+            _user = _identity_cache['_user']
+            _hostname = _identity_cache['_hostname']
+            _pid = _identity_cache['_pid']
+            _ppid = _identity_cache['_ppid']
+        except KeyError:
+            _user = os.getlogin()
+            _hostname = platform.node()
+            _pid = os.getpid()
+            _ppid = os.getppid()
+
+            _identity_cache['_user'] = _user
+            _identity_cache['_hostname'] = _hostname
+            _identity_cache['_pid'] = _pid
+            _identity_cache['_ppid'] = _ppid
+
+        self._user = _user
+        self._hostname = _hostname
+        self._pid = _pid
+        self._ppid = _ppid
         self._executable = sys.executable
         self._argv = sys.argv
 
