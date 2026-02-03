@@ -3,6 +3,9 @@
 """
 
 import itertools
+import os
+import platform
+import sys
 import threading
 import time as timemodule
 
@@ -373,6 +376,20 @@ class Payload:
 
         payload = json.dumps(payload)
         return payload
+
+
+    def identify(self):
+        """ Add fields to this payload to provide identity information
+            to the recipient. The primary intent of this information is
+            for debugging or logging, as opposed to uniquely identifying
+            the sender.
+        """
+
+        self._hostname = platform.node()
+        self._pid = os.getpid()
+        self._ppid = os.getppid()
+        self._executable = sys.executable
+        self._argv = sys.argv
 
 
 # end of class Payload
