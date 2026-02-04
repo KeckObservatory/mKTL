@@ -450,7 +450,8 @@ class Server:
         if payload is None and error is None:
             # The handler should only return None when no response is
             # immediately forthcoming-- the handler has invoked some
-            # other processing chain that will issue a proper response.
+            # other processing chain that will issue a proper response,
+            # or the client explicitly requested no response.
             return
 
         if error is not None:
