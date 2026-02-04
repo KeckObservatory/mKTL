@@ -201,14 +201,14 @@ class Client:
         self.request_signal.send(b'')
 
         try:
-            ack_requested = message.payload.ack
+            silent = message.payload.silent
         except:
-            ack_requested = True
+            silent = False
 
-        if ack_requested:
-            ack = message.wait_ack(self.timeout)
-        else:
+        if silent:
             return
+
+        ack = message.wait_ack(self.timeout)
 
         if ack == False:
             error = '%s @ %s:%d: no response received in %.2f sec'
@@ -369,12 +369,14 @@ class Server:
         """
 
         try:
-            ack_requested = request.payload.ack
+            silent = request.payload.silent
         except:
-            ack_requested = True
+            silent = False
 
-        if ack_requested:
-            self.req_ack(request)
+        if silent:
+            return
+
+        self.req_ack(request)
 
         response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
