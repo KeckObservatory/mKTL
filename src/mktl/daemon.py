@@ -481,11 +481,11 @@ class RequestServer(protocol.request.Server):
         """
 
         try:
-            ack_requested = request.payload.ack
+            silent = request.payload.silent
         except:
-            ack_requested = True
+            silent = False
 
-        if ack_requested:
+        if silent == False:
             self.req_ack(request)
 
         type = request.type
@@ -505,7 +505,10 @@ class RequestServer(protocol.request.Server):
         else:
             raise ValueError('unhandled request type: ' + type)
 
-        return response
+        if silent:
+            return None
+        else:
+            return response
 
 
     def req_get(self, request):
