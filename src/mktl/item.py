@@ -647,15 +647,18 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True, formatted=False, quantity=False):
+    def set(self, new_value, wait=True, response=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
             instance, which has a :func:`mktl.protocol.message.Request.wait`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
-            satisfied. There is no return value for a blocking request; failed
-            requests will raise exceptions.
+            satisfied. Set *response* to False to disable all error handling and
+            acknowledgements for the request (fire and forget); setting
+            *response* to False implies *wait* is also False.
+            There is no return value for a blocking request; failed requests
+            will raise exceptions.
 
             The optional *formatted* and *quantity* options enable calling
             :func:`set` with either the string-formatted representation or
@@ -684,10 +687,11 @@ class Item:
         else:
             raise ValueError('formatted+quantity arguments must be boolean')
 
-        if wait == False:
-            payload = self.to_payload(new_value, ack=False)
-        else:
+        if response:
             payload = self.to_payload(new_value)
+        else:
+            payload = self.to_payload(new_value, ack=False)
+            wait = False
 
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
