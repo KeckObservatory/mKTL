@@ -415,11 +415,13 @@ class RequestServer(mktl.protocol.request.Server):
         """
 
         try:
-            silent = request.payload.silent
+            reply = request.payload.reply
         except:
-            silent = False
+            reply = True
 
-        if silent:
+        if reply:
+            pass
+        else:
             return
 
         self.req_ack(request)

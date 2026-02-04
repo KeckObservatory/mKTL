@@ -201,11 +201,13 @@ class Client:
         self.request_signal.send(b'')
 
         try:
-            silent = message.payload.silent
+            reply = message.payload.reply
         except:
-            silent = False
+            reply = True
 
-        if silent:
+        if reply:
+            pass
+        else:
             return
 
         ack = message.wait_ack(self.timeout)
@@ -369,11 +371,13 @@ class Server:
         """
 
         try:
-            silent = request.payload.silent
+            reply = request.payload.reply
         except:
-            silent = False
+            reply = True
 
-        if silent:
+        if reply:
+            pass
+        else:
             return
 
         self.req_ack(request)
