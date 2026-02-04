@@ -618,6 +618,7 @@ class Item:
             return
 
         new_value = self.from_payload(payload)
+        new_value = self.validate_type(new_value)
         new_value = self.validate(new_value)
 
         # All custom logic is expected to occur in the perform_set() method,
@@ -886,13 +887,105 @@ class Item:
     def validate(self, value):
         """ A hook for a daemon to validate a new value. The default behavior
             is a no-op; any checks should raise exceptions if they encounter
-            a problem with the incoming value. The 'validated' value should
-            be returned by this method; this allows for the possibility that
+            a problem with the incoming value. The 'validated' value must be
+            returned by this method; this allows for the possibility that
             the incoming value has been translated to a more acceptable format,
             for example, converting the string '123' to the integer 123 for a
             numeric item type.
         """
 
+        return value
+
+
+    def validate_type(self, value):
+        """ Inspect the type of this item, if any, and reassign the reference
+            to this method to the appropriate type-specific validation.
+        """
+
+        try:
+            type = self.config['type']
+        except KeyError:
+            type = None
+        else:
+            if type == '':
+                type = None
+
+        if type is None:
+            self.validate_type = self._validate_typeless
+        else:
+            type = type.lower()
+
+            if type == 'boolean':
+                self.validate_type = self._validate_boolean
+            elif type == 'enumerated':
+                self.validate_type = self._validate_enumerated
+            elif type == 'mask':
+                self.validate_type = self._validate_enumerated
+            elif type == 'numeric':
+                self.validate_type = self._validate_numeric
+            elif type == 'numeric array':
+                self.validate_type = self._validate_numeric_array
+            else:
+                # This includes the 'string' type, for which there is no
+                # additional validation, hence typeless for this purpose.
+                self.validate_type = self._validate_typeless
+
+        return self.validate_type(value)
+
+
+    def _validate_boolean(self, value):
+        value = self._validate_enumerated(value)
+
+        # The unformatted value for a boolean is a boolean. A successful return
+        # from _validate_enumerated() will provide an integer, normalize that
+        # value here.
+
+        if value:
+            value = True
+        else:
+            value = False
+
+        return value
+
+
+    def _validate_enumerated(self, value):
+        # Performing the format conversion confirms that the provided value
+        # is valid for the locally defined enumeration (or mask).
+        self.to_format(value)
+
+        # The unformatted value for an enumeration (or mask) is an integer.
+        value = int(value)
+
+        return value
+
+
+    def _validate_numeric(self, value):
+
+        if isinstance(value, float):
+            pass
+        else:
+            try:
+                value = int(value)
+            except:
+                value = float(value)
+
+        # This is where a range check should go.
+
+        return value
+
+
+    def _validate_numeric_array(self, value):
+
+        validated = list()
+
+        for field in value:
+            field = self._validate_numeric(field)
+            validated.append(field)
+
+        return validated
+
+
+    def _validate_typeless(self, value):
         return value
 
 
