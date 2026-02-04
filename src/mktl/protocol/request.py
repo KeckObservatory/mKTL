@@ -483,6 +483,9 @@ class Server:
                 elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     # Calling submit() will block if a worker is not available.
+                    # Note that for high frequency operations this can result
+                    # in out-of-order handling of requests, for example, if a
+                    # stream of SET requests are inbound for a single item.
                     self.workers.submit(self.req_incoming, parts)
 
 
