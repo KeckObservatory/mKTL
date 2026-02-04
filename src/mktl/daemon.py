@@ -476,8 +476,8 @@ class RequestServer(protocol.request.Server):
 
 
     def req_handler(self, request):
-        """ Inspect the incoming request type and decide how a response
-            will be generated.
+        """ Inspect the incoming request type and call an appropriate
+            method to handle that specific request.
         """
 
         try:
