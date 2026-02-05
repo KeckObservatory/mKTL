@@ -5,7 +5,6 @@ import sys
 import threading
 import time
 import uuid
-import zmq
 
 # Importing pint is expensive, representing something like 30% of the
 # user runtime for a simple mKTL command. It will be imported on a
@@ -1196,7 +1195,7 @@ def announce(config, uuid, override=False):
     for address,port in brokers:
         try:
             payload = protocol.request.send(address, port, message)
-        except zmq.error.ZMQError:
+        except TimeoutError:
             continue
 
         error = payload.error
