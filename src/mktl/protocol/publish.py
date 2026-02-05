@@ -325,7 +325,7 @@ class Server:
                 error = "no ports available in range %d:%d" % (minimum, maximum)
             else:
                 error = 'port already in use: ' + str(port)
-            raise zmq.error.ZMQError(error)
+            raise ConnectionError(error)
 
         self.port = trial
 
