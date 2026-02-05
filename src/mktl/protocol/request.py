@@ -205,7 +205,7 @@ class Client:
             error = '%s @ %s:%d: no response received in %.2f sec'
             args = (message.type, self.address, self.port, self.timeout)
             error = error % args
-            raise zmq.ZMQError(error)
+            raise TimeoutError(error)
 
 
 # end of class Client
@@ -295,7 +295,7 @@ class Server:
                 error = "no ports available in range %d:%d" % (minimum, maximum)
             else:
                 error = 'port already in use: ' + str(port)
-            raise zmq.error.ZMQError(error)
+            raise ConnectionError(error)
 
         self.port = trial
 
