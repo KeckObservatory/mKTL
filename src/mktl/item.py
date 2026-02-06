@@ -184,9 +184,9 @@ class Item:
         try:
             unformatted = self.store.config.from_format(self.key, value)
         except:
-            ###
-            print("DEBUG: format conversion failed for %s:" % (self.full_key))
-            print(traceback.format_exc())
+            message = "format conversion failed for %s:"
+            logger = logging.getLogger(__name__)
+            logger.exception(message, self.full_key)
             raise
 
         return unformatted
@@ -304,14 +304,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote GET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote GET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -708,14 +713,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote SET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote SET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -951,9 +961,9 @@ class Item:
             try:
                 callback(self, new_data, new_timestamp)
             except:
-                ### This should probably be logged in a more graceful fashion.
-                print("DEBUG: callback failed for %s:" % (self.full_key))
-                print(traceback.format_exc())
+                message = "callback failed for %s:"
+                logger = logging.getLogger(__name__)
+                logger.exception(message, self.full_key)
                 continue
 
         for reference in invalid:
