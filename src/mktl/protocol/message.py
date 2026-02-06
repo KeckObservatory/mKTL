@@ -24,6 +24,11 @@ version = b'a'
 # alone we cache the return values from function calls where those values won't
 # change for the duration of program execution.
 
+# The blanket exception handling here is an acknowledgement that we don't test
+# these calls often enough on other platforms, like Windows, to know exactly
+# how they might fail. There is a strong desire for those failures to not be
+# show-stoppers for using mKTL at all, hence, all exceptions are caught.
+
 try:
     _origin_user = os.getlogin()
 except:
