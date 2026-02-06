@@ -1,4 +1,5 @@
 
+import logging
 import queue
 import threading
 import time
@@ -28,6 +29,7 @@ class Item:
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
         :ivar config: The JSON description of this item.
+        :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
 
@@ -42,6 +44,7 @@ class Item:
         self.store = store
         self.config = store.config[key]
         self.callbacks = list()
+        self.log_on_set = True
         self.publish_on_set = True
         self.subscribed = False
         self.timeout = 120
@@ -616,6 +619,10 @@ class Item:
         payload = request.payload
         if payload is None:
             return
+
+        if self.log_on_set:
+            logger = logging.getLogger(__name__)
+            request.log(logger)
 
         new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
