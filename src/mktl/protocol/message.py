@@ -129,8 +129,12 @@ class Message:
         self._parts = parts
 
 
-    def log(self, logger=None):
+    def log(self, logger=None, level=logging.DEBUG):
         """ Write a debug message describing the contents of this message.
+            The intent is that other sections of code would use this, as
+            needed, to log the contents of a message, rather than bake in
+            direct awareness of all the message and payload fields that
+            might be of interest for debugging.
         """
 
         if logger is None:
@@ -153,7 +157,7 @@ class Message:
             args.append(field)
             args.append(repr(info))
 
-        logger.debug(message, *args)
+        logger.log(level, message, *args)
 
 
 # end of class Message
