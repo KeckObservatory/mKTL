@@ -140,6 +140,8 @@ class Daemon:
         # before filling in with empty caching Item classes.
 
         atexit.register(self.cleanup)
+
+        self.logger.debug("starting setup() sequence")
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -166,11 +168,13 @@ class Daemon:
         # is ready, but before we go on the air.
 
         self.setup_final()
+        self.logger.debug("setup() sequence complete")
 
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
         config.announce(self.config, self.uuid, override)
+        self.logger.debug("daemon initialization complete")
 
 
     def add_item(self, item_class, key, **kwargs):
