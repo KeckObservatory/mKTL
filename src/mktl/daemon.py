@@ -1,5 +1,6 @@
 
 import atexit
+import logging
 import os
 import platform
 import queue
@@ -47,6 +48,9 @@ class Daemon:
 
     def __init__(self, store, alias, override=False, options=None):
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("daemon starting for store %s, alias %s", store, alias)
+
         self.alias = alias
         self.options = options
         self.config = None
@@ -67,6 +71,8 @@ class Daemon:
         if self.uuid is None:
             # This isn't supposed to happen. Catching it here just in case.
             raise RuntimeError('mktl.config did not set my UUID!')
+
+        self.logger.info("local UUID is %s", self.uuid)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
@@ -97,6 +103,9 @@ class Daemon:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
+
+        self.logger.info("REP server listening on port %d", self.rep.port)
+        self.logger.info("PUB server listening on port %d", self.pub.port)
 
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
