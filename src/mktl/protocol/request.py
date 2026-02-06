@@ -175,12 +175,12 @@ class Client:
 
         while True:
             sockets = poller.poll(10000) # milliseconds
-            for socket, flag in sockets:
+            for active, flag in sockets:
 
-                if self.request_receive == socket:
+                if self.request_receive == active:
                     self._req_outgoing()
 
-                elif self.socket == socket:
+                elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     self._rep_incoming(parts)
 
