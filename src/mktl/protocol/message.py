@@ -3,6 +3,7 @@
 """
 
 import itertools
+import logging
 import threading
 import time as timemodule
 
@@ -126,6 +127,33 @@ class Message:
             parts = (version, id, type, target, payload, bulk)
 
         self._parts = parts
+
+
+    def log(self, logger=None):
+        """ Write a debug message describing the contents of this message.
+        """
+
+        if logger is None:
+            logger = logging.getLogger(__name__)
+
+        message = "%s: id %s target %s"
+        args = [self.type, repr(self.id), repr(self.target)]
+
+        for field in ('value', '_user', '_hostname', '_pid', '_ppid', '_executable', '_argv'):
+            try:
+                info = getattr(self.payload, field)
+            except AttributeError:
+                continue
+
+            info = str(info)
+            if len(info) > 40:
+                info = info[:35] + '[...]'
+
+            message += " %s %s"
+            args.append(field)
+            args.append(repr(info))
+
+        logger.debug(message, *args)
 
 
 # end of class Message
