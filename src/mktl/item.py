@@ -1,9 +1,9 @@
 
+import logging
 import queue
 import threading
 import time
 import traceback
-import zmq
 
 try:
     import numpy
@@ -28,6 +28,7 @@ class Item:
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
         :ivar config: The JSON description of this item.
+        :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
 
@@ -42,6 +43,7 @@ class Item:
         self.store = store
         self.config = store.config[key]
         self.callbacks = list()
+        self.log_on_set = True
         self.publish_on_set = True
         self.subscribed = False
         self.timeout = 120
@@ -181,9 +183,9 @@ class Item:
         try:
             unformatted = self.store.config.from_format(self.key, value)
         except:
-            ###
-            print("DEBUG: format conversion failed for %s:" % (self.full_key))
-            print(traceback.format_exc())
+            message = "format conversion failed for %s:"
+            logger = logging.getLogger(__name__)
+            logger.exception(message, self.full_key)
             raise
 
         return unformatted
@@ -301,14 +303,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote GET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote GET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -405,7 +412,9 @@ class Item:
             representation of the new value. If *timestamp* is set it is
             expected to be a UNIX epoch timestamp; the current time will be
             used if it is not provided. Newly published values are always
-            cached locally.
+            cached locally. If *repeat* is set to True the value will be
+            published regardless of whether it is a repeat of the previously
+            published value.
 
             Note that, for simple cases, an authoritative daemon can set the
             :func:`value` property to publish a new value instead of calling
@@ -617,7 +626,12 @@ class Item:
         if payload is None:
             return
 
+        if self.log_on_set:
+            logger = logging.getLogger(__name__)
+            request.log(logger)
+
         new_value = self.from_payload(payload)
+        new_value = self.validate_type(new_value)
         new_value = self.validate(new_value)
 
         # All custom logic is expected to occur in the perform_set() method,
@@ -689,6 +703,7 @@ class Item:
 
         if reply:
             payload = self.to_payload(new_value)
+            payload.add_origin()
         else:
             payload = self.to_payload(new_value, reply=False)
             wait = False
@@ -709,14 +724,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote SET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote SET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -787,8 +807,8 @@ class Item:
         if prime == True:
             try:
                 self.get(refresh=True)
-            except (zmq.ZMQError, RuntimeError):
-                # Connection errors and remote errors on priming reads are
+            except (TimeoutError, RuntimeError):
+                # Timeout errors and remote errors on priming reads are
                 # thrown away; an error here means the remote daemon is not
                 # available to respond to requests, but despite that error
                 # the subscription will still be valid when the remote daemon
@@ -894,13 +914,105 @@ class Item:
     def validate(self, value):
         """ A hook for a daemon to validate a new value. The default behavior
             is a no-op; any checks should raise exceptions if they encounter
-            a problem with the incoming value. The 'validated' value should
-            be returned by this method; this allows for the possibility that
+            a problem with the incoming value. The 'validated' value must be
+            returned by this method; this allows for the possibility that
             the incoming value has been translated to a more acceptable format,
             for example, converting the string '123' to the integer 123 for a
             numeric item type.
         """
 
+        return value
+
+
+    def validate_type(self, value):
+        """ Inspect the type of this item, if any, and reassign the reference
+            to this method to the appropriate type-specific validation.
+        """
+
+        try:
+            type = self.config['type']
+        except KeyError:
+            type = None
+        else:
+            if type == '':
+                type = None
+
+        if type is None:
+            self.validate_type = self._validate_typeless
+        else:
+            type = type.lower()
+
+            if type == 'boolean':
+                self.validate_type = self._validate_boolean
+            elif type == 'enumerated':
+                self.validate_type = self._validate_enumerated
+            elif type == 'mask':
+                self.validate_type = self._validate_enumerated
+            elif type == 'numeric':
+                self.validate_type = self._validate_numeric
+            elif type == 'numeric array':
+                self.validate_type = self._validate_numeric_array
+            else:
+                # This includes the 'string' type, for which there is no
+                # additional validation, hence typeless for this purpose.
+                self.validate_type = self._validate_typeless
+
+        return self.validate_type(value)
+
+
+    def _validate_boolean(self, value):
+        value = self._validate_enumerated(value)
+
+        # The unformatted value for a boolean is a boolean. A successful return
+        # from _validate_enumerated() will provide an integer, normalize that
+        # value here.
+
+        if value:
+            value = True
+        else:
+            value = False
+
+        return value
+
+
+    def _validate_enumerated(self, value):
+        # Performing the format conversion confirms that the provided value
+        # is valid for the locally defined enumeration (or mask).
+        self.to_format(value)
+
+        # The unformatted value for an enumeration (or mask) is an integer.
+        value = int(value)
+
+        return value
+
+
+    def _validate_numeric(self, value):
+
+        if isinstance(value, float):
+            pass
+        else:
+            try:
+                value = int(value)
+            except:
+                value = float(value)
+
+        # This is where a range check should go.
+
+        return value
+
+
+    def _validate_numeric_array(self, value):
+
+        validated = list()
+
+        for field in value:
+            field = self._validate_numeric(field)
+            validated.append(field)
+
+        return validated
+
+
+    def _validate_typeless(self, value):
         return value
 
 
@@ -952,9 +1064,9 @@ class Item:
             try:
                 callback(self, new_data, new_timestamp)
             except:
-                ### This should probably be logged in a more graceful fashion.
-                print("DEBUG: callback failed for %s:" % (self.full_key))
-                print(traceback.format_exc())
+                message = "callback failed for %s:"
+                logger = logging.getLogger(__name__)
+                logger.exception(message, self.full_key)
                 continue
 
         for reference in invalid:

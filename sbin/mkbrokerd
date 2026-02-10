@@ -12,12 +12,15 @@ if they already know where to find a broker.
 """
 
 import argparse
+import logging
 import sys
 import threading
 import time
-import zmq
 
 import mktl
+
+logging.basicConfig(format='%(created)f %(message)s', level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -51,7 +54,7 @@ def main():
             try:
                 payload = mktl.protocol.request.send(address, port, request)
             except:
-                log("HASH request from %s:%d failed" % (address, port))
+                logger.warning("HASH request from %s:%d failed" % (address, port))
                 continue
 
             hashes = payload.value
@@ -66,14 +69,7 @@ def main():
                 if error:
                     e_type = error['type']
                     e_text = error['text']
-
-                    ### This debug print should be removed.
-                    try:
-                        print(error['debug'])
-                    except KeyError:
-                        pass
-
-                    log("CONFIG request failed: %s: %s" % (e_type, e_text))
+                    logger.warning("CONFIG request failed: %s: %s" % (e_type, e_text))
 
                 if blocks:
                     for uuid,block in blocks.items():
@@ -94,16 +90,6 @@ def main():
 main.known = set()
 main.shutdown = threading.Event()
 main.req = None
-
-
-
-def log(line):
-    """ Nothing special happening here, just sending output to stdout.
-        The idea is that perhaps in the future this will do something
-        more robust.
-    """
-
-    sys.stdout.write("%.3f: %s\n" % (time.time(), line))
 
 
 
@@ -175,7 +161,7 @@ class RequestServer(mktl.protocol.request.Server):
                         alias = new['alias']
                         port = new['provenance'][0]['rep']
                         host = new['provenance'][0]['hostname']
-                        log("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
+                        logger.error("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
                         raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
 
         # This set will be empty unless overrides were requested.
@@ -192,7 +178,7 @@ class RequestServer(mktl.protocol.request.Server):
             port = block['provenance'][0]['rep']
             host = block['provenance'][0]['hostname']
 
-            log("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
+            logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
             config.remove(uuid)
 
 
@@ -244,7 +230,7 @@ class RequestServer(mktl.protocol.request.Server):
 
             try:
                 payload = mktl.protocol.request.send(hostname, port, request)
-            except zmq.ZMQError:
+            except TimeoutError:
                 continue
 
             if payload.value is not None:
@@ -304,7 +290,7 @@ class RequestServer(mktl.protocol.request.Server):
                         old_host = old['provenance'][0]['hostname']
                         new_port = new['provenance'][0]['rep']
                         new_host = new['provenance'][0]['hostname']
-                        log("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                         raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
@@ -320,7 +306,7 @@ class RequestServer(mktl.protocol.request.Server):
                 new_port = new['provenance'][0]['rep']
                 new_host = new['provenance'][0]['hostname']
 
-                log("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
             if match == False and override == True:
@@ -337,7 +323,7 @@ class RequestServer(mktl.protocol.request.Server):
 
                 port = old['provenance'][0]['rep']
                 host = old['provenance'][0]['hostname']
-                log("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
+                logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
                 config.remove(uuid)
 
             # We've already seen a block for this UUID. Accept the new block
@@ -362,7 +348,7 @@ class RequestServer(mktl.protocol.request.Server):
         port = new['provenance'][0]['rep']
         host = new['provenance'][0]['hostname']
 
-        log("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
+        logger.info("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
         config.update(new)
 
 

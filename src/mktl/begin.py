@@ -3,7 +3,6 @@
 """
 
 import threading
-import zmq
 
 from . import config
 from . import protocol
@@ -205,7 +204,7 @@ def refresh(configuration):
 
             try:
                 client.send(request)
-            except zmq.ZMQError:
+            except TimeoutError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
                 # to rely on the local disk cache.

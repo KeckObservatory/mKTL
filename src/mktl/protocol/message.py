@@ -3,6 +3,10 @@
 """
 
 import itertools
+import logging
+import os
+import platform
+import sys
 import threading
 import time as timemodule
 
@@ -14,6 +18,38 @@ from .. import json
 # identified by a single byte.
 
 version = b'a'
+
+# The cached origin information is used by the Payload class to (optionally)
+# provide information used to determine the origin of a message. The call to
+# os.getlogin() appears to be more expensive than the others. For that reason
+# alone we cache the return values from function calls where those values won't
+# change for the duration of program execution.
+
+# The blanket exception handling here is an acknowledgement that we don't test
+# these calls often enough on other platforms, like Windows, to know exactly
+# how they might fail. There is a strong desire for those failures to not be
+# show-stoppers for using mKTL at all, hence, all exceptions are caught.
+
+try:
+    _origin_user = os.getlogin()
+except:
+    _origin_user = None
+
+try:
+    _origin_hostname = platform.node()
+except:
+    _origin_hostname = None
+
+try:
+    _origin_pid = os.getpid()
+except:
+    _origin_pid = None
+
+try:
+    _origin_ppid = os.getppid()
+except:
+    _origin_ppid = None
+
 
 
 class Message:
@@ -126,6 +162,37 @@ class Message:
             parts = (version, id, type, target, payload, bulk)
 
         self._parts = parts
+
+
+    def log(self, logger=None, level=logging.DEBUG):
+        """ Write a debug message describing the contents of this message.
+            The intent is that other sections of code would use this, as
+            needed, to log the contents of a message, rather than bake in
+            direct awareness of all the message and payload fields that
+            might be of interest for debugging.
+        """
+
+        if logger is None:
+            logger = logging.getLogger(__name__)
+
+        message = "%s: id %s target %s"
+        args = [self.type, repr(self.id), repr(self.target)]
+
+        for field in ('value', '_user', '_hostname', '_pid', '_ppid', '_executable', '_argv'):
+            try:
+                info = getattr(self.payload, field)
+            except AttributeError:
+                continue
+
+            info = str(info)
+            if len(info) > 40:
+                info = info[:35] + '[...]'
+
+            message += " %s %s"
+            args.append(field)
+            args.append(repr(info))
+
+        logger.log(level, message, *args)
 
 
     @property
@@ -351,6 +418,20 @@ class Payload:
 
     def __repr__(self):
         return self.encapsulate().decode()
+
+
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
+        """
+
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
+        self._executable = sys.executable
+        self._argv = sys.argv
 
 
     def encapsulate(self):

@@ -1,5 +1,6 @@
 
 import atexit
+import logging
 import os
 import platform
 import queue
@@ -9,7 +10,6 @@ import subprocess
 import sys
 import threading
 import time
-import zmq
 
 from . import begin
 from . import config
@@ -47,6 +47,9 @@ class Daemon:
 
     def __init__(self, store, alias, override=False, options=None):
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("daemon starting for store %s, alias %s", store, alias)
+
         self.alias = alias
         self.options = options
         self.config = None
@@ -68,6 +71,8 @@ class Daemon:
             # This isn't supposed to happen. Catching it here just in case.
             raise RuntimeError('mktl.config did not set my UUID!')
 
+        self.logger.info("local UUID is %s", self.uuid)
+
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
@@ -86,17 +91,20 @@ class Daemon:
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
-        except zmq.error.ZMQError:
+        except ConnectionError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
         avoid = _used_ports()
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=avoid)
-        except zmq.error.ZMQError:
+        except ConnectionError:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
+
+        self.logger.info("REP server listening on port %d", self.rep.port)
+        self.logger.info("PUB server listening on port %d", self.pub.port)
 
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
@@ -131,6 +139,8 @@ class Daemon:
         # before filling in with empty caching Item classes.
 
         atexit.register(self.cleanup)
+
+        self.logger.debug("starting setup() sequence")
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -157,11 +167,13 @@ class Daemon:
         # is ready, but before we go on the air.
 
         self.setup_final()
+        self.logger.debug("setup() sequence complete")
 
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
         config.announce(self.config, self.uuid, override)
+        self.logger.debug("daemon initialization complete")
 
 
     def add_item(self, item_class, key, **kwargs):
@@ -421,7 +433,7 @@ class Daemon:
 
         try:
             payload = protocol.request.send(hostname, port, request)
-        except zmq.ZMQError:
+        except TimeoutError:
             # Not running; perfect.
             return
 
