@@ -375,6 +375,30 @@ class Payload:
         return payload
 
 
+    @property
+    def reply(self):
+        """ The reply attribute is generally only set to indicate that a
+            reply is not necessary. Establishing a property to return the
+            current value allows the exception handling to be done once,
+            here, and not everywhere the reply attribute might be inspected.
+            By a happy coincidence, the existence of this property does not
+            trigger the inclusion of 'reply' in the output of vars(), which
+            is how the :func:`encapsulate` method determines which local
+            attributes to include in the final output.
+        """
+
+        try:
+            return self.__reply
+        except AttributeError:
+            # Message replies are enabled by default.
+            return True
+
+
+    @reply.setter
+    def reply(self, new_value):
+        self.__reply = new_value
+
+
 # end of class Payload
 
 
