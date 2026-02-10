@@ -9,11 +9,11 @@ import time
 
 class Daemon(mktl.Daemon):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, store, alias, *args, **kwargs):
 
         items = generate_config()
-        mktl.config.authoritative('unittest', 'unittest', items)
-        mktl.Daemon.__init__(self, *args, **kwargs)
+        mktl.config.authoritative(store, alias, items)
+        mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
 
 # end of class Daemon
