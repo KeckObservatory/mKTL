@@ -29,6 +29,15 @@ def generate_config():
     items['angle']['units'] = 'radians'
     items['angle']['type'] = 'numeric'
 
+    items['boolean'] = dict()
+    items['boolean']['description'] = 'A boolean item without enumerators.'
+    items['boolean']['type'] = 'boolean'
+
+    items['noyes'] = dict()
+    items['noyes']['description'] = 'A boolean item with enumerators.'
+    items['noyes']['type'] = 'boolean'
+    items['noyes']['enumerators'] = {0: 'No', 1: 'Yes'}
+
     items['number'] = dict()
     items['number']['description'] = 'A numeric item.'
     items['number']['units'] = 'meaningless units'
