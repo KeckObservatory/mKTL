@@ -24,19 +24,15 @@ def generate_config():
 
     items = dict()
 
-    items['number'] = dict()
-    items['number']['description'] = 'A numeric item.'
-    items['number']['units'] = 'meaningless units'
-    items['number']['type'] = 'numeric'
-
-    items['strinG'] = dict()
-    items['strinG']['description'] = 'A string item.'
-    items['strinG']['type'] = 'string'
-
     items['angle'] = dict()
     items['angle']['description'] = 'An angular numeric item.'
     items['angle']['units'] = 'radians'
     items['angle']['type'] = 'numeric'
+
+    items['number'] = dict()
+    items['number']['description'] = 'A numeric item.'
+    items['number']['units'] = 'meaningless units'
+    items['number']['type'] = 'numeric'
 
     items['readonly'] = dict()
     items['readonly']['description'] = 'A read-only numeric item.'
@@ -44,6 +40,10 @@ def generate_config():
     items['readonly']['type'] = 'numeric'
     items['readonly']['initial'] = 13
     items['readonly']['settable'] = False
+
+    items['string'] = dict()
+    items['string']['description'] = 'A string item.'
+    items['string']['type'] = 'string'
 
     items['typeless'] = dict()
     items['typeless']['description'] = 'A typeless item.'
