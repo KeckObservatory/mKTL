@@ -128,6 +128,21 @@ class Message:
         self._parts = parts
 
 
+    @property
+    def reply(self):
+        """ The payload reply attribute is mirrored here for the sake of
+            simplifying exception handling elsewhere in the mKTL code base.
+            Otherwise, the other code would need to catch the AttributeError
+            thrown when the local payload is None.
+        """
+
+        try:
+            return self.payload.reply
+        except AttributeError:
+            # There is no payload, and message replies are enabled by default.
+            return True
+
+
 # end of class Message
 
 
