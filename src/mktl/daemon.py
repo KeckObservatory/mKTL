@@ -10,7 +10,6 @@ import subprocess
 import sys
 import threading
 import time
-import zmq
 
 from . import begin
 from . import config
@@ -92,14 +91,14 @@ class Daemon:
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
-        except zmq.error.ZMQError:
+        except ConnectionError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
         avoid = _used_ports()
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=avoid)
-        except zmq.error.ZMQError:
+        except ConnectionError:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
@@ -434,7 +433,7 @@ class Daemon:
 
         try:
             payload = protocol.request.send(hostname, port, request)
-        except zmq.ZMQError:
+        except TimeoutError:
             # Not running; perfect.
             return
 

@@ -16,7 +16,6 @@ import logging
 import sys
 import threading
 import time
-import zmq
 
 import mktl
 
@@ -231,7 +230,7 @@ class RequestServer(mktl.protocol.request.Server):
 
             try:
                 payload = mktl.protocol.request.send(hostname, port, request)
-            except zmq.ZMQError:
+            except TimeoutError:
                 continue
 
             if payload.value is not None:
