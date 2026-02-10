@@ -4,6 +4,9 @@
 
 import itertools
 import logging
+import os
+import platform
+import sys
 import threading
 import time as timemodule
 
@@ -15,6 +18,38 @@ from .. import json
 # identified by a single byte.
 
 version = b'a'
+
+# The cached origin information is used by the Payload class to (optionally)
+# provide information used to determine the origin of a message. The call to
+# os.getlogin() appears to be more expensive than the others. For that reason
+# alone we cache the return values from function calls where those values won't
+# change for the duration of program execution.
+
+# The blanket exception handling here is an acknowledgement that we don't test
+# these calls often enough on other platforms, like Windows, to know exactly
+# how they might fail. There is a strong desire for those failures to not be
+# show-stoppers for using mKTL at all, hence, all exceptions are caught.
+
+try:
+    _origin_user = os.getlogin()
+except:
+    _origin_user = None
+
+try:
+    _origin_hostname = platform.node()
+except:
+    _origin_hostname = None
+
+try:
+    _origin_pid = os.getpid()
+except:
+    _origin_pid = None
+
+try:
+    _origin_ppid = os.getppid()
+except:
+    _origin_ppid = None
+
 
 
 class Message:
@@ -405,6 +440,20 @@ class Payload:
 
         payload = json.dumps(payload)
         return payload
+
+
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
+        """
+
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
+        self._executable = sys.executable
+        self._argv = sys.argv
 
 
 # end of class Payload

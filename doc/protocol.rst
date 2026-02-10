@@ -199,7 +199,8 @@ also exists, but has its own message structure outside this scheme.
 
       The :ref:`message_payload` for a SET request is the same as the payload
       for a GET response, except that the 'time' field is not required or
-      expected.
+      expected, and there are additional fields set by the client to describe
+      the origin of the request.
 
   * - **HASH**
     - Request the current hash identifiers for any known configuration blocks
@@ -245,16 +246,18 @@ also exists, but has its own message structure outside this scheme.
 
   * - **ACK**
     - Immediate acknowledgement of a request; this message type originates from
-      a daemon, only in response to a request If this response is not received
+      a daemon, only in response to a request. If this response is not received
       with a very small time window after the initial request, the client can
-      and should assume the daemon handling that request is offline.
+      and should assume the daemon handling that request is offline. The
+      acknowledgement confers no additional information beyond a positive
+      affirmation that the request has been received.
 
   * - **REP**
     - A response to a direct request; this message type originates from a
       daemon, only in response to a request. This response will contain the
       full payload to satisfy the request, any error text related to a problem
-      satisfying the request, or simply an indication that the request has been
-      completed.
+      satisfying the request, or be an empty indication that the request has
+      been completed.
 
 
 .. _message_payload:
@@ -276,7 +279,7 @@ allowed, but a standard mKTL client will not notice or handle them.
     - The base representation of the value being transmitted in this message.
       For a GET response or a SET request, this would be the item value;
       depending on the item type this could be a boolean, numeric, or string
-      value, depending.
+      value, or any valid data that can be serialized as JSON.
 
   * - **time**
     - The timestamp associated with the transmitted value. This should be
@@ -327,6 +330,25 @@ allowed, but a standard mKTL client will not notice or handle them.
 
         payload['dtype'] = str(my_numpy_array.dtype)
         dtype = getattr(numpy, payload['dtype'])
+
+  * - **_user**
+    - The user name associated with a SET request.
+
+  * - **_hostname**
+    - The host name from which a SET request originated.
+
+  * - **_pid**
+    - The process identifier associated with a SET request.
+
+  * - **_ppid**
+    - The identifier for the parent process associated with a SET request.
+
+  * - **_executable**
+    - The executable running the process associated with a SET request.
+
+  * - **_argv**
+    - All additional command line arguments provided to the process associated
+      with a SET request.
 
 
 .. _publish:

@@ -1215,6 +1215,7 @@ def announce(config, uuid, override=False):
         block['override'] = True
 
     payload = protocol.message.Payload(block)
+    payload.add_origin()
     message = protocol.message.Request('CONFIG', store, payload)
 
     brokers = protocol.discover.search(wait=True)
