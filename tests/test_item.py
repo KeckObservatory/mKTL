@@ -196,6 +196,24 @@ def test_string(run_mkbrokerd, run_mkd):
     assert string == test_value * 2
 
 
+def test_typeless(run_mkbrokerd, run_mkd):
+
+    typeless = mktl.get('unittest.typeless')
+
+    typeless.value = 24
+    typeless.formatted
+    typeless.value = True
+    typeless.formatted
+    typeless.value = 'test'
+    typeless.formatted
+    typeless.value = {1: 'one', 2: 'two'}
+    typeless.formatted
+    typeless.value = (1, 2, 3)
+    typeless.formatted
+    typeless.value = None
+    typeless.formatted
+
+
 def test_callback(run_mkbrokerd, run_mkd):
 
     string = mktl.get('unittest.string')
