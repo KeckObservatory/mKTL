@@ -29,21 +29,21 @@ def generate_config():
     items['number']['units'] = 'meaningless units'
     items['number']['type'] = 'numeric'
 
-    items['STRING'] = dict()
-    items['STRING']['description'] = 'A string item.'
-    items['STRING']['type'] = 'string'
+    items['strinG'] = dict()
+    items['strinG']['description'] = 'A string item.'
+    items['strinG']['type'] = 'string'
 
-    items['ANGLE'] = dict()
-    items['ANGLE']['description'] = 'An angular numeric item.'
-    items['ANGLE']['units'] = 'radians'
-    items['ANGLE']['type'] = 'numeric'
+    items['angle'] = dict()
+    items['angle']['description'] = 'An angular numeric item.'
+    items['angle']['units'] = 'radians'
+    items['angle']['type'] = 'numeric'
 
-    items['READONLY'] = dict()
-    items['READONLY']['description'] = 'A read-only numeric item.'
-    items['READONLY']['units'] = 'meaningless units'
-    items['READONLY']['type'] = 'numeric'
-    items['READONLY']['initial'] = 13
-    items['READONLY']['settable'] = False
+    items['readonly'] = dict()
+    items['readonly']['description'] = 'A read-only numeric item.'
+    items['readonly']['units'] = 'meaningless units'
+    items['readonly']['type'] = 'numeric'
+    items['readonly']['initial'] = 13
+    items['readonly']['settable'] = False
 
     return items
 
