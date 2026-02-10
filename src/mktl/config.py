@@ -160,12 +160,12 @@ class Configuration:
 
         if type == 'boolean' or type == 'enumerated':
             unformatted = self.from_format_enumerated(key, value)
-
         elif type == 'mask':
             unformatted = self.from_format_mask(key, value)
-
         elif type == 'numeric':
             unformatted = self.from_format_numeric(key, value)
+        elif type == 'numeric array':
+            unformatted = self.from_format_numeric_array(key, value)
 
         if unformatted is None:
             return value
@@ -278,6 +278,24 @@ class Configuration:
                 value = float(value)
 
             unformatted = self.from_format_units(key, value)
+
+        return unformatted
+
+
+    def from_format_numeric_array(self, key, value):
+        """ Return a Python-native sequence (either integer or floating point)
+            derived from a string-formatted sequence of numbers.
+        """
+
+        # JSON expects a list-like format, with square brackets. Convert a
+        # tuple-like format before handing it off to the JSON parser for
+        # conversion.
+
+        if value[0] == '(' and value[-1] == ')':
+            value = '[' + value[1:-1] + ']'
+
+        value = value.encode()
+        unformatted = json.loads(value)
 
         return unformatted
 
@@ -638,12 +656,12 @@ class Configuration:
 
         if type == 'boolean' or type == 'enumerated':
             formatted = self.to_format_enumerated(key, value)
-
         elif type == 'mask':
             formatted = self.to_format_mask(key, value)
-
         elif type == 'numeric':
             formatted = self.to_format_numeric(key, value)
+        elif type == 'numeric array':
+            formatted = self.to_format_numeric_array(key, value)
 
         if formatted is None:
             return str(value)
@@ -746,6 +764,14 @@ class Configuration:
 
             formatted = format % (value)
 
+        return formatted
+
+
+    def to_format_numeric_array(self, key, value):
+        """ Return a string representing this numeric array.
+        """
+
+        formatted = str(value)
         return formatted
 
 
