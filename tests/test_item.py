@@ -80,52 +80,65 @@ def test_math(run_mkbrokerd, run_mkd):
 
     number = mktl.get('unittest.number')
 
-    number.value = 50
+    # The ~ operator works on integers and not floating point numbers.
 
-    assert number == 50
-    assert number <= 50
-    assert number <= 51
-    assert number < 51
-    assert number >= 50
-    assert number >= 49
-    assert number > 49
-    assert number != 49
+    number.value = 25
+    assert ~number == ~25
 
-    assert +number == 50
-    assert -number == -50
-    assert ~number == ~50
-    assert number + 1 == 51
-    assert number - 1 == 49
-    assert number * 2 == 100
-    assert number / 2 == 25
-    assert number ** 2 == 2500
-    assert number % 25 == 0
-    assert number % 12 == 2
+    number.value = 25.1
+    with pytest.raises(TypeError):
+        ~number
 
-    assert 1 + number == 51
-    assert 1 - number == -49
-    assert 2 * number == 100
-    assert 2 / number == 0.04
-    assert 2 ** number == 1125899906842624
-    assert 100 % number == 0
-    assert 52 % number == 2
+    # The remainder of the operations are expected to work for both integer
+    # and floating point numbers.
 
-    assert number + 1 == 51
-    assert number - 1 == 49
-    assert number * 2 == 100
-    assert number / 2 == 25
-    assert number ** 2 == 2500
-    assert number % 25 == 0
-    assert number % 48 == 2
+    testing = (50, 50.1)
+    for test_value in testing:
+        number.value = test_value
 
-    number += 1
-    assert number == 51
-    number -= 1
-    assert number == 50
-    number /= 2
-    assert number == 25
-    number *= 2
-    assert number == 50
+        assert number == test_value
+        assert number <= test_value
+        assert number <= test_value + 1
+        assert number < test_value + 1
+        assert number >= test_value
+        assert number >= test_value - 1
+        assert number > test_value -1
+        assert number != test_value -1
+
+        assert +number == test_value
+        assert -number == -test_value
+        assert number + 1 == test_value + 1
+        assert number - 1 == test_value -1
+        assert number * 2 == test_value * 2
+        assert number / 2 == test_value / 2
+        assert number ** 2 == test_value ** 2
+        assert number % 25 == test_value % 25
+        assert number % 12 == test_value % 12
+
+        assert 1 + number == 1 + test_value
+        assert 1 - number == 1 - test_value
+        assert 2 * number == 2 * test_value
+        assert 2 / number == 2 / test_value
+        assert 2 ** number == 2 ** test_value
+        assert 100 % number == 100 % test_value
+        assert 52 % number == 52 % test_value
+
+        assert number + 1 == test_value + 1
+        assert number - 1 == test_value - 1
+        assert number * 2 == test_value * 2
+        assert number / 2 == test_value / 2
+        assert number ** 2 == test_value ** 2
+        assert number % 25 == test_value % 25
+        assert number % 48 == test_value % 48
+
+        number += 1
+        assert number == test_value + 1
+        number -= 1
+        assert number == test_value
+        number /= 2
+        assert number == test_value / 2
+        number *= 2
+        assert number == test_value
 
 
 def test_callback(run_mkbrokerd, run_mkd):
