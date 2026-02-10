@@ -102,13 +102,13 @@ def test_math(run_mkbrokerd, run_mkd):
         assert number < test_value + 1
         assert number >= test_value
         assert number >= test_value - 1
-        assert number > test_value -1
-        assert number != test_value -1
+        assert number > test_value - 1
+        assert number != test_value - 1
 
         assert +number == test_value
         assert -number == -test_value
         assert number + 1 == test_value + 1
-        assert number - 1 == test_value -1
+        assert number - 1 == test_value - 1
         assert number * 2 == test_value * 2
         assert number / 2 == test_value / 2
         assert number ** 2 == test_value ** 2
@@ -139,6 +139,61 @@ def test_math(run_mkbrokerd, run_mkd):
         assert number == test_value / 2
         number *= 2
         assert number == test_value
+
+
+def test_string(run_mkbrokerd, run_mkd):
+
+    string = mktl.get('unittest.string')
+
+    test_value = 'test'
+    string.value = test_value
+
+    with pytest.raises(TypeError):
+        ~string
+
+    with pytest.raises(TypeError):
+        string - 't'
+
+    with pytest.raises(TypeError):
+        string - 1
+
+    with pytest.raises(TypeError):
+        +string
+
+    with pytest.raises(TypeError):
+        -string
+
+    with pytest.raises(ValueError):
+        string / 't'
+
+    with pytest.raises(ValueError):
+        string / 2
+
+    with pytest.raises(TypeError):
+        string ** 2
+
+    with pytest.raises(TypeError):
+        string % 2
+
+    assert string == test_value
+    assert string <= test_value
+    assert string <= test_value + 'z'
+    assert string < test_value + 'z'
+    assert string >= test_value
+    assert string >= 'a' + test_value
+    assert string > 'a' + test_value
+    assert string != 'a' + test_value
+
+    assert string + 'z' == test_value + 'z'
+    assert string * 2 == test_value * 2
+    assert 'z' + string == 'z' + test_value
+    assert 2 * string == 2 * test_value
+
+    string += 'z'
+    assert string == test_value + 'z'
+    string.value = test_value
+    string *= 2
+    assert string == test_value * 2
 
 
 def test_callback(run_mkbrokerd, run_mkd):
