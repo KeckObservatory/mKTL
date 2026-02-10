@@ -19,7 +19,7 @@ def test_set(run_mkbrokerd, run_mkd):
     assert number.value == 44
     assert number == 44
 
-    string = mktl.get('unittest.STRING')
+    string = mktl.get('unittest.string')
 
     string.set('testing')
     assert string.get() == 'testing'
@@ -28,7 +28,7 @@ def test_set(run_mkbrokerd, run_mkd):
 
     string.set('')
 
-    readonly = mktl.get('unittest.READONLY')
+    readonly = mktl.get('unittest.readonly')
 
     with pytest.raises(RuntimeError):
         readonly.set(44)
@@ -36,7 +36,7 @@ def test_set(run_mkbrokerd, run_mkd):
 
 def test_logic(run_mkbrokerd, run_mkd):
 
-    string = mktl.get('unittest.STRING')
+    string = mktl.get('unittest.string')
 
     string.set('testing')
     assert bool(string) == True
@@ -143,7 +143,7 @@ def test_math(run_mkbrokerd, run_mkd):
 
 def test_callback(run_mkbrokerd, run_mkd):
 
-    string = mktl.get('unittest.STRING')
+    string = mktl.get('unittest.string')
 
     test_callback.called = False
     test_callback.item = None
