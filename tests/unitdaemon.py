@@ -45,6 +45,9 @@ def generate_config():
     items['readonly']['initial'] = 13
     items['readonly']['settable'] = False
 
+    items['typeless'] = dict()
+    items['typeless']['description'] = 'A typeless item.'
+
     return items
 
 
