@@ -682,6 +682,9 @@ class Configuration:
 
         # {"0": "No", "1": "Yes", "2": "Unknown"}
 
+        if isinstance(value, bool):
+            value = int(value)
+
         value = str(value)
 
         try:
@@ -992,14 +995,14 @@ class Configuration:
                         enumerators = dict()
                         item_config['enumerators'] = enumerators
 
-                    try:
-                        enumerators['0']
-                    except:
+                    if 0 in enumerators or '0' in enumerators:
+                        pass
+                    else:
                         enumerators['0'] = 'False'
 
-                    try:
-                        enumerators['1']
-                    except:
+                    if 1 in enumerators or '1' in enumerators:
+                        pass
+                    else:
                         enumerators['1'] = 'True'
 
 
