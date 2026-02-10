@@ -195,6 +195,21 @@ class Message:
         logger.log(level, message, *args)
 
 
+    @property
+    def reply(self):
+        """ The payload reply attribute is mirrored here for the sake of
+            simplifying exception handling elsewhere in the mKTL code base.
+            Otherwise, the other code would need to catch the AttributeError
+            thrown when the local payload is None.
+        """
+
+        try:
+            return self.payload.reply
+        except AttributeError:
+            # There is no payload, and message replies are enabled by default.
+            return True
+
+
 # end of class Message
 
 
@@ -405,6 +420,20 @@ class Payload:
         return self.encapsulate().decode()
 
 
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
+        """
+
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
+        self._executable = sys.executable
+        self._argv = sys.argv
+
+
     def encapsulate(self):
         """ Add all non-omitted local attributes to a dictionary, and return
             the JSON encoding of that dictionary. For example, if the .value
@@ -442,18 +471,28 @@ class Payload:
         return payload
 
 
-    def add_origin(self):
-        """ Add fields to this payload to provide information describing
-            the origin of this message. The primary use case is for debugging
-            or logging, as opposed to uniquely identifying the sender.
+    @property
+    def reply(self):
+        """ The reply attribute is generally only set to indicate that a
+            reply is not necessary. Establishing a property to return the
+            current value allows the exception handling to be done once,
+            here, and not everywhere the reply attribute might be inspected.
+            By a happy coincidence, the existence of this property does not
+            trigger the inclusion of 'reply' in the output of vars(), which
+            is how the :func:`encapsulate` method determines which local
+            attributes to include in the final output.
         """
 
-        self._user = _origin_user
-        self._hostname = _origin_hostname
-        self._pid = _origin_pid
-        self._ppid = _origin_ppid
-        self._executable = sys.executable
-        self._argv = sys.argv
+        try:
+            return self.__reply
+        except AttributeError:
+            # Message replies are enabled by default.
+            return True
+
+
+    @reply.setter
+    def reply(self, new_value):
+        self.__reply = new_value
 
 
 # end of class Payload
