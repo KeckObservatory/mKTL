@@ -1,4 +1,5 @@
 
+import logging
 import queue
 import threading
 import time
@@ -28,6 +29,7 @@ class Item:
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
         :ivar config: The JSON description of this item.
+        :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
 
@@ -42,6 +44,7 @@ class Item:
         self.store = store
         self.config = store.config[key]
         self.callbacks = list()
+        self.log_on_set = True
         self.publish_on_set = True
         self.subscribed = False
         self.timeout = 120
@@ -181,9 +184,9 @@ class Item:
         try:
             unformatted = self.store.config.from_format(self.key, value)
         except:
-            ###
-            print("DEBUG: format conversion failed for %s:" % (self.full_key))
-            print(traceback.format_exc())
+            message = "format conversion failed for %s:"
+            logger = logging.getLogger(__name__)
+            logger.exception(message, self.full_key)
             raise
 
         return unformatted
@@ -301,14 +304,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote GET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote GET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -617,6 +625,10 @@ class Item:
         if payload is None:
             return
 
+        if self.log_on_set:
+            logger = logging.getLogger(__name__)
+            request.log(logger)
+
         new_value = self.from_payload(payload)
         new_value = self.validate(new_value)
 
@@ -701,14 +713,19 @@ class Item:
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote SET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote SET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -944,9 +961,9 @@ class Item:
             try:
                 callback(self, new_data, new_timestamp)
             except:
-                ### This should probably be logged in a more graceful fashion.
-                print("DEBUG: callback failed for %s:" % (self.full_key))
-                print(traceback.format_exc())
+                message = "callback failed for %s:"
+                logger = logging.getLogger(__name__)
+                logger.exception(message, self.full_key)
                 continue
 
         for reference in invalid:
