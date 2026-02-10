@@ -4,20 +4,20 @@ import time
 
 def test_get(run_mkbrokerd, run_mkd):
 
-    integer = mktl.get('unittest.INTEGER')
-    integer.get()
+    number = mktl.get('unittest.number')
+    number.get()
 
 
 def test_set(run_mkbrokerd, run_mkd):
 
-    integer = mktl.get('unittest.INTEGER')
-    integer.set(-1)
-    integer.set(23)
-    integer.set(44)
+    number = mktl.get('unittest.number')
+    number.set(-1)
+    number.set(23)
+    number.set(44)
 
-    assert integer.get() == 44
-    assert integer.value == 44
-    assert integer == 44
+    assert number.get() == 44
+    assert number.value == 44
+    assert number == 44
 
     string = mktl.get('unittest.STRING')
 
@@ -45,87 +45,87 @@ def test_logic(run_mkbrokerd, run_mkd):
     assert bool(string) == False
 
 
-    integer = mktl.get('unittest.INTEGER')
+    number = mktl.get('unittest.number')
 
-    integer.value = 0
-    assert bool(integer) == False
-    assert integer | 0 == 0
-    assert integer | 1 == 1
-    assert integer & 0 == 0
-    assert integer & 1 == 0
+    number.value = 0
+    assert bool(number) == False
+    assert number | 0 == 0
+    assert number | 1 == 1
+    assert number & 0 == 0
+    assert number & 1 == 0
 
-    integer.value = 1
-    assert bool(integer) == True
+    number.value = 1
+    assert bool(number) == True
 
-    integer.value = 2
-    assert bool(integer) == True
-    assert integer | 0 == 2
-    assert integer | 1 == 3
-    assert integer & 0 == 0
-    assert integer & 1 == 0
-    assert integer & 2 == 2
-    assert integer ^ 2 == 0
-    assert integer ^ 1 == 3
+    number.value = 2
+    assert bool(number) == True
+    assert number | 0 == 2
+    assert number | 1 == 3
+    assert number & 0 == 0
+    assert number & 1 == 0
+    assert number & 2 == 2
+    assert number ^ 2 == 0
+    assert number ^ 1 == 3
 
-    assert 0 | integer == 2
-    assert 1 | integer == 3
-    assert 0 & integer == 0
-    assert 1 & integer == 0
-    assert 2 & integer == 2
-    assert 2 ^ integer == 0
-    assert 1 ^ integer == 3
+    assert 0 | number == 2
+    assert 1 | number == 3
+    assert 0 & number == 0
+    assert 1 & number == 0
+    assert 2 & number == 2
+    assert 2 ^ number == 0
+    assert 1 ^ number == 3
 
 
 def test_math(run_mkbrokerd, run_mkd):
 
-    integer = mktl.get('unittest.INTEGER')
+    number = mktl.get('unittest.number')
 
-    integer.value = 50
+    number.value = 50
 
-    assert integer == 50
-    assert integer <= 50
-    assert integer <= 51
-    assert integer < 51
-    assert integer >= 50
-    assert integer >= 49
-    assert integer > 49
-    assert integer != 49
+    assert number == 50
+    assert number <= 50
+    assert number <= 51
+    assert number < 51
+    assert number >= 50
+    assert number >= 49
+    assert number > 49
+    assert number != 49
 
-    assert +integer == 50
-    assert -integer == -50
-    assert ~integer == ~50
-    assert integer + 1 == 51
-    assert integer - 1 == 49
-    assert integer * 2 == 100
-    assert integer / 2 == 25
-    assert integer ** 2 == 2500
-    assert integer % 25 == 0
-    assert integer % 12 == 2
+    assert +number == 50
+    assert -number == -50
+    assert ~number == ~50
+    assert number + 1 == 51
+    assert number - 1 == 49
+    assert number * 2 == 100
+    assert number / 2 == 25
+    assert number ** 2 == 2500
+    assert number % 25 == 0
+    assert number % 12 == 2
 
-    assert 1 + integer == 51
-    assert 1 - integer == -49
-    assert 2 * integer == 100
-    assert 2 / integer == 0.04
-    assert 2 ** integer == 1125899906842624
-    assert 100 % integer == 0
-    assert 52 % integer == 2
+    assert 1 + number == 51
+    assert 1 - number == -49
+    assert 2 * number == 100
+    assert 2 / number == 0.04
+    assert 2 ** number == 1125899906842624
+    assert 100 % number == 0
+    assert 52 % number == 2
 
-    assert integer + 1 == 51
-    assert integer - 1 == 49
-    assert integer * 2 == 100
-    assert integer / 2 == 25
-    assert integer ** 2 == 2500
-    assert integer % 25 == 0
-    assert integer % 48 == 2
+    assert number + 1 == 51
+    assert number - 1 == 49
+    assert number * 2 == 100
+    assert number / 2 == 25
+    assert number ** 2 == 2500
+    assert number % 25 == 0
+    assert number % 48 == 2
 
-    integer += 1
-    assert integer == 51
-    integer -= 1
-    assert integer == 50
-    integer /= 2
-    assert integer == 25
-    integer *= 2
-    assert integer == 50
+    number += 1
+    assert number == 51
+    number -= 1
+    assert number == 50
+    number /= 2
+    assert number == 25
+    number *= 2
+    assert number == 50
 
 
 def test_callback(run_mkbrokerd, run_mkd):

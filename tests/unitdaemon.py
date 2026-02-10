@@ -24,10 +24,10 @@ def generate_config():
 
     items = dict()
 
-    items['INTEGER'] = dict()
-    items['INTEGER']['description'] = 'A numeric item.'
-    items['INTEGER']['units'] = 'meaningless units'
-    items['INTEGER']['type'] = 'numeric'
+    items['number'] = dict()
+    items['number']['description'] = 'A numeric item.'
+    items['number']['units'] = 'meaningless units'
+    items['number']['type'] = 'numeric'
 
     items['STRING'] = dict()
     items['STRING']['description'] = 'A string item.'
