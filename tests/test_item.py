@@ -34,6 +34,61 @@ def test_set(run_mkbrokerd, run_mkd):
         readonly.set(44)
 
 
+def test_boolean(run_mkbrokerd, run_mkd):
+
+    boolean = mktl.get('unittest.boolean')
+
+    boolean.value = False
+    assert boolean == 0
+    assert boolean == False
+
+    boolean.value = True
+    assert boolean == 1
+    assert boolean == True
+
+    boolean.value = 0
+    assert boolean == 0
+    assert boolean == False
+
+    boolean.value = 1
+    assert boolean == 1
+    assert boolean == True
+
+    boolean.formatted = 'fALSE'
+    boolean.formatted = 'False'
+    assert boolean == 0
+    assert boolean == False
+
+    boolean.formatted = 'tRUE'
+    boolean.formatted = 'True'
+    assert boolean == 1
+    assert boolean == True
+
+    with pytest.raises(KeyError):
+        boolean.formatted = 'No'
+
+    with pytest.raises(KeyError):
+        boolean.formatted = 'Yes'
+
+    noyes = mktl.get('unittest.noyes')
+
+    with pytest.raises(KeyError):
+        noyes.formatted = 'False'
+
+    with pytest.raises(KeyError):
+        noyes.formatted = 'True'
+
+    noyes.formatted = 'nO'
+    noyes.formatted = 'No'
+    assert noyes == 0
+    assert noyes == False
+
+    noyes.formatted = 'yES'
+    noyes.formatted = 'Yes'
+    assert noyes == 1
+    assert noyes == True
+
+
 def test_logic(run_mkbrokerd, run_mkd):
 
     string = mktl.get('unittest.string')
