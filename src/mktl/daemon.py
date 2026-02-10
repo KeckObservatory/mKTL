@@ -480,10 +480,7 @@ class RequestServer(protocol.request.Server):
             method to handle that specific request.
         """
 
-        try:
-            reply = request.payload.reply
-        except:
-            reply = True
+        reply = request.reply
 
         if reply:
             self.req_ack(request)

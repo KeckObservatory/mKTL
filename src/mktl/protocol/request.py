@@ -200,12 +200,7 @@ class Client:
         self.requests.put(message)
         self.request_signal.send(b'')
 
-        try:
-            reply = message.payload.reply
-        except:
-            reply = True
-
-        if reply:
+        if message.reply:
             pass
         else:
             return
@@ -370,12 +365,7 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        try:
-            reply = request.payload.reply
-        except:
-            reply = True
-
-        if reply:
+        if request.reply:
             pass
         else:
             return

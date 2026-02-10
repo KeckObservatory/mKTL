@@ -414,12 +414,7 @@ class RequestServer(mktl.protocol.request.Server):
             will be generated.
         """
 
-        try:
-            reply = request.payload.reply
-        except:
-            reply = True
-
-        if reply:
+        if request.reply:
             pass
         else:
             return
