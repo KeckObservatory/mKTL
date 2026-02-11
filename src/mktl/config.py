@@ -717,6 +717,7 @@ class Configuration:
 
         value = int(value)
         formatted = list()
+        verified = 0
 
         for bit,name in enumerators.items():
             if bit == 'None':
@@ -726,6 +727,10 @@ class Configuration:
             bit_value = 1 << bit
             if value & bit_value:
                 formatted.append(name)
+                verified += bit_value
+
+        if verified != value:
+            raise KeyError('verified %d; value contains unknown active bits: ' % (verified) + str(value))
 
         if len(formatted) == 0:
             try:
