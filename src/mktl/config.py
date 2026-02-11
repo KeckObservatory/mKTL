@@ -730,7 +730,7 @@ class Configuration:
                 verified += bit_value
 
         if verified != value:
-            raise KeyError('verified %d; value contains unknown active bits: ' % (verified) + str(value))
+            raise KeyError('value contains unknown active bits: ' + str(value))
 
         if len(formatted) == 0:
             try:
