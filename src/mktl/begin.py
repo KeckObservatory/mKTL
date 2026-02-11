@@ -3,10 +3,10 @@
 """
 
 import threading
-import zmq
 
 from . import config
 from . import protocol
+from .transport import TransportError
 from .store import Store
 
 
@@ -205,7 +205,7 @@ def refresh(configuration):
 
             try:
                 client.send(request)
-            except zmq.ZMQError:
+            except TransportError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
                 # to rely on the local disk cache.

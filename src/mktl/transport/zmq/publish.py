@@ -12,6 +12,7 @@ from typing import Dict, Optional, Tuple
 import zmq
 
 from ...protocol import Message, Publish
+from ...transport import TransportPortError
 from .framing import from_pub_frames, to_pub_frames
 
 minimum_port = 10139
@@ -63,9 +64,16 @@ class Server:
                 except zmq.ZMQError:
                     continue
             if self.port is None:
-                raise zmq.ZMQError("no PUB port available")
+                raise TransportPortError(
+                    f"no ports available in range {minimum_port}:{maximum_port}"
+                )
         else:
-            self.socket.bind(f"tcp://*:{self.port}")
+            try:
+                self.socket.bind(f"tcp://*:{self.port}")
+            except zmq.ZMQError as exc:
+                raise TransportPortError(
+                    f"port already in use: {self.port}"
+                ) from exc
 
         # Internal queue for thread-safe sends
         try:

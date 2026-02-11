@@ -3,7 +3,6 @@ import queue
 import threading
 import time
 import traceback
-import zmq
 
 try:
     import numpy
@@ -13,6 +12,7 @@ except ImportError:
 from . import protocol
 from . import poll
 from . import weakref
+from .transport import TransportError
 
 
 class Item:
@@ -779,7 +779,7 @@ class Item:
         if prime == True:
             try:
                 self.get(refresh=True)
-            except (zmq.ZMQError, RuntimeError):
+            except (TransportError, RuntimeError):
                 # Connection errors and remote errors on priming reads are
                 # thrown away; an error here means the remote daemon is not
                 # available to respond to requests, but despite that error

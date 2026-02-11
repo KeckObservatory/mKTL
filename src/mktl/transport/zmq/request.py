@@ -26,6 +26,7 @@ import zmq
 
 from ...protocol import Message, Payload, Request
 from ...protocol.fields import ACK, REP
+from ...transport import TransportTimeout, TransportPortError
 from .framing import from_request_frames, to_request_frames
 
 
@@ -138,7 +139,7 @@ class Client:
 
         ack = pending.wait_ack(self.timeout)
         if not ack:
-            raise zmq.ZMQError(
+            raise TransportTimeout(
                 f"{request.msg_type} @ {self.address}:{self.port}: no ACK in {self.timeout:.2f} sec"
             )
         return pending
@@ -160,7 +161,12 @@ class Server:
         if self.port is None:
             self.port = self._bind_any()
         else:
-            self.socket.bind(f"tcp://{self.address}:{self.port}")
+            try:
+                self.socket.bind(f"tcp://{self.address}:{self.port}")
+            except zmq.ZMQError as exc:
+                raise TransportPortError(
+                    f"port already in use: {self.port}"
+                ) from exc
 
         # Response queue for thread-safe sending
         try:
@@ -188,7 +194,9 @@ class Server:
                 return port
             except zmq.ZMQError:
                 continue
-        raise RuntimeError("no available ports")
+        raise TransportPortError(
+            f"no ports available in range {minimum_port}:{maximum_port}"
+        )
 
     # --- request handling hooks ---
     def req_handler(self, request: Request) -> Optional[Payload]:
@@ -291,7 +299,7 @@ def send(address: str, port: int, message: Request) -> Payload:
     pending = c.send(message)
     response = pending.wait(timeout=60)
     if response is None:
-        raise zmq.ZMQError("no response received")
+        raise TransportTimeout("no response received")
     if response.payload is None:
         return Payload(value=None)
     return response.payload

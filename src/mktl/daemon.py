@@ -9,7 +9,6 @@ import subprocess
 import sys
 import threading
 import time
-import zmq
 
 from . import begin
 from . import config
@@ -18,6 +17,7 @@ from . import json
 from . import poll
 from . import protocol
 from . import store
+from .transport import TransportError, TransportPortError
 
 
 class Daemon:
@@ -86,14 +86,14 @@ class Daemon:
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
-        except zmq.error.ZMQError:
+        except TransportPortError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
         avoid = _used_ports()
 
         try:
             self.rep = RequestServer(self, port=rep, avoid=avoid)
-        except zmq.error.ZMQError:
+        except TransportPortError:
             self.rep = RequestServer(self, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
@@ -421,7 +421,7 @@ class Daemon:
 
         try:
             payload = protocol.request.send(hostname, port, request)
-        except zmq.ZMQError:
+        except TransportError:
             # Not running; perfect.
             return
 
