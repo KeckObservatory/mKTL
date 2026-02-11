@@ -26,8 +26,9 @@ def generate_config():
 
     items['angle'] = dict()
     items['angle']['description'] = 'An angular numeric item.'
-    items['angle']['units'] = 'radians'
     items['angle']['type'] = 'numeric'
+    items['angle']['format'] = '%2d:%2.2d:%04.1f'
+    items['angle']['units'] = {'': 'radians', 'formatted': 'degrees'}
 
     items['boolean'] = dict()
     items['boolean']['description'] = 'A boolean item without enumerators.'
@@ -37,6 +38,12 @@ def generate_config():
     items['enumerated']['description'] = 'An enumerated item.'
     items['enumerated']['type'] = 'enumerated'
     items['enumerated']['enumerators'] = {0: 'Zero', 1: 'One', 4: 'Four'}
+
+    items['hourangle'] = dict()
+    items['hourangle']['description'] = 'An angular numeric item, in h:m:s.'
+    items['hourangle']['type'] = 'numeric'
+    items['hourangle']['format'] = '%2d:%2.2d:%04.1f'
+    items['hourangle']['units'] = {'': 'radians', 'formatted': 'hours'}
 
     items['mask'] = dict()
     items['mask']['description'] = 'A mask item.'
@@ -50,13 +57,13 @@ def generate_config():
 
     items['number'] = dict()
     items['number']['description'] = 'A numeric item.'
-    items['number']['units'] = 'meaningless units'
     items['number']['type'] = 'numeric'
+    items['number']['units'] = 'meaningless units'
 
     items['readonly'] = dict()
     items['readonly']['description'] = 'A read-only numeric item.'
-    items['readonly']['units'] = 'meaningless units'
     items['readonly']['type'] = 'numeric'
+    items['readonly']['units'] = 'meaningless units'
     items['readonly']['initial'] = 13
     items['readonly']['settable'] = False
 
