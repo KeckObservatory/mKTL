@@ -38,6 +38,11 @@ def generate_config():
     items['enumerated']['type'] = 'enumerated'
     items['enumerated']['enumerators'] = {0: 'Zero', 1: 'One', 4: 'Four'}
 
+    items['mask'] = dict()
+    items['mask']['description'] = 'A mask item.'
+    items['mask']['type'] = 'mask'
+    items['mask']['enumerators'] = {'None': 'none set', 0: 'A', 1: 'B', 2: 'C'}
+
     items['noyes'] = dict()
     items['noyes']['description'] = 'A boolean item with enumerators.'
     items['noyes']['type'] = 'boolean'
