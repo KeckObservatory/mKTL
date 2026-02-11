@@ -1,14 +1,11 @@
-"""ZMQ transport codec for protocol Payload.
-
-This is a JSON codec compatible with the historical mKTL wire format.
-"""
+"""Transport codec for protocol Payload."""
 
 from __future__ import annotations
 
 from typing import Optional, Tuple
 
-from ... import json
-from ...protocol.message import Payload
+from .. import json
+from ..protocol.message import Payload
 
 
 def encode_payload(payload: Optional[Payload]) -> Tuple[bytes, bytes]:

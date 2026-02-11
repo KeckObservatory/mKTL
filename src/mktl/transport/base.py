@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from ..protocol import Message
+from ..protocol.message import Message
 
 
 # Transport agnostic exceptions

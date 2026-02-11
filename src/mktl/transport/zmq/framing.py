@@ -11,8 +11,8 @@ from __future__ import annotations
 
 from typing import Iterable, Optional, Sequence, Tuple
 
-from ...protocol import Message, Payload, PROTOCOL_VERSION
-from .codec import encode_payload, decode_payload
+from ...protocol.message import Message, Payload, PROTOCOL_VERSION
+from ..codec import encode_payload, decode_payload
 
 
 _VERSION_BYTES = PROTOCOL_VERSION.encode()

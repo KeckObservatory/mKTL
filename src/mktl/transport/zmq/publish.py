@@ -11,7 +11,8 @@ from typing import Dict, Optional, Tuple
 
 import zmq
 
-from ...protocol import Message, Publish
+from ...protocol.message import Message
+from ...protocol.publish import Publish
 from ...transport import TransportPortError
 from .framing import from_pub_frames, to_pub_frames
 

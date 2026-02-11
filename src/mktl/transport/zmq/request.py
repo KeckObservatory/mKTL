@@ -24,7 +24,8 @@ from typing import Dict, Optional, Tuple
 
 import zmq
 
-from ...protocol import Message, Payload, Request
+from ...protocol.message import Message, Payload
+from ...protocol.request import Request
 from ...protocol.fields import ACK, REP
 from ...transport import TransportTimeout, TransportPortError
 from .framing import from_request_frames, to_request_frames
