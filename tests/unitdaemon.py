@@ -29,6 +29,7 @@ def generate_config():
     items['angle']['type'] = 'numeric'
     items['angle']['format'] = '%2d:%2.2d:%04.1f'
     items['angle']['units'] = {'': 'radians', 'formatted': 'degrees'}
+    items['angle']['initial'] = 0.018049613347708025
 
     items['boolean'] = dict()
     items['boolean']['description'] = 'A boolean item without enumerators.'
@@ -44,6 +45,7 @@ def generate_config():
     items['hourangle']['type'] = 'numeric'
     items['hourangle']['format'] = '%2d:%2.2d:%04.1f'
     items['hourangle']['units'] = {'': 'radians', 'formatted': 'hours'}
+    items['hourangle']['initial'] = 0.2707442002156204
 
     items['mask'] = dict()
     items['mask']['description'] = 'A mask item.'
