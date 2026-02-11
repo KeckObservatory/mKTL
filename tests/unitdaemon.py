@@ -33,6 +33,11 @@ def generate_config():
     items['boolean']['description'] = 'A boolean item without enumerators.'
     items['boolean']['type'] = 'boolean'
 
+    items['enumerated'] = dict()
+    items['enumerated']['description'] = 'An enumerated item.'
+    items['enumerated']['type'] = 'enumerated'
+    items['enumerated']['enumerators'] = {0: 'Zero', 1: 'One', 4: 'Four'}
+
     items['noyes'] = dict()
     items['noyes']['description'] = 'A boolean item with enumerators.'
     items['noyes']['type'] = 'boolean'
