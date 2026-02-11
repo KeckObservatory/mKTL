@@ -89,6 +89,34 @@ def test_boolean(run_mkbrokerd, run_mkd):
     assert noyes == True
 
 
+def test_enumerated(run_mkbrokerd, run_mkd):
+
+    enumerated = mktl.get('unittest.enumerated')
+
+    enumerated.value = 0
+    assert enumerated == 0
+    assert enumerated.formatted == 'Zero'
+
+    enumerated.value = 1
+    assert enumerated == 1
+    assert enumerated.formatted == 'One'
+
+    enumerated.formatted = 'zERO'
+    assert enumerated == 0
+
+    enumerated.formatted = 'oNE'
+    assert enumerated == 1
+
+    with pytest.raises(KeyError):
+        enumerated.formatted = 'invalid'
+
+    with pytest.raises(RuntimeError):
+        enumerated.value = 234
+
+    with pytest.raises(RuntimeError):
+        enumerated.value = 'invalid'
+
+
 def test_logic(run_mkbrokerd, run_mkd):
 
     string = mktl.get('unittest.string')
