@@ -159,6 +159,40 @@ def test_logic(run_mkbrokerd, run_mkd):
     assert 1 ^ number == 3
 
 
+def test_mask(run_mkbrokerd, run_mkd):
+
+    mask = mktl.get('unittest.mask')
+
+    mask.value = 0
+    assert mask == 0
+    assert mask.formatted == 'none set'
+
+    mask.value = 1
+    assert mask == 1
+    assert mask.formatted == 'A'
+
+    mask.formatted = 'B'
+    assert mask == 2
+
+    mask.formatted = 'c'
+    assert mask == 4
+
+    mask.value = 3
+    assert mask.formatted == 'A, B'
+
+    mask.formatted = 'B, C'
+    assert mask == 6
+
+    with pytest.raises(KeyError):
+        mask.formatted = 'invalid'
+
+    with pytest.raises(RuntimeError):
+        mask.value = 234
+
+    with pytest.raises(RuntimeError):
+        mask.value = 'invalid'
+
+
 def test_math(run_mkbrokerd, run_mkd):
 
     number = mktl.get('unittest.number')
