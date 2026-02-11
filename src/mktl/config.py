@@ -993,7 +993,7 @@ class Configuration:
                 # First pass: make sure the enumerators are in with
                 # strings as keys instead of integers.
 
-                if type == 'boolean' or type == 'enumerated':
+                if type == 'boolean' or type == 'enumerated' or type == 'mask':
                     additions = dict()
                     deletions = list()
 
@@ -1004,6 +1004,11 @@ class Configuration:
                         item_config['enumerators'] = enumerators
 
                     for enumerator in enumerators.keys():
+                        # This would be a nice place to handle the enumerator
+                        # being None for a mask, but if that were the case an
+                        # exception would already be thrown when trying to
+                        # convert the configuration block to JSON.
+
                         if isinstance(enumerator, int):
                             additions[str(enumerator)] = enumerators[enumerator]
                             deletions.append(enumerator)
