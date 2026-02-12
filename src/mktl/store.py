@@ -30,11 +30,15 @@ class Store:
     def __contains__(self, key):
 
         if isinstance(key, Item):
-            key = key.key
+            item = key
+            key = item.key
+
+            my_item = self._items[key]
+            return item is my_item
+
         else:
             key = key.lower()
-
-        return key in self._items
+            return key in self._items
 
 
     def __delitem__(self, key):
@@ -42,7 +46,10 @@ class Store:
 
 
     def __getitem__(self, key):
-        key = key.lower()
+        if isinstance(key, Item):
+            key = key.key
+        else:
+            key = key.lower()
 
         try:
             item = self._items[key]
