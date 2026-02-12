@@ -14,8 +14,14 @@ _BACKEND = os.environ.get("MKTL_TRANSPORT", "zmq")
 if _BACKEND == "zmq":
     from .zmq import request
     from .zmq import publish
-# elif _BACKEND == "rabbitmq":
-#     from .rabbitmq import request
-#     from .rabbitmq import publish
+elif _BACKEND == "rabbitmq":
+    try:
+        from .rabbitmq import request
+        from .rabbitmq import publish
+    except ImportError:
+        raise ImportError(
+            "MKTL_TRANSPORT='rabbitmq' requires pika: "
+            "pip install mKTL[rabbitmq]"
+        )
 else:
     raise ImportError(f"unknown MKTL_TRANSPORT backend: {_BACKEND!r}")

@@ -87,7 +87,6 @@ class RequestServer:
         self.transport = transport
         self.node_id = node_id
 
-    # --- request handling hooks ---
     def req_handler(self, msg: Message) -> Optional[dict]:
         """Override in subclasses.
 
@@ -114,7 +113,6 @@ class RequestServer:
     def send(self, response: Message) -> None:
         self.transport.send(response)
 
-    # --- internal ---
     def _req_incoming(self, msg: Message) -> None:
         if self._on_receive is not None:
             self._on_receive(msg)

@@ -154,7 +154,6 @@ class Server(RequestServer):
         self._responses.put(response)
         self._signal_tx.send(b"")
 
-    # --- internal ---
     def _rep_outgoing(self) -> None:
         self._signal_rx.recv(flags=zmq.NOBLOCK)
         response: Message = self._responses.get(block=False)
@@ -176,8 +175,6 @@ class Server(RequestServer):
                     msg.env.meta["zmq_prefix"] = (identity,)
                     self.workers.submit(self._req_incoming, msg)
 
-
-# --- convenience helpers (API-compatible-ish) ---
 
 _client_cache: Dict[Tuple[str, int], Client] = {}
 _client_lock = threading.Lock()
