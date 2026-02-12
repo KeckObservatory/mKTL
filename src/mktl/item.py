@@ -3,7 +3,6 @@ import queue
 import threading
 import time
 import traceback
-import zmq
 
 try:
     import numpy
@@ -12,7 +11,9 @@ except ImportError:
 
 from . import protocol
 from . import poll
+from . import transport
 from . import weakref
+from .transport import TransportError
 
 
 class Item:
@@ -95,8 +96,8 @@ class Item:
             # configuration that doesn't contain a provenance.
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
-        self.sub = protocol.publish.client(hostname, pub)
-        self.req = protocol.request.client(hostname, rep)
+        self.sub = transport.publish.client(hostname, pub)
+        self.req = transport.request.client(hostname, rep)
 
         try:
             settable = self.config['settable']
@@ -779,7 +780,7 @@ class Item:
         if prime == True:
             try:
                 self.get(refresh=True)
-            except (zmq.ZMQError, RuntimeError):
+            except (TransportError, RuntimeError):
                 # Connection errors and remote errors on priming reads are
                 # thrown away; an error here means the remote daemon is not
                 # available to respond to requests, but despite that error

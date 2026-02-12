@@ -1,5 +1,27 @@
-"""Transport implementations.
+"""Transport layer implementations."""
 
-Each transport is responsible for mapping protocol :class:`mktl.protocol.Message`
-objects to/from a wire representation.
-"""
+import os
+
+from .base import (
+    TransportError,
+    TransportTimeout,
+    TransportConnectionError,
+    TransportPortError,
+)
+
+_BACKEND = os.environ.get("MKTL_TRANSPORT", "zmq")
+
+if _BACKEND == "zmq":
+    from .zmq import request
+    from .zmq import publish
+elif _BACKEND == "rabbitmq":
+    try:
+        from .rabbitmq import request
+        from .rabbitmq import publish
+    except ImportError:
+        raise ImportError(
+            "MKTL_TRANSPORT='rabbitmq' requires pika: "
+            "pip install mKTL[rabbitmq]"
+        )
+else:
+    raise ImportError(f"unknown MKTL_TRANSPORT backend: {_BACKEND!r}")

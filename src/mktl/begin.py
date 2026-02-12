@@ -3,10 +3,11 @@
 """
 
 import threading
-import zmq
 
 from . import config
 from . import protocol
+from . import transport
+from .transport import TransportError
 from .store import Store
 
 
@@ -47,13 +48,13 @@ def discover(*targets):
     # Hacking the timeout for discovery, this is not expected to throw
     # errors with minimal delay.
 
-    old_timeout = protocol.request.Client.timeout
-    protocol.request.Client.timeout = 0.5
+    old_timeout = transport.request.Client.timeout
+    transport.request.Client.timeout = 0.5
 
     for address,port in brokers:
         request = protocol.message.Request('HASH')
         try:
-            payload = protocol.request.send(address, port, request)
+            payload = transport.request.send(address, port, request)
         except:
             continue
 
@@ -61,7 +62,7 @@ def discover(*targets):
 
         for store in hashes.keys():
             request = protocol.message.Request('CONFIG', store)
-            payload = protocol.request.send(address, port, request)
+            payload = transport.request.send(address, port, request)
 
             blocks = payload.value
 
@@ -71,7 +72,7 @@ def discover(*targets):
                     configuration.update(block)
 
 
-    protocol.request.Client.timeout = old_timeout
+    transport.request.Client.timeout = old_timeout
 
 
 
@@ -140,7 +141,7 @@ def get(store, key=None):
 
         hostname,port = brokers[0]
         message = protocol.message.Request('CONFIG', store)
-        payload = protocol.request.send(hostname, port, message)
+        payload = transport.request.send(hostname, port, message)
 
         blocks = payload.value
 
@@ -200,12 +201,12 @@ def refresh(configuration):
             hostname = stratum['hostname']
             rep = stratum['rep']
 
-            client = protocol.request.client(hostname, rep)
+            client = transport.request.client(hostname, rep)
             request = protocol.message.Request('HASH', store)
 
             try:
                 client.send(request)
-            except zmq.ZMQError:
+            except TransportError:
                 # No response from this daemon; move on to the next entry in
                 # the provenance. If no daemons respond the client will have
                 # to rely on the local disk cache.

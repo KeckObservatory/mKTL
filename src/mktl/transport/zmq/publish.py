@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import atexit
-import itertools
 import queue
 import threading
 import traceback
@@ -11,15 +10,17 @@ from typing import Dict, Optional, Tuple
 
 import zmq
 
-from ...protocol import Message, Publish
-from .framing import from_pub_frames, to_pub_frames
+from ...protocol.message import Message
+from ...protocol.wire import pack_frame, unpack_frame
+from ...transport import TransportPortError
+from ..session import PublishSession, SubscribeSession
 
 minimum_port = 10139
 maximum_port = 13679
 zmq_context = zmq.Context()
 
 
-class Client:
+class Client(SubscribeSession):
     """SUB client."""
 
     def __init__(self, address: str, port: int):
@@ -39,11 +40,11 @@ class Client:
         self.socket.setsockopt(zmq.SUBSCRIBE, (topic + ".").encode())
 
     def recv(self) -> Message:
-        parts = self.socket.recv_multipart()
-        return from_pub_frames(parts)
+        _topic, wire_bytes = self.socket.recv_multipart()
+        return unpack_frame(wire_bytes)
 
 
-class Server:
+class Server(PublishSession):
     """PUB server."""
 
     def __init__(self, port: Optional[int] = None, avoid: Optional[set] = None):
@@ -63,9 +64,16 @@ class Server:
                 except zmq.ZMQError:
                     continue
             if self.port is None:
-                raise zmq.ZMQError("no PUB port available")
+                raise TransportPortError(
+                    f"no ports available in range {minimum_port}:{maximum_port}"
+                )
         else:
-            self.socket.bind(f"tcp://*:{self.port}")
+            try:
+                self.socket.bind(f"tcp://*:{self.port}")
+            except zmq.ZMQError as exc:
+                raise TransportPortError(
+                    f"port already in use: {self.port}"
+                ) from exc
 
         # Internal queue for thread-safe sends
         try:
@@ -83,15 +91,15 @@ class Server:
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
-    def send(self, msg: Publish) -> None:
+    def send(self, msg: Message) -> None:
         self._queue.put(msg)
         self._sig_tx.send(b"")
 
     def _send_one(self) -> None:
         self._sig_rx.recv(flags=zmq.NOBLOCK)
         msg = self._queue.get(block=False)
-        frames = to_pub_frames(msg)
-        self.socket.send_multipart(frames)
+        topic = ((msg.env.key or "") + ".").encode()
+        self.socket.send_multipart([topic, pack_frame(msg)])
 
     def run(self) -> None:
         poller = zmq.Poller()
