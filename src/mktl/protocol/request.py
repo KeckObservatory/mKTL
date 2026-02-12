@@ -52,7 +52,7 @@ def build_response(
 
     return (
         builder
-        .resp(req.env.transid)
+        .rep(req.env.transid)
         .to(req.env.sourceid)
         .payload(payload)
         .build()
