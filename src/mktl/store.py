@@ -67,11 +67,10 @@ class Store:
             if item is None:
                 try:
                     item = Item(self, key)
-                except:
+                finally:
                     self._items_lock.release()
-                    raise
-
-            self._items_lock.release()
+            else:
+                self._items_lock.release()
 
             # The Item assigns itself to our self._items dictionary as an early
             # step in its initialization process, there is no need to manipulate
