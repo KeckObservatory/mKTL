@@ -53,6 +53,10 @@ def test_store(run_mkbrokerd, run_mkd):
     assert number1 is number2
     assert string1 is string2
 
+    assert number1 in store
+    number3 = store[number1]
+    assert number1 is number3
+
     for item in store:
         assert isinstance(item, mktl.Item)
 
@@ -67,8 +71,8 @@ def test_store(run_mkbrokerd, run_mkd):
     for key in store.keys():
         assert key in store.config
 
-    # The actual result from str() and repr() is not enforced, just want to
-    # invoke the statement(s) for completeness's sake.
+    # The actual result from str() and repr() is not inspected, it's only
+    # used for debug purposes.
 
     str(store)
     repr(store)
