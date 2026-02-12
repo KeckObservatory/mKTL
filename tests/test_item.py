@@ -269,6 +269,36 @@ def test_quantity(run_mkbrokerd, run_mkd):
     if pint is None:
         return
 
+    angle = mktl.get('unittest', 'angle')
+
+    angle.value = 0.5
+    original_value = angle.value
+
+    # The base units are radians. The formatted units require degrees to be
+    # available, but any rational angular unit should be usable.
+
+    radians = angle.quantity
+    degrees = angle.quantity.to('degrees')
+    microradians = angle.quantity.to('microradians')
+
+    # Comparing microradians runs into floating point imprecision.
+
+    original_microradians = original_value * 1000000
+    assert microradians.magnitude >= original_microradians - 0.0000001
+    assert microradians.magnitude <= original_microradians + 0.0000001
+
+    # The quantity property should accept any units that can be translated to
+    # the base units. Multiply some other units by a factor of ten, and set the
+    # item value to that scaled value; the item-provided quantity should reflect
+    # the multiplied value.
+
+    microradians *= 10
+    angle.quantity = microradians
+
+    original_scaled = original_value * 10
+    assert angle.value >= original_scaled - 0.0000001
+    assert angle.value <= original_scaled + 0.0000001
+
 
 def test_sexagesimal(run_mkbrokerd, run_mkd):
 
