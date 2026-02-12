@@ -2,6 +2,12 @@ import mktl
 import pytest
 import time
 
+try:
+    import pint
+except ImportError:
+    pint = None
+
+
 def test_get(run_mkbrokerd, run_mkd):
 
     number = mktl.get('unittest.number')
@@ -258,7 +264,16 @@ def test_math(run_mkbrokerd, run_mkd):
         assert number == test_value
 
 
+def test_quantity(run_mkbrokerd, run_mkd):
+
+    if pint is None:
+        return
+
+
 def test_sexagesimal(run_mkbrokerd, run_mkd):
+
+    if pint is None:
+        return
 
     # The regular 'angle' is D:M:S.
 
