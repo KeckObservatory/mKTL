@@ -17,6 +17,7 @@ from . import json
 from . import poll
 from . import protocol
 from . import store
+from . import transport
 from .transport import TransportError, TransportPortError
 
 
@@ -85,9 +86,9 @@ class Daemon:
             self._test_port(store, rep)
 
         try:
-            self.pub = protocol.publish.Server(port=pub, avoid=avoid)
+            self.pub = transport.publish.Server(port=pub, avoid=avoid)
         except TransportPortError:
-            self.pub = protocol.publish.Server(port=None, avoid=avoid)
+            self.pub = transport.publish.Server(port=None, avoid=avoid)
 
         avoid = _used_ports()
 
@@ -420,7 +421,7 @@ class Daemon:
         request = protocol.message.Request('CONFIG', store)
 
         try:
-            payload = protocol.request.send(hostname, port, request)
+            payload = transport.request.send(hostname, port, request)
         except TransportError:
             # Not running; perfect.
             return
@@ -446,10 +447,10 @@ class Daemon:
 
 
 
-class RequestServer(protocol.request.Server):
+class RequestServer(transport.request.Server):
 
     def __init__(self, daemon, *args, **kwargs):
-        protocol.request.Server.__init__(self, *args, **kwargs)
+        transport.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
 
 

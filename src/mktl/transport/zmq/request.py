@@ -13,21 +13,17 @@ from __future__ import annotations
 
 import atexit
 import concurrent.futures
-import itertools
 import queue
 import socket as pysocket
-import sys
 import threading
-import time
-import traceback
 from typing import Dict, Optional, Tuple
 
 import zmq
 
 from ...protocol.message import Message, Payload
 from ...protocol.request import Request
-from ...protocol.fields import ACK, REP
 from ...transport import TransportTimeout, TransportPortError
+from ..session import RequestSession, RequestServer, PendingRequest
 from .framing import from_request_frames, to_request_frames
 
 
@@ -36,36 +32,7 @@ maximum_port = 13679
 zmq_context = zmq.Context()
 
 
-class PendingRequest:
-    """Client-side helper that provides ACK/REP synchronization."""
-
-    def __init__(self, req: Request):
-        self.req = req
-        self.response: Optional[Message] = None
-        self.ack_event = threading.Event()
-        self.rep_event = threading.Event()
-
-    @property
-    def id(self) -> bytes:
-        return self.req.msg_id
-
-    def wait_ack(self, timeout: Optional[float]) -> bool:
-        return self.ack_event.wait(timeout)
-
-    def wait(self, timeout: Optional[float] = 60) -> Optional[Message]:
-        self.rep_event.wait(timeout)
-        return self.response
-
-    def _complete_ack(self) -> None:
-        self.ack_event.set()
-
-    def _complete(self, response: Message) -> None:
-        self.response = response
-        self.ack_event.set()
-        self.rep_event.set()
-
-
-class Client:
+class Client(RequestSession):
     """Issue requests via a ZeroMQ DEALER socket and receive responses."""
 
     timeout = 0.1
@@ -97,20 +64,6 @@ class Client:
         self._thread = threading.Thread(target=self.run, daemon=True)
         self._thread.start()
 
-    def _handle_incoming(self, parts: Tuple[bytes, ...]) -> None:
-        msg = from_request_frames(parts)
-        pending = self._pending.get(msg.msg_id)
-        if pending is None:
-            return
-
-        if msg.msg_type == ACK:
-            pending._complete_ack()
-            return
-
-        # REP (or error REP on version mismatch)
-        pending._complete(msg)
-        self._pending.pop(msg.msg_id, None)
-
     def _handle_outgoing(self) -> None:
         # Clear one signal and send one request.
         self._signal_rx.recv(flags=zmq.NOBLOCK)
@@ -131,7 +84,8 @@ class Client:
                     self._handle_outgoing()
                 elif active == self.socket:
                     parts = tuple(self.socket.recv_multipart())
-                    self._handle_incoming(parts)
+                    msg = from_request_frames(parts)
+                    self._handle_incoming(msg)
 
     def send(self, request: Request) -> PendingRequest:
         pending = PendingRequest(request)
@@ -146,7 +100,7 @@ class Client:
         return pending
 
 
-class Server:
+class Server(RequestServer):
     """Receive requests via a ZeroMQ ROUTER socket, respond to them."""
 
     port = None  # auto
@@ -199,24 +153,6 @@ class Server:
             f"no ports available in range {minimum_port}:{maximum_port}"
         )
 
-    # --- request handling hooks ---
-    def req_handler(self, request: Request) -> Optional[Payload]:
-        """Override in subclasses.
-
-        Return:
-          - Payload -> will be wrapped into a REP
-          - None    -> no immediate REP (handler is responsible for later response)
-        """
-
-        # Default: no-op
-        self.req_ack(request)
-        return None
-
-    def req_ack(self, request: Request) -> None:
-        ack = Message(msg_type=ACK, target=request.target, msg_id=request.msg_id)
-        ack.meta["zmq_prefix"] = request.meta.get("zmq_prefix", ())
-        self.send(ack)
-
     def send(self, response: Message) -> None:
         self._responses.put(response)
         self._signal_tx.send(b"")
@@ -227,43 +163,6 @@ class Server:
         response: Message = self._responses.get(block=False)
         frames = to_request_frames(response, include_prefix=True)
         self.socket.send_multipart(frames)
-
-    def _req_incoming(self, parts: Tuple[bytes, ...]) -> None:
-        msg = from_request_frames(parts)
-
-        # Convert generic Message to typed Request (validates op)
-        try:
-            req = Request(msg_type=msg.msg_type, target=msg.target, payload=msg.payload, msg_id=msg.msg_id)
-        except Exception:
-            # If invalid, treat as opaque request
-            req = Request(msg_type=msg.msg_type, target=msg.target, payload=msg.payload, msg_id=msg.msg_id)
-
-        req.meta.update(msg.meta)
-
-        payload: Optional[Payload] = None
-        error: Optional[dict] = None
-
-        try:
-            payload = self.req_handler(req)
-        except Exception:
-            e_class, e_instance, _tb = sys.exc_info()
-            error = {
-                "type": getattr(e_class, "__name__", "Exception"),
-                "text": str(e_instance),
-                "debug": traceback.format_exc(),
-            }
-
-        if payload is None and error is None:
-            return
-
-        if payload is None:
-            payload = Payload(value=None)
-        if error is not None:
-            payload.error = error
-
-        rep = Message(msg_type=REP, target=req.target, payload=payload, msg_id=req.msg_id)
-        rep.meta["zmq_prefix"] = req.meta.get("zmq_prefix", ())
-        self.send(rep)
 
     def run(self) -> None:
         poller = zmq.Poller()
@@ -276,7 +175,8 @@ class Server:
                     self._rep_outgoing()
                 elif active == self.socket:
                     parts = tuple(self.socket.recv_multipart())
-                    self.workers.submit(self._req_incoming, parts)
+                    msg = from_request_frames(parts)
+                    self.workers.submit(self._req_incoming, msg)
 
 
 # --- convenience helpers (API-compatible-ish) ---

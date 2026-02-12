@@ -11,6 +11,7 @@ except ImportError:
 
 from . import protocol
 from . import poll
+from . import transport
 from . import weakref
 from .transport import TransportError
 
@@ -95,8 +96,8 @@ class Item:
             # configuration that doesn't contain a provenance.
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
-        self.sub = protocol.publish.client(hostname, pub)
-        self.req = protocol.request.client(hostname, rep)
+        self.sub = transport.publish.client(hostname, pub)
+        self.req = transport.request.client(hostname, rep)
 
         try:
             settable = self.config['settable']

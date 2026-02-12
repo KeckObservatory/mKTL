@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import atexit
-import itertools
 import queue
 import threading
 import traceback
@@ -14,6 +13,7 @@ import zmq
 from ...protocol.message import Message
 from ...protocol.publish import Publish
 from ...transport import TransportPortError
+from ..session import PublishSession, SubscribeSession
 from .framing import from_pub_frames, to_pub_frames
 
 minimum_port = 10139
@@ -21,7 +21,7 @@ maximum_port = 13679
 zmq_context = zmq.Context()
 
 
-class Client:
+class Client(SubscribeSession):
     """SUB client."""
 
     def __init__(self, address: str, port: int):
@@ -45,7 +45,7 @@ class Client:
         return from_pub_frames(parts)
 
 
-class Server:
+class Server(PublishSession):
     """PUB server."""
 
     def __init__(self, port: Optional[int] = None, avoid: Optional[set] = None):

@@ -18,6 +18,7 @@ else:
 
 from . import json
 from . import protocol
+from . import transport
 from .transport import TransportError
 
 
@@ -1195,7 +1196,7 @@ def announce(config, uuid, override=False):
 
     for address,port in brokers:
         try:
-            payload = protocol.request.send(address, port, message)
+            payload = transport.request.send(address, port, message)
         except TransportError:
             continue
 
