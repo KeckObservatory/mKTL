@@ -13,12 +13,11 @@ def is_request(msg: Message) -> bool:
     return msg.env.type in {
         MsgType.GET,
         MsgType.SET,
-        MsgType.REQ,
     }
 
 
 def is_response(msg: Message) -> bool:
-    return msg.env.type == MsgType.RESP
+    return msg.env.type == MsgType.REP
 
 
 def is_ack(msg: Message) -> bool:
@@ -29,7 +28,7 @@ def validate(msg: Message) -> None:
 
     t = msg.env.type
 
-    if t in {MsgType.GET, MsgType.SET, MsgType.REQ}:
+    if t in {MsgType.GET, MsgType.SET}:
         if msg.env.key is None:
             raise ValueError("Request message missing key")
 
