@@ -87,7 +87,7 @@ class Store:
 
 
     def __repr__(self):
-        return 'store.Store: ' + repr(self._items)
+        return "mktl.Store(%s): %s" % (self.name, repr(self._items))
 
 
     def __setitem__(self, name, value):
