@@ -258,6 +258,61 @@ def test_math(run_mkbrokerd, run_mkd):
         assert number == test_value
 
 
+def test_sexagesimal(run_mkbrokerd, run_mkd):
+
+    # The regular 'angle' is D:M:S.
+
+    angle = mktl.get('unittest.angle')
+
+    angle.formatted = '1:2:3'
+    assert angle.formatted == ' 1:02:03.0'
+
+    angle *= 2
+    assert angle.formatted == ' 2:04:06.0'
+
+    angle *= 2
+    assert angle.formatted == ' 4:08:12.0'
+
+    angle *= 10
+    assert angle.formatted == '41:22:00.0'
+
+    angle *= 10
+    assert angle.formatted == '413:40:00.0'
+    assert angle.value == 7.21984533908321
+
+    angle.formatted = '-1:2:3'
+    assert angle.formatted == '-1:02:03.0'
+
+    angle.formatted = '1:-2:3'
+    assert angle.formatted == ' 0:58:03.0'
+
+    angle.formatted = '1:-2:-3'
+    assert angle.formatted == ' 0:57:57.0'
+
+    angle.formatted = '1:2:-3'
+    assert angle.formatted == ' 1:01:57.0'
+
+    # The 'hourangle' item is H:M:S.
+
+    hourangle = mktl.get('unittest.hourangle')
+
+    hourangle.formatted = '1:2:3'
+    assert hourangle.formatted == ' 1:02:03.0'
+
+    hourangle *= 2
+    assert hourangle.formatted == ' 2:04:06.0'
+
+    hourangle *= 2
+    assert hourangle.formatted == ' 4:08:12.0'
+
+    hourangle *= 10
+    assert hourangle.formatted == '41:22:00.0'
+
+    hourangle *= 10
+    assert hourangle.formatted == '413:40:00.0'
+    assert hourangle.value == 108.29768008624816
+
+
 def test_string(run_mkbrokerd, run_mkd):
 
     string = mktl.get('unittest.string')
