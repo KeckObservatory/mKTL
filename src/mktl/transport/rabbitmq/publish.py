@@ -39,6 +39,7 @@ class Client(SubscribeSession):
 
         self._inbox: queue.Queue = queue.Queue()
         self._bindings: list = []
+        self._has_wildcard = False
         self._ready = threading.Event()
         self._connection = None
 
@@ -51,12 +52,23 @@ class Client(SubscribeSession):
         self._bindings.append(routing_key)
         if self._ready.is_set():
             self._connection.add_callback_threadsafe(
-                lambda rk=routing_key: self._channel.queue_bind(
-                    exchange=_EXCHANGE,
-                    queue=self._queue_name,
-                    routing_key=rk,
-                )
+                lambda rk=routing_key: self._bind_topic(rk)
             )
+
+    def _bind_topic(self, routing_key: str) -> None:
+        """Add a topic binding, removing the default wildcard if present."""
+        if self._has_wildcard:
+            self._channel.queue_unbind(
+                exchange=_EXCHANGE,
+                queue=self._queue_name,
+                routing_key="#",
+            )
+            self._has_wildcard = False
+        self._channel.queue_bind(
+            exchange=_EXCHANGE,
+            queue=self._queue_name,
+            routing_key=routing_key,
+        )
 
     def recv(self) -> Message:
         body = self._inbox.get()
@@ -73,20 +85,16 @@ class Client(SubscribeSession):
         result = self._channel.queue_declare(queue="", exclusive=True)
         self._queue_name = result.method.queue
 
-        # Subscribe to everything by default (same as ZMQ SUB with b"")
         self._channel.queue_bind(
             exchange=_EXCHANGE,
             queue=self._queue_name,
             routing_key="#",
         )
+        self._has_wildcard = True
 
-        # Apply any bindings requested before the channel was ready
+        # Apply any bindings requested before the channel was ready.
         for rk in self._bindings:
-            self._channel.queue_bind(
-                exchange=_EXCHANGE,
-                queue=self._queue_name,
-                routing_key=rk,
-            )
+            self._bind_topic(rk)
 
         self._channel.basic_consume(
             queue=self._queue_name,
