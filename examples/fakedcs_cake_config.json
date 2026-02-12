@@ -1,0 +1,713 @@
+{
+  "fakedcs:AUTACTIV": {
+    "channel": "fakedcs:AUTACTIV",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-active in {no,yes}",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean",
+    "enumerators": {
+      "0": "no",
+      "1": "yes"
+    }
+  },
+  "fakedcs:AUTGO": {
+    "channel": "fakedcs:AUTGO",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-go-flag in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:AUTPAUSE": {
+    "channel": "fakedcs:AUTPAUSE",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-pause in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:AUTRESUM": {
+    "channel": "fakedcs:AUTRESUM",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-resume in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:AUTRESX": {
+    "channel": "fakedcs:AUTRESX",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-resumeX in arcsec",
+    "units": {
+      "": "Radians",
+      "formatted": "arcsec"
+    },
+    "type": "double"
+  },
+  "fakedcs:AUTRESY": {
+    "channel": "fakedcs:AUTRESY",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-resumeY in arcsec",
+    "units": {
+      "": "Radians",
+      "formatted": "arcsec"
+    },
+    "type": "double"
+  },
+  "fakedcs:AUTSQNUM": {
+    "channel": "fakedcs:AUTSQNUM",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-seqnum in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:AUTSTOP": {
+    "channel": "fakedcs:AUTSTOP",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-stop in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:AUTXCENT": {
+    "channel": "fakedcs:AUTXCENT",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-Xcent in arcsec",
+    "units": {
+      "": "Radians",
+      "formatted": "arcsec"
+    },
+    "type": "double"
+  },
+  "fakedcs:AUTYCENT": {
+    "channel": "fakedcs:AUTYCENT",
+    "gettable": true,
+    "settable": true,
+    "description": "guider-Ycent in arcsec",
+    "units": {
+      "": "Radians",
+      "formatted": "arcsec"
+    },
+    "type": "double"
+  },
+  "fakedcs:AXESTAT": {
+    "channel": "fakedcs:AXESTAT",
+    "gettable": true,
+    "settable": true,
+    "description": "axes-control-status in {unknown, not controlling, halted, in position, in limit, slewing, acquiring, tracking}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "not controlling",
+      "2": "halted",
+      "4": "in position",
+      "8": "in limit",
+      "16": "slewing",
+      "32": "acquiring",
+      "64": "tracking"
+    }
+  },
+  "fakedcs:AZ": {
+    "channel": "fakedcs:AZ",
+    "gettable": true,
+    "settable": true,
+    "description": "telescope-azimuth in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:CURRINST": {
+    "channel": "fakedcs:CURRINST",
+    "gettable": true,
+    "settable": true,
+    "description": "current-instrument in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:EL": {
+    "channel": "fakedcs:EL",
+    "gettable": true,
+    "settable": true,
+    "description": "telescope-elevation in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:PARANG": {
+    "channel": "fakedcs:PARANG",
+    "gettable": true,
+    "settable": true,
+    "description": "parallactic-angle-astrometric in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTBASE": {
+    "channel": "fakedcs:ROTBASE",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-base-angle in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTDEST": {
+    "channel": "fakedcs:ROTDEST",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-user-destination in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTDETS1": {
+    "channel": "fakedcs:ROTDETS1",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-destination-timestamp1-ut1-slow in \"\"",
+    "units": {
+      "": "Seconds",
+      "formatted": ""
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTDETS2": {
+    "channel": "fakedcs:ROTDETS2",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-destination-timestamp2-ut1-slow in \"\"",
+    "units": {
+      "": "Seconds",
+      "formatted": ""
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTERRS": {
+    "channel": "fakedcs:ROTERRS",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-error-string in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:ROTERVL": {
+    "channel": "fakedcs:ROTERVL",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-error-status in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:ROTHALT": {
+    "channel": "fakedcs:ROTHALT",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-halt-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTHALTC": {
+    "channel": "fakedcs:ROTHALTC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-halt-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTINIT": {
+    "channel": "fakedcs:ROTINIT",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-initialization-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTINITC": {
+    "channel": "fakedcs:ROTINITC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-initialization-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTMODE": {
+    "channel": "fakedcs:ROTMODE",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-tracking-mode in {unknown, position angle, vertical angle, stationary}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "position angle",
+      "2": "vertical angle",
+      "4": "stationary"
+    }
+  },
+  "fakedcs:ROTNEWS": {
+    "channel": "fakedcs:ROTNEWS",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-new-destination-slow in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:ROTPDEST": {
+    "channel": "fakedcs:ROTPDEST",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-physical-destination in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTPDSTS": {
+    "channel": "fakedcs:ROTPDSTS",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-physical-destination-slow in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTPOSN": {
+    "channel": "fakedcs:ROTPOSN",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-user-position in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTPOTS1": {
+    "channel": "fakedcs:ROTPOTS1",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-position-timestamp1-ut1-slow in \"\"",
+    "units": {
+      "": "Seconds",
+      "formatted": ""
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTPOTS2": {
+    "channel": "fakedcs:ROTPOTS2",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-position-timestamp2-ut1-slow in \"\"",
+    "units": {
+      "": "Seconds",
+      "formatted": ""
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTPPOSN": {
+    "channel": "fakedcs:ROTPPOSN",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-physical-position in deg",
+    "units": {
+      "": "Radians",
+      "formatted": "deg"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTSEL": {
+    "channel": "fakedcs:ROTSEL",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-select in {none, fcass (forward cass), cass (cassegrain), lbc (left bent cass), rbc (right bent cass)}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "none",
+      "1": "fcass (forward cass)",
+      "2": "cass (cassegrain)",
+      "3": "lbc (left bent cass)",
+      "4": "rbc (right bent cass)"
+    }
+  },
+  "fakedcs:ROTSPEED": {
+    "channel": "fakedcs:ROTSPEED",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-fake-speed in deg/sec",
+    "units": {
+      "": "double",
+      "formatted": "deg/sec"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTSRVER": {
+    "channel": "fakedcs:ROTSRVER",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-servo-error in arcsec",
+    "units": {
+      "": "Radians",
+      "formatted": "arcsec"
+    },
+    "type": "double"
+  },
+  "fakedcs:ROTSTAT": {
+    "channel": "fakedcs:ROTSTAT",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-state in  {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "off",
+      "2": "initializing",
+      "4": "standby",
+      "8": "tracking",
+      "16": "fault",
+      "32": "manual",
+      "64": "halted",
+      "128": "disabled",
+      "256": "in position",
+      "512": "slewing",
+      "1024": "acquiring",
+      "2048": "in limit"
+    }
+  },
+  "fakedcs:ROTSTBY": {
+    "channel": "fakedcs:ROTSTBY",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-standby-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTSTBYC": {
+    "channel": "fakedcs:ROTSTBYC",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-standby-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:ROTSTST": {
+    "channel": "fakedcs:ROTSTST",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-state-string in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:ROTTIME": {
+    "channel": "fakedcs:ROTTIME",
+    "gettable": true,
+    "settable": true,
+    "description": "rotator-current-time in \"\"",
+    "units": {
+      "": "Seconds",
+      "formatted": ""
+    },
+    "type": "double"
+  },
+  "fakedcs:SIMULATE": {
+    "channel": "fakedcs:SIMULATE",
+    "gettable": true,
+    "settable": true,
+    "description": "simulating-dcs in {false, true}",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean",
+    "enumerators": {
+      "0": "false",
+      "1": "true"
+    }
+  },
+  "fakedcs:TERTERRS": {
+    "channel": "fakedcs:TERTERRS",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-error-string in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:TERTERVL": {
+    "channel": "fakedcs:TERTERVL",
+    "gettable": true,
+    "settable": false,
+    "description": "tertiary-error-status in \"\"",
+    "units": {
+      "": "integer",
+      "formatted": ""
+    },
+    "type": "integer"
+  },
+  "fakedcs:TERTHALT": {
+    "channel": "fakedcs:TERTHALT",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-halt-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTHALTC": {
+    "channel": "fakedcs:TERTHALTC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-halt-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTINIT": {
+    "channel": "fakedcs:TERTINIT",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-initialization-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTINITC": {
+    "channel": "fakedcs:TERTINITC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-initialization-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTMOVE": {
+    "channel": "fakedcs:TERTMOVE",
+    "gettable": true,
+    "settable": true,
+    "description": "move-tertiary in no,yes",
+    "units": {
+      "": "boolean",
+      "formatted": "no,yes"
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTMOVEC": {
+    "channel": "fakedcs:TERTMOVEC",
+    "gettable": true,
+    "settable": true,
+    "description": "move-tertiary in no,yes",
+    "units": {
+      "": "boolean",
+      "formatted": "no,yes"
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTDEST": {
+    "channel": "fakedcs:TERTDEST",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-destination in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, cass, mirrorup}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "lnas",
+      "1": "lbc1",
+      "2": "lbc2",
+      "3": "stowed",
+      "4": "rbc2",
+      "5": "rbc1",
+      "6": "rnas",
+      "7": "cass",
+      "8": "mirrorup"
+    }
+  },
+  "fakedcs:TERTPOSN": {
+    "channel": "fakedcs:TERTPOSN",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-position in {lnas, lbc1, lbc2, stowed, rbc2, rbc1, rnas, unknown, cass, mirrorup}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "lnas",
+      "1": "lbc1",
+      "2": "lbc2",
+      "3": "stowed",
+      "4": "rbc2",
+      "5": "rbc1",
+      "6": "rnas",
+      "7": "unknown",
+      "8": "cass",
+      "9": "mirrorup"
+    }
+  },
+  "fakedcs:TERTSTAT": {
+    "channel": "fakedcs:TERTSTAT",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-state in {unknown, off, initializing, standby, tracking, fault, manual, halted, disabled, in position, slewing, acquiring, in limit}",
+    "units": {
+      "": "binary",
+      "formatted": ""
+    },
+    "type": "enumerated",
+    "enumerators": {
+      "0": "unknown",
+      "1": "off",
+      "2": "initializing",
+      "4": "standby",
+      "8": "tracking",
+      "16": "fault",
+      "32": "manual",
+      "64": "halted",
+      "128": "disabled",
+      "256": "in position",
+      "512": "slewing",
+      "1024": "acquiring",
+      "2048": "in limit"
+    }
+  },
+  "fakedcs:TERTSTBY": {
+    "channel": "fakedcs:TERTSTBY",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-standby-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTSTBYC": {
+    "channel": "fakedcs:TERTSTBYC",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-standby-command in \"\"",
+    "units": {
+      "": "boolean",
+      "formatted": ""
+    },
+    "type": "boolean"
+  },
+  "fakedcs:TERTSTST": {
+    "channel": "fakedcs:TERTSTST",
+    "gettable": true,
+    "settable": true,
+    "description": "tertiary-state-string in \"\"",
+    "units": {
+      "": "string",
+      "formatted": ""
+    },
+    "type": "string"
+  },
+  "fakedcs:UTC": {
+    "channel": "fakedcs:UTC",
+    "gettable": true,
+    "settable": true,
+    "description": "coordinated-universal-time in h",
+    "units": {
+      "": "Seconds",
+      "formatted": "h"
+    },
+    "type": "double"
+  }
+}
