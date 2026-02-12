@@ -24,6 +24,5 @@ discover = begin.discover
 from .item import Item
 from .store import Store
 from .daemon import Daemon
-Payload = protocol.message.Payload
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

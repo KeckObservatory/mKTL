@@ -11,7 +11,6 @@ from typing import Dict, Optional, Tuple
 import zmq
 
 from ...protocol.message import Message
-from ...protocol.publish import Publish
 from ...transport import TransportPortError
 from ..session import PublishSession, SubscribeSession
 from .framing import from_pub_frames, to_pub_frames
@@ -92,7 +91,7 @@ class Server(PublishSession):
         self.thread = threading.Thread(target=self.run, daemon=True)
         self.thread.start()
 
-    def send(self, msg: Publish) -> None:
+    def send(self, msg: Message) -> None:
         self._queue.put(msg)
         self._sig_tx.send(b"")
 

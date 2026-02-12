@@ -6,22 +6,67 @@ requests (ZMQ/Zyre/MQTT/etc.) live under :mod:`mktl.transport`.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import Optional
+from .message import Message, MsgType
+from .builder import MessageBuilder
 
-from .fields import CONFIG, GET, HASH, SET
-from .message import Message, Payload
+def is_request(msg: Message) -> bool:
+    return msg.env.type in {
+        MsgType.GET,
+        MsgType.SET,
+    }
 
 
-@dataclass(slots=True)
-class Request(Message):
-    """A protocol request that expects a response."""
+def is_response(msg: Message) -> bool:
+    return msg.env.type == MsgType.REP
 
-    # For mKTL requests, msg_type is the *operation* (CONFIG/GET/HASH/SET).
-    msg_type: str = GET
-    target: Optional[str] = None
-    payload: Optional[Payload] = None
 
-    def __post_init__(self):
-        if self.msg_type not in (CONFIG, GET, HASH, SET):
-            raise ValueError(f"invalid request operation: {self.msg_type}")
+def is_ack(msg: Message) -> bool:
+    return msg.env.type == MsgType.ACK
+
+
+def validate(msg: Message) -> None:
+
+    t = msg.env.type
+
+    if t in {MsgType.GET, MsgType.SET, MsgType.REQ}:
+        if msg.env.key is None:
+            raise ValueError("Request message missing key")
+
+    if t == MsgType.SET:
+        if not msg.env.payload:
+            raise ValueError("SET requires payload")
+
+    if t == MsgType.PUB:
+        raise ValueError("PUB should not be validated via request module")
+
+
+def matches(req: Message, resp: Message) -> bool:
+    return req.env.transid == resp.env.transid
+
+
+def build_response(
+    builder: MessageBuilder,
+    req: Message,
+    payload,
+) -> Message:
+
+    return (
+        builder
+        .rep(req.env.transid)
+        .to(req.env.sourceid)
+        .payload(payload)
+        .build()
+    )
+
+
+def build_ack(
+    builder: MessageBuilder,
+    req: Message,
+) -> Message:
+
+    return (
+        builder
+        .ack(req.env.transid)
+        .to(req.env.sourceid)
+        .build()
+    )

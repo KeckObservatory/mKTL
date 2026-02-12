@@ -1,44 +1,43 @@
 """ZMQ multipart framing for protocol messages.
 
 Request/Response (DEALER<->ROUTER)
-    (optional routing prefix...), version, id, type, target, payload_json, bulk
+    (optional routing prefix...), version, transid, type, key, payload_json, binary
 
 Publish (PUB/SUB)
-    topic_with_trailing_dot, version, payload_json, bulk
+    topic_with_trailing_dot, version, payload_json, binary
 """
 
 from __future__ import annotations
 
-from typing import Iterable, Optional, Sequence, Tuple
+from typing import Sequence, Tuple
 
-from ...protocol.message import Message, Payload, PROTOCOL_VERSION
+from ...protocol.message import Message, Envelope, MsgType
 from ..codec import encode_payload, decode_payload
 
 
-_VERSION_BYTES = PROTOCOL_VERSION.encode()
-
-
-def _as_bytes_id(msg_id: bytes) -> bytes:
-    # msg_id is bytes in the new protocol. Keep as-is.
-    return msg_id
+_VERSION = "a"
+_VERSION_BYTES = _VERSION.encode()
 
 
 def to_request_frames(msg: Message, *, include_prefix: bool = False) -> Tuple[bytes, ...]:
-    """Encode a protocol Message to ZMQ request/response multipart frames."""
 
-    prefix: Tuple[bytes, ...] = tuple(msg.meta.get("zmq_prefix", ()))
-    if prefix and not include_prefix:
+    env = msg.env
+    prefix: Tuple[bytes, ...] = tuple(env.meta.get("zmq_prefix", ()))
+    if not include_prefix:
         prefix = ()
 
-    payload_bytes, bulk = encode_payload(msg.payload)
-    target = (msg.target or "").encode()
+    payload_bytes = encode_payload(env.payload)
+    binary = msg.binary or b""
+    transid = env.transid.encode()
+    key = (env.key or "").encode()
+
     parts = (
         _VERSION_BYTES,
-        _as_bytes_id(msg.msg_id),
-        msg.msg_type.encode(),
-        target,
+        transid,
+        env.type.value.encode(),
+        key,
         payload_bytes,
-        bulk,
+        binary,
     )
     return prefix + parts
 
@@ -46,16 +45,16 @@ def to_request_frames(msg: Message, *, include_prefix: bool = False) -> Tuple[by
 def from_request_frames(parts: Sequence[bytes]) -> Message:
     """Decode ROUTER/DEALER parts into a protocol Message.
 
-    If a ROUTER identity prefix is present, it is stored as msg.meta['zmq_prefix'].
+    If a ROUTER identity prefix is present, it is stored in env.meta['zmq_prefix'].
     """
 
     if not parts:
         raise ValueError("empty message")
 
     # ROUTER sockets prepend identity frames. We expect either:
-    #   [version, id, type, target, payload, bulk]
+    #   [version, transid, type, key, payload, binary]
     # or
-    #   [ident, version, id, type, target, payload, bulk]
+    #   [ident, version, transid, type, key, payload, binary]
     if parts[0] == _VERSION_BYTES:
         prefix: Tuple[bytes, ...] = ()
         start = 0
@@ -65,37 +64,50 @@ def from_request_frames(parts: Sequence[bytes]) -> Message:
 
     their_version = parts[start]
     if their_version != _VERSION_BYTES:
-        # Version mismatch: represent as an error payload.
-        err = {
-            "type": "RuntimeError",
-            "text": f"message is mKTL protocol {their_version!r}, recipient expects {_VERSION_BYTES!r}",
-        }
-        payload = Payload(value=None, error=err)
-        msg = Message(msg_type="REP", target="???", payload=payload, msg_id=parts[start + 1])
-        if prefix:
-            msg.meta["zmq_prefix"] = prefix
-        return msg
+        meta = {"zmq_prefix": prefix} if prefix else {}
+        env = Envelope(
+            type=MsgType.REP,
+            sourceid="",
+            transid=parts[start + 1].decode(),
+            payload={"error": {
+                "type": "RuntimeError",
+                "text": f"mKTL protocol {their_version!r}, expected {_VERSION_BYTES!r}",
+            }},
+            meta=meta,
+        )
+        return Message(env=env)
 
-    msg_id = parts[start + 1]
+    transid = parts[start + 1].decode()
     msg_type = parts[start + 2].decode()
-    target = parts[start + 3].decode() if parts[start + 3] not in (b"", None) else None
+    key_bytes = parts[start + 3]
+    key = key_bytes.decode() if key_bytes not in (b"", None) else None
     payload_bytes = parts[start + 4]
-    bulk_bytes = parts[start + 5] if len(parts) > start + 5 else b""
+    binary_bytes = parts[start + 5] if len(parts) > start + 5 else b""
 
-    payload = decode_payload(payload_bytes, bulk_bytes)
-    msg = Message(msg_type=msg_type, target=target, payload=payload, msg_id=msg_id)
-    if prefix:
-        msg.meta["zmq_prefix"] = prefix
-    return msg
+    payload = decode_payload(payload_bytes)
+    meta = {"zmq_prefix": prefix} if prefix else {}
+
+    env = Envelope(
+        type=MsgType(msg_type),
+        sourceid=prefix[0].decode() if prefix else "",
+        transid=transid,
+        key=key,
+        payload=payload,
+        meta=meta,
+    )
+
+    return Message(env=env, binary=binary_bytes if binary_bytes else None)
 
 
 def to_pub_frames(msg: Message) -> Tuple[bytes, ...]:
     """Encode a publish message for PUB/SUB sockets."""
 
-    topic = (msg.target or "") + "."  # trailing dot to prevent prefix matches
+    env = msg.env
+    topic = (env.key or "") + "."  # trailing dot to prevent prefix matches
     topic_b = topic.encode()
-    payload_bytes, bulk = encode_payload(msg.payload)
-    return (topic_b, _VERSION_BYTES, payload_bytes, bulk)
+    payload_bytes = encode_payload(env.payload)
+    binary = msg.binary or b""
+    return (topic_b, _VERSION_BYTES, payload_bytes, binary)
 
 
 def from_pub_frames(parts: Sequence[bytes]) -> Message:
@@ -105,14 +117,28 @@ def from_pub_frames(parts: Sequence[bytes]) -> Message:
     topic = parts[0].decode()
     if topic.endswith("."):
         topic = topic[:-1]
+
     their_version = parts[1]
     if their_version != _VERSION_BYTES:
-        err = {
-            "type": "RuntimeError",
-            "text": f"message is mKTL protocol {their_version!r}, recipient expects {_VERSION_BYTES!r}",
-        }
-        payload = Payload(value=None, error=err)
-        return Message(msg_type="PUB", target=topic, payload=payload)
+        env = Envelope(
+            type=MsgType.PUB,
+            sourceid="",
+            key=topic,
+            payload={"error": {
+                "type": "RuntimeError",
+                "text": f"mKTL protocol {their_version!r}, expected {_VERSION_BYTES!r}",
+            }},
+        )
+        return Message(env=env)
 
-    payload = decode_payload(parts[2], parts[3])
-    return Message(msg_type="PUB", target=topic, payload=payload)
+    payload = decode_payload(parts[2])
+    binary_bytes = parts[3] if len(parts) > 3 else b""
+
+    env = Envelope(
+        type=MsgType.PUB,
+        sourceid="",
+        key=topic,
+        payload=payload,
+    )
+
+    return Message(env=env, binary=binary_bytes if binary_bytes else None)

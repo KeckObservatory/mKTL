@@ -7,25 +7,22 @@ import threading
 import traceback
 from typing import Dict, Optional
 
-from ..protocol.factory import fast_ack
-from ..protocol.fields import ACK, REP
-from ..protocol.message import Message, Payload
-from ..protocol.request import Request
+from ..protocol.message import Message, Envelope, MsgType
 from .base import Transport, TransportTimeout
 
 
 class PendingRequest:
     """Client-side helper that provides ACK/REP synchronization."""
 
-    def __init__(self, req: Request):
-        self.req = req
+    def __init__(self, msg: Message):
+        self.req = msg
         self.response: Optional[Message] = None
         self.ack_event = threading.Event()
         self.rep_event = threading.Event()
 
     @property
-    def id(self) -> bytes:
-        return self.req.msg_id
+    def id(self) -> str:
+        return self.req.env.transid
 
     def wait_ack(self, timeout: Optional[float]) -> bool:
         return self.ack_event.wait(timeout)
@@ -50,32 +47,32 @@ class RequestSession:
 
     def __init__(self, transport: Transport):
         self.transport = transport
-        self._pending: Dict[bytes, PendingRequest] = {}
+        self._pending: Dict[str, PendingRequest] = {}
 
     def _handle_incoming(self, msg: Message) -> None:
         """Correlate incoming ACK/REP to a PendingRequest."""
-        pending = self._pending.get(msg.msg_id)
+        pending = self._pending.get(msg.env.transid)
         if pending is None:
             return
 
-        if msg.msg_type == ACK:
+        if msg.env.type == MsgType.ACK:
             pending._complete_ack()
             return
 
-        # REP (or error REP on version mismatch)
+        # REP
         pending._complete(msg)
-        self._pending.pop(msg.msg_id, None)
+        self._pending.pop(msg.env.transid, None)
 
-    def send(self, request: Request) -> PendingRequest:
-        pending = PendingRequest(request)
+    def send(self, msg: Message) -> PendingRequest:
+        pending = PendingRequest(msg)
         self._pending[pending.id] = pending
-        self.transport.send(request)
+        self.transport.send(msg)
 
         ack = pending.wait_ack(self.timeout)
         if not ack:
             self._pending.pop(pending.id, None)
             raise TransportTimeout(
-                f"{request.msg_type}: no ACK in {self.timeout:.2f} sec"
+                f"{msg.env.type}: no ACK in {self.timeout:.2f} sec"
             )
         return pending
 
@@ -83,45 +80,51 @@ class RequestSession:
 class RequestServer:
     """Server-side request handler."""
 
-    def __init__(self, transport: Transport):
+    node_id = ""
+    _on_receive = None
+
+    def __init__(self, transport: Transport, node_id: str = ""):
         self.transport = transport
+        self.node_id = node_id
 
     # --- request handling hooks ---
-    def req_handler(self, request: Request) -> Optional[Payload]:
+    def req_handler(self, msg: Message) -> Optional[dict]:
         """Override in subclasses.
 
         Return:
-          - Payload -> will be wrapped into a REP
-          - None    -> no immediate REP (handler is responsible for later response)
+          - dict  -> will be wrapped into a REP
+          - None  -> no immediate REP (handler is responsible)
         """
-
-        # Default: no-op
-        self.req_ack(request)
+        self.req_ack(msg)
         return None
 
-    def req_ack(self, request: Request) -> None:
-        self.send(fast_ack(request))
+    def req_ack(self, msg: Message) -> None:
+        ack = Message(
+            env=Envelope(
+                type=MsgType.ACK,
+                sourceid=self.node_id,
+                transid=msg.env.transid,
+                destid=msg.env.sourceid,
+                key=msg.env.key,
+                meta=dict(msg.env.meta),
+            ),
+        )
+        self.send(ack)
 
     def send(self, response: Message) -> None:
         self.transport.send(response)
 
     # --- internal ---
     def _req_incoming(self, msg: Message) -> None:
-        """Dispatch to req_handler, build REP, send."""
-        # Convert generic Message to typed Request (validates op)
-        try:
-            req = Request(msg_type=msg.msg_type, target=msg.target, payload=msg.payload, msg_id=msg.msg_id)
-        except Exception:
-            # If invalid, treat as opaque request
-            req = Request(msg_type=msg.msg_type, target=msg.target, payload=msg.payload, msg_id=msg.msg_id)
+        if self._on_receive is not None:
+            self._on_receive(msg)
+            return
 
-        req.meta.update(msg.meta)
-
-        payload: Optional[Payload] = None
+        payload: Optional[dict] = None
         error: Optional[dict] = None
 
         try:
-            payload = self.req_handler(req)
+            payload = self.req_handler(msg)
         except Exception:
             e_class, e_instance, _tb = sys.exc_info()
             error = {
@@ -133,13 +136,21 @@ class RequestServer:
         if payload is None and error is None:
             return
 
-        if payload is None:
-            payload = Payload(value=None)
+        rep_payload = payload if payload is not None else {}
         if error is not None:
-            payload.error = error
+            rep_payload["error"] = error
 
-        rep = Message(msg_type=REP, target=req.target, payload=payload, msg_id=req.msg_id)
-        rep.meta.update(req.meta)
+        rep = Message(
+            env=Envelope(
+                type=MsgType.REP,
+                sourceid=self.node_id,
+                transid=msg.env.transid,
+                destid=msg.env.sourceid,
+                key=msg.env.key,
+                payload=rep_payload,
+                meta=dict(msg.env.meta),
+            ),
+        )
         self.send(rep)
 
 

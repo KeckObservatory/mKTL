@@ -20,8 +20,7 @@ from typing import Dict, Optional, Tuple
 
 import zmq
 
-from ...protocol.message import Message, Payload
-from ...protocol.request import Request
+from ...protocol.message import Message
 from ...transport import TransportTimeout, TransportPortError
 from ..session import RequestSession, RequestServer, PendingRequest
 from .framing import from_request_frames, to_request_frames
@@ -60,7 +59,7 @@ class Client(RequestSession):
         self._signal_tx = zmq_context.socket(zmq.PAIR)
         self._signal_tx.connect(internal)
 
-        self._pending: Dict[bytes, PendingRequest] = {}
+        self._pending: Dict[str, PendingRequest] = {}
         self._thread = threading.Thread(target=self.run, daemon=True)
         self._thread.start()
 
@@ -87,15 +86,15 @@ class Client(RequestSession):
                     msg = from_request_frames(parts)
                     self._handle_incoming(msg)
 
-    def send(self, request: Request) -> PendingRequest:
-        pending = PendingRequest(request)
+    def send(self, msg: Message) -> PendingRequest:
+        pending = PendingRequest(msg)
         self._outbox.put(pending)
         self._signal_tx.send(b"")
 
         ack = pending.wait_ack(self.timeout)
         if not ack:
             raise TransportTimeout(
-                f"{request.msg_type} @ {self.address}:{self.port}: no ACK in {self.timeout:.2f} sec"
+                f"{msg.env.type} @ {self.address}:{self.port}: no ACK in {self.timeout:.2f} sec"
             )
         return pending
 
@@ -195,15 +194,13 @@ def client(address: str, port: int) -> Client:
         return c
 
 
-def send(address: str, port: int, message: Request) -> Payload:
+def send(address: str, port: int, message: Message) -> Message:
     c = client(address, port)
     pending = c.send(message)
     response = pending.wait(timeout=60)
     if response is None:
         raise TransportTimeout("no response received")
-    if response.payload is None:
-        return Payload(value=None)
-    return response.payload
+    return response
 
 
 def _cleanup() -> None:
