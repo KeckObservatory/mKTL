@@ -21,9 +21,9 @@ from typing import Dict, Optional, Tuple
 import zmq
 
 from ...protocol.message import Message
+from ...protocol.wire import pack_frame, unpack_frame
 from ...transport import TransportTimeout, TransportPortError
 from ..session import RequestSession, RequestServer, PendingRequest
-from .framing import from_request_frames, to_request_frames
 
 
 minimum_port = 10079
@@ -68,9 +68,8 @@ class Client(RequestSession):
         self._signal_rx.recv(flags=zmq.NOBLOCK)
         pending: PendingRequest = self._outbox.get(block=False)
 
-        frames = to_request_frames(pending.req)
         self._pending[pending.id] = pending
-        self.socket.send_multipart(frames)
+        self.socket.send(pack_frame(pending.req))
 
     def run(self) -> None:
         poller = zmq.Poller()
@@ -82,8 +81,7 @@ class Client(RequestSession):
                 if active == self._signal_rx:
                     self._handle_outgoing()
                 elif active == self.socket:
-                    parts = tuple(self.socket.recv_multipart())
-                    msg = from_request_frames(parts)
+                    msg = unpack_frame(self.socket.recv())
                     self._handle_incoming(msg)
 
     def send(self, msg: Message) -> PendingRequest:
@@ -160,8 +158,8 @@ class Server(RequestServer):
     def _rep_outgoing(self) -> None:
         self._signal_rx.recv(flags=zmq.NOBLOCK)
         response: Message = self._responses.get(block=False)
-        frames = to_request_frames(response, include_prefix=True)
-        self.socket.send_multipart(frames)
+        identity = response.env.meta.get("zmq_prefix", (b"",))[0]
+        self.socket.send_multipart([identity, pack_frame(response)])
 
     def run(self) -> None:
         poller = zmq.Poller()
@@ -173,8 +171,9 @@ class Server(RequestServer):
                 if active == self._signal_rx:
                     self._rep_outgoing()
                 elif active == self.socket:
-                    parts = tuple(self.socket.recv_multipart())
-                    msg = from_request_frames(parts)
+                    identity, wire_bytes = self.socket.recv_multipart()
+                    msg = unpack_frame(wire_bytes)
+                    msg.env.meta["zmq_prefix"] = (identity,)
                     self.workers.submit(self._req_incoming, msg)
 
 

@@ -11,9 +11,9 @@ from typing import Dict, Optional, Tuple
 import zmq
 
 from ...protocol.message import Message
+from ...protocol.wire import pack_frame, unpack_frame
 from ...transport import TransportPortError
 from ..session import PublishSession, SubscribeSession
-from .framing import from_pub_frames, to_pub_frames
 
 minimum_port = 10139
 maximum_port = 13679
@@ -40,8 +40,8 @@ class Client(SubscribeSession):
         self.socket.setsockopt(zmq.SUBSCRIBE, (topic + ".").encode())
 
     def recv(self) -> Message:
-        parts = self.socket.recv_multipart()
-        return from_pub_frames(parts)
+        _topic, wire_bytes = self.socket.recv_multipart()
+        return unpack_frame(wire_bytes)
 
 
 class Server(PublishSession):
@@ -98,8 +98,8 @@ class Server(PublishSession):
     def _send_one(self) -> None:
         self._sig_rx.recv(flags=zmq.NOBLOCK)
         msg = self._queue.get(block=False)
-        frames = to_pub_frames(msg)
-        self.socket.send_multipart(frames)
+        topic = ((msg.env.key or "") + ".").encode()
+        self.socket.send_multipart([topic, pack_frame(msg)])
 
     def run(self) -> None:
         poller = zmq.Poller()
