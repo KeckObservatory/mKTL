@@ -34,7 +34,7 @@ The command line arguments describe its usage:
 .. _mkregistryd:
 
 mkregistryd
----------
+-----------
 
 The `mkregistryd` persistent daemon is a discovery aid, listening for UDP
 broadcasts on a well-known port number so that clients can be directed to
