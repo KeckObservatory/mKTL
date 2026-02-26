@@ -30,18 +30,18 @@ def _clear(store):
 
 
 def discover(*targets):
-    """ Look for mKTL brokers, both by broadcasting on the local network
+    """ Look for mKTL registries, both by broadcasting on the local network
         and by directly querying any/all supplied addresses. The goal of
         this discovery is to populate a local cache including any/all stores
-        known to these brokers, for all future queries. This is especially
+        known to these registries, for all future queries. This is especially
         helpful if the local client is not on the same network as the
-        brokers of interest.
+        registries of interest.
     """
 
-    brokers = protocol.discover.search(wait=True, targets=targets)
+    registries = protocol.discover.search(wait=True, targets=targets)
 
-    if len(brokers) == 0:
-        raise RuntimeError('no brokers available')
+    if len(registries) == 0:
+        raise RuntimeError('no registries available')
 
     # Hacking the timeout for discovery, this is not expected to throw
     # errors with minimal delay.
@@ -49,7 +49,7 @@ def discover(*targets):
     old_timeout = protocol.request.Client.timeout
     protocol.request.Client.timeout = 0.5
 
-    for address,port in brokers:
+    for address,port in registries:
         request = protocol.message.Request('HASH')
         try:
             payload = protocol.request.send(address, port, request)
@@ -133,11 +133,11 @@ def get(store, key=None):
 
     if len(configuration) == 0:
         # Nothing valid cached locally. Broadcast for responses.
-        brokers = protocol.discover.search()
-        if len(brokers) == 0:
+        registries = protocol.discover.search()
+        if len(registries) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
-        hostname,port = brokers[0]
+        hostname,port = registries[0]
         message = protocol.message.Request('CONFIG', store)
         payload = protocol.request.send(hostname, port, message)
 
