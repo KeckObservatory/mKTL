@@ -224,6 +224,7 @@ def preload_registries():
 
     directory = config.directory()
     client = os.path.join(directory, 'client')
+    manual = os.path.join(client, 'registries')
     cached = os.path.join(client, 'registries.cache')
 
     lines = list()
