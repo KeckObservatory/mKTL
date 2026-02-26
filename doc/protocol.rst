@@ -26,10 +26,10 @@ listener, operating on a unique port on that host.
 A given host providing connectivity for mKTL could have thousands of daemons
 running locally, each listening on a unique port number. Each daemon deploys
 a UDP listener on a predetermined port number (10111) to enable discovery of
-daemons on that host; a :ref:`dedicated "broker" process <mkbrokerd>` also
+daemons on that host; a :ref:`dedicated registry process <mkregistryd>` also
 listens on a predetermined port number (10103) to streamline discovery from
 the client side. This usage pattern expects there to be a single
-:ref:`mkbrokerd` process running on every host running one or more mKTL
+:ref:`mkregistryd` process running on every host running one or more mKTL
 daemons. The discovery exchange is :ref:`described below <discovery>`
 in more detail.
 
@@ -424,11 +424,11 @@ port, which greatly simplfies periodic discovery.
 
 The discovery of daemons is a two-part process; rather than ask every daemon
 to cache the configuration for every other daemon on its local network, the
-caching of configuration data is handled by :ref:`mkbrokerd`; when a client
+caching of configuration data is handled by :ref:`mkregistryd`; when a client
 issues a discovery broadcast, it is not looking for responses from individual
-daemons, it is looking for responses from a :ref:`mkbrokerd` process.
+daemons, it is looking for responses from a :ref:`mkregistryd` process.
 
-This two-step approach, of contacting the broker process, and subsequently
+This two-step approach, of contacting the registry process, and subsequently
 contacting the authoritative daemon, could be avoided if every local daemon
 caching the configuration of every other local daemon; however, a typical
 client will cache the response, and discovery is only invoked if the cached
@@ -439,24 +439,25 @@ exponentially with the number of locally reachable daemons.
 
 There are four shared secrets used in the discovery exchange:
 
-===============	===============================================================
-*Secret*	*Description*
-===============	===============================================================
-**broker port**	The UDP port used to discover locally accessible
-		:ref:`mkbrokerd` processes. Clients use this port to find
-		all such processes. The port number is 10103.
+================= ==============================================================
+*Secret*	  *Description*
+================= ==============================================================
+**registry port** The UDP port used to discover locally accessible
+		  :ref:`mkregistryd` processes. Clients use this port to find
+		  all such processes. The port number is 10103.
 
-**daemon port**	The UDP port used to discover locally accessible mKTL daemons.
-		:ref:`mkbrokerd` uses this port to find all such daemons.
-		The port number is 10111.
+**daemon port**	  The UDP port used to discover locally accessible mKTL daemons.
+		  :ref:`mkregistryd` uses this port to find all such daemons.
+		  The port number is 10111.
 
-**call**	An arbitrary string used by the discoverer to trigger a
-		response from the listener. The string value is ``I heard it``.
+**call**	  An arbitrary string used by the discoverer to trigger a
+		  response from the listener. The string value is
+		  ``I heard it``.
 
-**response**	An arbitrary string used by the listener to respond to any
-		received calls. The string value is ``on the X:``.
+**response**	  An arbitrary string used by the listener to respond to any
+		  received calls. The string value is ``on the X:``.
 
-===============	===============================================================
+================= ==============================================================
 
 The purpose of discovery is to convey a single piece of information: what is
 the port number of an actual mKTL request handler on this host? That port

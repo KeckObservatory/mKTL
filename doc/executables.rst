@@ -31,14 +31,14 @@ The command line arguments describe its usage:
    :language: none
 
 
-.. _mkbrokerd:
+.. _mkregistryd:
 
-mkbrokerd
+mkregistryd
 ---------
 
-The `mkbrokerd` persistent daemon is a discovery aid, listening for UDP
+The `mkregistryd` persistent daemon is a discovery aid, listening for UDP
 broadcasts on a well-known port number so that clients can be directed to
 a specific mKTL daemon handling requests for a specific store, or fraction
-of a store. While having a `mkbrokerd` daemon running is not a strict
+of a store. While having a `mkregistryd` daemon running is not a strict
 requirement it is a key component of automated discovery of mKTL stores on
 a local network.
