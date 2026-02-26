@@ -124,7 +124,7 @@ def parse_command_line():
 
     parser.add_argument('requests',
         nargs='*',
-        help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of broker addresses.')
+        help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of registry addresses.')
 
 
     parsed = parser.parse_args()
