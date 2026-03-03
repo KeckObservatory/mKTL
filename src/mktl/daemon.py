@@ -309,12 +309,21 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
+        key = '_config'
+        items[key] = dict()
+        items[key]['description'] = 'JSON description of all items for this store.'
+
         key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
         items[key]['format'] = '%.3f'
+
+        key = '_' + self.alias + 'con'
+        items[key] = dict()
+        items[key]['description'] = 'JSON description of all items for this daemon.'
+        items[key]['settable'] = False
 
         key = '_' + self.alias + 'cpu'
         items[key] = dict()
@@ -359,8 +368,10 @@ class Daemon:
         # Having updated the configuration, now instantiate the built-in items.
 
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
+        self.add_item(DaemonConfiguration, '_' + self.alias + 'con')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
+        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
+        self.add_item(StoreConfiguration, '_config')
 
         for suffix in ('dev', 'host'):
             key = '_' + self.alias + suffix
@@ -464,6 +475,19 @@ class RequestServer(protocol.request.Server):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
 
+        daemon.config.register(self.clear_handlers)
+
+
+    def clear_handlers(self):
+        self._getters = dict()
+        self._setters = dict()
+
+        if self.daemon.store is None:
+            # Still initializing.
+            return
+
+        self._getters[self.daemon.store.name + '._config'] = self.req_get_config
+
 
     def req_config(self, request):
 
@@ -516,6 +540,13 @@ class RequestServer(protocol.request.Server):
 
     def req_get(self, request):
 
+        try:
+            getter = self._getters[request.target]
+        except KeyError:
+            pass
+        else:
+            return getter(request)
+
         store, key = request.target.split('.', 1)
 
         if store != self.daemon.store.name:
@@ -528,8 +559,18 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        response = self.daemon.store[key].req_get(request)
-        return response
+        getter = self.daemon.store[key].req_get
+        self._getters[request.target] = getter
+        return getter(request)
+
+
+    def req_get_config(self, request):
+
+        store, key = request.target.split('.', 1)
+
+        configuration = config.get(store)
+        configuration = configuration._by_uuid
+        return configuration
 
 
     def req_set(self, request):
@@ -856,6 +897,21 @@ class PendingPersistence:
 
 
 
+class DaemonConfiguration(item.Item):
+
+    def perform_get(self):
+
+        uuid = self.store._daemon.uuid
+        configuration = config.get(self.store.name)
+        configuration = configuration[uuid]
+
+        return configuration
+
+
+# end of class DaemonConfiguration
+
+
+
 class MemoryUsage(item.Item):
 
     def __init__(self, *args, **kwargs):
@@ -909,6 +965,42 @@ class ProcessorUsage(item.Item):
 
 
 # end of class ProcessorUsage
+
+
+
+class StoreConfiguration(item.Item):
+    ### Is this class necessary at the per-daemon level? Or should it strictly
+    ### be the purview of the broker/registry?
+
+    def __init__(self, *args, **kwargs):
+
+        item.Item.__init__(self, *args, **kwargs)
+        self.publish_on_set = False
+
+        configuration = config.get(self.store.name)
+        configuration.register(self.req_poll)
+
+
+    def perform_get(self):
+
+        configuration = config.get(self.store.name)
+        configuration = configuration._by_uuid
+        return configuration
+
+
+    def perform_set(self, new_config):
+
+        configuration = config.get(self.store.name)
+
+        for uuid,block in new_config:
+            if uuid == self.store._daemon.uuid:
+                # Silently drop any block describing our local daemon.
+                continue
+
+            configuration.update(block)
+
+
+# end of class StoreConfiguration
 
 
 
