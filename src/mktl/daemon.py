@@ -464,6 +464,9 @@ class RequestServer(protocol.request.Server):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
 
+        self._req_get_methods = dict()
+        self._req_set_methods = dict()
+
 
     def req_config(self, request):
 
@@ -516,6 +519,13 @@ class RequestServer(protocol.request.Server):
 
     def req_get(self, request):
 
+        try:
+            getter = self._req_get_methods[request.target]
+        except KeyError:
+            pass
+        else:
+            return getter(request)
+
         store, key = request.target.split('.', 1)
 
         if store != self.daemon.store.name:
@@ -528,23 +538,12 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        response = self.daemon.store[key].req_get(request)
-        return response
+        getter = self.daemon.store[key].req_get
+        self._req_get_methods[request.target] = getter
+        return getter(request)
 
 
     def req_set(self, request):
-
-        store, key = request.target.split('.', 1)
-
-        if store != self.daemon.store.name:
-            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
-
-        block = self.daemon.config[self.daemon.uuid]
-        items = block['items']
-        if key in items:
-            pass
-        else:
-            raise KeyError('this daemon does not contain ' + repr(key))
 
         ### This may be the right place to send a publish message indicating
         ### that a set request has been received. This would largely be a
@@ -555,8 +554,28 @@ class RequestServer(protocol.request.Server):
         ### This would allow a debug client to subscribe to all messages with
         ### a leading 'set:' topic.
 
-        response = self.daemon.store[key].req_set(request)
-        return response
+        try:
+            setter = self._req_set_methods[request.target]
+        except KeyError:
+            pass
+        else:
+            return setter(request)
+
+        store, key = request.target.split('.', 1)
+
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        block = self.daemon.config[self.daemon.uuid]
+        items = block['items']
+        if key in items:
+            pass
+        else:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        setter = self.daemon.store[key].req_set
+        self._req_set_methods[request.target] = setter
+        return setter(request)
 
 
     def req_hash(self, request):
