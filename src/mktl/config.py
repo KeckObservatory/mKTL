@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import uuid
+import weakref
 
 # Importing pint is expensive, representing something like 30% of the
 # user runtime for a simple mKTL command. It will be imported on a
@@ -47,6 +48,8 @@ class Configuration:
         self._by_uuid = dict()
         self._by_alias = dict()
         self._by_key = dict()
+
+        self.callbacks = list()
 
         if store in _cache:
             raise ValueError('Configuration class is a singleton')
@@ -551,6 +554,46 @@ class Configuration:
             configuration['items'] = json.loads(raw_json)
 
         return configuration,target_uuid
+
+
+    def _propagate(self):
+        """ Invoke any registered callbacks upon a configuration update.
+        """
+
+        if self.callbacks:
+            pass
+        else:
+            return
+
+        invalid = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            self.callbacks.remove(reference)
+
+
+    def register(self, method):
+        """ Register a callback to be invoked whenever this configuration
+            instance receives an update. The callback should take no additional
+            arguments.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the registered method must be callable')
+
+        reference = weakref.ref(method)
+        self.callbacks.append(reference)
+
+        method()
 
 
     def _reject_units(self, *args, **kwargs):
@@ -1123,6 +1166,8 @@ class Configuration:
 
         if save == True:
             self._save_client(block)
+
+        self._propagate()
 
 
     def uuids(self, authoritative=False):
