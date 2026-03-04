@@ -224,10 +224,63 @@ class Daemon:
                 created.register(callback)
 
 
+    def add_handlers(self, handlers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods handling GET and SET
+            requests, bypassing the usual handling chain involving
+            :class:`mktl.Item` instances.
+
+            A triplet is the key for an item (including the store name), whether
+            this is a 'get' or a 'set' handler, and a valid reference to a
+            method. For example::
+
+                ('maunakea.temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.req_get` and
+            :func:`mktl.Item.req_set` for additional details; inspection of
+            the implementation for those methods is recommended to ensure all
+            the necessary actions are covered.
+        """
+
+        for triplet in handlers:
+            full_key,request,method = triplet
+
+            full_key = full_key.lower()
+            full_key = full_key.strip()
+
+            # Allow this method to be called before placeholder Item instances
+            # have been established. The use of external handler methods
+            # implies the caller will not be instantiating custom Item
+            # subclasses; instantiating them now ensures any custom code is
+            # exclusive.
+
+            store,key = full_key.split('.', 1)
+
+            try:
+                existing = self.store._items[key]
+            except KeyError:
+                raise KeyError('this daemon does not contain ' + repr(key))
+
+            if existing is None or existing.authoritative == False:
+                self.add_item(item.Item, key)
+
+
+            request = request.lower()
+            request = request.strip()
+
+            if request == 'get':
+                self.rep._req_get_handlers[full_key] = method
+            elif request == 'set':
+                return self.add_set_performer(method)
+            else:
+                raise ValueError("request must be either 'get' or 'set'")
+
+
+
     def add_performers(self, performers):
         """ This method is intended to be a single call, accepting a sequence
             of triplets mapping external methods performing GET and SET
-            requests back to the :class:`mktl.Item` instances receiving those
+            requests onto the :class:`mktl.Item` instances receiving those
             requests from this daemon.
 
             A triplet is the key for an item (omitting the store name), whether
@@ -243,11 +296,12 @@ class Daemon:
         for triplet in performers:
             key,request,method = triplet
 
-            # Allow this method to be called before placeolder Item instances
+            # Allow this method to be called before placeholder Item instances
             # have been established. The use of external performer methods,
             # rather than overriding Item.perform_get() and Item.perform_set(),
             # implies the caller will not be instantiating custom Item
-            # subclasses.
+            # subclasses; instantiating them now ensures any custom code is
+            # exclusive.
 
             try:
                 existing = self.store._items[key]
@@ -501,8 +555,8 @@ class RequestServer(protocol.request.Server):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
 
-        self._req_get_methods = dict()
-        self._req_set_methods = dict()
+        self._req_get_handlers = dict()
+        self._req_set_handlers = dict()
 
 
     def req_config(self, request):
@@ -557,7 +611,7 @@ class RequestServer(protocol.request.Server):
     def req_get(self, request):
 
         try:
-            getter = self._req_get_methods[request.target]
+            getter = self._req_get_handlers[request.target]
         except KeyError:
             pass
         else:
@@ -576,7 +630,7 @@ class RequestServer(protocol.request.Server):
             raise KeyError('this daemon does not contain ' + repr(key))
 
         getter = self.daemon.store[key].req_get
-        self._req_get_methods[request.target] = getter
+        self._req_get_handlers[request.target] = getter
         return getter(request)
 
 
@@ -592,7 +646,7 @@ class RequestServer(protocol.request.Server):
         ### a leading 'set:' topic.
 
         try:
-            setter = self._req_set_methods[request.target]
+            setter = self._req_set_handlers[request.target]
         except KeyError:
             pass
         else:
@@ -611,7 +665,7 @@ class RequestServer(protocol.request.Server):
             raise KeyError('this daemon does not contain ' + repr(key))
 
         setter = self.daemon.store[key].req_set
-        self._req_set_methods[request.target] = setter
+        self._req_set_handlers[request.target] = setter
         return setter(request)
 
 
