@@ -224,6 +224,34 @@ class Daemon:
                 created.register(callback)
 
 
+    def add_performers(self, performers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods performing GET and SET
+            requests back to the :class:`mktl.Item` instances receiving those
+            requests from this daemon.
+
+            A triplet is the key for an item (omitting the store name), whether
+            this is a 'get' or a 'set' performer, and a valid reference to a
+            method. For example::
+
+                ('temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        for triplet in performers:
+            key,request,method = triplet
+
+            existing = self.store._items[key]
+
+            if existing is None or existing.authoritative == False:
+                self.add_item(item.Item, key)
+                existing = self.store[key]
+
+            existing.add_performer(request, method)
+
+
     def _begin_persistence(self):
         """ Start the background process responsible for updating the
             persistent value cache.
