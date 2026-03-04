@@ -143,22 +143,22 @@ class Item:
         self.perform_get = self._perform_get_wrapper
 
 
-    def add_performer(self, type, method):
+    def add_performer(self, request, method):
         """ Define a method that will be called for either GET or SET requests,
-            determined by the *type* argument, which must be one of 'get' or
+            determined by the *request* argument, which must be one of 'get' or
             'set'. See :func:`add_get_performer` and :func:`add_set_performer`
             for additional information.
         """
 
-        type = type.lower()
-        type = type.strip()
+        request = request.lower()
+        request = request.strip()
 
-        if type == 'get':
+        if request == 'get':
             return self.add_get_performer(method)
-        elif type == 'set':
+        elif request == 'set':
             return self.add_set_performer(method)
         else:
-            raise ValueError("type must be either 'get' or 'set'")
+            raise ValueError("request must be either 'get' or 'set'")
 
 
     def add_set_performer(self, method):
