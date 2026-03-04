@@ -243,6 +243,12 @@ class Daemon:
         for triplet in performers:
             key,request,method = triplet
 
+            # Allow this method to be called before placeolder Item instances
+            # have been established. The use of external performer methods,
+            # rather than overriding Item.perform_get() and Item.perform_set(),
+            # implies the caller will not be instantiating custom Item
+            # subclasses.
+
             existing = self.store._items[key]
 
             if existing is None or existing.authoritative == False:
