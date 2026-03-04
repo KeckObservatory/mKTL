@@ -131,7 +131,8 @@ class Item:
     def add_get_performer(self, method):
         """ Define a method that will be called for all GET requests for
             this item. This will replace the :func:`perform_get` method.
-            The performer method must accept no arguments.
+            The performer method must accept no arguments; refer to
+            :func:`perform_get` for additional details.
         """
 
         if callable(method):
@@ -165,7 +166,8 @@ class Item:
         """ Define a method that will be called for all SET requests for
             this item. This will replace the :func:`perform_set` method.
             The performer method must accept one argument, the 'unformatted'
-            Python native representation of the item value.
+            Python native representation of the item value; refer to
+            :func:`perform_set` for additional details.
         """
 
         if callable(method):
@@ -415,6 +417,14 @@ class Item:
             is returned it will be used as-is, otherwise the return value
             will be passed to :func:`to_payload` for encapsulation.
 
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a get request takes to process. There
+            are also no restrictions on concurrency, though ideally a get
+            request is trivial to execute; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
+
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
             'value'; this is not expected to be a common occurrence, but if a
@@ -443,6 +453,13 @@ class Item:
             a set request for this item. No return value is expected. Any
             subclass implementations should raise an exception in order to
             trigger an error response.
+
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a set request takes to process. There
+            are also no restrictions on concurrency; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
 
             Any return value, though again none is expected, will be
             encapsulated via :func:`to_payload`, after the same fashion as
