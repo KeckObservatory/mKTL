@@ -128,6 +128,55 @@ class Item:
             self.subscribe(prime=prime)
 
 
+    def add_get_performer(self, method):
+        """ Define a method that will be called for all GET requests for
+            this item. This will replace the :func:`perform_get` method.
+            The performer method must accept no arguments.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self._perform_get_external = method
+        self.perform_get = self._perform_get_wrapper
+
+
+    def add_performer(self, type, method):
+        """ Define a method that will be called for either GET or SET requests,
+            determined by the *type* argument, which must be one of 'get' or
+            'set'. See :func:`add_get_performer` and :func:`add_set_performer`
+            for additional information.
+        """
+
+        type = type.lower()
+        type = type.strip()
+
+        if type == 'get':
+            return self.add_get_performer(method)
+        elif type == 'set':
+            return self.add_set_performer(method)
+        else:
+            raise ValueError("type must be either 'get' or 'set'")
+
+
+    def add_set_performer(self, method):
+        """ Define a method that will be called for all SET requests for
+            this item. This will replace the :func:`perform_set` method.
+            The performer method must accept one argument, the 'unformatted'
+            Python native representation of the item value.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self._perform_set_external = method
+        self.perform_set = self._perform_set_wrapper
+
+
     def _cleanup(self):
         """ Shut down any background processing involved with this item.
             In the general case this is not required; :class:`Item` instances
