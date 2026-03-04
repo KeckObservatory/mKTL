@@ -249,7 +249,10 @@ class Daemon:
             # implies the caller will not be instantiating custom Item
             # subclasses.
 
-            existing = self.store._items[key]
+            try:
+                existing = self.store._items[key]
+            except KeyError:
+                raise KeyError('this daemon does not contain ' + repr(key))
 
             if existing is None or existing.authoritative == False:
                 self.add_item(item.Item, key)
