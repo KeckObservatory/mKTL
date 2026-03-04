@@ -62,6 +62,9 @@ class Item:
         self._update_thread = None
         self._updated = threading.Event()
 
+        self._perform_get_external = None
+        self._perform_set_external = None
+
         # An Item is a singleton in practice; enforce that constraint.
 
         try:
@@ -378,6 +381,14 @@ class Item:
         return payload
 
 
+    def _perform_get_wrapper(self):
+        """ The only purpose of this wrapper method is to strip the 'self'
+            argument from a call to an external method.
+        """
+
+        return self._perform_get_external()
+
+
     def perform_set(self, new_value):
         """ Implement any custom behavior that should occur as a result of
             a set request for this item. No return value is expected. Any
@@ -395,6 +406,14 @@ class Item:
         # is published.
 
         pass
+
+
+    def _perform_set_wrapper(self, new_value):
+        """ The only purpose of this wrapper method is to strip the 'self'
+            argument from a call to an external method.
+        """
+
+        return self._perform_set_external(new_value)
 
 
     def poll(self, period):
