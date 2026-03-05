@@ -232,9 +232,9 @@ class Daemon:
         request = request.strip()
 
         if request == 'get':
-            self.add_get_request(key, method)
+            self.add_get_handler(key, method)
         elif request == 'set':
-            self.add_set_request(key, method)
+            self.add_set_handler(key, method)
         else:
             raise ValueError("request must be either 'get' or 'set'")
 
