@@ -310,6 +310,34 @@ class Daemon:
                 created.register(callback)
 
 
+    def add_performer(self, key, request, method):
+        """ Define a method that will be called for either GET or SET
+            requests, determined by the *request* argument, which must be one
+            of 'get' or 'set'.
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        # Allow this method to be called before placeholder Item instances
+        # have been established. The use of external performer methods,
+        # rather than overriding Item.perform_get() and Item.perform_set(),
+        # implies the caller will not be instantiating custom Item
+        # subclasses; instantiating them now ensures any custom code is
+        # exclusive.
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_performer(request, method)
+
+
     def add_performers(self, performers):
         """ This method is intended to be a single call, accepting a sequence
             of triplets mapping external methods performing GET and SET
@@ -328,24 +356,7 @@ class Daemon:
 
         for triplet in performers:
             key,request,method = triplet
-
-            # Allow this method to be called before placeholder Item instances
-            # have been established. The use of external performer methods,
-            # rather than overriding Item.perform_get() and Item.perform_set(),
-            # implies the caller will not be instantiating custom Item
-            # subclasses; instantiating them now ensures any custom code is
-            # exclusive.
-
-            try:
-                existing = self.store._items[key]
-            except KeyError:
-                raise KeyError('this daemon does not contain ' + repr(key))
-
-            if existing is None or existing.authoritative == False:
-                self.add_item(item.Item, key)
-                existing = self.store[key]
-
-            existing.add_performer(request, method)
+            self.add_performer(key, request, method)
 
 
     def add_set_handler(self, key, method):
