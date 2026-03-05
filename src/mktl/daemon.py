@@ -368,7 +368,7 @@ class Daemon:
         # Having updated the configuration, now instantiate the built-in items.
 
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(DaemonConfiguration, '_' + self.alias + 'con')
+        self.add_item(DaemonConfiguration, '_' + self.alias + 'conf')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
         self.add_item(StoreConfiguration, '_config')
@@ -474,19 +474,7 @@ class RequestServer(protocol.request.Server):
     def __init__(self, daemon, *args, **kwargs):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
-
-        daemon.config.register(self.clear_handlers)
-
-
-    def clear_handlers(self):
         self._getters = dict()
-        self._setters = dict()
-
-        if self.daemon.store is None:
-            # Still initializing.
-            return
-
-        self._getters[self.daemon.store.name + '._config'] = self.req_get_config
 
 
     def req_config(self, request):
@@ -969,8 +957,6 @@ class ProcessorUsage(item.Item):
 
 
 class StoreConfiguration(item.Item):
-    ### Is this class necessary at the per-daemon level? Or should it strictly
-    ### be the purview of the broker/registry?
 
     def __init__(self, *args, **kwargs):
 
