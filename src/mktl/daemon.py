@@ -176,54 +176,6 @@ class Daemon:
         self.logger.debug("daemon initialization complete")
 
 
-    def add_item(self, item_class, key, **kwargs):
-        """ Add an :class:`mktl.Item` to this daemon instance; this is the entry
-            point for establishing an authoritative item, one that will handle
-            inbound get/set request and the like. The *kwargs* will be passed
-            directly to the *item_class* when it is called to be instantiated.
-        """
-
-        key = key.lower()
-
-        try:
-            self.config.authoritative_items[key]
-        except KeyError:
-            raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
-
-        existing = self.store._items[key]
-
-        if existing is not None:
-            if existing.authoritative:
-                raise RuntimeError('duplicate item not allowed: ' + key)
-
-            # It's possible that some other item registered callbacks against
-            # this item before the local, authoritative variant could be
-            # established; we'll want to preserve the callbacks established
-            # on that previous item while replacing it with the authoritative
-            # variant.
-
-            preserved_callbacks = existing.callbacks
-            existing._cleanup()
-            del existing
-        else:
-            preserved_callbacks = tuple()
-
-
-        kwargs['authoritative'] = True
-        kwargs['pub'] = self.pub
-        created = item_class(self.store, key, **kwargs)
-
-        # Instantiating the item results in a persistent reference in
-        # self.store._items, there is no need to manipulate that dictionary
-        # directly.
-
-        for reference in preserved_callbacks:
-            callback = reference()
-
-            if callback:
-                created.register(callback)
-
-
     def add_handlers(self, handlers):
         """ This method is intended to be a single call, accepting a sequence
             of triplets mapping external methods handling GET and SET
@@ -275,6 +227,53 @@ class Daemon:
             else:
                 raise ValueError("request must be either 'get' or 'set'")
 
+
+    def add_item(self, item_class, key, **kwargs):
+        """ Add an :class:`mktl.Item` to this daemon instance; this is the entry
+            point for establishing an authoritative item, one that will handle
+            inbound get/set request and the like. The *kwargs* will be passed
+            directly to the *item_class* when it is called to be instantiated.
+        """
+
+        key = key.lower()
+
+        try:
+            self.config.authoritative_items[key]
+        except KeyError:
+            raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
+
+        existing = self.store._items[key]
+
+        if existing is not None:
+            if existing.authoritative:
+                raise RuntimeError('duplicate item not allowed: ' + key)
+
+            # It's possible that some other item registered callbacks against
+            # this item before the local, authoritative variant could be
+            # established; we'll want to preserve the callbacks established
+            # on that previous item while replacing it with the authoritative
+            # variant.
+
+            preserved_callbacks = existing.callbacks
+            existing._cleanup()
+            del existing
+        else:
+            preserved_callbacks = tuple()
+
+
+        kwargs['authoritative'] = True
+        kwargs['pub'] = self.pub
+        created = item_class(self.store, key, **kwargs)
+
+        # Instantiating the item results in a persistent reference in
+        # self.store._items, there is no need to manipulate that dictionary
+        # directly.
+
+        for reference in preserved_callbacks:
+            callback = reference()
+
+            if callback:
+                created.register(callback)
 
 
     def add_performers(self, performers):
