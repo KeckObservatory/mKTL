@@ -320,7 +320,7 @@ class Daemon:
         items[key]['units'] = 'seconds'
         items[key]['format'] = '%.3f'
 
-        key = '_' + self.alias + 'con'
+        key = '_' + self.alias + 'cfg'
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
         items[key]['settable'] = False
@@ -368,7 +368,7 @@ class Daemon:
         # Having updated the configuration, now instantiate the built-in items.
 
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(DaemonConfiguration, '_' + self.alias + 'conf')
+        self.add_item(DaemonConfiguration, '_' + self.alias + 'cfg')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
         self.add_item(StoreConfiguration, '_config')
