@@ -230,11 +230,11 @@ class Daemon:
             requests, bypassing the usual handling chain involving
             :class:`mktl.Item` instances.
 
-            A triplet is the key for an item (including the store name), whether
+            A triplet is the key for an item (omitting the store name), whether
             this is a 'get' or a 'set' handler, and a valid reference to a
             method. For example::
 
-                ('maunakea.temperature', 'get', mkwc.get_temperature)
+                ('temperature', 'get', mkwc.get_temperature)
 
             See :func:`mktl.Item.req_get` and
             :func:`mktl.Item.req_set` for additional details; inspection of
@@ -243,18 +243,16 @@ class Daemon:
         """
 
         for triplet in handlers:
-            full_key,request,method = triplet
+            key,request,method = triplet
 
-            full_key = full_key.lower()
-            full_key = full_key.strip()
+            key = key.lower()
+            key = key.strip()
 
             # Allow this method to be called before placeholder Item instances
             # have been established. The use of external handler methods
             # implies the caller will not be instantiating custom Item
             # subclasses; instantiating them now ensures any custom code is
             # exclusive.
-
-            store,key = full_key.split('.', 1)
 
             try:
                 existing = self.store._items[key]
@@ -268,10 +266,12 @@ class Daemon:
             request = request.lower()
             request = request.strip()
 
+            full_key = self.store.name + '.' + key
+
             if request == 'get':
                 self.rep._req_get_handlers[full_key] = method
             elif request == 'set':
-                return self.add_set_performer(method)
+                self.rep._req_set_handlers[full_key] = method
             else:
                 raise ValueError("request must be either 'get' or 'set'")
 
