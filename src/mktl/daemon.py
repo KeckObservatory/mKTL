@@ -313,6 +313,11 @@ class Daemon:
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this store.'
 
+        key = '_hash'
+        items[key] = dict()
+        items[key]['description'] = 'Hashes for all known configuration blocks for this store.'
+        items[key]['settable'] = False
+
         key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
@@ -372,6 +377,7 @@ class Daemon:
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
         self.add_item(StoreConfiguration, '_config')
+        self.add_item(StoreHash, '_hash')
 
         for suffix in ('dev', 'host'):
             key = '_' + self.alias + suffix
@@ -987,6 +993,26 @@ class StoreConfiguration(item.Item):
 
 
 # end of class StoreConfiguration
+
+
+
+class StoreHash(item.Item):
+
+    def __init__(self, *args, **kwargs):
+
+        item.Item.__init__(self, *args, **kwargs)
+
+        configuration = config.get(self.store.name)
+        configuration.register(self.req_poll)
+
+
+    def perform_get(self):
+
+        hashes = config.get_hashes(self.store.name)
+        return hashes
+
+
+# end of class StoreHash
 
 
 
