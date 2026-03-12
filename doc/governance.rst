@@ -70,7 +70,11 @@ resources that the user base is entitled to draw upon should problems arise.
 Approval
 --------
 
-Approval of any changes requires:
+Changes to the governance requires a full consensus among all maintainers,
+and ideally a consensus from participating contributors. Significant changes
+may also require the approval from supporting institutions.
+
+Approval of any other changes requires:
 
   #. A minimum of one maintainer
   #. A minimum of two contributors from WMKO
