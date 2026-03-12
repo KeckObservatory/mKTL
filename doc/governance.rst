@@ -79,5 +79,6 @@ Approval of any changes requires:
 There can be overlap between these roles, for example, if a maintainer is
 from an external institution. Contributors are not expected to approve their
 own contributions, except in the case where no other approvals are available,
-for example if there is only one maintainer and their contribution that
-requires approval.
+for example if there is only one maintainer and their contribution requires
+approval. Maintainers have the authority to bypass the normal approval process
+but this authority should be used sparingly, if at all.
