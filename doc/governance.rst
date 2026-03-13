@@ -5,6 +5,7 @@ This page describes the governance policy for mKTL. Any individual or
 organization contributing to mKTL, regardless of their role, implicitly
 agrees to this policy.
 
+
 Roles
 -----
 
@@ -39,6 +40,54 @@ form of reviewing and merging pull requests, actively participating in
 discussions, and building consensus around any decisions. On an annual
 basis this is expected to be a minimum of a 40-80 hour time commitment
 from each maintainer.
+
+
+Communication
+-------------
+
+mKTL is maintained as a GitHub project. Issue tracking will occur
+via GitHub; discussion of pull requests should primarily occur in the
+discussion thread associated with the pull request. Secondary discussions
+will occur in the #mktl Slack channel in the WMKO Software Coordination
+workspace. Side conversations are inevitable, but should be brought back to
+a common space where all contributors can participate.
+
+
+Contributed code
+----------------
+
+All code contributions will occur via pull request. Pull requests shall
+be targeted and concise, ideally addressing a single topic (whether or
+not it is separately filed as an issue), and being manageable to review.
+The general rule of thumb is pull requests should take less than an hour
+to review, as an upper bound; similarly, the number of lines changed
+should be kept low, with 50-200 lines being a reasonable target, and 500
+lines as an upper bound. These are not firm requirements, but staying
+within these guidelines helps reduce the burden on maintainers and other
+reviewers.
+
+Informative commit messages and other inline documentation should be
+leveraged whenever practical. Clear expressions of intent go a long way
+towards understanding code, both for reviews and future debugging.
+
+Adherence to
+`PEP-8 <https://peps.python.org/pep-0008/>`_ is strongly suggested but
+is not rigidly enforced; absent a document formally laying out the minutiae
+of code style the established practices in existing code should be followed.
+This includes handling of whitespace, quoting, capitalization practices,
+variable naming, type hints (or the absence thereof), and the use of the
+English language.
+
+Backwards compatibility is a priority for mKTL and all contributions should
+take care to adhere to the established minimum package versions to the full
+extent possible. Requiring a newer release of Python, for example, should be
+a major topic of discussion among maintainers and contributors; use of
+incompatible language features or module functionality will result in
+rejection of a pull request.
+
+All contributors relinquish individual copyright claims for any contributed
+code. Code subject to an external copyright should not be submitted in any
+form.
 
 
 Project support
