@@ -56,6 +56,9 @@ a common space where all contributors can participate.
 Contributed code
 ----------------
 
+Pull requests
+^^^^^^^^^^^^^
+
 All code contributions will occur via pull request. Pull requests shall
 be targeted and concise, ideally addressing a single topic (whether or
 not it is separately filed as an issue), and being manageable to review.
@@ -64,30 +67,62 @@ to review, as an upper bound; similarly, the number of lines changed
 should be kept low, with 50-200 lines being a reasonable target, and 500
 lines as an upper bound. These are not firm requirements, but staying
 within these guidelines helps reduce the burden on maintainers and other
-reviewers.
+reviewers, and increases the likelihood that a pull request can be properly
+assessed and quickly merged.
 
 Informative commit messages and other inline documentation should be
 leveraged whenever practical. Clear expressions of intent go a long way
 towards understanding code, both for reviews and future debugging.
 
+All pull requests are expected to pass the unit test suite with no errors.
+
+Code style
+^^^^^^^^^^
+
 Adherence to
 `PEP-8 <https://peps.python.org/pep-0008/>`_ is strongly suggested but
 is not rigidly enforced; absent a document formally laying out the minutiae
-of code style the established practices in existing code should be followed.
+of code style the established practices in the mKTL code should be followed.
 This includes handling of whitespace, quoting, capitalization practices,
 variable naming, type hints (or the absence thereof), and the use of the
 English language.
 
+Compatibility
+^^^^^^^^^^^^^
+
 Backwards compatibility is a priority for mKTL and all contributions should
-take care to adhere to the established minimum package versions to the full
-extent possible. Requiring a newer release of Python, for example, should be
+take care to adhere to the established minimum package versions.
+Requiring a newer release of Python, for example, should be
 a major topic of discussion among maintainers and contributors; use of
 incompatible language features or module functionality will result in
 rejection of a pull request.
 
+Copyright
+^^^^^^^^^
+
 All contributors relinquish individual copyright claims for any contributed
 code. Code subject to an external copyright should not be submitted in any
 form.
+
+
+Releases
+--------
+
+Periodic stable releases will be tagged from the main repository; this should
+be the resource of choice for any users requiring stable behavior. The main
+branch makes no promises of stability, other than it is expected to be self
+consistent and functional. Branches are intended for specific feature or
+issue related development, and will not have any meaningful persistence.
+
+mKTL will follow the Python versioning scheme described in
+`PEP-440 <https://peps.python.org/pep-0440/>`_, though perhaps with more
+clarity in the `Python packaging documentation <https://packaging.python.org/en/latest/discussions/versioning/>`_
+as `semantic versioning <https://semver.org/>`_, with a three part
+version number, concatenated with a '.' character:
+
+  * major, for incompatible API changes
+  * minor, for backwards-compatible additions or changes
+  * patch, for backwards-compatible bug fixes
 
 
 Project support
