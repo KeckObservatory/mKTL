@@ -41,6 +41,11 @@ discussions, and building consensus around any decisions. On an annual
 basis this is expected to be a minimum of a 40-80 hour time commitment
 from each maintainer.
 
+Any changes to the list of maintainers must be approved by a majority
+of the current maintainers. The initial set of maintainers is expected
+to include representatives from W. M. Keck Observatory, University
+of California Observatories, and the California Institute of Technology.
+
 
 Communication
 -------------
@@ -132,8 +137,8 @@ The principal customer for mKTL and mKTL-based systems is
 `W. M. Keck Observatory <https://keckobservatory.org/>`_ (WMKO). As such,
 WMKO is committed to the ongoing development and maintenance of mKTL, and
 will support the participation of at least one maintainer for the duration
-of mKTL's operational use, and will support contributors as needed for
-ongoing development and operational fixes.
+of mKTL's operational use, and will internally support contributors as needed
+for ongoing development and operational fixes.
 
 Other participating institutions should make a similar commitment commensurate
 with their needs.
