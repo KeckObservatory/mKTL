@@ -125,7 +125,7 @@ clarity in the `Python packaging documentation <https://packaging.python.org/en/
 as `semantic versioning <https://semver.org/>`_, with a three part
 version number, concatenated with a '.' character:
 
-  * major, for incompatible API changes
+  * major, for changes breaking backwards compatibility
   * minor, for backwards-compatible additions or changes
   * patch, for backwards-compatible bug fixes
 
