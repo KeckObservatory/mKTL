@@ -86,8 +86,8 @@ Code style
 
 Adherence to
 `PEP-8 <https://peps.python.org/pep-0008/>`_ is strongly suggested but
-is not rigidly enforced; absent a document formally laying out the minutiae
-of code style the established practices in the mKTL code should be followed.
+is not rigidly enforced; absent a formal code style document
+the established practices in the mKTL code should be followed.
 This includes handling of whitespace, quoting, capitalization practices,
 variable naming, type hints (or the absence thereof), and the use of the
 English language.
@@ -159,7 +159,7 @@ resources that the user base is entitled to draw upon should problems arise.
 Approval
 --------
 
-Changes to the governance requires a full consensus among all maintainers,
+Changes to mKTL governance require a full consensus among all maintainers,
 and ideally a consensus from participating contributors. Significant changes
 may also require the approval from supporting institutions.
 
