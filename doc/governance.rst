@@ -73,7 +73,8 @@ should be kept low, with 50-200 lines being a reasonable target, and 500
 lines as an upper bound. These are not firm requirements, but staying
 within these guidelines helps reduce the burden on maintainers and other
 reviewers, and increases the likelihood that a pull request can be properly
-assessed and quickly merged.
+assessed and quickly merged. This assessment process is expected to occur
+within a week of submission.
 
 Informative commit messages and other inline documentation should be
 leveraged whenever practical. Clear expressions of intent go a long way
