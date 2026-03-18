@@ -27,6 +27,8 @@ basic professional decency there are no expectations or commitments
 associated with being a contributor, nor are there any limits on how
 much time a contributor might provide to the project.
 
+All contributors implicitly agree to abide by the mKTL code of conduct.
+
 Maintainer
 ^^^^^^^^^^
 
@@ -45,6 +47,8 @@ Any changes to the list of maintainers must be approved by a majority
 of the current maintainers. The initial set of maintainers is expected
 to include representatives from W. M. Keck Observatory, University
 of California Observatories, and the California Institute of Technology.
+
+All maintainers implicitly agree to abide by the mKTL code of conduct.
 
 
 Communication
