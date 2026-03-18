@@ -94,7 +94,7 @@ via GitHub; discussion of pull requests should primarily occur in the
 discussion thread associated with the pull request. Secondary discussions
 will occur in the #mktl Slack channel in the WMKO Software Coordination
 workspace. Side conversations are inevitable, but should be brought back to
-a common space where all contributors can participate.
+a common space where all contributors can participate in the discussion.
 
 
 Contributed code
