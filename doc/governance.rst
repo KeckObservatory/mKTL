@@ -6,6 +6,41 @@ organization contributing to mKTL, regardless of their role, implicitly
 agrees to this policy.
 
 
+Project support
+---------------
+
+The principal customer for mKTL and mKTL-based systems is
+`W. M. Keck Observatory <https://keckobservatory.org/>`_ (WMKO). As such,
+WMKO is committed to the ongoing development and maintenance of mKTL, and
+will support the participation of at least one maintainer for the duration
+of mKTL's operational use, and will internally support contributors as needed
+for ongoing development and operational fixes.
+
+Other participating institutions should make a similar commitment commensurate
+with their needs.
+
+
+Approval
+--------
+
+Changes to mKTL governance require a full consensus among all maintainers,
+and ideally a consensus from participating contributors. Significant changes
+may also require the approval from supporting institutions.
+
+Approval of any other changes requires:
+
+  #. A minimum of one maintainer
+  #. A minimum of two contributors from WMKO
+  #. A minimum of one contributor from outside WMKO
+
+There can be overlap between these roles, for example, if a maintainer is
+from an external institution. Contributors are not expected to approve their
+own contributions, except in the case where no other approvals are available,
+for example if there is only one maintainer and their contribution requires
+approval. Maintainers have the authority to bypass the normal approval process
+but this authority should be used sparingly, if at all.
+
+
 Roles
 -----
 
@@ -135,20 +170,6 @@ version number, concatenated with a '.' character:
   * patch, for backwards-compatible bug fixes
 
 
-Project support
----------------
-
-The principal customer for mKTL and mKTL-based systems is
-`W. M. Keck Observatory <https://keckobservatory.org/>`_ (WMKO). As such,
-WMKO is committed to the ongoing development and maintenance of mKTL, and
-will support the participation of at least one maintainer for the duration
-of mKTL's operational use, and will internally support contributors as needed
-for ongoing development and operational fixes.
-
-Other participating institutions should make a similar commitment commensurate
-with their needs.
-
-
 User support
 ------------
 
@@ -159,24 +180,3 @@ be made to address any deficiencies in the online documentation.
 
 The existence of project support does not imply there is a warranty or other
 resources that the user base is entitled to draw upon should problems arise.
-
-
-Approval
---------
-
-Changes to mKTL governance require a full consensus among all maintainers,
-and ideally a consensus from participating contributors. Significant changes
-may also require the approval from supporting institutions.
-
-Approval of any other changes requires:
-
-  #. A minimum of one maintainer
-  #. A minimum of two contributors from WMKO
-  #. A minimum of one contributor from outside WMKO
-
-There can be overlap between these roles, for example, if a maintainer is
-from an external institution. Contributors are not expected to approve their
-own contributions, except in the case where no other approvals are available,
-for example if there is only one maintainer and their contribution requires
-approval. Maintainers have the authority to bypass the normal approval process
-but this authority should be used sparingly, if at all.
