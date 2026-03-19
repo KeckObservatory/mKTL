@@ -163,7 +163,7 @@ mKTL will follow the Python versioning scheme described in
 `PEP-440 <https://peps.python.org/pep-0440/>`_, though perhaps with more
 clarity in the `Python packaging documentation <https://packaging.python.org/en/latest/discussions/versioning/>`_
 as `semantic versioning <https://semver.org/>`_, with a three part
-version number, concatenated with a '.' character:
+version number, concatenated with a '.' character (major.minor.patch):
 
   * major, for changes breaking backwards compatibility
   * minor, for backwards-compatible additions or changes
