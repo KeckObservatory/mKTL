@@ -51,6 +51,11 @@ This code of conduct applies to all mKTL community situations online and
 offline, including mailing lists, forums, social media, conferences, meetings,
 associated social events, and one-to-one interactions.
 
+Project maintainers will decide as a group on how to proceed in response to
+any reports. Resulting consequences can include revocation of contributor
+and/or maintainer status; additional consequences may occur at the discretion
+of the reported person's current employer.
+
 ----
 
 This document is a modified version of the `PypeIt Code of Conduct
