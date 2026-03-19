@@ -18,7 +18,7 @@ release = '0.1'
 extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'README.md', '.DS_Store', 'Thumbs.db']
 intersphinx_mapping = {'pint': ('https://pint.readthedocs.io/en/stable', None),
 			'python': ('https://docs.python.org/3', None)}
 
