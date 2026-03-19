@@ -108,12 +108,11 @@ Pull requests
 ^^^^^^^^^^^^^
 
 All code contributions will occur via pull request. Pull requests shall
-be targeted and concise, ideally addressing a single topic (whether or
-not it is separately filed as an issue), and being manageable to review.
-The general rule of thumb is pull requests should take less than an hour
-to review, as an upper bound; similarly, the number of lines changed
-should be kept low, with 50-200 lines being a reasonable target, and 500
-lines as an upper bound. These are not firm requirements, but staying
+be targeted and concise, ideally addressing a single topic (whether or not
+it is separately filed as an issue), and being manageable to review. Pull
+requests should take less than an hour to review; similarly, the number of
+lines changed should be kept low, with 50-200 lines being a reasonable target,
+and 500 lines as an upper bound. These are not firm requirements, but staying
 within these guidelines helps reduce the burden on maintainers and other
 reviewers, and increases the likelihood that a pull request can be properly
 assessed and quickly merged. This assessment process is expected to occur
