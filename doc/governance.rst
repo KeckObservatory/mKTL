@@ -55,6 +55,8 @@ strengths or weaknesses of mKTL from their perspective.
 Contributor
 ^^^^^^^^^^^
 
+Contributors are a subset of users.
+
 A contributor is anyone who manipulates the source code repository in
 any context: submitting issues, commenting on issues, submitting pull
 requests, or any similar activity is considered a contributor. Beyond
@@ -66,6 +68,8 @@ All contributors implicitly agree to abide by the mKTL code of conduct.
 
 Maintainer
 ^^^^^^^^^^
+
+Maintainers are a subset of contributors.
 
 A maintainer is an individual with commit and merge access on the mKTL
 repository. There will always be an odd number of designated maintainers
