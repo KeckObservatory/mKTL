@@ -59,5 +59,6 @@ itself a modified version of the `Astropy Code of Conduct
 <https://www.astropy.org/code_of_conduct.html>`_, licensed under a `Creative
 Commons Attribution 4.0 International License
 <https://creativecommons.org/licenses/by/4.0/>`__, of which parts were
-originally adapted from the `PSF Code of Conduct
-<https://www.python.org/psf/conduct/>`_.
+originally adapted from the `Python Software Foundation Code of Conduct
+<https://www.python.org/psf/conduct/>`_ and the
+`NumFOCUS Code of Conduct <https://numfocus.org/code-of-conduct>`_.
