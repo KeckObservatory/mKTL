@@ -29,16 +29,15 @@ may also require the approval from supporting institutions.
 
 Approval of any other changes requires:
 
-  #. A minimum of one maintainer
-  #. A minimum of two contributors from WMKO
-  #. A minimum of one contributor from outside WMKO
+  #. A minimum of two maintainers from WMKO
+  #. A minimum of one maintainer from outside WMKO
 
 There can be overlap between these roles, for example, if a maintainer is
 from an external institution. Contributors are not expected to approve their
 own contributions, except in the case where no other approvals are available,
 for example if there is only one maintainer and their contribution requires
-approval. Maintainers have the authority to bypass the normal approval process
-but this authority should be used sparingly, if at all.
+approval. Organization administrators have the authority to bypass the normal
+approval process but this authority should be used sparingly, if at all.
 
 
 Roles
