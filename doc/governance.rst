@@ -63,6 +63,9 @@ basic professional decency there are no expectations or commitments
 associated with being a contributor, nor are there any limits on how
 much time a contributor might provide to the project.
 
+Contributor status does not confer approval authority, which rests solely
+with maintainers.
+
 All contributors implicitly agree to abide by the mKTL code of conduct.
 
 Maintainer
