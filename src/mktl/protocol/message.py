@@ -75,7 +75,7 @@ class Message:
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
-    valid_types = set(('ACK', 'REP'))
+    valid_types = set(('ACK', 'PUB', 'REP'))
 
     def __init__(self, type, target=None, payload=None, id=None):
 
@@ -99,13 +99,13 @@ class Message:
 
 
     def __iter__(self):
-        self._finalize()
-        return iter(self._parts)
+        parts = self._finalize()
+        return iter(parts)
 
 
     def __repr__(self):
-        self._finalize()
-        return repr(self._parts)
+        parts = self._finalize()
+        return repr(parts)
 
 
     def _finalize(self):
@@ -123,18 +123,21 @@ class Message:
         target = self.target
         payload = self.payload
 
-        # It is legal to create a Message with None as the id-- this happens
-        # all the time when a Message is used as a container-- but trying to
-        # send such a message is not permitted.
+        # All requests and responses should have a locally unique identifier,
+        # but publish messages do not, and it is not an error for a Message
+        # instance to be used as a container and not have an identifier--
+        # but putting one on the wire would ideally be prevented. There used
+        # to be a guard against that here, but that had to be removed for the
+        # realignment of the request/response and publish message structure.
 
         if id is None:
-            raise RuntimeError('messages must have an id to be put on the wire')
-
-        try:
-            id.decode
-        except AttributeError:
-            id = '%08x' % (id)
-            id = id.encode()
+            id = b''
+        else:
+            try:
+                id.decode
+            except AttributeError:
+                id = '%08x' % (id)
+                id = id.encode()
 
         type = type.encode()
 
@@ -147,6 +150,11 @@ class Message:
                 # Assume it is already bytes.
                 pass
 
+            # Use a trailing dot to prevent leading substring matches from
+            # matching the wrong key.
+
+            target = target + b'.'
+
         if payload is None or payload == '':
             bulk = b''
             payload = b''
@@ -157,9 +165,9 @@ class Message:
             payload = payload.encapsulate()
 
         if self.prefix:
-            parts = self.prefix + (version, id, type, target, payload, bulk)
+            parts = self.prefix + (target, version, id, type, payload, bulk)
         else:
-            parts = (version, id, type, target, payload, bulk)
+            parts = (target, version, id, type, payload, bulk)
 
         self._parts = parts
 
@@ -196,46 +204,6 @@ class Message:
 
 
 # end of class Message
-
-
-
-class Broadcast(Message):
-    """ A :class:`Broadcast` is a minor variant of a :class:`Message`,
-        with a change to format the multipart tuple in a PUB/SUB specific
-        fashion.
-    """
-
-    valid_types = set(('PUB',))
-
-    def _finalize(self):
-
-        if self._parts:
-            # Once finalized, always finalized.
-            return
-
-        target = self.target
-        payload = self.payload
-
-        # The PUB/SUB topic has a trailing dot to prevent leading
-        # substring matches from picking up extra keys.
-
-        target = target + '.'
-        target = target.encode()
-
-        if payload is None or payload == '':
-            bulk = b''
-            payload = b''
-        else:
-            bulk = payload.bulk
-            if bulk is None:
-                bulk = b''
-            payload = payload.encapsulate()
-
-        # The prefix is ignored for broadcast messages; it should not be set.
-        self._parts = (target, version, payload, bulk)
-
-
-# end of class Broadcast
 
 
 
