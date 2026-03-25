@@ -427,6 +427,65 @@ class Payload:
 # end of class Payload
 
 
+
+def from_parts(parts):
+    """ Translate a multipart message into a :class:`Message` instance.
+        Any translation errors, such as a version mismatch, will be
+        encpasulated in the returned Message.
+
+        This is the inverse of :func:`Message._finalize`.
+    """
+
+    error = None
+
+    try:
+        target = parts[0]
+        message_version = parts[1]
+        message_id = parts[2]
+    except IndexError:
+        message_id = None
+        error = dict()
+        error['type'] = 'RuntimeError'
+        error['text'] = "%d parts found, not enough to reconstruct a message" % (len(parts))
+
+    if not error and message_version != version:
+        error = dict()
+        error['type'] = 'RuntimeError'
+        error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(message_version), repr(version))
+
+    if not error:
+        message_type = parts[3]
+        payload = parts[4]
+        bulk = parts[5]
+
+        if target and target[-1] == b'.':
+            target = target[:-1]
+
+    if error:
+        payload = message.Payload(None, error=error)
+        payload = payload.encapsulate()
+        message_type = 'REP'
+        target = '???'
+        bulk = None
+
+    if bulk == b'':
+        bulk = None
+
+    if payload == b'':
+        payload = None
+    else:
+        payload = json.loads(payload)
+        try:
+            payload = Payload(**payload, bulk=bulk)
+        except TypeError:
+            # Weird stuff in the payload. Don't fail on the conversion,
+            # allow it to pass, assuming the users know what they're doing.
+            pass
+
+    message = Message(message_type, target, payload, id=message_id)
+    return message
+
+
 _id_min = 0
 _id_max = 0xFFFFFFFF
 _id_lock = threading.Lock()
