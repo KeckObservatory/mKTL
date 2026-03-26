@@ -56,7 +56,7 @@ class Client:
         self.thread.start()
 
 
-    def propagate(self, topic, message):
+    def propagate(self, message):
         """ Invoke any/all callbacks registered via :func:`register` for
             a newly arrived message.
         """
@@ -94,6 +94,8 @@ class Client:
         # Handle the case where a callback is registered for a specific topic.
         # If there are no topic-specific callbacks, no further processing is
         # required.
+
+        topic = message.target
 
         if self.callback_specific:
             pass
@@ -152,8 +154,6 @@ class Client:
         else:
             topic = str(topic)
             topic = topic.strip()
-            topic = topic + '.'
-            topic = topic.encode()
 
             try:
                 callbacks = self.callback_specific[topic]
@@ -162,6 +162,9 @@ class Client:
                 self.callback_specific[topic] = callbacks
 
             callbacks.append(reference)
+
+            topic = topic + '.'
+            topic = topic.encode()
             self.subscribe(topic)
 
 
@@ -192,33 +195,8 @@ class Client:
             ### floor.
             return
 
-        topic = parts[0]
-        their_version = parts[1]
-
-        if their_version != message.version:
-            ### Maybe we should occasionally log a version mismatch.
-            ### For now it's being dropped on the floor.
-            return
-
-        payload = parts[2]
-        bulk = parts[3]
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        broadcast = message.Broadcast('PUB', topic, payload)
-        self.propagate(topic, broadcast)
+        broadcast = message.from_parts(parts)
+        self.propagate(broadcast)
 
 
     def _sub_incoming(self):
@@ -331,7 +309,7 @@ class Server:
 
 
     def publish(self, message):
-        """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
+        """ A *message* is a :class:`mktl.protocol.message.Message` instance
             intended for broadcast to any/all subscribers.
         """
 
