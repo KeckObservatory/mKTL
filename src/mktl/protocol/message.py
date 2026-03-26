@@ -82,7 +82,7 @@ class Message:
         if type in self.valid_types:
             pass
         else:
-            raise ValueError('invalid request type: ' + type)
+            raise ValueError('invalid request type: ' + repr(type))
 
         # There are some message types where the id is allowed to be None;
         # for example, publish messages do not have or need an identification
@@ -99,13 +99,13 @@ class Message:
 
 
     def __iter__(self):
-        parts = self._finalize()
-        return iter(parts)
+        self._finalize()
+        return iter(self._parts)
 
 
     def __repr__(self):
-        parts = self._finalize()
-        return repr(parts)
+        self._finalize()
+        return repr(self._parts)
 
 
     def _finalize(self):
@@ -461,12 +461,22 @@ def from_parts(parts):
         if target and target[-1] == b'.':
             target = target[:-1]
 
+        if target == b'':
+            target = None
+        else:
+            target = target.decode()
+
+        message_type = message_type.decode()
+
     if error:
         payload = message.Payload(None, error=error)
         payload = payload.encapsulate()
         message_type = 'REP'
         target = '???'
         bulk = None
+
+    if message_id == b'':
+        message_id = None
 
     if bulk == b'':
         bulk = None
