@@ -53,6 +53,9 @@ def main():
             request = mktl.protocol.message.Request('HASH')
             try:
                 payload = mktl.protocol.request.send(address, port, request)
+            except TimeoutError:
+                logger.warning("HASH request from %s:%d timed out" % (address, port))
+                continue
             except:
                 logger.warning("HASH request from %s:%d failed" % (address, port))
                 continue
