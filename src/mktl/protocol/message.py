@@ -460,11 +460,10 @@ def from_parts(parts):
 
         target = target.decode()
 
-        if target[-1] == '.':
-            target = target[:-1]
-
-        if target == '':
+        if target == '' or target == '.':
             target = None
+        elif target[-1] == '.':
+            target = target[:-1]
 
         message_type = message_type.decode()
 
