@@ -458,13 +458,13 @@ def from_parts(parts):
         payload = parts[4]
         bulk = parts[5]
 
-        if target and target[-1] == b'.':
+        target = target.decode()
+
+        if target[-1] == '.':
             target = target[:-1]
 
-        if target == b'':
+        if target == '':
             target = None
-        else:
-            target = target.decode()
 
         message_type = message_type.decode()
 
