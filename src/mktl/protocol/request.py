@@ -387,19 +387,22 @@ class Server:
         ### Presumably that means calling something like _req_incoming().
 
         ident = parts[0]
-        their_version = parts[1]
+        target = parts[1]
+        their_version = parts[2]
 
         if their_version != message.version:
             raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(message.version)))
 
-        req_id = parts[2]
-        req_type = parts[3]
-        target = parts[4]
+        req_id = parts[3]
+        req_type = parts[4]
         payload = parts[5]
         bulk = parts[6]
 
         req_type = req_type.decode()
         target = target.decode()
+
+        if target[-1] == '.':
+            target = target[:-1]
 
         if bulk == b'':
             bulk = None
