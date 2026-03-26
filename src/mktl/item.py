@@ -459,7 +459,7 @@ class Item:
 
         if changed == True or repeat == True:
             key = self.full_key
-            message = protocol.message.Broadcast('PUB', key, payload)
+            message = protocol.message.Message('PUB', key, payload)
 
             # One could bypass the normal broadcast handling internally
             # within a daemon by putting the message in self._update_queue
