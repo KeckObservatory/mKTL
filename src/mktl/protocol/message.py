@@ -75,7 +75,7 @@ class Message:
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
-    valid_types = set(('ACK', 'PUB', 'REP'))
+    valid_types = set(('ACK', 'CONFIG', 'GET', 'HASH', 'PUB', 'REP'))
 
     def __init__(self, type, target=None, payload=None, id=None):
 
@@ -460,7 +460,7 @@ def from_parts(parts, throw=False):
 
         error = dict()
         error['type'] = 'RuntimeError'
-        error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(message_version), repr(version))
+        error['text'] = error_text
 
     if not error:
         message_type = parts[3]
