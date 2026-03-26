@@ -428,7 +428,7 @@ class Payload:
 
 
 
-def from_parts(parts):
+def from_parts(parts, throw=False):
     """ Translate a multipart message into a :class:`Message` instance.
         Any translation errors, such as a version mismatch, will be
         encpasulated in the returned Message.
@@ -444,11 +444,20 @@ def from_parts(parts):
         message_id = parts[2]
     except IndexError:
         message_id = None
+        error_text = "%d parts found, not enough to reconstruct a message" % (len(parts))
+        if throw:
+            raise RuntimeError(error_text)
+
         error = dict()
         error['type'] = 'RuntimeError'
-        error['text'] = "%d parts found, not enough to reconstruct a message" % (len(parts))
+        error['text'] = error_text
 
     if not error and message_version != version:
+        error_text = "message is mKTL protocol %s, recipient expects %s" % (repr(message_version), repr(version))
+
+        if throw:
+            raise RuntimeError(error_text)
+
         error = dict()
         error['type'] = 'RuntimeError'
         error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(message_version), repr(version))
