@@ -79,57 +79,21 @@ class Client:
             any further handling by the original caller.
         """
 
-        their_version = parts[0]
-
-        if their_version == message.version:
-            response_type = parts[2]
-            target = parts[3]
-            payload = parts[4]
-            bulk = parts[5]
-        else:
-            error = dict()
-            error['type'] = 'RuntimeError'
-            error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
-            payload = message.Payload(None, error=error)
-            payload = payload.encapsulate()
-            response_type = 'REP'
-            target = '???'
-            bulk = None
-
-        # This could still blow up if the version doesn't match-- the id may
-        # be in a different message part-- but we have to try, otherwise
-        # there's no way to pass the error back to the original caller.
-
-        response_id = parts[1]
+        response = message.from_parts(parts)
 
         try:
-            pending = self.pending[response_id]
+            pending = self.pending[response.id]
         except KeyError:
             # The original caller's request is gone, no further processing
             # is possible.
             return
 
-        if response_type == b'ACK':
+        if response.type == 'ACK':
             pending._complete_ack()
             return
 
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        response = message.Message('REP', target, payload, response_id)
         pending._complete(response)
-        del self.pending[response_id]
+        del self.pending[response.id]
 
 
     def _req_outgoing(self):
