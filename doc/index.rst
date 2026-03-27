@@ -36,6 +36,7 @@ be expert mKTL maintainers in order to successfully develop an application.
    protocol
    protocol_interface
    governance
+   code_of_conduct
    glossary
 
 Indices and tables
