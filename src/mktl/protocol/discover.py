@@ -26,11 +26,11 @@ response = response.encode()
 
 default_port = 10103
 
-# The default port is used for discovery of intermediaries, brokers that are
+# The default port is used for discovery of intermediaries, registries that are
 # willing to cache and share second-hand information aggregated from one or
 # more authoritative daemons, and be the first stop for any new clients on
 # the network. The direct port is used by last-stop daemons, those that are
-# authoritative for their respective stores; the brokers will use this direct
+# authoritative for their respective stores; the registries will use this direct
 # port to discover them.
 
 direct_port = 10111
@@ -145,7 +145,7 @@ def search(port=default_port, wait=False, targets=tuple()):
     targets = list(targets)
 
     if port == default_port:
-        cached = preload_brokers()
+        cached = preload_registries()
         targets.extend(cached)
 
     for target in targets:
@@ -204,7 +204,7 @@ def search(port=default_port, wait=False, targets=tuple()):
             sock.settimeout(expiration - elapsed)
 
     if port == default_port:
-        remember_brokers(found)
+        remember_registries(found)
 
     return found
 
@@ -217,14 +217,15 @@ def search_direct(port=direct_port, wait=True):
     return search(port, wait)
 
 
-def preload_brokers():
+def preload_registries():
     """ Helper method to parse environment variables and cached files on
-        disk to build a list of addresses to check for broker availability.
+        disk to build a list of addresses to check for registry availability.
     """
 
     directory = config.directory()
-    manual = os.path.join(directory, 'client', 'brokers')
-    cached = manual + '.cache'
+    client = os.path.join(directory, 'client')
+    manual = os.path.join(client, 'registries')
+    cached = os.path.join(client, 'registries.cache')
 
     lines = list()
 
@@ -243,33 +244,33 @@ def preload_brokers():
         lines.extend(contents.split('\n'))
 
 
-    brokers = ''
+    registries = ''
 
     for line in lines:
         line = line.split('#')[0]
-        brokers = brokers + ' ' + line
+        registries = registries + ' ' + line
 
-    brokers = brokers.strip()
+    registries = registries.strip()
 
-    if brokers == '' or brokers is None:
-        brokers = tuple()
+    if registries == '' or registries is None:
+        registries = tuple()
     else:
-        brokers = brokers.split()
+        registries = registries.split()
 
-    return brokers
+    return registries
 
 
-def remember_brokers(found):
-    """ Cache any found brokers for future requests. There is no provision
-        for removing brokers that no longer respond, this may become necessary
-        in the future-- if the cached set grows unbounded there may become
-        a point where the occasional UDP broadcast becomes a burden rather
-        than a minor inefficiency.
+def remember_registries(found):
+    """ Cache any found registries for future requests. There is no provision
+        for removing registries that no longer respond, this may become
+        necessary in the future-- if the cached set grows unbounded there may
+        become a point where the occasional UDP broadcast becomes a burden
+        rather than a minor inefficiency.
     """
 
     directory = config.directory()
     client = os.path.join(directory, 'client')
-    cached = os.path.join(client, 'brokers.cache')
+    cached = os.path.join(client, 'registries.cache')
 
     if os.path.exists(client):
         pass

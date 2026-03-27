@@ -32,16 +32,16 @@ at run time.
 .. autofunction:: mktl.home
 
 You may need to pre-populate your local cache with information from the
-brokers handling the configuration for the store(s) you wish to access.
+registries handling the configuration for the store(s) you wish to access.
 The :ref:`mk` command line tool will handle this process; for a given
 IP address or hostname, you would invoke::
 
     mk discover 192.168.5.34
 
 This discovery process will query that address for any available configurations,
-but more importantly, will cache the address of that broker and use it again in
-the future if/when discovering new services, without an explicit request to do
-so. In other words, it should only be necessary to run this discovery process
+but more importantly, will cache the address of that registry and use it again
+in the future if/when discovering new services, without an explicit request to
+do so. In other words, it should only be necessary to run this discovery process
 a single time in order to gain access to a new set of mKTL stores.
 
 The :func:`mktl.get` method is the universal entry point to retrieve a

@@ -1217,9 +1217,9 @@ def announce(config, uuid, override=False):
     payload.add_origin()
     message = protocol.message.Request('CONFIG', store, payload)
 
-    brokers = protocol.discover.search(wait=True)
+    registries = protocol.discover.search(wait=True)
 
-    for address,port in brokers:
+    for address,port in registries:
         try:
             payload = protocol.request.send(address, port, message)
         except TimeoutError:
@@ -1229,7 +1229,7 @@ def announce(config, uuid, override=False):
         if error is None or error == '':
             continue
 
-        # The broker daemon will return errors for a variety of circumstances,
+        # The registry daemon will return errors for a variety of circumstances,
         # but in every case the immediate meaning is the same: do not proceed.
 
         e_type = error['type']

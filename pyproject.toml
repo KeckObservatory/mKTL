@@ -27,8 +27,8 @@ repository = "https://github.com/KeckObservatory/mKTL"
 [tool.poetry.scripts]
 mk = { reference = "bin/mk", type = "file" }
 mkd = { reference = "sbin/mkd", type = "file" }
-mkbrokerd = { reference = "sbin/mkbrokerd", type = "file" }
 mkpersistd = { reference = "sbin/mkpersistd", type = "file" }
+mkregistryd = { reference = "sbin/mkregistryd", type = "file" }
 
 [build-system]
 requires = ["poetry-core"]
