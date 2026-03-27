@@ -101,10 +101,10 @@ class Client:
         """
 
         self.request_receive.recv(flags=zmq.NOBLOCK)
-        message = self.requests.get(block=False)
+        request = self.requests.get(block=False)
 
-        parts = tuple(message)
-        self.pending[message.id] = message
+        parts = tuple(request)
+        self.pending[request.id] = request
 
         # A lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
@@ -148,11 +148,11 @@ class Client:
                     self._rep_incoming(parts)
 
 
-    def send(self, message):
-        """ A *message* is a fully populated
+    def send(self, request):
+        """ A *request* is a fully populated
             :class:`mktl.protocol.message.Request` instance,
             which normalizes the arguments that will be sent via this method
-            as a multi-part message. The message instance will also be used for
+            as a multi-part message. The request instance will also be used for
             notification of any/all responses from the remote end; this method
             will block while waiting for the ACK request, but will never block
             waiting for the full response; the caller is free to decide whether
@@ -160,14 +160,14 @@ class Client:
             :class:`mktl.protocol.message.Request` instance.
         """
 
-        self.requests.put(message)
+        self.requests.put(request)
         self.request_signal.send(b'')
 
-        ack = message.wait_ack(self.timeout)
+        ack = request.wait_ack(self.timeout)
 
         if ack == False:
             error = '%s @ %s:%d: no response received in %.2f sec'
-            args = (message.type, self.address, self.port, self.timeout)
+            args = (request.type, self.address, self.port, self.timeout)
             error = error % args
             raise TimeoutError(error)
 
@@ -350,8 +350,8 @@ class Server:
         ### exceptions are passed back to the originator of the request.
         ### Presumably that means calling something like _req_incoming().
 
-        request = message.from_parts(parts, throw=True)
-        request.prefix = (ident,)
+        request = message.from_parts(parts[1:], throw=True)
+        request.prefix = (parts[0],)
         payload = None
         error = None
 
@@ -377,7 +377,7 @@ class Server:
             elif payload.error is None:
                 payload.error = error
 
-        response = message.Message('REP', target, payload, req_id)
+        response = message.Message('REP', request.target, payload, request.id)
         response.prefix = request.prefix
 
         self.send(response)
