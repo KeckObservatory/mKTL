@@ -455,6 +455,12 @@ def send(address, port, request):
     connection.send(request)
     request.wait()
 
+    if request.response is None:
+        error = '%s @ %s:%d: no response received'
+        args = (request.type, address, port)
+        error = error % args
+        raise TimeoutError(error)
+
     payload = request.response.payload
     return payload
 
