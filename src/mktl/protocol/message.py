@@ -75,7 +75,7 @@ class Message:
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
-    valid_types = set(('ACK', 'CONFIG', 'GET', 'HASH', 'PUB', 'REP'))
+    valid_types = set(('ACK', 'CONFIG', 'GET', 'HASH', 'PUB', 'REP', 'SET'))
 
     def __init__(self, type, target=None, payload=None, id=None):
 
