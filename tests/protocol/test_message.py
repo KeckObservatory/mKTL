@@ -15,7 +15,10 @@ def test_message_translation():
     assert message.prefix == translated.prefix
     assert message.target == translated.target
 
-    assert round(message.timestamp, 4) == round(translated.timestamp, 4)
+    # The message.timestamp is created anew for every Message instance,
+    # it is not part of what is encapsulated for transmission.
+
+    assert message.timestamp != translated.timestamp
 
     assert message.payload.value == translated.payload.value
     assert message.payload.time == translated.payload.time
