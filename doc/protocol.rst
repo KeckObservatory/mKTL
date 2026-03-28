@@ -63,6 +63,13 @@ For both ends of the request/response exchange, the message parts are:
   * - *Field*
     - *Data type*
 
+  * - **target**
+    - The target for this request/response, if any. Not all requests have a
+      target; responses don't need to specify it, since it is the identification
+      number that ties a response to its request. If a target is specified it
+      is a store or a key, depending on the request; this field will be an empty
+      byte sequence if the target is not specified.
+
   * - **version**
     - A single ASCII character indicating the mKTL protocol version number.
       The initial release of the mKTL protocol uses the version character 'a'.
@@ -81,13 +88,6 @@ For both ends of the request/response exchange, the message parts are:
     - The message type. This is a short string of characters that identifies
       what type of request, or reponse, this message represents. It is one
       of the values described in the ref:`message_types` section below.
-
-  * - **target**
-    - The target for this request/response, if any. Not all requests have a
-      target; responses don't need to specify it, since it is the identification
-      number that ties a response to its request. If a target is specified it
-      is a store or a key, depending on the request; this field will be an empty
-      byte sequence if the target is not specified.
 
   * - **payload**
     - The message payload. This is the JSON representation of any additional
@@ -138,24 +138,24 @@ like, in this case handling the exchange as a synchronous request::
 Here is a representation of what the on-the-wire messages might look like
 for the simple exchange outlined above::
 
+	b'kpfguide.LASTFILENAME'
 	b'a'
 	b'00000023'
 	b'GET'
-	b'kpfguide.LASTFILENAME'
 	b''
 	b''
 
+	b''
 	b'a'
 	b'00000023'
 	b'ACK'
 	b''
 	b''
-	b''
 
+	b''
 	b'a'
 	b'00000023'
 	b'REP'
-	b''
 	b'{"value": /sdata1701/kpf1/2025-06-23/image_672.fits', "time": 234.23}'
 	b''
 
@@ -357,8 +357,8 @@ Publish/subscribe
 -----------------
 
 The second socket type implements a publish/subscribe socket pattern. The
-desired functionality in mKTL is a neat match for the PUB/SUB socket pattern
-offered by ZeroMQ:
+desired functionality in mKTL is an excellent match for the PUB/SUB socket
+pattern offered by ZeroMQ:
 
 	* SUB clients subscribe to one or more topics from
 	  a given PUB socket, or can subscribe to all topics
@@ -373,41 +373,12 @@ offered by ZeroMQ:
 	  subscribed to those specific topics, the broadcasts
 	  are never sent to the client.
 
-The formatting of the PUB message is very similar to what is described
+The formatting of the PUB message is exactly the same as what is described
 above for the :ref:`request/response multipart message format <request>`.
-Some fields are not necessary for the PUB variant, and in order for the
-topic matching to work the topic must be the first component of a multipart
-message. The fields are as follows:
-
-.. list-table::
-
-  * - *Field*
-    - *Data type*
-
-  * - **topic**
-    - For a typical broadcast the topic will be the full key for a single
-      mKTL item. This is similar to the 'target' field in a
-      :ref:`request/response message <request>`. For all mKTL addressing
-      the topic appends a trailing '.' in order to prevent unwanted substring
-      matching between similarly
-      named keys. Likewise, because of the ZeroMQ behavior around leading
-      substrings, any expanded use of mKTL PUB/SUB behavior will use a
-      leading prefix to distinguish it from other message types. For example,
-      broadcasting all SET requests with a leading 'set:' prefix, or
-      broadcasting a bundle of related mKTL items with a leading 'bundle:'
-      prefix.
-
-  * - **version**
-    - A single ASCII character indicating the mKTL protocol version number.
-      The initial release of the mKTL protocol uses the version character 'a'.
-
-  * - **payload**
-    - The message payload, with exactly the same contents as
-      :ref:`described above <message_payload>`.
-
-  * - **bulk**
-    - A bulk byte sequence, with exactly the same contents as the
-      :ref:`request/response message <request>`.
+Some fields, such as the identifier, are not necessary for the PUB variant
+and will always be empty. The PUB/SUB message structure, where the topic
+must be the first field in the multipart message, motivates having that
+field be the first part for the universal mKTL message structure.
 
 
 .. _discovery:
@@ -420,7 +391,7 @@ are you allowed to have multiple listeners on the same port, but they will all
 respond to an incoming broadcast message. Some care thus needs to be taken to
 make sure these responses do not lend themselves to a denial of service attack.
 Regardless, this feature allows every daemon to create a listener on the same
-port, which greatly simplfies periodic discovery.
+port, which simplifies periodic discovery.
 
 The discovery of daemons is a two-part process; rather than ask every daemon
 to cache the configuration for every other daemon on its local network, the
