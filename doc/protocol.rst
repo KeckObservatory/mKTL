@@ -86,7 +86,7 @@ For both ends of the request/response exchange, the message parts are:
 
   * - **type**
     - The message type. This is a short string of characters that identifies
-      what type of request, or reponse, this message represents. It is one
+      what type of request, or response, this message represents. It is one
       of the values described in the ref:`message_types` section below.
 
   * - **payload**
