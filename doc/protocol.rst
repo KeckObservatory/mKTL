@@ -54,9 +54,10 @@ in any order, in any direction.
 
 The request/response interaction between the client and daemon is a multipart
 message, where each part is required and has specific meaning. The reference
-implementation provides a :class:`mktl.protocol.Message` class to minimize
-the amount of code that has to be aware about the on-the-wire message structure.
-For both ends of the request/response exchange, the message parts are:
+implementation provides a :class:`mktl.protocol.message.Message` class to
+minimize the amount of code that has to be aware about the on-the-wire message
+structure. For both ends of the request/response exchange, the message parts
+are:
 
 .. list-table::
 
@@ -87,7 +88,7 @@ For both ends of the request/response exchange, the message parts are:
   * - **type**
     - The message type. This is a short string of characters that identifies
       what type of request, or response, this message represents. It is one
-      of the values described in the ref:`message_types` section below.
+      of the values described in the :ref:`message_types` section below.
 
   * - **payload**
     - The message payload. This is the JSON representation of any additional
