@@ -329,6 +329,10 @@ class Server:
 
         self.port = trial
 
+        # Experiments with a multiprocessing.SimpleQueue and an ipc socket
+        # for notifications result in something like a 35% slowdown compared
+        # to using a queue.SimpleQueue and an inproc socket.
+
         try:
             # Available in Python 3.7+.
             self.broadcasts = queue.SimpleQueue()
