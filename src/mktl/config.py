@@ -200,7 +200,7 @@ class Configuration:
                 break
 
         if unformatted is None:
-            raise KeyError('invalid enumerator: ' + repr(value))
+            raise KeyError('invalid enumeration value: ' + repr(value))
 
         return unformatted
 
@@ -682,12 +682,18 @@ class Configuration:
 
         # {"0": "No", "1": "Yes", "2": "Unknown"}
 
+        if value is None:
+            return ''
+
+        if isinstance(value, bool):
+            value = int(value)
+
         value = str(value)
 
         try:
             formatted = enumerators[value]
         except KeyError:
-            formatted = value
+            raise KeyError('invalid enumerator: ' + repr(value))
 
         return formatted
 
@@ -711,6 +717,7 @@ class Configuration:
 
         value = int(value)
         formatted = list()
+        verified = 0
 
         for bit,name in enumerators.items():
             if bit == 'None':
@@ -720,6 +727,10 @@ class Configuration:
             bit_value = 1 << bit
             if value & bit_value:
                 formatted.append(name)
+                verified += bit_value
+
+        if verified != value:
+            raise KeyError('value contains unknown active bits: ' + str(value))
 
         if len(formatted) == 0:
             try:
@@ -972,9 +983,8 @@ class Configuration:
             del items[key]
             items[lower] = item
 
-        # Allow for the possibility that a boolean item does not include
-        # enumerators in its description. This check is only necessary
-        # for authoritative blocks.
+        # Normalize the formatting of enumerators for any relevant items.
+        # This check is only necessary for authoritative blocks.
 
         if uuid == self.authoritative_uuid:
             for key in items.keys():
@@ -985,22 +995,48 @@ class Configuration:
                 except KeyError:
                     continue
 
-                if type == 'boolean':
+                # First pass: make sure the enumerators are in with
+                # strings as keys instead of integers.
+
+                if type == 'boolean' or type == 'enumerated' or type == 'mask':
+                    additions = dict()
+                    deletions = list()
+
                     try:
                         enumerators = item_config['enumerators']
                     except KeyError:
                         enumerators = dict()
                         item_config['enumerators'] = enumerators
 
+                    for enumerator in enumerators.keys():
+                        # This would be a nice place to handle the enumerator
+                        # being None for a mask, but if that were the case an
+                        # exception would already be thrown when trying to
+                        # convert the configuration block to JSON.
+
+                        if isinstance(enumerator, int):
+                            additions[str(enumerator)] = enumerators[enumerator]
+                            deletions.append(enumerator)
+
+                    enumerators.update(additions)
+
+                    for deletion in deletions:
+                        del enumerators[deletion]
+
+                # Second pass: fill in default boolean values if they
+                # are not specified.
+
+                if type == 'boolean':
                     try:
                         enumerators['0']
-                    except:
+                    except KeyError:
                         enumerators['0'] = 'False'
 
                     try:
                         enumerators['1']
-                    except:
+                    except KeyError:
                         enumerators['1'] = 'True'
+
 
 
         # It's possible the contents of the local authoritative block changed.

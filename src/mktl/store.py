@@ -30,11 +30,15 @@ class Store:
     def __contains__(self, key):
 
         if isinstance(key, Item):
-            key = key.key
+            item = key
+            key = item.key
+
+            my_item = self._items[key]
+            return item is my_item
+
         else:
             key = key.lower()
-
-        return key in self._items
+            return key in self._items
 
 
     def __delitem__(self, key):
@@ -42,7 +46,10 @@ class Store:
 
 
     def __getitem__(self, key):
-        key = key.lower()
+        if isinstance(key, Item):
+            key = key.key
+        else:
+            key = key.lower()
 
         try:
             item = self._items[key]
@@ -60,11 +67,10 @@ class Store:
             if item is None:
                 try:
                     item = Item(self, key)
-                except:
+                finally:
                     self._items_lock.release()
-                    raise
-
-            self._items_lock.release()
+            else:
+                self._items_lock.release()
 
             # The Item assigns itself to our self._items dictionary as an early
             # step in its initialization process, there is no need to manipulate
@@ -87,7 +93,7 @@ class Store:
 
 
     def __repr__(self):
-        return 'store.Store: ' + repr(self._items)
+        return "mktl.Store(%s): %s" % (self.name, repr(self._items))
 
 
     def __setitem__(self, name, value):

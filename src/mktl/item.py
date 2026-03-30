@@ -833,11 +833,7 @@ class Item:
             This is the inverse of :func:`from_format`.
         """
 
-        try:
-            formatted = self.store.config.to_format(self.key, value)
-        except:
-            formatted = str(self.value)
-
+        formatted = self.store.config.to_format(self.key, value)
         return formatted
 
 
