@@ -235,6 +235,43 @@ class Broadcast(Message):
         self._parts = (target, version, payload, bulk)
 
 
+    @classmethod
+    def reconstruct(cls, parts):
+        """ Reconstruct a :class:`Broadcast` instance from the specified
+            sequence of message parts. This is effectively the inverse of the
+            :func:`Broadcast._finalize` method.
+        """
+
+        if len(parts) < 4:
+            raise ValueError("multipart quantity mismatch: expected 4, got %d" % len(parts))
+
+        topic = parts[0]
+        their_version = parts[1]
+
+        if their_version != version:
+            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
+
+        payload = parts[2]
+        bulk = parts[3]
+
+        if bulk == b'':
+            bulk = None
+
+        if payload == b'':
+            payload = None
+        else:
+            payload = json.loads(payload)
+            try:
+                payload = Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
+
+        broadcast = cls('PUB', topic, payload)
+        return broadcast
+
+
 # end of class Broadcast
 
 
@@ -486,6 +523,31 @@ def _id_next():
     id = '%08x' % (id)
     id = id.encode()
     return id
+
+
+def reconstruct(mclass, parts):
+    """ Reconstruct a :class:`Message` instance from the specified sequence
+        of message parts. This is effectively the inverse of the
+        :func:`Message._finalize` method. The *mclass* argument is expected
+        to be appropriate for this message type; the caller should always
+        know which type of message it is expecting to handle.
+    """
+
+    if mclass == Broadcast:
+        return reconstruct_broadcast(parts)
+    elif mclass == Request:
+        return reconstruct_request(parts)
+    else:
+        return reconstruct_message(parts)
+
+
+def reconstruct_broadcast(parts):
+    """ Reconstruct a :class:`Broadcast` instance from the specified sequence
+        of message parts. This is effectively the inverse of the
+        :func:`Message._finalize` method. The *mclass* argument is expected
+        to be appropriate for this message type; the caller should always
+        know which type of message it is expecting to handle.
+    """
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
