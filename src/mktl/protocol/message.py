@@ -583,29 +583,4 @@ def _id_next():
     return id
 
 
-def reconstruct(mclass, parts):
-    """ Reconstruct a :class:`Message` instance from the specified sequence
-        of message parts. This is effectively the inverse of the
-        :func:`Message._finalize` method. The *mclass* argument is expected
-        to be appropriate for this message type; the caller should always
-        know which type of message it is expecting to handle.
-    """
-
-    if mclass == Broadcast:
-        return reconstruct_broadcast(parts)
-    elif mclass == Request:
-        return reconstruct_request(parts)
-    else:
-        return reconstruct_message(parts)
-
-
-def reconstruct_broadcast(parts):
-    """ Reconstruct a :class:`Broadcast` instance from the specified sequence
-        of message parts. This is effectively the inverse of the
-        :func:`Message._finalize` method. The *mclass* argument is expected
-        to be appropriate for this message type; the caller should always
-        know which type of message it is expecting to handle.
-    """
-
-
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
