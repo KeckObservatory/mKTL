@@ -347,6 +347,56 @@ class Request(Message):
         return self.rep_event.is_set()
 
 
+    @classmethod
+    def reconstruct(cls, parts):
+        """ Reconstruct a :class:`Request` instance from the specified
+            sequence of message parts. This is effectively the inverse of the
+            :func:`Request._finalize` method. Reconstructed requests are not
+            expected to leverage the internal event notification scheme, those
+            aspects of a :class:`Request` are not functional as they do not
+            have meaning in this context; they are only relevant for the
+            initiator of the request.
+        """
+
+        if len(parts) < 6:
+            raise ValueError("multipart quantity mismatch: expected 6, got %d" % len(parts))
+
+        their_version = parts[0]
+
+        if their_version != version:
+            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
+
+        req_id = parts[1]
+        req_type = parts[2]
+        target = parts[3]
+        payload = parts[4]
+        bulk = parts[5]
+
+        req_type = req_type.decode()
+        target = target.decode()
+
+        if bulk == b'':
+            bulk = None
+
+        if payload == b'':
+            payload = None
+        else:
+            payload = json.loads(payload)
+            try:
+                payload = Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
+
+        request = cls(req_type, target, payload, req_id)
+
+        request.ack_event = None
+        request.rep_event = None
+
+        return request
+
+
     def wait_ack(self, timeout):
         """ Block until the request has been acknowledged. This is a wrapper to
             a :class:`threading.Event` instance; if the event has occurred it
