@@ -195,6 +195,48 @@ class Message:
         logger.log(level, message, *args)
 
 
+    @classmethod
+    def reconstruct(cls, parts):
+        """ Reconstruct a :class:`Message` instance from the specified
+            sequence of message parts. This is effectively the inverse of the
+            :func:`Message._finalize` method.
+        """
+
+        if len(parts) < 6:
+            raise ValueError("multipart quantity mismatch: expected 6, got %d" % len(parts))
+
+        their_version = parts[0]
+
+        if their_version != version:
+            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
+
+        message_id = parts[1]
+        message_type = parts[2]
+        target = parts[3]
+        payload = parts[4]
+        bulk = parts[5]
+
+        message_type = message_type.decode()
+        target = target.decode()
+
+        if bulk == b'':
+            bulk = None
+
+        if payload == b'':
+            payload = None
+        else:
+            payload = json.loads(payload)
+            try:
+                payload = Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
+
+        message = cls(message_type, target, payload, message_id)
+        return message
+
+
 # end of class Message
 
 
@@ -358,38 +400,16 @@ class Request(Message):
             initiator of the request.
         """
 
-        if len(parts) < 6:
-            raise ValueError("multipart quantity mismatch: expected 6, got %d" % len(parts))
+        # This is a bit of a hack to work around the valid types check,
+        # but it avoids duplicating the entirety of the parent reconstruct()
+        # method.
 
-        their_version = parts[0]
+        request_type = parts[2]
+        request_type = request_type.decode()
+        parts[2] = b'REP'
 
-        if their_version != version:
-            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
-
-        req_id = parts[1]
-        req_type = parts[2]
-        target = parts[3]
-        payload = parts[4]
-        bulk = parts[5]
-
-        req_type = req_type.decode()
-        target = target.decode()
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        request = cls(req_type, target, payload, req_id)
+        message = Message.reconstruct(parts)
+        request = cls(request_type, message.target, message.payload, message.id)
 
         request.ack_event = None
         request.rep_event = None
