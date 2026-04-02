@@ -389,34 +389,6 @@ class Request(Message):
         return self.rep_event.is_set()
 
 
-    @classmethod
-    def reconstruct(cls, parts):
-        """ Reconstruct a :class:`Request` instance from the specified
-            sequence of message parts. This is effectively the inverse of the
-            :func:`Request._finalize` method. Reconstructed requests are not
-            expected to leverage the internal event notification scheme, those
-            aspects of a :class:`Request` are not functional as they do not
-            have meaning in this context; they are only relevant for the
-            initiator of the request.
-        """
-
-        # This is a bit of a hack to work around the valid types check,
-        # but it avoids duplicating the entirety of the parent reconstruct()
-        # method.
-
-        request_type = parts[2]
-        request_type = request_type.decode()
-        parts[2] = b'REP'
-
-        message = Message.reconstruct(parts)
-        request = cls(request_type, message.target, message.payload, message.id)
-
-        request.ack_event = None
-        request.rep_event = None
-
-        return request
-
-
     def wait_ack(self, timeout):
         """ Block until the request has been acknowledged. This is a wrapper to
             a :class:`threading.Event` instance; if the event has occurred it
