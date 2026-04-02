@@ -386,6 +386,9 @@ class Server:
         ### exceptions are passed back to the originator of the request.
         ### Presumably that means calling something like _req_incoming().
 
+        ### As it currently stands, any exceptions occurring here are being
+        ### silently eaten by the thread pool executing this method.
+
         ident = parts[0]
         parts = parts[1:]
         request = message.Request.reconstruct(parts)
