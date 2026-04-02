@@ -54,9 +54,10 @@ in any order, in any direction.
 
 The request/response interaction between the client and daemon is a multipart
 message, where each part is required and has specific meaning. The reference
-implementation provides a :class:`mktl.protocol.Message` class to minimize
-the amount of code that has to be aware about the on-the-wire message structure.
-For both ends of the request/response exchange, the message parts are:
+implementation provides a :class:`mktl.protocol.message.Message` class to
+minimize the amount of code that has to be aware about the on-the-wire message
+structure. For both ends of the request/response exchange, the message parts
+are:
 
 .. list-table::
 
@@ -79,8 +80,8 @@ For both ends of the request/response exchange, the message parts are:
 
   * - **type**
     - The message type. This is a short string of characters that identifies
-      what type of request, or reponse, this message represents. It is one
-      of the values described in the ref:`message_types` section below.
+      what type of request, or response, this message represents. It is one
+      of the values described in the :ref:`message_types` section below.
 
   * - **target**
     - The target for this request/response, if any. Not all requests have a
@@ -101,8 +102,8 @@ For both ends of the request/response exchange, the message parts are:
     - A bulk byte sequence, typically a component of the payload. This is to
       allow the transmission of information like image data, where the bulk
       bytes represent the image buffer, and the JSON payload describes how
-      to interpret the buffer. This field will be an empty byte sequence if
-      there is no bulk component.
+      to interpret the buffer. This field will be omitted entirely if there
+      is no bulk component.
 
 Upon receipt of a request the daemon will immediately issue an ACK response.
 The absence of a quick response indicates that the daemon is not available,
@@ -143,12 +144,10 @@ for the simple exchange outlined above::
 	b'GET'
 	b'kpfguide.LASTFILENAME'
 	b''
-	b''
 
 	b'a'
 	b'00000023'
 	b'ACK'
-	b''
 	b''
 	b''
 
@@ -157,7 +156,6 @@ for the simple exchange outlined above::
 	b'REP'
 	b''
 	b'{"value": /sdata1701/kpf1/2025-06-23/image_672.fits', "time": 234.23}'
-	b''
 
 
 .. _message_types:
@@ -407,7 +405,8 @@ message. The fields are as follows:
 
   * - **bulk**
     - A bulk byte sequence, with exactly the same contents as the
-      :ref:`request/response message <request>`.
+      :ref:`request/response message <request>`. This field will be
+      omitted entirely if there is no bulk component.
 
 
 .. _discovery:
