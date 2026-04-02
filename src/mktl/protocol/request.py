@@ -387,36 +387,10 @@ class Server:
         ### Presumably that means calling something like _req_incoming().
 
         ident = parts[0]
-        their_version = parts[1]
-
-        if their_version != message.version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(message.version)))
-
-        req_id = parts[2]
-        req_type = parts[3]
-        target = parts[4]
-        payload = parts[5]
-        bulk = parts[6]
-
-        req_type = req_type.decode()
-        target = target.decode()
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        request = message.Request(req_type, target, payload, req_id)
+        parts = parts[1:]
+        request = message.Request.reconstruct(parts)
         request.prefix = (ident,)
+
         payload = None
         error = None
 
@@ -442,7 +416,7 @@ class Server:
             elif payload.error is None:
                 payload.error = error
 
-        response = message.Message('REP', target, payload, req_id)
+        response = message.Message('REP', request.target, payload, request.id)
         response.prefix = request.prefix
 
         self.send(response)
