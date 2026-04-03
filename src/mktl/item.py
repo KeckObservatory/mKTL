@@ -661,15 +661,18 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True, formatted=False, quantity=False):
+    def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
             instance, which has a :func:`mktl.protocol.message.Request.wait`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
-            satisfied. There is no return value for a blocking request; failed
-            requests will raise exceptions.
+            satisfied. Set *reply* to False to disable all error handling and
+            acknowledgements for the request (fire and forget); setting
+            *reply to False implies *wait* is also False.
+            There is no return value for a blocking request; failed requests
+            will raise exceptions.
 
             The optional *formatted* and *quantity* options enable calling
             :func:`set` with either the string-formatted representation or
@@ -698,8 +701,13 @@ class Item:
         else:
             raise ValueError('formatted+quantity arguments must be boolean')
 
-        payload = self.to_payload(new_value)
-        payload.add_origin()
+        if reply:
+            payload = self.to_payload(new_value)
+            payload.add_origin()
+        else:
+            payload = self.to_payload(new_value, reply=False)
+            wait = False
+
         message = protocol.message.Request('SET', self.full_key, payload)
         self.req.send(message)
 
@@ -841,7 +849,7 @@ class Item:
         return formatted
 
 
-    def to_payload(self, value=None, timestamp=None):
+    def to_payload(self, value=None, timestamp=None, **kwargs):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
             not specified the current value of this :class:`Item` will be
@@ -877,11 +885,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value, timestamp, **kwargs)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype, **kwargs)
 
         return payload
 
