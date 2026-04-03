@@ -1267,15 +1267,20 @@ def announce(config, uuid, override=False):
     """
 
     store = config.store
+    key = store + '.config'
+
     block = config[uuid]
     block = dict(block)
 
     if override == True:
         block['override'] = True
 
-    payload = protocol.message.Payload(block)
+    blocks = dict()
+    blocks[uuid] = block
+
+    payload = protocol.message.Payload(blocks)
     payload.add_origin()
-    message = protocol.message.Request('CONFIG', store, payload)
+    message = protocol.message.Request('SET', key, payload)
 
     brokers = protocol.discover.search(wait=True)
 
