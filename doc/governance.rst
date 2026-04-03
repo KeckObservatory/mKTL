@@ -124,7 +124,7 @@ Informative commit messages and other inline documentation should be
 leveraged whenever practical. Clear expressions of intent go a long way
 towards understanding code, both for reviews and future debugging.
 
-All pull requests are expected to pass the unit test suite with no errors.
+All pull requests must pass the unit test suite with no errors.
 
 Code style
 ^^^^^^^^^^
