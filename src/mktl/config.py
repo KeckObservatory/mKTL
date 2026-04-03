@@ -24,6 +24,8 @@ from . import protocol
 _cache = dict()
 _cache_lock = threading.Lock()
 
+_callbacks = list()
+
 
 class Configuration:
     """ A convenience class to represent mKTL configuration data. To first
@@ -577,6 +579,19 @@ class Configuration:
 
         for reference in invalid:
             self.callbacks.remove(reference)
+
+        invalid = list()
+
+        for reference in _callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            _callbacks.remove(reference)
 
 
     def register(self, method):
@@ -1521,6 +1536,24 @@ def match_provenance(full_provenance1, full_provenance2):
 
         matched = True
         index += 1
+
+
+
+def register(method):
+    """ Register a callback to be invoked whenever any configuration
+        instance receives an update. The callback should take no additional
+        arguments.
+    """
+
+    if callable(method):
+        pass
+    else:
+        raise TypeError('the registered method must be callable')
+
+    reference = weakref.ref(method)
+    _callbacks.append(reference)
+
+    method()
 
 
 
