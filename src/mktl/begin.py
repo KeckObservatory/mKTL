@@ -50,7 +50,7 @@ def discover(*targets):
     protocol.request.Client.timeout = 0.5
 
     for address,port in brokers:
-        request = protocol.message.Request('HASH')
+        request = protocol.message.Request('GET', '_hash')
         try:
             payload = protocol.request.send(address, port, request)
         except:
@@ -59,7 +59,8 @@ def discover(*targets):
         hashes = payload.value
 
         for store in hashes.keys():
-            request = protocol.message.Request('CONFIG', store)
+            key = store + '._config'
+            request = protocol.message.Request('GET', key)
             payload = protocol.request.send(address, port, request)
 
             blocks = payload.value
@@ -138,7 +139,8 @@ def get(store, key=None):
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
         hostname,port = brokers[0]
-        message = protocol.message.Request('CONFIG', store)
+        key = store + '._config'
+        message = protocol.message.Request('GET', key)
         payload = protocol.request.send(hostname, port, message)
 
         blocks = payload.value
@@ -199,8 +201,9 @@ def refresh(configuration):
             hostname = stratum['hostname']
             rep = stratum['rep']
 
+            key = store + '._hash'
             client = protocol.request.client(hostname, rep)
-            request = protocol.message.Request('HASH', store)
+            request = protocol.message.Request('GET', key)
 
             try:
                 client.send(request)
@@ -235,7 +238,8 @@ def refresh(configuration):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                message = protocol.message.Request('CONFIG', store)
+                key = store + '._config'
+                message = protocol.message.Request('GET', key)
                 client.send(message)
                 ### Again, exception handling may be required, though the
                 ### previous request went through, so there shouldn't be a
@@ -255,7 +259,7 @@ def refresh(configuration):
 
                 # This is not checking to see whether the UUID is present in the
                 # results-- it is assumed, because the UUID was present in the
-                # response to the HASH query prior to reaching this point.
+                # response to the _hash query prior to reaching this point.
 
                 new_block = new_config[uuid]
                 configuration.update(new_block)
