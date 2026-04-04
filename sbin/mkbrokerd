@@ -375,6 +375,8 @@ class RequestServer(mktl.protocol.request.Server):
             key = '_hash'
         else:
             store, key = target.split('.', 1)
+            if store == '':
+                store = None
 
         if key == '_hash':
             payload_data = mktl.config.get_hashes(store)
