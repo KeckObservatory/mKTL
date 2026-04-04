@@ -97,9 +97,9 @@ class Daemon:
         avoid = _used_ports()
 
         try:
-            self.rep = RequestServer(self, port=rep, avoid=avoid)
+            self.rep = RequestServer(self, store, port=rep, avoid=avoid)
         except ConnectionError:
-            self.rep = RequestServer(self, port=None, avoid=avoid)
+            self.rep = RequestServer(self, store, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
 
@@ -446,7 +446,8 @@ class Daemon:
         """
 
         hostname = socket.getfqdn()
-        request = protocol.message.Request('CONFIG', store)
+        key = store + '._config'
+        request = protocol.message.Request('GET', key)
 
         try:
             payload = protocol.request.send(hostname, port, request)
@@ -455,10 +456,6 @@ class Daemon:
             return
 
         blocks = payload.value
-
-        # There should only be one UUID in this block, because we're asking
-        # a direct question of an authoritative daemon running on the same
-        # host we're trying to run on. But that assumption is not being checked.
 
         for uuid,block in blocks.items():
             alias = block['alias']
@@ -477,32 +474,16 @@ class Daemon:
 
 class RequestServer(protocol.request.Server):
 
-    def __init__(self, daemon, *args, **kwargs):
+    def __init__(self, daemon, store, *args, **kwargs):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
+        self.store = store
+
         self._getters = dict()
-
-
-    def req_config(self, request):
-
-        target = request.target
-        response = dict()
-
-        if self.daemon.store is None:
-            raise RuntimeError('daemon not ready to accept CONFIG request')
-
-        if target == self.daemon.store.name:
-            uuid = self.daemon.uuid
-            configuration = dict(self.daemon.config[uuid])
-            response[uuid] = configuration
-        else:
-            configuration = config.get(target)
-            uuids = configuration.uuids()
-            for uuid in uuids:
-                response[uuid] = config[uuid]
-
-        payload = protocol.message.Payload(response)
-        return payload
+        self._getters[store + '._config'] = self.req_get_config
+        self._getters[store + '._hash'] = self.req_get_hash
+        self._getters['._hash'] = self.req_get_hash
+        self._getters['_hash'] = self.req_get_hash
 
 
     def req_handler(self, request):
@@ -515,17 +496,10 @@ class RequestServer(protocol.request.Server):
         type = request.type
         target = request.target
 
-        if target == '' and type != 'HASH' and type != 'CONFIG':
-            raise KeyError("invalid %s request, 'target' not set" % (type))
-
-        if type == 'HASH':
-            response = self.req_hash(request)
-        elif type == 'SET':
+        if type == 'SET':
             response = self.req_set(request)
         elif type == 'GET':
             response = self.req_get(request)
-        elif type == 'CONFIG':
-            response = self.req_config(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
@@ -564,7 +538,24 @@ class RequestServer(protocol.request.Server):
 
         configuration = config.get(store)
         configuration = configuration._by_uuid
-        return configuration
+        payload = protocol.message.Payload(configuration)
+        return payload
+
+
+    def req_get_hash(self, request):
+
+        target = request.target
+
+        if target == '_hash':
+            store = None
+        else:
+            store, key = target.split('.', 1)
+            if store == '':
+                store = None
+
+        hashes = config.get_hashes(store)
+        payload = protocol.message.Payload(hashes)
+        return payload
 
 
     def req_set(self, request):
@@ -592,17 +583,6 @@ class RequestServer(protocol.request.Server):
 
         response = self.daemon.store[key].req_set(request)
         return response
-
-
-    def req_hash(self, request):
-
-        store = request.target
-        if store == '':
-            store = None
-
-        hashes = config.get_hashes(store)
-        payload = protocol.message.Payload(hashes)
-        return payload
 
 
 # end of class RequestServer
