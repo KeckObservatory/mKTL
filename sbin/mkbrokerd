@@ -50,8 +50,7 @@ def main():
             # configuration blocks discovered in this fashion.
 
             address,port = seen
-            request = mktl.protocol.message.Request('HASH')
-            #request = mktl.protocol.message.Request('GET', '_hash')
+            request = mktl.protocol.message.Request('GET', '_hash')
             try:
                 payload = mktl.protocol.request.send(address, port, request)
             except:
@@ -60,9 +59,19 @@ def main():
 
             hashes = payload.value
 
+            if hashes is None:
+                # Error requesting the hashes.
+                logger.warning("HASH request from %s:%d failed" % (address, port))
+                error = payload.error
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+                    e_debug = error['debug']
+                    logger.warning("Remote exception: %s: %s\n%s" % (e_type, e_text, e_debug))
+                continue
+
             for store in hashes.keys():
-                request = mktl.protocol.message.Request('CONFIG', store)
-                #request = mktl.protocol.message.Request('GET', store + '._config')
+                request = mktl.protocol.message.Request('GET', store + '._config')
                 payload = mktl.protocol.request.send(address, port, request)
 
                 blocks = payload.value
@@ -354,72 +363,30 @@ class RequestServer(mktl.protocol.request.Server):
         config.update(new)
 
 
-    def req_config(self, request):
-        """ When a daemon announces a configuration block it will be the payload
-            of the request, otherwise, for a query the payload is empty. The
-            response for a payload is ignored, though the presence or absence of
-            exceptions is significant. The response to a configuration request
-            is a sequence of configuration blocks representing the full known
-            configuration for the specified store, with a single block
-            corresponding to a single daemon.
-        """
-
-        store = request.target
-        payload = request.payload
-
-        if payload is None or payload.value is None:
-            try:
-                config = mktl.config.get(store)
-            except KeyError:
-                response = tuple()
-            else:
-                response = config._by_uuid
-
-            if len(response) == 0:
-                raise KeyError('no configuration available for ' + repr(store))
-
-        else:
-            response = True
-            block = payload.value
-
-            try:
-                self.process_block(block)
-            except ProvenanceLoopError:
-                # This configuration block came from us. Pay no mind.
-                pass
-
-            provenance = block['provenance'][0]
-            seen = (provenance['hostname'], provenance['rep'])
-            main.known.add(seen)
-
-
-        payload = mktl.Payload(response)
-        return payload
-
-
     def req_get(self, request):
         """ We are expecting queries for hash and configuration data, aimed
-            at specially named built-in keys.
+            at specially named built-in keys '_hash' and '_config'.
         """
 
         target = request.target
 
         if target == '_hash':
-            payload_data = mktl.config.get_hashes()
+            store = None
+            key = '_hash'
         else:
-            store,key = target.split('.', 1)
+            store, key = target.split('.', 1)
 
-            if key == '_hash':
-                payload_data = mktl.config.get_hashes(store)
-            elif key == '_config':
-                try:
-                    config = mktl.config.get(store)
-                except KeyError:
-                    payload_data = tuple()
-                else:
-                    payload_data = config._by_uuid
+        if key == '_hash':
+            payload_data = mktl.config.get_hashes(store)
+        elif key == '_config':
+            try:
+                config = mktl.config.get(store)
+            except KeyError:
+                payload_data = tuple()
             else:
-                raise ValueError('unhandled key: ' + target)
+                payload_data = config._by_uuid
+        else:
+            raise ValueError('unhandled key: ' + target)
 
 
         payload = mktl.Payload(payload_data)
@@ -436,38 +403,13 @@ class RequestServer(mktl.protocol.request.Server):
         type = request.type
         target = request.target
 
-        if type != 'HASH' and target == '':
-            raise KeyError('invalid request, no store/name specified')
-
         if type == 'GET':
             payload = self.req_get(request)
         elif type == 'SET':
             payload = self.req_set(request)
-        elif type == 'HASH':
-            payload = self.req_hash(request)
-        elif type == 'CONFIG':
-            payload = self.req_config(request)
         else:
             raise ValueError('unhandled request: ' + type)
 
-        return payload
-
-
-    def req_hash(self, request):
-        """ Return the hash of a configuration block for a requested store name,
-            or all hashes for all locally known stores.
-        """
-
-        store = request.target
-        if store == '':
-            store = None
-
-        try:
-            hashes = mktl.config.get_hashes(store)
-        except KeyError:
-            raise KeyError('no local configuration for ' + repr(store))
-
-        payload = mktl.Payload(hashes)
         return payload
 
 
