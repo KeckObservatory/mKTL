@@ -309,16 +309,17 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
+        key = '_' + self.alias + 'cfg'
+        items[key] = dict()
+        items[key]['description'] = 'JSON description of all items for this daemon.'
+        items[key]['settable'] = False
+
         key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
         items[key]['format'] = '%.3f'
-
-        key = '_' + self.alias + 'cfg'
-        items[key] = dict()
-        items[key]['description'] = 'JSON description of all items for this daemon.'
         items[key]['settable'] = False
 
         key = '_' + self.alias + 'cpu'
