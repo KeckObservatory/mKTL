@@ -202,48 +202,6 @@ also exists, but has its own message structure outside this scheme.
       expected, and there are additional fields set by the client to describe
       the origin of the request.
 
-  * - **HASH**
-    - Request the current hash identifiers for any known configuration blocks
-      of a single mKTL store. All available hash identifiers, for all known
-      stores, will be returned if no store name is specified in the target
-      field. An error will be
-      returned if a store is requested and the responding daemon does not have
-      a cached configuration for that store.
-
-      The hash is 32 hexadecimal integers. The actual hash format is not
-      significant, as long as the source of authority is consistent about
-      which hash format it uses, and the format can be transmitted as 32
-      hexadecimal integers.
-
-      To unify processing the response value is always a dictionary of
-      dictionaries, even if only one hash is available.
-
-      Example response values::
-
-	{'kpfguide': {'uuid1': 0x84a30b35...,
-		      'uuid2': 0x983ae10f...}}
-
-	{'kpfguide': {'uuid1': 0x84a30b35...,
-		      'uuid2': 0x983ae10f...},
-	 'kpfmet': {'uuid6': 0xe0377e7d...,
-		    'uuid7': 0x7735a20a...,
-		    'uuid8': 0x88645dab...,
-		    'uuid9': 0x531c14fd...}}
-
-
-  * - **CONFIG**
-    - Request the full configuration contents for a single mKTL store.
-      There is no option to dump the configuration data for all known stores,
-      a target must always be specified.
-      A typical client interaction will request the configuration hash first,
-      and if the hash for the cached local copy is not a match, request the
-      full contents from the daemon to update the local cache.
-
-      The configuration contents are not fully described here, this is just
-      a description of the request. See the
-      :ref:`configuration documentation <configuration>` for a full description
-      of the data format.
-
   * - **ACK**
     - Immediate acknowledgement of a request; this message type originates from
       a daemon, only in response to a request. If this response is not received
