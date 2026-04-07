@@ -249,7 +249,7 @@ class Request(Message):
         :ivar response: The response (as a :class:`Message`) to this request
     """
 
-    valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
+    valid_types = set(('GET', 'SET'))
 
     def __init__(self, type, target=None, payload=None, id=None):
 
