@@ -378,10 +378,6 @@ class Daemon:
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
 
-        for suffix in ('dev', 'host'):
-            key = '_' + self.alias + suffix
-            self.add_item(item.Item, key)
-
 
     def _setup_missing(self):
         """ Inspect the locally known list of :class:`mktl.Item` instances;
