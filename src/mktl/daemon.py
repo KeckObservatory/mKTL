@@ -358,11 +358,20 @@ class Daemon:
         items[key]['initial'] = os.getpid()
         items[key]['settable'] = False
 
+        key = '_' + self.alias + 'uuid'
+        items[key] = dict()
+        items[key]['description'] = 'Universally unique identifier (UUID) for this daemon.'
+        items[key]['type'] = 'string'
+        items[key]['initial'] = self.uuid
+        items[key]['settable'] = False
+
         self.config.update(block, save=False)
         self.store._update_config()
 
 
-        # Having updated the configuration, now instantiate the built-in items.
+        # Instantiate any custom item subclasses for the newly defined
+        # built-in items; this is only possible after the configuration
+        # has been updated.
 
         self.add_item(Uptime, '_' + self.alias + 'clk')
         self.add_item(DaemonConfiguration, '_' + self.alias + 'cfg')
