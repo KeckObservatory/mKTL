@@ -19,6 +19,11 @@ from .. import json
 
 version = b'a'
 
+# Define any/all optional flags for message handling.
+
+NO_ACK = 0b1
+NO_REPLY = 0b10
+
 # The cached origin information is used by the Payload class to (optionally)
 # provide information used to determine the origin of a message. The call to
 # os.getlogin() appears to be more expensive than the others. For that reason
@@ -77,7 +82,7 @@ class Message:
 
     valid_types = set(('ACK', 'REP'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         if type in self.valid_types:
             pass
@@ -88,6 +93,7 @@ class Message:
         # for example, publish messages do not have or need an identification
         # number or a prefix.
 
+        self.flags = flags
         self.id = id
         self.type = type
         self.payload = payload
@@ -118,10 +124,16 @@ class Message:
             # Once finalized, always finalized.
             return
 
+        flags = self.flags
         id = self.id
         type = self.type
         target = self.target
         payload = self.payload
+
+        if flags:
+            flags = flags.to_bytes(byteorder='big')
+        else:
+            flags = b'\x00'
 
         # It is legal to create a Message with None as the id-- this happens
         # all the time when a Message is used as a container-- but trying to
@@ -157,9 +169,9 @@ class Message:
             payload = payload.encapsulate()
 
         if self.prefix:
-            parts = self.prefix + (version, id, type, target, payload, bulk)
+            parts = self.prefix + (version, id, flags, type, target, payload, bulk)
         else:
-            parts = (version, id, type, target, payload, bulk)
+            parts = (version, id, flags, type, target, payload, bulk)
 
         self._parts = parts
 
@@ -197,16 +209,10 @@ class Message:
 
     @property
     def reply(self):
-        """ The payload reply attribute is mirrored here for the sake of
-            simplifying exception handling elsewhere in the mKTL code base.
-            Otherwise, the other code would need to catch the AttributeError
-            thrown when the local payload is None.
-        """
 
-        try:
-            return self.payload.reply
-        except AttributeError:
-            # There is no payload, and message replies are enabled by default.
+        if self.flags and self.flags & NO_REPLY:
+            return False
+        else:
             return True
 
 
