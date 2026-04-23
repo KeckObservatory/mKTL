@@ -707,7 +707,7 @@ class Item:
             flags = None
             payload.add_origin()
         else:
-            flags = protocol.message.NO_ACK | protocol.message.NO_REPLY
+            flags = protocol.message.NO_ACK_OR_REP
             wait = False
 
         key = self.full_key

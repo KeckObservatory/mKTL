@@ -23,6 +23,7 @@ version = b'a'
 
 NO_ACK = 0b1
 NO_REPLY = 0b10
+NO_ACK_OR_REP = NO_ACK | NO_REPLY
 
 # The cached origin information is used by the Payload class to (optionally)
 # provide information used to determine the origin of a message. The call to
