@@ -167,7 +167,7 @@ class Message:
         if flags:
             flags = flags.to_bytes(byteorder='big')
         else:
-            flags = b'\x00'
+            flags = b''
 
         if payload is None or payload == '':
             bulk = None
@@ -249,9 +249,13 @@ class Message:
         except IndexError:
             bulk = None
 
-        flags = int.from_bytes(flags, byteorder='big')
         type = type.decode()
         target = target.decode()
+
+        if flags == b'':
+            flags = None
+        else:
+            flags = int.from_bytes(flags, byteorder='big')
 
         if payload == b'':
             payload = None
