@@ -403,11 +403,6 @@ class RequestServer(mktl.protocol.request.Server):
         if request.ack:
             self.req_ack(request)
 
-        if request.reply:
-            pass
-        else:
-            return
-
         type = request.type
         target = request.target
 
@@ -421,7 +416,8 @@ class RequestServer(mktl.protocol.request.Server):
         else:
             raise ValueError('invalid request type: ' + type)
 
-        return payload
+        if request.reply:
+            return payload
 
 
     def req_hash(self, request):
