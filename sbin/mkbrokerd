@@ -400,12 +400,13 @@ class RequestServer(mktl.protocol.request.Server):
             will be generated.
         """
 
+        if request.ack:
+            self.req_ack(request)
+
         if request.reply:
             pass
         else:
             return
-
-        self.req_ack(request)
 
         type = request.type
         target = request.target
