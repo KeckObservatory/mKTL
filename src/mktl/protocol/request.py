@@ -182,7 +182,7 @@ class Client:
         self.requests.put(message)
         self.request_signal.send(b'')
 
-        if message.reply:
+        if message.ack:
             pass
         else:
             return
@@ -347,12 +347,14 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
+
+        if request.ack:
+            self.req_ack(request)
+
         if request.reply:
             pass
         else:
             return
-
-        self.req_ack(request)
 
         response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
