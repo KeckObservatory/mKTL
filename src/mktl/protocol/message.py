@@ -114,6 +114,15 @@ class Message:
         return repr(self._parts)
 
 
+    @property
+    def ack(self):
+
+        if self.flags and self.flags & NO_ACK:
+            return False
+        else:
+            return True
+
+
     def _finalize(self):
         """ Take the contents of this :class:`Message`, interpet them as
             bytes, and prepare the tuple that will be used for the multipart
