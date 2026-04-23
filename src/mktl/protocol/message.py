@@ -393,7 +393,7 @@ class Request(Message):
         if id is None:
             id = _id_next()
 
-        Message.__init__(self, type, target, payload, id)
+        Message.__init__(self, type, target, payload, id, flags)
 
         self.response = None
 
