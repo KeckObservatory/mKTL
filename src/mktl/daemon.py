@@ -492,9 +492,7 @@ class RequestServer(protocol.request.Server):
             method to handle that specific request.
         """
 
-        reply = request.reply
-
-        if reply:
+        if request.ack:
             self.req_ack(request)
 
         type = request.type
@@ -514,7 +512,7 @@ class RequestServer(protocol.request.Server):
         else:
             raise ValueError('unhandled request type: ' + type)
 
-        if reply:
+        if request.reply:
             return response
         else:
             return None
