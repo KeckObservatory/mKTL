@@ -52,12 +52,25 @@ implementation in ZeroMQ, which enforces a strict one request, one response
 pattern; instead, we use DEALER/ROUTER, which allows any amount of messages
 in any order, in any direction.
 
+Upon receipt of a request the daemon will immediately issue an ACK response.
+The absence of a quick response indicates that the daemon is not available,
+and the client should immediately raise an error. After the client receives
+the initial ACK it should then look for the full response. There will be no
+further messages associated with that id number after the full response is
+received. A daemon may choose to forego the ACK response, but should only
+do so in circumstances where processing a request requires zero additional
+processing time.
+
+All requests are handled
+fully asynchronously; a client could send a thousand requests in quick
+succession, but the responses will not be serialized, and the response order
+is not guaranteed. Synchronous behavior, if desired, is implemented by client
+code and not in the protocol itself.
+
 The request/response interaction between the client and daemon is a multipart
-message, where each part is required and has specific meaning. The reference
-implementation provides a :class:`mktl.protocol.message.Message` class to
-minimize the amount of code that has to be aware about the on-the-wire message
-structure. For both ends of the request/response exchange, the message parts
-are:
+message, where each part is required and has specific meaning.
+The message parts are identical for both ends of the request/response
+exchange; the message parts are:
 
 .. list-table::
 
@@ -90,6 +103,26 @@ are:
       is a store or a key, depending on the request; this field will be an empty
       byte sequence if the target is not specified.
 
+  * - **flags**
+    - A big-endian integer representing boolean flags that modify how this
+      message is handled. The default value is an integer zero; if this field
+      is transmitted as an empty byte sequence it must be interpreted as the
+      integer zero. Each bit in the integer has a specific meaning:
+
+      .. list-table::
+
+	 * - *Bit*
+	   - *Name*
+	   - *Meaning*
+
+         * - 0b0001
+           - NO_ACK
+	   - The ACK response to this request should be suppressed.
+
+         * - 0b0010
+           - NO_REP
+	   - The REP response to this request should be suppressed.
+
   * - **payload**
     - The message payload. This is the JSON representation of any additional
       data required as part of this exchange; if setting a new value, it would
@@ -104,21 +137,6 @@ are:
       bytes represent the image buffer, and the JSON payload describes how
       to interpret the buffer. This field will be omitted entirely if there
       is no bulk component.
-
-Upon receipt of a request the daemon will immediately issue an ACK response.
-The absence of a quick response indicates that the daemon is not available,
-and the client should immediately raise an error. After the client receives
-the initial ACK it should then look for the full response. There will be no
-further messages associated with that id number after the full response is
-received. A daemon may choose to forego the ACK response, but should only
-do so in circumstances where processing a request requires zero additional
-processing time.
-
-All requests are handled
-fully asynchronously; a client could send a thousand requests in quick
-succession, but the responses will not be serialized, and the response order
-is not guaranteed. Synchronous behavior, if desired, is implemented by client
-code and not in the protocol itself.
 
 Here is an example of what the full exchange on the client side might look
 like, in this case handling the exchange as a synchronous request::
@@ -137,12 +155,13 @@ like, in this case handling the exchange as a synchronous request::
 	response = self.socket.recv_multipart()
 
 Here is a representation of what the on-the-wire messages might look like
-for the simple exchange outlined above::
+for a simple GET request::
 
 	b'a'
 	b'00000023'
 	b'GET'
 	b'kpfguide.LASTFILENAME'
+	b'\x00'
 	b''
 
 	b'a'
@@ -150,12 +169,18 @@ for the simple exchange outlined above::
 	b'ACK'
 	b''
 	b''
+	b''
 
 	b'a'
 	b'00000023'
 	b'REP'
 	b''
+	b''
 	b'{"value": /sdata1701/kpf1/2025-06-23/image_672.fits', "time": 234.23}'
+
+The reference implementation provides a :class:`mktl.protocol.message.Message`
+class to minimize the amount of code that has to be aware about the on-the-wire
+message structure.
 
 
 .. _message_types:
