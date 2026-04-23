@@ -66,11 +66,26 @@ fully asynchronously; a client could send a thousand requests in quick
 succession, but the responses will not be serialized, and the response order
 is not guaranteed. Synchronous behavior, if desired, is implemented by client
 code and not in the protocol itself.
+Here is an example of what the full exchange on the client side might look
+like, in this case handling the exchange as a synchronous request::
+
+        self.socket = zmq_context.socket(zmq.DEALER)
+        self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.identity = identity.encode()
+        self.socket.connect(daemon)
+
+	self.socket.send_multipart(request)
+	result = self.socket.poll(100) # milliseconds
+	if result == 0:
+	    raise TimeoutError('no response received in 100 ms')
+
+	ack = self.socket.recv_multipart()
+	response = self.socket.recv_multipart()
 
 The request/response interaction between the client and daemon is a multipart
-message, where each part is required and has specific meaning.
+message, where each component of the message has a specific meaning.
 The message parts are identical for both ends of the request/response
-exchange; the message parts are:
+exchange.
 
 .. list-table::
 
@@ -80,6 +95,7 @@ exchange; the message parts are:
   * - **version**
     - A single ASCII character indicating the mKTL protocol version number.
       The initial release of the mKTL protocol uses the version character 'a'.
+      The version identifier is always present.
 
   * - **identifier**
     - A unique identifier for the request. The format of this identifier is
@@ -89,17 +105,18 @@ exchange; the message parts are:
       to the original request. Note that this identifier does not necessarily
       have significance on the daemon side, daemons will use their own internal
       scheme to uniquely identify requests, but the response will always include
-      this original identifier.
+      this original identifier. The request identifier is always present.
 
   * - **type**
     - The message type. This is a short string of characters that identifies
       what type of request, or response, this message represents. It is one
-      of the values described in the :ref:`message_types` section below.
+      of the values described in the :ref:`message_types` section below. The
+      message type is always present.
 
   * - **target**
     - The target for this request/response, if any. Not all requests have a
-      target; responses don't need to specify it, since it is the identification
-      number that ties a response to its request. If a target is specified it
+      target; responses don't need to specify it, since the identifier field
+      associates a response with a request. If a target is specified it
       is a store or a key, depending on the request; this field will be an empty
       byte sequence if the target is not specified.
 
@@ -117,42 +134,27 @@ exchange; the message parts are:
 
          * - 0b0001
            - NO_ACK
-	   - The ACK response to this request should be suppressed.
+	   - Suppress the ACK response to this request.
 
          * - 0b0010
            - NO_REP
-	   - The REP response to this request should be suppressed.
+	   - Suppress the REP response to this request.
 
   * - **payload**
     - The message payload. This is the JSON representation of any additional
       data required as part of this exchange; if setting a new value, it would
       contain the value; if it is a response containing additional information
-      it would go here. This field will be an empty byte sequence if no
-      additional information is required. See the :ref:`message_payload` section
-      for a more complete description of the payload contents.
+      it would go here. See the :ref:`message_payload` section
+      for a more complete description of the payload contents. This field will
+      be an empty byte sequence if there is no payload.
 
   * - **bulk**
     - A bulk byte sequence, typically a component of the payload. This is to
       allow the transmission of information like image data, where the bulk
       bytes represent the image buffer, and the JSON payload describes how
       to interpret the buffer. This field will be omitted entirely if there
-      is no bulk component.
-
-Here is an example of what the full exchange on the client side might look
-like, in this case handling the exchange as a synchronous request::
-
-        self.socket = zmq_context.socket(zmq.DEALER)
-        self.socket.setsockopt(zmq.LINGER, 0)
-        self.socket.identity = identity.encode()
-        self.socket.connect(daemon)
-
-	self.socket.send_multipart(request)
-	result = self.socket.poll(100) # milliseconds
-	if result == 0:
-	    raise zmq.ZMQError('no response received in 100 ms')
-
-	ack = self.socket.recv_multipart()
-	response = self.socket.recv_multipart()
+      is no bulk component, which allows a recipient to distinguish between
+      an empty byte sequence and the complete absence of data.
 
 Here is a representation of what the on-the-wire messages might look like
 for a simple GET request::
