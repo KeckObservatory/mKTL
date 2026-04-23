@@ -701,14 +701,17 @@ class Item:
         else:
             raise ValueError('formatted+quantity arguments must be boolean')
 
+        payload = self.to_payload(new_value)
+
         if reply:
-            payload = self.to_payload(new_value)
+            flags = None
             payload.add_origin()
         else:
-            payload = self.to_payload(new_value, reply=False)
+            flags = protocol.message.NO_ACK | protocol.message.NO_REPLY
             wait = False
 
-        message = protocol.message.Request('SET', self.full_key, payload)
+        key = self.full_key
+        message = protocol.message.Request('SET', key, payload, flags=flags)
         self.req.send(message)
 
         if wait == False:
