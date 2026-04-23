@@ -220,8 +220,8 @@ class Message:
 
         quantity = len(parts)
 
-        if quantity != 5 and quantity != 6:
-            raise ValueError("expected 5 or 6 parts, got %d" % (quantity))
+        if quantity != 6 and quantity != 7:
+            raise ValueError("expected 6 or 7 parts, got %d" % (quantity))
 
         their_version = parts[0]
 
@@ -229,15 +229,17 @@ class Message:
             raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
 
         message_id = parts[1]
-        message_type = parts[2]
-        target = parts[3]
-        payload = parts[4]
+        message_flags = parts[2]
+        message_type = parts[3]
+        target = parts[4]
+        payload = parts[5]
 
         try:
-            bulk = parts[5]
+            bulk = parts[6]
         except IndexError:
             bulk = None
 
+        message_flags = int.from_bytes(message_flags, byteorder='big')
         message_type = message_type.decode()
         target = target.decode()
 
@@ -252,7 +254,7 @@ class Message:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        message = cls(message_type, target, payload, message_id)
+        message = cls(message_type, target, payload, message_id, message_flags)
         return message
 
 
@@ -367,7 +369,7 @@ class Request(Message):
 
     valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         # Requests are generally initiated without an id number, but they're
         # required to have one. The expectation is that requests will have an
