@@ -140,11 +140,6 @@ class Message:
         target = self.target
         payload = self.payload
 
-        if flags:
-            flags = flags.to_bytes(byteorder='big')
-        else:
-            flags = b'\x00'
-
         # It is legal to create a Message with None as the id-- this happens
         # all the time when a Message is used as a container-- but trying to
         # send such a message is not permitted.
@@ -169,6 +164,11 @@ class Message:
                 # Assume it is already bytes.
                 pass
 
+        if flags:
+            flags = flags.to_bytes(byteorder='big')
+        else:
+            flags = b'\x00'
+
         if payload is None or payload == '':
             bulk = None
             payload = b''
@@ -180,9 +180,9 @@ class Message:
         # be represented as None, distinct from being an empty byte sequence.
 
         if bulk is None:
-            parts = (version, id, flags, type, target, payload)
+            parts = (version, id, type, target, flags, payload)
         else:
-            parts = (version, id, flags, type, target, payload, bulk)
+            parts = (version, id, type, target, flags, payload, bulk)
 
         if self.prefix:
             parts = self.prefix + parts
@@ -238,10 +238,10 @@ class Message:
         if their_version != version:
             raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
 
-        message_id = parts[1]
-        message_flags = parts[2]
-        message_type = parts[3]
-        target = parts[4]
+        id = parts[1]
+        type = parts[2]
+        target = parts[3]
+        flags = parts[4]
         payload = parts[5]
 
         try:
@@ -249,8 +249,8 @@ class Message:
         except IndexError:
             bulk = None
 
-        message_flags = int.from_bytes(message_flags, byteorder='big')
-        message_type = message_type.decode()
+        flags = int.from_bytes(flags, byteorder='big')
+        type = type.decode()
         target = target.decode()
 
         if payload == b'':
@@ -264,7 +264,7 @@ class Message:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        message = cls(message_type, target, payload, message_id, message_flags)
+        message = cls(type, target, payload, id, flags)
         return message
 
 
