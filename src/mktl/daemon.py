@@ -398,7 +398,7 @@ class Daemon:
                 continue
 
             item = self.store[key]
-            payload = protocol.message.Payload(initial)
+            payload = protocol.message.Payload(value=initial)
             request = protocol.message.Request('SET', item.full_key, payload)
             item.req_initialize(request)
 
@@ -483,7 +483,7 @@ class RequestServer(protocol.request.Server):
             for uuid in uuids:
                 response[uuid] = config[uuid]
 
-        payload = protocol.message.Payload(response)
+        payload = protocol.message.Payload(value=response)
         return payload
 
 
@@ -566,7 +566,7 @@ class RequestServer(protocol.request.Server):
             store = None
 
         hashes = config.get_hashes(store)
-        payload = protocol.message.Payload(hashes)
+        payload = protocol.message.Payload(value=hashes)
         return payload
 
 
