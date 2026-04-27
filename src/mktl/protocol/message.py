@@ -494,9 +494,11 @@ class Payload:
             if key in self.omit:
                 continue
 
-            # Do not include attributes that are just 'None'. This may be
-            # premature optimization, but it seems silly to put a bunch of
-            # extra bytes on the wire when it conveys no additional information.
+            # Do not include attributes that are None. This may be premature
+            # optimization, but it seems silly to put extra bytes on the wire
+            # when it conveys no additional information.
+
+            # Only the 'value' attribute will be put on the wire if it is None.
 
             # It's faster to check the key against 'value' repeatedly than
             # to build a separate set of includes and only assign those
