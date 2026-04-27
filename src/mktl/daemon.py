@@ -755,8 +755,13 @@ def _save_persistent(item, *args, **kwargs):
     by_prefix = dict()
     payload = item.to_payload()
 
-    if payload.bulk is not None:
-        by_prefix['bulk'] = payload.bulk
+    try:
+        bulk = payload.bulk
+    except AttributeError:
+        pass
+    else:
+        if bulk is not None:
+            by_prefix['bulk'] = bulk
 
     by_prefix[''] = payload.encapsulate()
 
