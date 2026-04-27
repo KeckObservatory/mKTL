@@ -203,12 +203,15 @@ class Item:
             This is the inverse of :func:`to_payload`.
         """
 
-        if payload.bulk is not None:
+        try:
+            bulk = payload.bulk
+        except AttributeError:
+            bulk = None
+
+        if bulk is not None:
 
             if numpy is None:
                 raise ImportError('numpy module not available')
-
-            bulk = payload.bulk
 
             shape = payload.shape
             dtype = payload.dtype
@@ -287,7 +290,7 @@ class Item:
         elif refresh == False:
             request = protocol.message.Request('GET', self.full_key)
         elif refresh == True:
-            payload = protocol.message.Payload(None, refresh=True)
+            payload = protocol.message.Payload(refresh=True)
             request = protocol.message.Request('GET', self.full_key, payload)
         else:
             raise TypeError('refresh argument must be a boolean')
@@ -440,7 +443,12 @@ class Item:
         changed = False
 
         if repeat == False:
-            if payload.bulk is None:
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
+
+            if bulk is None:
                 changed = self._daemon_value != new_value
             else:
                 if self._daemon_value is None and new_value is not None:
