@@ -1213,7 +1213,7 @@ def announce(config, uuid, override=False):
     if override == True:
         block['override'] = True
 
-    payload = protocol.message.Payload(block)
+    payload = protocol.message.Payload(value=block)
     payload.add_origin()
     message = protocol.message.Request('CONFIG', store, payload)
 
