@@ -653,7 +653,7 @@ class Item:
         # the contents of the response payload are not inspected.
 
         if response is None:
-            payload = protocol.message.Payload(True)
+            payload = protocol.message.Payload(value=True)
         elif isinstance(response, protocol.message.Payload):
             payload = response
         else:
@@ -885,11 +885,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value=value, time=timestamp)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(time=timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
         return payload
 
