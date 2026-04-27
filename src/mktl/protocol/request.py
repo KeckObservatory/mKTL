@@ -94,8 +94,7 @@ class Client:
             # Fingers crossed that this works:
             response_id = parts[1]
 
-            payload = message.Payload(None)
-            payload.error = error
+            payload = message.Payload(error=error)
             response = message.Message('REP', '???', payload, response_id)
 
 
@@ -396,8 +395,7 @@ class Server:
 
         if error is not None:
             if payload is None:
-                payload = message.Payload(None)
-                payload.error = error
+                payload = message.Payload(error=error)
             elif payload.error is None:
                 payload.error = error
 
