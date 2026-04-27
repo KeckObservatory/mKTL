@@ -151,7 +151,10 @@ class Message:
             bulk = None
             payload = b''
         else:
-            bulk = payload.bulk
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
             payload = payload.encapsulate()
 
         # The absence of the bulk field is the indication that it should
@@ -275,7 +278,10 @@ class Broadcast(Message):
             bulk = None
             payload = b''
         else:
-            bulk = payload.bulk
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
             payload = payload.encapsulate()
 
         # The prefix is ignored for broadcast messages; it should not be set.
@@ -449,48 +455,14 @@ class Payload:
 
     omit = set(('bulk', 'omit'))
 
-    def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None, **kwargs):
+    def __init__(self, **kwargs):
         """ Arbitrary keyword arguments are allowed when creating a
-            :class:`Payload` instance, beyond the canonical set; when
-            included, these additional keyword arguments will be assigned
-            directly as attributes for later encapsulation. Any values
+            :class:`Payload` instance, beyond the canonical set; any values
             assigned in this fashion must be serializable as JSON.
         """
 
-        # The use of 'time' as a keyword argument is what's motivating the
-        # weird import of the time module in this file. We want the keyword
-        # arguments to be aligned with the fields in the JSON description
-        # of a payload: value, time, error, etc.
-
-        if time is None:
-            time = timemodule.time()
-
-        if refresh is False:
-            refresh = None
-
-        # We expect the canonical arguments to all be set all the time,
-        # even if their value is None. That's why they're not rolled up
-        # into the kwargs catch-all.
-
-        self.bulk = bulk
-        self.dtype = dtype
-        self.error = error
-        self.refresh = refresh
-        self.shape = shape
-        self.time = time
-        self.value = value
-
-        if not kwargs:
-            # This is the average case. Faster to check this one condition
-            # and return than to drop out of the next two conditions.
-            return
-
         if 'omit' in kwargs:
             raise ValueError("cannot assign 'omit' to a Payload")
-
-        # Allow additional arbitrary fields in the payload. We are assuming
-        # the caller knows what they are doing, and that these additional
-        # fields can be serialized as JSON.
 
         for key,value in kwargs.items():
             setattr(self, key, value)
