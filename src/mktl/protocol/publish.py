@@ -56,7 +56,7 @@ class Client:
         self.thread.start()
 
 
-    def propagate(self, topic, message):
+    def propagate(self, message):
         """ Invoke any/all callbacks registered via :func:`register` for
             a newly arrived message.
         """
@@ -99,6 +99,8 @@ class Client:
             pass
         else:
             return
+
+        topic = message.target
 
         try:
             references = self.callback_specific[topic]
@@ -185,40 +187,16 @@ class Client:
 
     def _pub_incoming(self, parts):
 
-        if len(parts) < 4:
+        try:
+            broadcast = message.Broadcast.reconstruct(parts)
+        except ValueError:
             ### Malformed message. Not sure where these are coming from,
             ### but here we are. This should be logged, or at least exposed
             ### for future debugging. For now it's being dropped on the
             ### floor.
             return
 
-        topic = parts[0]
-        their_version = parts[1]
-
-        if their_version != message.version:
-            ### Maybe we should occasionally log a version mismatch.
-            ### For now it's being dropped on the floor.
-            return
-
-        payload = parts[2]
-        bulk = parts[3]
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        broadcast = message.Broadcast('PUB', topic, payload)
-        self.propagate(topic, broadcast)
+        self.propagate(broadcast)
 
 
     def _sub_incoming(self):
