@@ -301,7 +301,11 @@ class Item:
         if response is None:
             raise RuntimeError('GET failed: no response to request')
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -719,7 +723,11 @@ class Item:
         if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -828,9 +836,15 @@ class Item:
         """
 
         if self.authoritative == True:
-            return self._daemon_value_timestamp
+            timestamp = self._daemon_value_timestamp
         else:
-            return self._value_timestamp
+            timestamp = self._value_timestamp
+
+        if timestamp is None:
+            # This only occurs in startup conditions, but it does occur.
+            timestamp = time.time()
+
+        return timestamp
 
 
     def to_format(self, value):
