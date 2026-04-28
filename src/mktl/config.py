@@ -1225,7 +1225,11 @@ def announce(config, uuid, override=False):
         except TimeoutError:
             continue
 
-        error = payload.error
+        try:
+            error = payload.error
+        except AttributeError:
+            continue
+
         if error is None or error == '':
             continue
 
