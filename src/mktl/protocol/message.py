@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 import threading
-import time as timemodule
+import time
 
 from .. import json
 
@@ -93,7 +93,7 @@ class Message:
         self.payload = payload
         self.prefix = None
         self.target = target
-        self.timestamp = timemodule.time()
+        self.timestamp = time.time()
 
         self._parts = None
 
