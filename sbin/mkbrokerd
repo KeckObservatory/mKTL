@@ -64,7 +64,11 @@ def main():
                 payload = mktl.protocol.request.send(address, port, request)
 
                 blocks = payload.value
-                error = payload.error
+
+                try:
+                    error = payload.error
+                except AttributeError:
+                    error = None
 
                 if error:
                     e_type = error['type']
