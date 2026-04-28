@@ -148,18 +148,22 @@ class Message:
                 pass
 
         if payload is None or payload == '':
-            bulk = b''
+            bulk = None
             payload = b''
         else:
             bulk = payload.bulk
-            if bulk is None:
-                bulk = b''
             payload = payload.encapsulate()
 
-        if self.prefix:
-            parts = self.prefix + (version, id, type, target, payload, bulk)
+        # The absence of the bulk field is the indication that it should
+        # be represented as None, distinct from being an empty byte sequence.
+
+        if bulk is None:
+            parts = (version, id, type, target, payload)
         else:
             parts = (version, id, type, target, payload, bulk)
+
+        if self.prefix:
+            parts = self.prefix + parts
 
         self._parts = parts
 
@@ -195,6 +199,51 @@ class Message:
         logger.log(level, message, *args)
 
 
+    @classmethod
+    def reconstruct(cls, parts):
+        """ Reconstruct a :class:`Message` instance from the specified
+            sequence of message parts. This is effectively the inverse of the
+            :func:`Message._finalize` method.
+        """
+
+        quantity = len(parts)
+
+        if quantity != 5 and quantity != 6:
+            raise ValueError("expected 5 or 6 parts, got %d" % (quantity))
+
+        their_version = parts[0]
+
+        if their_version != version:
+            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
+
+        message_id = parts[1]
+        message_type = parts[2]
+        target = parts[3]
+        payload = parts[4]
+
+        try:
+            bulk = parts[5]
+        except IndexError:
+            bulk = None
+
+        message_type = message_type.decode()
+        target = target.decode()
+
+        if payload == b'':
+            payload = None
+        else:
+            payload = json.loads(payload)
+            try:
+                payload = Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
+
+        message = cls(message_type, target, payload, message_id)
+        return message
+
+
 # end of class Message
 
 
@@ -223,16 +272,62 @@ class Broadcast(Message):
         target = target.encode()
 
         if payload is None or payload == '':
-            bulk = b''
+            bulk = None
             payload = b''
         else:
             bulk = payload.bulk
-            if bulk is None:
-                bulk = b''
             payload = payload.encapsulate()
 
         # The prefix is ignored for broadcast messages; it should not be set.
-        self._parts = (target, version, payload, bulk)
+        # The absence of the bulk field is the indication that it should
+        # be represented as None, distinct from being an empty byte sequence.
+
+        if bulk is None:
+            parts = (target, version, payload)
+        else:
+            parts = (target, version, payload, bulk)
+
+        self._parts = parts
+
+
+    @classmethod
+    def reconstruct(cls, parts):
+        """ Reconstruct a :class:`Broadcast` instance from the specified
+            sequence of message parts. This is effectively the inverse of the
+            :func:`Broadcast._finalize` method.
+        """
+
+        quantity = len(parts)
+
+        if quantity != 3 and quantity != 4:
+            raise ValueError("expected 3 or 4 parts, got %d" % (quantity))
+
+        topic = parts[0]
+        their_version = parts[1]
+
+        if their_version != version:
+            raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
+
+        payload = parts[2]
+
+        try:
+            bulk = parts[3]
+        except IndexError:
+            bulk = None
+
+        if payload == b'':
+            payload = None
+        else:
+            payload = json.loads(payload)
+            try:
+                payload = Payload(**payload, bulk=bulk)
+            except TypeError:
+                # Weird stuff in the payload. Don't fail on the conversion,
+                # allow it to pass, assuming the users know what they're doing.
+                pass
+
+        broadcast = cls('PUB', topic, payload)
+        return broadcast
 
 
 # end of class Broadcast
