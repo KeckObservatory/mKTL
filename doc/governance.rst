@@ -48,8 +48,7 @@ Roles
 User
 ^^^^
 
-A user is anyone that uses mKTL for any task. This is the most important
-role; a project with no users has no purpose. Users are encouraged to
+A user is anyone that uses mKTL for any task. Users are encouraged to
 provide feedback on any and all topics, especially with regard to any
 strengths or weaknesses of mKTL from their perspective.
 
@@ -60,10 +59,10 @@ Contributors are a subset of users.
 
 A contributor is anyone who manipulates the source code repository in
 any context: submitting issues, commenting on issues, submitting pull
-requests, or any similar activity is considered a contributor. Beyond
-basic professional decency there are no expectations or commitments
-associated with being a contributor, nor are there any limits on how
-much time a contributor might provide to the project.
+requests, or any similar activity is considered a contributor. There
+are no formal expectations or commitments associated with being a
+contributor, nor are there any limits on how much time a contributor
+might provide to the project.
 
 Contributor status does not confer approval authority, which rests solely
 with maintainers.
