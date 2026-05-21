@@ -36,8 +36,10 @@ There can be overlap between these roles, for example, if a maintainer is
 from an external institution. Contributors are not expected to approve their
 own contributions, except in the case where no other approvals are available,
 for example if there is only one maintainer and their contribution requires
-approval. Organization administrators have the authority to bypass the normal
-approval process but this authority should be used sparingly, if at all.
+approval. Organization administrators may be appealed to bypass the normal
+approval process when there are unacceptable delays or an inadequate number
+of maintainers are available. Bypassing the normal approval process must be
+justified and this authority should be used sparingly, if at all.
 
 
 Roles
