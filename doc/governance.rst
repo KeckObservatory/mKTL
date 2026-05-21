@@ -23,9 +23,9 @@ with their needs.
 Approval
 --------
 
-Changes to mKTL governance require a full consensus among all maintainers,
-and ideally a consensus from participating contributors. Significant changes
-may also require the approval from supporting institutions.
+Changes to mKTL governance require a majority of all maintainers, and ideally
+a consensus from participating contributors. Significant changes may also
+require the approval from supporting institutions.
 
 Approval of any other changes requires:
 
@@ -174,6 +174,8 @@ version number, concatenated with a '.' character (major.minor.patch):
   * major, for changes breaking backwards compatibility
   * minor, for backwards-compatible additions or changes
   * patch, for backwards-compatible bug fixes
+
+A description of all changes for a release shall be summarized in a changelog.
 
 
 User support
