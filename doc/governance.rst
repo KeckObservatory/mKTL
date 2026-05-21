@@ -16,7 +16,7 @@ will support the participation of at least one maintainer for the duration
 of mKTL's operational use, and will internally support contributors as needed
 for ongoing development and operational fixes.
 
-Other participating institutions should make a similar commitment commensurate
+Other participating institutions shall make a similar commitment commensurate
 with their needs.
 
 
@@ -120,7 +120,7 @@ reviewers, and increases the likelihood that a pull request can be properly
 assessed and quickly merged. This assessment process is expected to occur
 within a week of submission.
 
-Informative commit messages and other inline documentation should be
+Informative commit messages and other inline documentation shall be
 leveraged whenever practical. Clear expressions of intent go a long way
 towards understanding code, both for reviews and future debugging.
 
@@ -132,7 +132,7 @@ Code style
 Adherence to
 `PEP-8 <https://peps.python.org/pep-0008/>`_ is strongly suggested but
 is not rigidly enforced; absent a formal code style document
-the established practices in the mKTL code should be followed.
+the established practices in the mKTL code shall be followed.
 This includes handling of whitespace, quoting, capitalization practices,
 variable naming, type hints (or the absence thereof), and the use of the
 English language.
@@ -140,9 +140,9 @@ English language.
 Compatibility
 ^^^^^^^^^^^^^
 
-Backwards compatibility is a priority for mKTL and all contributions should
+Backwards compatibility is a priority for mKTL and all contributions shall
 take care to adhere to the established minimum package versions.
-Requiring a newer release of Python, for example, should be
+Requiring a newer release of Python, for example, shall be
 a major topic of discussion among maintainers and contributors; use of
 incompatible language features or module functionality will result in
 rejection of a pull request.
@@ -151,7 +151,7 @@ Copyright
 ^^^^^^^^^
 
 All contributors relinquish individual copyright claims for any contributed
-code. Code subject to an external copyright should not be submitted in any
+code. Code subject to an external copyright shall not be submitted in any
 form.
 
 
