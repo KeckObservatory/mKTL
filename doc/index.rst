@@ -36,6 +36,7 @@ be expert mKTL maintainers in order to successfully develop an application.
    protocol
    protocol_interface
    code_of_conduct
+   history
    glossary
 
 Indices and tables
