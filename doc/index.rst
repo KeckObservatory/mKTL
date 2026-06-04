@@ -30,6 +30,8 @@ be expert mKTL maintainers in order to successfully develop an application.
 
    client
    daemon
+   store
+   item
    examples
    executables
    configuration
