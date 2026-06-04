@@ -130,3 +130,13 @@ Performance
 
 mKTL and its dependencies must be adequately performant such that the overall performance is not degraded by their use.
 
+
+Core dependencies
+-----------------
+
+With these principles as guideposts, mKTL has adopted two key external technologies as foundational components for its functional goals: `ZeroMQ <https://zeromq.org/>`_ as a network transport, and `JSON <https://www.json.org/>`_ as a data interchange format.
+
+Support for ZeroMQ spans virtually every programming language in use today, well beyond the set of languages of potential interest to the mKTL community; because of its widespread use and extensive history it is also the type of technology that will have a long tail of maintenance as it ages, even if it is no longer being actively developed. The features of ZeroMQ are also well aligned with the goals of mKTL, with respect to enabling a distributed architecture, having low overhead and high performance, transparent reconnect logic, and usage patterns that mimic simple sockets. By a happy coincidence ZeroMQ also implements an efficient PUB/SUB pattern well-suited to mKTL's functional requirements.
+
+Similarly, JSON enjoys ubiquitous support for all modern programming languages, surpassed possibly only by XML; XML's gains in language support are offset by its bulky structure and inefficiency of parsing. JSON parsing is likewise inefficient and represents a significant source of processing overhead for mKTL messages; this inefficiency is accepted as it is not onerous enough to cause mKTL to miss its performance goals. Being able to natively represent numeric, string, boolean, and sequence data in JSON relieves mKTL of the need to invent its own parsing or complex message payload scheme; being able to represent the description of a store's items in JSON also eliminates ambiguity about the proper formatting of mKTL metadata.
+
