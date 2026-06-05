@@ -35,5 +35,9 @@ html_static_path = ['_static']
 
 html_css_files = ['css/custom.css']
 
+mermaid_params = ['--theme', 'default']
+mermaid_dark_theme = 'default'
+mermaid_light_theme = 'default'
+
 import sys
 sys.path.append('.')
