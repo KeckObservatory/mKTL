@@ -12,8 +12,8 @@ The protocol provides:
 * A key/value abstraction for commands and telemetry
 * Request/response messaging for synchronous interactions
 * Publish/subscribe messaging for asynchronous updates
-* A distributed architecture with no central message broker
-* A stable, versioned wire protocol suitable for multi-language implementations
+* A distributed architecture with no required brokers or intermediaries
+* A stable, versioned wire protocol suitable for multiple independent implementations
 
 
 Core concepts
@@ -28,3 +28,9 @@ Each item has a *key* that uniquely identifies it within its store; the same ite
 A *daemon* is any application that is authoritative for one or more items, meaning, the daemon is responsible for publishing any new values, and for handling any requests to change the value of the item. A *client* is any application that interacts with an item for which it is not authoritative.
 
 .. mermaid:: overview_client.mmd
+
+From a high level view, an mKTL client solely interacts with mKTL items, contained within an mKTL store; no direct interactions with the wire protocol or the transport are required, though a client could forego all interface code and work strictly at the protocol+transport level.
+
+.. mermaid:: overview_daemon.mmd
+
+The perspective from an mKTL daemon is the mirror image, with daemons likewise not requiring any direct interactions with the protocol or transport, though again a daemon could bypass all interface code as long as it adheres to :ref:`mKTL standards <protocol>`.
