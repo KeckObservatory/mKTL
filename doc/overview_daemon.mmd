@@ -1,0 +1,27 @@
+flowchart LR
+    ZMQ0(((Transport)))
+    Proto0([REP+PUB<br>protocol])
+    ZMQ0<-->Proto0
+
+    subgraph store [Store]
+    Item0(Item)
+    Item1(Item)
+    Item2(Item)
+    end
+    style Item0 fill:#fff5ad
+    style Item1 fill:#fff5ad
+    style Item2 fill:#fff5ad
+
+    Proto0 <--> Item0
+    Proto0 <--> Item1
+    Proto0 <--> Item2
+
+    Item0 -.- Daemon0[Daemon]
+    Item1 -.- Daemon0
+    Daemon0 <--> Device0@{ shape: cyl, label: "Device<br>logic" }
+    style Daemon0 fill:#dd8bd3
+    style Device0 fill:#dd8bd3
+    Item2 -.- Daemon1[Daemon]
+    Daemon1 <--> Device1@{ shape: cyl, label: "Device<br>logic" }
+    style Daemon1 fill:#dd8bd3
+    style Device1 fill:#dd8bd3

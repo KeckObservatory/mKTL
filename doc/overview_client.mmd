@@ -1,0 +1,18 @@
+flowchart LR
+    Client0[Client] -.- Item0
+    Client0 -.- Item1
+    Client2[Client] -.- Item2
+    style Client0 fill:#adf5ff
+    style Client2 fill:#adf5ff
+    subgraph store [Store]
+    Item0(Item)
+    Item1(Item)
+    Item2(Item)
+    end
+    style Item0 fill:#fff5ad
+    style Item1 fill:#fff5ad
+    style Item2 fill:#fff5ad
+    Item0 <--> Proto0([REQ+SUB<br>protocol])
+    Item1 <--> Proto0
+    Item2 <--> Proto0
+    Proto0 <--> ZMQ0(((Transport)))
