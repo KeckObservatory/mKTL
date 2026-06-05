@@ -15,7 +15,11 @@ release = '0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
+extensions = list()
+extensions.append('myst_parser')
+extensions.append('sphinx.ext.autodoc')
+extensions.append('sphinx.ext.intersphinx')
+extensions.append('sphinxcontrib.mermaid')
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
