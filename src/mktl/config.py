@@ -5,6 +5,7 @@ import sys
 import threading
 import time
 import uuid
+import weakref
 
 # Importing pint is expensive, representing something like 30% of the
 # user runtime for a simple mKTL command. It will be imported on a
@@ -22,6 +23,8 @@ from . import protocol
 
 _cache = dict()
 _cache_lock = threading.Lock()
+
+_callbacks = list()
 
 
 class Configuration:
@@ -47,6 +50,8 @@ class Configuration:
         self._by_uuid = dict()
         self._by_alias = dict()
         self._by_key = dict()
+
+        self.callbacks = list()
 
         if store in _cache:
             raise ValueError('Configuration class is a singleton')
@@ -551,6 +556,59 @@ class Configuration:
             configuration['items'] = json.loads(raw_json)
 
         return configuration,target_uuid
+
+
+    def _propagate(self):
+        """ Invoke any registered callbacks upon a configuration update.
+        """
+
+        if self.callbacks:
+            pass
+        else:
+            return
+
+        invalid = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            self.callbacks.remove(reference)
+
+        invalid = list()
+
+        for reference in _callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            _callbacks.remove(reference)
+
+
+    def register(self, method):
+        """ Register a callback to be invoked whenever this configuration
+            instance receives an update. The callback should take no additional
+            arguments.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the registered method must be callable')
+
+        reference = weakref.ref(method)
+        self.callbacks.append(reference)
+
+        method()
 
 
     def _reject_units(self, *args, **kwargs):
@@ -1124,6 +1182,8 @@ class Configuration:
         if save == True:
             self._save_client(block)
 
+        self._propagate()
+
 
     def uuids(self, authoritative=False):
         """ Return an iterable sequence of UUIDs represented in this
@@ -1207,15 +1267,20 @@ def announce(config, uuid, override=False):
     """
 
     store = config.store
+    key = store + '.config'
+
     block = config[uuid]
     block = dict(block)
 
     if override == True:
         block['override'] = True
 
-    payload = protocol.message.Payload(block)
+    blocks = dict()
+    blocks[uuid] = block
+
+    payload = protocol.message.Payload(blocks)
     payload.add_origin()
-    message = protocol.message.Request('CONFIG', store, payload)
+    message = protocol.message.Request('SET', key, payload)
 
     brokers = protocol.discover.search(wait=True)
 
@@ -1476,6 +1541,24 @@ def match_provenance(full_provenance1, full_provenance2):
 
         matched = True
         index += 1
+
+
+
+def register(method):
+    """ Register a callback to be invoked whenever any configuration
+        instance receives an update. The callback should take no additional
+        arguments.
+    """
+
+    if callable(method):
+        pass
+    else:
+        raise TypeError('the registered method must be callable')
+
+    reference = weakref.ref(method)
+    _callbacks.append(reference)
+
+    method()
 
 
 
