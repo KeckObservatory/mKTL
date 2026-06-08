@@ -428,14 +428,13 @@ class RequestServer(mktl.protocol.request.Server):
         # matches the provided configuration blocks. For now, just process
         # whatever we get.
 
-        blocks = request.payload.value
+        block = request.payload.value
 
-        for uuid,block in blocks.items():
-            try:
-                self.process_block(block)
-            except ProvenanceLoopError:
-                # This configuration block came from us. Pay no mind.
-                pass
+        try:
+            self.process_block(block)
+        except ProvenanceLoopError:
+            # This configuration block came from us. Pay no mind.
+            pass
 
         payload = mktl.Payload(value=True)
         return payload
