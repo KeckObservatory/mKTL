@@ -8,13 +8,13 @@ except ImportError:
     pint = None
 
 
-def test_get(run_mkbrokerd, run_mkd):
+def test_get(run_mkregistryd, run_mkd):
 
     number = mktl.get('unittest.number')
     number.get()
 
 
-def test_set(run_mkbrokerd, run_mkd):
+def test_set(run_mkregistryd, run_mkd):
 
     number = mktl.get('unittest.number')
     number.set(-1)
@@ -40,7 +40,7 @@ def test_set(run_mkbrokerd, run_mkd):
         readonly.set(44)
 
 
-def test_boolean(run_mkbrokerd, run_mkd):
+def test_boolean(run_mkregistryd, run_mkd):
 
     boolean = mktl.get('unittest.boolean')
 
@@ -95,7 +95,7 @@ def test_boolean(run_mkbrokerd, run_mkd):
     assert noyes == True
 
 
-def test_enumerated(run_mkbrokerd, run_mkd):
+def test_enumerated(run_mkregistryd, run_mkd):
 
     enumerated = mktl.get('unittest.enumerated')
 
@@ -123,7 +123,7 @@ def test_enumerated(run_mkbrokerd, run_mkd):
         enumerated.value = 'invalid'
 
 
-def test_logic(run_mkbrokerd, run_mkd):
+def test_logic(run_mkregistryd, run_mkd):
 
     string = mktl.get('unittest.string')
 
@@ -165,7 +165,7 @@ def test_logic(run_mkbrokerd, run_mkd):
     assert 1 ^ number == 3
 
 
-def test_mask(run_mkbrokerd, run_mkd):
+def test_mask(run_mkregistryd, run_mkd):
 
     mask = mktl.get('unittest.mask')
 
@@ -199,7 +199,7 @@ def test_mask(run_mkbrokerd, run_mkd):
         mask.value = 'invalid'
 
 
-def test_math(run_mkbrokerd, run_mkd):
+def test_math(run_mkregistryd, run_mkd):
 
     number = mktl.get('unittest.number')
 
@@ -264,7 +264,7 @@ def test_math(run_mkbrokerd, run_mkd):
         assert number == test_value
 
 
-def test_quantity(run_mkbrokerd, run_mkd):
+def test_quantity(run_mkregistryd, run_mkd):
 
     if pint is None:
         return
@@ -300,7 +300,7 @@ def test_quantity(run_mkbrokerd, run_mkd):
     assert angle.value <= original_scaled + 0.0000001
 
 
-def test_sexagesimal(run_mkbrokerd, run_mkd):
+def test_sexagesimal(run_mkregistryd, run_mkd):
 
     if pint is None:
         return
@@ -358,7 +358,7 @@ def test_sexagesimal(run_mkbrokerd, run_mkd):
     assert hourangle.value == 108.29768008624816
 
 
-def test_string(run_mkbrokerd, run_mkd):
+def test_string(run_mkregistryd, run_mkd):
 
     string = mktl.get('unittest.string')
 
@@ -413,7 +413,7 @@ def test_string(run_mkbrokerd, run_mkd):
     assert string == test_value * 2
 
 
-def test_typeless(run_mkbrokerd, run_mkd):
+def test_typeless(run_mkregistryd, run_mkd):
 
     typeless = mktl.get('unittest.typeless')
 
@@ -431,7 +431,7 @@ def test_typeless(run_mkbrokerd, run_mkd):
     typeless.formatted
 
 
-def test_callback(run_mkbrokerd, run_mkd):
+def test_callback(run_mkregistryd, run_mkd):
 
     string = mktl.get('unittest.string')
 
