@@ -533,7 +533,7 @@ class RequestServer(protocol.request.Server):
 
         configuration = config.get(store)
         configuration = configuration._by_uuid
-        payload = protocol.message.Payload(configuration)
+        payload = protocol.message.Payload(value=configuration)
         return payload
 
 
@@ -549,7 +549,7 @@ class RequestServer(protocol.request.Server):
                 store = None
 
         hashes = config.get_hashes(store)
-        payload = protocol.message.Payload(hashes)
+        payload = protocol.message.Payload(value=hashes)
         return payload
 
 
