@@ -26,10 +26,10 @@ listener, operating on a unique port on that host.
 A given host providing connectivity for mKTL could have thousands of daemons
 running locally, each listening on a unique port number. Each daemon deploys
 a UDP listener on a predetermined port number (10111) to enable discovery of
-daemons on that host; a :ref:`dedicated "broker" process <mkbrokerd>` also
+daemons on that host; a :ref:`dedicated registry process <mkregistryd>` also
 listens on a predetermined port number (10103) to streamline discovery from
 the client side. This usage pattern expects there to be a single
-:ref:`mkbrokerd` process running on every host running one or more mKTL
+:ref:`mkregistryd` process running on every host running one or more mKTL
 daemons. The discovery exchange is :ref:`described below <discovery>`
 in more detail.
 
@@ -199,48 +199,6 @@ also exists, but has its own message structure outside this scheme.
       for a GET response, except that the 'time' field is not required or
       expected, and there are additional fields set by the client to describe
       the origin of the request.
-
-  * - **HASH**
-    - Request the current hash identifiers for any known configuration blocks
-      of a single mKTL store. All available hash identifiers, for all known
-      stores, will be returned if no store name is specified in the target
-      field. An error will be
-      returned if a store is requested and the responding daemon does not have
-      a cached configuration for that store.
-
-      The hash is 32 hexadecimal integers. The actual hash format is not
-      significant, as long as the source of authority is consistent about
-      which hash format it uses, and the format can be transmitted as 32
-      hexadecimal integers.
-
-      To unify processing the response value is always a dictionary of
-      dictionaries, even if only one hash is available.
-
-      Example response values::
-
-	{'kpfguide': {'uuid1': 0x84a30b35...,
-		      'uuid2': 0x983ae10f...}}
-
-	{'kpfguide': {'uuid1': 0x84a30b35...,
-		      'uuid2': 0x983ae10f...},
-	 'kpfmet': {'uuid6': 0xe0377e7d...,
-		    'uuid7': 0x7735a20a...,
-		    'uuid8': 0x88645dab...,
-		    'uuid9': 0x531c14fd...}}
-
-
-  * - **CONFIG**
-    - Request the full configuration contents for a single mKTL store.
-      There is no option to dump the configuration data for all known stores,
-      a target must always be specified.
-      A typical client interaction will request the configuration hash first,
-      and if the hash for the cached local copy is not a match, request the
-      full contents from the daemon to update the local cache.
-
-      The configuration contents are not fully described here, this is just
-      a description of the request. See the
-      :ref:`configuration documentation <configuration>` for a full description
-      of the data format.
 
   * - **ACK**
     - Immediate acknowledgement of a request; this message type originates from
@@ -423,11 +381,11 @@ port, which greatly simplfies periodic discovery.
 
 The discovery of daemons is a two-part process; rather than ask every daemon
 to cache the configuration for every other daemon on its local network, the
-caching of configuration data is handled by :ref:`mkbrokerd`; when a client
+caching of configuration data is handled by :ref:`mkregistryd`; when a client
 issues a discovery broadcast, it is not looking for responses from individual
-daemons, it is looking for responses from a :ref:`mkbrokerd` process.
+daemons, it is looking for responses from a :ref:`mkregistryd` process.
 
-This two-step approach, of contacting the broker process, and subsequently
+This two-step approach, of contacting the registry process, and subsequently
 contacting the authoritative daemon, could be avoided if every local daemon
 caching the configuration of every other local daemon; however, a typical
 client will cache the response, and discovery is only invoked if the cached
@@ -438,24 +396,25 @@ exponentially with the number of locally reachable daemons.
 
 There are four shared secrets used in the discovery exchange:
 
-===============	===============================================================
-*Secret*	*Description*
-===============	===============================================================
-**broker port**	The UDP port used to discover locally accessible
-		:ref:`mkbrokerd` processes. Clients use this port to find
-		all such processes. The port number is 10103.
+================= ==============================================================
+*Secret*	  *Description*
+================= ==============================================================
+**registry port** The UDP port used to discover locally accessible
+		  :ref:`mkregistryd` processes. Clients use this port to find
+		  all such processes. The port number is 10103.
 
-**daemon port**	The UDP port used to discover locally accessible mKTL daemons.
-		:ref:`mkbrokerd` uses this port to find all such daemons.
-		The port number is 10111.
+**daemon port**	  The UDP port used to discover locally accessible mKTL daemons.
+		  :ref:`mkregistryd` uses this port to find all such daemons.
+		  The port number is 10111.
 
-**call**	An arbitrary string used by the discoverer to trigger a
-		response from the listener. The string value is ``I heard it``.
+**call**	  An arbitrary string used by the discoverer to trigger a
+		  response from the listener. The string value is
+		  ``I heard it``.
 
-**response**	An arbitrary string used by the listener to respond to any
-		received calls. The string value is ``on the X:``.
+**response**	  An arbitrary string used by the listener to respond to any
+		  received calls. The string value is ``on the X:``.
 
-===============	===============================================================
+================= ==============================================================
 
 The purpose of discovery is to convey a single piece of information: what is
 the port number of an actual mKTL request handler on this host? That port
