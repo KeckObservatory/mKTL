@@ -7,16 +7,24 @@ def test_basics():
     start = time.time()
 
     for test_value in (44, True, None, 35.5, (1,2,3), {1: 'one'}, 'string'):
-        payload = mktl.protocol.message.Payload(test_value)
+        payload = mktl.protocol.message.Payload(value=test_value, time=time.time())
         assert payload.value is test_value
         assert payload.time > start
-        assert payload.bulk == None
-        assert payload.dtype == None
-        assert payload.error == None
-        assert payload.refresh == None
-        assert payload.shape == None
-        ## Pull request is pending
-        ##assert payload.reply == True
+
+        # The 'new' Payload only has attributes for the keyword arguments
+        # set when it is instantiated.
+
+        with pytest.raises(AttributeError):
+            payload.bulk
+        with pytest.raises(AttributeError):
+            payload.dtype
+        with pytest.raises(AttributeError):
+            payload.error
+        with pytest.raises(AttributeError):
+            payload.refresh
+        with pytest.raises(AttributeError):
+            payload.shape
+
         payload.encapsulate()
 
 
@@ -24,7 +32,7 @@ def test_encapsulate():
 
     test_value = 44
     for test_value in (44, True, None, 35.5, [1,2,3], 'string'):
-        payload = mktl.protocol.message.Payload(test_value)
+        payload = mktl.protocol.message.Payload(value=test_value, time=time.time())
 
         encapsulated = payload.encapsulate()
         assert isinstance(encapsulated, bytes)
@@ -37,7 +45,7 @@ def test_encapsulate():
         assert decoded['value'] == test_value
 
 
-    bad_payload = mktl.protocol.message.Payload({None: 'none'})
+    bad_payload = mktl.protocol.message.Payload(value={None: 'none'})
 
     with pytest.raises(TypeError):
         bad_payload.encapsulate()
@@ -45,7 +53,7 @@ def test_encapsulate():
 
 def test_kwargs():
 
-    payload = mktl.protocol.message.Payload('something', testing='testing')
+    payload = mktl.protocol.message.Payload(value='something', testing='testing', time=time.time())
     assert payload.testing == 'testing'
 
     encapsulated = payload.encapsulate()
@@ -65,7 +73,7 @@ def test_kwargs():
 
 def test_origin():
 
-    payload = mktl.protocol.message.Payload('something')
+    payload = mktl.protocol.message.Payload(payload='something')
     payload.add_origin()
 
     encapsulated = payload.encapsulate()
