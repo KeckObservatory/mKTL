@@ -56,7 +56,7 @@ class Client:
         self.thread.start()
 
 
-    def propagate(self, topic, message):
+    def propagate(self, message):
         """ Invoke any/all callbacks registered via :func:`register` for
             a newly arrived message.
         """
@@ -99,6 +99,8 @@ class Client:
             pass
         else:
             return
+
+        topic = message.target
 
         try:
             references = self.callback_specific[topic]
@@ -185,40 +187,16 @@ class Client:
 
     def _pub_incoming(self, parts):
 
-        if len(parts) < 4:
+        try:
+            broadcast = message.Broadcast.reconstruct(parts)
+        except ValueError:
             ### Malformed message. Not sure where these are coming from,
             ### but here we are. This should be logged, or at least exposed
             ### for future debugging. For now it's being dropped on the
             ### floor.
             return
 
-        topic = parts[0]
-        their_version = parts[1]
-
-        if their_version != message.version:
-            ### Maybe we should occasionally log a version mismatch.
-            ### For now it's being dropped on the floor.
-            return
-
-        payload = parts[2]
-        bulk = parts[3]
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        broadcast = message.Broadcast('PUB', topic, payload)
-        self.propagate(topic, broadcast)
+        self.propagate(broadcast)
 
 
     def _sub_incoming(self):
@@ -329,21 +307,70 @@ class Server:
 
         self.port = trial
 
+        # Experiments with a multiprocessing.SimpleQueue and an ipc socket
+        # for notifications result in something like a 35% slowdown compared
+        # to using a queue.SimpleQueue and an inproc socket.
+
+        try:
+            # Available in Python 3.7+.
+            self.broadcasts = queue.SimpleQueue()
+        except AttributeError:
+            self.broadcasts = queue.Queue()
+
+        internal = "inproc://publish.Server.signal:%d" % (port)
+        self.broadcast_address = internal
+        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
+        self.broadcast_receive.bind(internal)
+
+        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
+        self.broadcast_signal.connect(internal)
+
+        self.publishing_thread = threading.Thread(target=self.run)
+        self.publishing_thread.daemon = True
+        self.publishing_thread.start()
+
 
     def publish(self, message):
         """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
             intended for broadcast to any/all subscribers.
         """
 
+        self.broadcasts.put(message)
+        self.broadcast_signal.send(b'')
+
+
+    def _pub_outgoing(self):
+        """ Clear one broadcast notification and send one pending broadcast.
+        """
+
+        self.broadcast_receive.recv(flags=zmq.NOBLOCK)
+        message = self.broadcasts.get(block=False)
+
         parts = tuple(message)
 
-        # The lock around the ZeroMQ socket is necessary in a multithreaded
+        # A lock around the ZeroMQ socket is necessary in a multithreaded
         # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed together.
+        # send_multipart(), the message parts can and will get mixed
+        # together. However, this send_multipart() call is now only called
+        # from a single thread handling all send/recv calls, so the
+        # lock is no longer in place.
 
-        self.socket_lock.acquire()
         self.socket.send_multipart(parts)
-        self.socket_lock.release()
+
+
+    def run(self):
+        """ All send() calls are sequestered to this thread. Though not as
+            problematic as the REQ/REP case, it seems like good practice to
+            mirror the same structure here.
+        """
+
+        poller = zmq.Poller()
+        poller.register(self.broadcast_receive, zmq.POLLIN)
+
+        while True:
+            sockets = poller.poll(10000) # milliseconds
+            for ignored in sockets:
+                self._pub_outgoing()
 
 
 # end of class Server

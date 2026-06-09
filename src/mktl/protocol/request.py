@@ -40,6 +40,7 @@ class Client:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
 
@@ -79,57 +80,38 @@ class Client:
             any further handling by the original caller.
         """
 
-        their_version = parts[0]
+        try:
+            response = message.Message.reconstruct(parts)
+        except:
+            ### This response is malformed somehow, and cannot be gracefully
+            ### tied back to its original request ID.
 
-        if their_version == message.version:
-            response_type = parts[2]
-            target = parts[3]
-            payload = parts[4]
-            bulk = parts[5]
-        else:
+            e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
-            error['type'] = 'RuntimeError'
-            error['text'] = "message is mKTL protocol %s, recipient expects %s" % (repr(their_version), repr(message.version))
-            payload = message.Payload(None, error=error)
-            payload = payload.encapsulate()
-            response_type = 'REP'
-            target = '???'
-            bulk = None
+            error['type'] = e_class.__name__
+            error['text'] = str(e_instance)
+            error['debug'] = traceback.format_exc()
 
-        # This could still blow up if the version doesn't match-- the id may
-        # be in a different message part-- but we have to try, otherwise
-        # there's no way to pass the error back to the original caller.
+            # Fingers crossed that this works:
+            response_id = parts[1]
 
-        response_id = parts[1]
+            payload = message.Payload(error=error)
+            response = message.Message('REP', '???', payload, response_id)
+
 
         try:
-            pending = self.pending[response_id]
+            pending = self.pending[response.id]
         except KeyError:
             # The original caller's request is gone, no further processing
             # is possible.
             return
 
-        if response_type == b'ACK':
+        if response.type == 'ACK':
             pending._complete_ack()
             return
 
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        response = message.Message('REP', target, payload, response_id)
         pending._complete(response)
-        del self.pending[response_id]
+        del self.pending[response.id]
 
 
     def _req_outgoing(self):
@@ -199,6 +181,11 @@ class Client:
         self.requests.put(message)
         self.request_signal.send(b'')
 
+        if message.ack:
+            pass
+        else:
+            return
+
         ack = message.wait_ack(self.timeout)
 
         if ack == False:
@@ -240,6 +227,7 @@ class Server:
         self.hostname = hostname
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
@@ -358,7 +346,14 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(request)
+
+        if request.ack:
+            self.req_ack(request)
+
+        if request.reply:
+            pass
+        else:
+            return
 
         response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
@@ -386,37 +381,14 @@ class Server:
         ### exceptions are passed back to the originator of the request.
         ### Presumably that means calling something like _req_incoming().
 
+        ### As it currently stands, any exceptions occurring here are being
+        ### silently eaten by the thread pool executing this method.
+
         ident = parts[0]
-        their_version = parts[1]
-
-        if their_version != message.version:
-            raise ValueError("message is mKTL protocol %s, recipient is %s" % (repr(their_version), repr(message.version)))
-
-        req_id = parts[2]
-        req_type = parts[3]
-        target = parts[4]
-        payload = parts[5]
-        bulk = parts[6]
-
-        req_type = req_type.decode()
-        target = target.decode()
-
-        if bulk == b'':
-            bulk = None
-
-        if payload == b'':
-            payload = None
-        else:
-            payload = json.loads(payload)
-            try:
-                payload = message.Payload(**payload, bulk=bulk)
-            except TypeError:
-                # Weird stuff in the payload. Don't fail on the conversion,
-                # allow it to pass, assuming the users know what they're doing.
-                pass
-
-        request = message.Request(req_type, target, payload, req_id)
+        parts = parts[1:]
+        request = message.Request.reconstruct(parts)
         request.prefix = (ident,)
+
         payload = None
         error = None
 
@@ -432,17 +404,17 @@ class Server:
         if payload is None and error is None:
             # The handler should only return None when no response is
             # immediately forthcoming-- the handler has invoked some
-            # other processing chain that will issue a proper response.
+            # other processing chain that will issue a proper response,
+            # or the client explicitly requested no response.
             return
 
         if error is not None:
             if payload is None:
-                payload = message.Payload(None)
-                payload.error = error
+                payload = message.Payload(error=error)
             elif payload.error is None:
                 payload.error = error
 
-        response = message.Message('REP', target, payload, req_id)
+        response = message.Message('REP', request.target, payload, request.id)
         response.prefix = request.prefix
 
         self.send(response)
@@ -464,6 +436,9 @@ class Server:
                 elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     # Calling submit() will block if a worker is not available.
+                    # Note that for high frequency operations this can result
+                    # in out-of-order handling of requests, for example, if a
+                    # stream of SET requests are inbound for a single item.
                     self.workers.submit(self.req_incoming, parts)
 
 
