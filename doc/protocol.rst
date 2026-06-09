@@ -364,6 +364,14 @@ offered by ZeroMQ:
 
 .. mermaid:: protocol_pub_sub.mmd
 
+The above diagram shows a typical pattern for publish/subscribe interactions.
+A daemon periodically polls a hardware controller for a new value; the daemon
+publishes any new values to any clients subscribed to updates for that item.
+Subscribers may come and go at any time. Once the daemon issues the publication
+it has no awareness of any subsequent processing or potential performance
+bottlenecks on the client side; subscribed clients offer no feedback on their
+receipt or handling of a published message.
+
 The formatting of the PUB message is very similar to what is described
 above for the :ref:`request/response multipart message format <request>`.
 Some fields are not necessary for the PUB variant, and in order for the
