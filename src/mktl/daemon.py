@@ -190,6 +190,13 @@ class Daemon:
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
+
+        # Allow for the possibility that a daemon is establishing an
+        # authoritative item where before a default item was created
+        # by a just-in-time process. We cannot assume the daemon is
+        # using a default Item instance; if it was, it would be enough
+        # to set the .authoritative attribute and move on.
+
         existing = self.store._items[key]
 
         if existing is not None:
@@ -510,6 +517,8 @@ class RequestServer(protocol.request.Server):
         else:
             return getter(request)
 
+        # Look up the conventional req_get() method for this item.
+
         store, key = request.target.split('.', 1)
 
         if store != self.daemon.store.name:
@@ -522,8 +531,16 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
+        # There's an argument for optimizing the behavior here by storing
+        # the getter reference to prevent the need to look it up all over
+        # again. There's a bootstrapping problem though, and Item instances
+        # can be replaced in authoritative daemons partway through the
+        # initialization process.
+
+        # This suggested optimization also doesn't buy us a measurable
+        # improvement in transactions per second.
+
         getter = self.daemon.store[key].req_get
-        self._getters[request.target] = getter
         return getter(request)
 
 
