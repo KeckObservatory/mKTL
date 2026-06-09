@@ -1,0 +1,24 @@
+sequenceDiagram
+    autonumber
+    Participant Alpha
+    Participant Beta
+    Participant Gamma
+    Participant Daemon
+    Participant Controller
+
+    Alpha->>Daemon: SUB temp
+    Gamma->>Daemon:
+    Daemon->>+Controller: RI02
+    Controller->>-Daemon: 0aae
+    Daemon->>Alpha: PUB temp 273.4
+    Daemon->>Gamma:
+    Daemon->>+Controller: RI02
+    Controller->>-Daemon: 0aac
+    Daemon->>Alpha: PUB temp 273.2
+    Daemon->>Gamma:
+    Beta->>Daemon: SUB temp
+    Daemon->>+Controller: RI02
+    Controller->>-Daemon: 0aad
+    Daemon->>Alpha: PUB temp 273.3
+    Daemon->>Beta:
+    Daemon->>Gamma:

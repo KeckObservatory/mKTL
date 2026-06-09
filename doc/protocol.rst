@@ -52,14 +52,20 @@ implementation in ZeroMQ, which enforces a strict one request, one response
 pattern; instead, we use DEALER/ROUTER, which allows any amount of messages
 in any order, in any direction.
 
+.. mermaid:: protocol_req_rep.mmd
+
 Upon receipt of a request the daemon will immediately issue an ACK response.
-The absence of a quick response indicates that the daemon is not available,
-and the client should immediately raise an error. After the client receives
-the initial ACK it should then look for the full response. There will be no
-further messages associated with that id number after the full response is
-received. A daemon may choose to forego the ACK response, but should only
-do so in circumstances where processing a request requires zero additional
-processing time.
+The purpose of the ACK response is to verify that the appropriate endpoint
+for the request is online and available to respond; the final response to a
+request may be significantly delayed compared to its initial receipt, and
+the ACK response allows a client to distinguish between delayed operations
+and the complete absence of a proper handler for the request. The client
+should immediately raise an error in the absence of a quick response.
+
+The full REP response can be issued at any time. If it arrives prior to the
+ACK response the client will consider this final response to be a combined
+ACK and REP response. There is never more than one ACK response for a request;
+likewise, there is never more than one REP response.
 
 All requests are handled
 fully asynchronously; a client could send a thousand requests in quick
@@ -355,6 +361,16 @@ offered by ZeroMQ:
 	  values or large broadcasts, and a client is not
 	  subscribed to those specific topics, the broadcasts
 	  are never sent to the client.
+
+.. mermaid:: protocol_pub_sub.mmd
+
+The above diagram shows a typical pattern for publish/subscribe interactions.
+A daemon periodically polls a hardware controller for a new value; the daemon
+publishes any new values to any clients subscribed to updates for that item.
+Subscribers may come and go at any time. Once the daemon issues the publication
+it has no awareness of any subsequent processing or potential performance
+bottlenecks on the client side; subscribed clients offer no feedback on their
+receipt or handling of a published message.
 
 The formatting of the PUB message is very similar to what is described
 above for the :ref:`request/response multipart message format <request>`.
