@@ -23,9 +23,9 @@ def _clear(store):
         existing = _cache[store]
     except KeyError:
         return
-
-    del _cache[store]
-    return existing
+    else:
+        del _cache[store]
+        return existing
 
 
 
@@ -219,7 +219,11 @@ def refresh(configuration):
                 # No response from this daemon; it's broken somehow. Move on.
                 continue
 
-            hashes = response.payload.value
+            try:
+                hashes = response.payload.value
+            except AttributeError:
+                hashes = None
+
             if hashes is None:
                 # No response available.
                 continue

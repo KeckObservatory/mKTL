@@ -1311,10 +1311,7 @@ def announce(config, uuid, override=False):
     if override == True:
         block['override'] = True
 
-    blocks = dict()
-    blocks[uuid] = block
-
-    payload = protocol.message.Payload(blocks)
+    payload = protocol.message.Payload(value=block)
     payload.add_origin()
     message = protocol.message.Request('SET', key, payload)
 
@@ -1326,7 +1323,11 @@ def announce(config, uuid, override=False):
         except TimeoutError:
             continue
 
-        error = payload.error
+        try:
+            error = payload.error
+        except AttributeError:
+            continue
+
         if error is None or error == '':
             continue
 

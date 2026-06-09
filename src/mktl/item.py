@@ -203,12 +203,15 @@ class Item:
             This is the inverse of :func:`to_payload`.
         """
 
-        if payload.bulk is not None:
+        try:
+            bulk = payload.bulk
+        except AttributeError:
+            bulk = None
+
+        if bulk is not None:
 
             if numpy is None:
                 raise ImportError('numpy module not available')
-
-            bulk = payload.bulk
 
             shape = payload.shape
             dtype = payload.dtype
@@ -287,7 +290,7 @@ class Item:
         elif refresh == False:
             request = protocol.message.Request('GET', self.full_key)
         elif refresh == True:
-            payload = protocol.message.Payload(None, refresh=True)
+            payload = protocol.message.Payload(refresh=True)
             request = protocol.message.Request('GET', self.full_key, payload)
         else:
             raise TypeError('refresh argument must be a boolean')
@@ -298,7 +301,11 @@ class Item:
         if response is None:
             raise RuntimeError('GET failed: no response to request')
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -440,7 +447,12 @@ class Item:
         changed = False
 
         if repeat == False:
-            if payload.bulk is None:
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
+
+            if bulk is None:
                 changed = self._daemon_value != new_value
             else:
                 if self._daemon_value is None and new_value is not None:
@@ -645,7 +657,7 @@ class Item:
         # the contents of the response payload are not inspected.
 
         if response is None:
-            payload = protocol.message.Payload(True)
+            payload = protocol.message.Payload(value=True)
         elif isinstance(response, protocol.message.Payload):
             payload = response
         else:
@@ -711,7 +723,11 @@ class Item:
         if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -820,9 +836,15 @@ class Item:
         """
 
         if self.authoritative == True:
-            return self._daemon_value_timestamp
+            timestamp = self._daemon_value_timestamp
         else:
-            return self._value_timestamp
+            timestamp = self._value_timestamp
+
+        if timestamp is None:
+            # This only occurs in startup conditions, but it does occur.
+            timestamp = time.time()
+
+        return timestamp
 
 
     def to_format(self, value):
@@ -873,11 +895,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value=value, time=timestamp)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(time=timestamp, bulk=bulk, shape=shape, dtype=dtype)
 
         return payload
 

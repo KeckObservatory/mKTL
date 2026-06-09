@@ -75,7 +75,11 @@ def main():
                 payload = mktl.protocol.request.send(address, port, request)
 
                 blocks = payload.value
-                error = payload.error
+
+                try:
+                    error = payload.error
+                except AttributeError:
+                    error = None
 
                 if error:
                     e_type = error['type']
@@ -219,7 +223,7 @@ class RequestServer(mktl.protocol.request.Server):
         clock = '_' + alias + 'clk'
         key = store + '.' + clock
 
-        payload = mktl.protocol.message.Payload(None, refresh=True)
+        payload = mktl.protocol.message.Payload(refresh=True)
         request = mktl.protocol.message.Request('GET', key, payload)
 
         # Traverse the provenance by highest stratum number first.
@@ -391,7 +395,7 @@ class RequestServer(mktl.protocol.request.Server):
             raise ValueError('unhandled key: ' + target)
 
 
-        payload = mktl.Payload(payload_data)
+        payload = mktl.Payload(value=payload_data)
         return payload
 
 
@@ -424,16 +428,15 @@ class RequestServer(mktl.protocol.request.Server):
         # matches the provided configuration blocks. For now, just process
         # whatever we get.
 
-        blocks = request.payload.value
+        block = request.payload.value
 
-        for uuid,block in blocks.items():
-            try:
-                self.process_block(block)
-            except ProvenanceLoopError:
-                # This configuration block came from us. Pay no mind.
-                pass
+        try:
+            self.process_block(block)
+        except ProvenanceLoopError:
+            # This configuration block came from us. Pay no mind.
+            pass
 
-        payload = mktl.Payload(True)
+        payload = mktl.Payload(value=True)
         return payload
 
 

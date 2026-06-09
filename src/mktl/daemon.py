@@ -190,6 +190,13 @@ class Daemon:
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
+
+        # Allow for the possibility that a daemon is establishing an
+        # authoritative item where before a default item was created
+        # by a just-in-time process. We cannot assume the daemon is
+        # using a default Item instance; if it was, it would be enough
+        # to set the .authoritative attribute and move on.
+
         existing = self.store._items[key]
 
         if existing is not None:
@@ -410,7 +417,7 @@ class Daemon:
                 continue
 
             item = self.store[key]
-            payload = protocol.message.Payload(initial)
+            payload = protocol.message.Payload(value=initial)
             request = protocol.message.Request('SET', item.full_key, payload)
             item.req_initialize(request)
 
@@ -510,6 +517,8 @@ class RequestServer(protocol.request.Server):
         else:
             return getter(request)
 
+        # Look up the conventional req_get() method for this item.
+
         store, key = request.target.split('.', 1)
 
         if store != self.daemon.store.name:
@@ -522,8 +531,16 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
+        # There's an argument for optimizing the behavior here by storing
+        # the getter reference to prevent the need to look it up all over
+        # again. There's a bootstrapping problem though, and Item instances
+        # can be replaced in authoritative daemons partway through the
+        # initialization process.
+
+        # This suggested optimization also doesn't buy us a measurable
+        # improvement in transactions per second.
+
         getter = self.daemon.store[key].req_get
-        self._getters[request.target] = getter
         return getter(request)
 
 
@@ -533,7 +550,7 @@ class RequestServer(protocol.request.Server):
 
         configuration = config.get(store)
         configuration = configuration._by_uuid
-        payload = protocol.message.Payload(configuration)
+        payload = protocol.message.Payload(value=configuration)
         return payload
 
 
@@ -549,7 +566,7 @@ class RequestServer(protocol.request.Server):
                 store = None
 
         hashes = config.get_hashes(store)
-        payload = protocol.message.Payload(hashes)
+        payload = protocol.message.Payload(value=hashes)
         return payload
 
 
@@ -765,8 +782,13 @@ def _save_persistent(item, *args, **kwargs):
     by_prefix = dict()
     payload = item.to_payload()
 
-    if payload.bulk is not None:
-        by_prefix['bulk'] = payload.bulk
+    try:
+        bulk = payload.bulk
+    except AttributeError:
+        pass
+    else:
+        if bulk is not None:
+            by_prefix['bulk'] = bulk
 
     by_prefix[''] = payload.encapsulate()
 

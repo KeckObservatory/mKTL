@@ -503,7 +503,11 @@ def execute_set_requests(requests):
             key = request.target
             value = request.payload.value
             response = request.response
-            error = response.payload.error
+
+            try:
+                error = response.payload.error
+            except AttributeError:
+                error = None
 
             if error is not None and error != '':
                 sys.stderr.write("%s failed: %s: %s\n" % (key, error['type'], error['text']))
