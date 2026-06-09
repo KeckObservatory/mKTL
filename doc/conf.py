@@ -22,7 +22,7 @@ extensions.append('sphinx.ext.intersphinx')
 extensions.append('sphinxcontrib.mermaid')
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'README.md', '.DS_Store', 'Thumbs.db']
 intersphinx_mapping = {'pint': ('https://pint.readthedocs.io/en/stable', None),
 			'python': ('https://docs.python.org/3', None)}
 

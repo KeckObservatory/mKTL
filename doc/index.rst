@@ -34,9 +34,12 @@ be expert mKTL maintainers in order to successfully develop an application.
    examples
    executables
    configuration
+   built_ins
    protocol
    protocol_interface
+   governance
    code_of_conduct
+   heritage
    glossary
 
 Indices and tables

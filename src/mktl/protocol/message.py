@@ -8,7 +8,7 @@ import os
 import platform
 import sys
 import threading
-import time as timemodule
+import time
 
 from .. import json
 
@@ -18,6 +18,12 @@ from .. import json
 # identified by a single byte.
 
 version = b'a'
+
+# Define any/all optional flags for message handling.
+
+NO_ACK = 0b1
+NO_REP = 0b10
+NO_ACK_OR_REP = NO_ACK | NO_REP
 
 # The cached origin information is used by the Payload class to (optionally)
 # provide information used to determine the origin of a message. The call to
@@ -77,7 +83,7 @@ class Message:
 
     valid_types = set(('ACK', 'REP'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         if type in self.valid_types:
             pass
@@ -88,12 +94,13 @@ class Message:
         # for example, publish messages do not have or need an identification
         # number or a prefix.
 
+        self.flags = flags
         self.id = id
         self.type = type
         self.payload = payload
         self.prefix = None
         self.target = target
-        self.timestamp = timemodule.time()
+        self.timestamp = time.time()
 
         self._parts = None
 
@@ -108,6 +115,15 @@ class Message:
         return repr(self._parts)
 
 
+    @property
+    def ack(self):
+
+        if self.flags and self.flags & NO_ACK:
+            return False
+        else:
+            return True
+
+
     def _finalize(self):
         """ Take the contents of this :class:`Message`, interpet them as
             bytes, and prepare the tuple that will be used for the multipart
@@ -118,6 +134,7 @@ class Message:
             # Once finalized, always finalized.
             return
 
+        flags = self.flags
         id = self.id
         type = self.type
         target = self.target
@@ -147,20 +164,28 @@ class Message:
                 # Assume it is already bytes.
                 pass
 
+        if flags:
+            flags = flags.to_bytes(byteorder='big')
+        else:
+            flags = b''
+
         if payload is None or payload == '':
             bulk = None
             payload = b''
         else:
-            bulk = payload.bulk
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
             payload = payload.encapsulate()
 
         # The absence of the bulk field is the indication that it should
         # be represented as None, distinct from being an empty byte sequence.
 
         if bulk is None:
-            parts = (version, id, type, target, payload)
+            parts = (version, id, type, target, flags, payload)
         else:
-            parts = (version, id, type, target, payload, bulk)
+            parts = (version, id, type, target, flags, payload, bulk)
 
         if self.prefix:
             parts = self.prefix + parts
@@ -208,26 +233,32 @@ class Message:
 
         quantity = len(parts)
 
-        if quantity != 5 and quantity != 6:
-            raise ValueError("expected 5 or 6 parts, got %d" % (quantity))
+        if quantity != 6 and quantity != 7:
+            raise ValueError("expected 6 or 7 parts, got %d" % (quantity))
 
         their_version = parts[0]
 
         if their_version != version:
             raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
 
-        message_id = parts[1]
-        message_type = parts[2]
+        id = parts[1]
+        type = parts[2]
         target = parts[3]
-        payload = parts[4]
+        flags = parts[4]
+        payload = parts[5]
 
         try:
-            bulk = parts[5]
+            bulk = parts[6]
         except IndexError:
             bulk = None
 
-        message_type = message_type.decode()
+        type = type.decode()
         target = target.decode()
+
+        if flags == b'':
+            flags = None
+        else:
+            flags = int.from_bytes(flags, byteorder='big')
 
         if payload == b'':
             payload = None
@@ -240,8 +271,17 @@ class Message:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        message = cls(message_type, target, payload, message_id)
+        message = cls(type, target, payload, id, flags)
         return message
+
+
+    @property
+    def reply(self):
+
+        if self.flags and self.flags & NO_REP:
+            return False
+        else:
+            return True
 
 
 # end of class Message
@@ -275,7 +315,10 @@ class Broadcast(Message):
             bulk = None
             payload = b''
         else:
-            bulk = payload.bulk
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
             payload = payload.encapsulate()
 
         # The prefix is ignored for broadcast messages; it should not be set.
@@ -344,9 +387,9 @@ class Request(Message):
         :ivar response: The response (as a :class:`Message`) to this request
     """
 
-    valid_types = set(('CONFIG', 'GET', 'HASH', 'SET'))
+    valid_types = set(('GET', 'SET'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         # Requests are generally initiated without an id number, but they're
         # required to have one. The expectation is that requests will have an
@@ -361,7 +404,7 @@ class Request(Message):
         if id is None:
             id = _id_next()
 
-        Message.__init__(self, type, target, payload, id)
+        Message.__init__(self, type, target, payload, id, flags)
 
         self.response = None
 
@@ -449,48 +492,14 @@ class Payload:
 
     omit = set(('bulk', 'omit'))
 
-    def __init__(self, value, time=None, error=None, bulk=None, shape=None, dtype=None, refresh=None, **kwargs):
+    def __init__(self, **kwargs):
         """ Arbitrary keyword arguments are allowed when creating a
-            :class:`Payload` instance, beyond the canonical set; when
-            included, these additional keyword arguments will be assigned
-            directly as attributes for later encapsulation. Any values
+            :class:`Payload` instance, beyond the canonical set; any values
             assigned in this fashion must be serializable as JSON.
         """
 
-        # The use of 'time' as a keyword argument is what's motivating the
-        # weird import of the time module in this file. We want the keyword
-        # arguments to be aligned with the fields in the JSON description
-        # of a payload: value, time, error, etc.
-
-        if time is None:
-            time = timemodule.time()
-
-        if refresh is False:
-            refresh = None
-
-        # We expect the canonical arguments to all be set all the time,
-        # even if their value is None. That's why they're not rolled up
-        # into the kwargs catch-all.
-
-        self.bulk = bulk
-        self.dtype = dtype
-        self.error = error
-        self.refresh = refresh
-        self.shape = shape
-        self.time = time
-        self.value = value
-
-        if not kwargs:
-            # This is the average case. Faster to check this one condition
-            # and return than to drop out of the next two conditions.
-            return
-
         if 'omit' in kwargs:
             raise ValueError("cannot assign 'omit' to a Payload")
-
-        # Allow additional arbitrary fields in the payload. We are assuming
-        # the caller knows what they are doing, and that these additional
-        # fields can be serialized as JSON.
 
         for key,value in kwargs.items():
             setattr(self, key, value)
@@ -498,6 +507,20 @@ class Payload:
 
     def __repr__(self):
         return self.encapsulate().decode()
+
+
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
+        """
+
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
+        self._executable = sys.executable
+        self._argv = sys.argv
 
 
     def encapsulate(self):
@@ -522,9 +545,11 @@ class Payload:
             if key in self.omit:
                 continue
 
-            # Do not include attributes that are just 'None'. This may be
-            # premature optimization, but it seems silly to put a bunch of
-            # extra bytes on the wire when it conveys no additional information.
+            # Do not include attributes that are None. This may be premature
+            # optimization, but it seems silly to put extra bytes on the wire
+            # when it conveys no additional information.
+
+            # Only the 'value' attribute will be put on the wire if it is None.
 
             # It's faster to check the key against 'value' repeatedly than
             # to build a separate set of includes and only assign those
@@ -535,20 +560,6 @@ class Payload:
 
         payload = json.dumps(payload)
         return payload
-
-
-    def add_origin(self):
-        """ Add fields to this payload to provide information describing
-            the origin of this message. The primary use case is for debugging
-            or logging, as opposed to uniquely identifying the sender.
-        """
-
-        self._user = _origin_user
-        self._hostname = _origin_hostname
-        self._pid = _origin_pid
-        self._ppid = _origin_ppid
-        self._executable = sys.executable
-        self._argv = sys.argv
 
 
 # end of class Payload

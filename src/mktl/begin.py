@@ -23,25 +23,25 @@ def _clear(store):
         existing = _cache[store]
     except KeyError:
         return
-
-    del _cache[store]
-    return existing
+    else:
+        del _cache[store]
+        return existing
 
 
 
 def discover(*targets):
-    """ Look for mKTL brokers, both by broadcasting on the local network
+    """ Look for mKTL registries, both by broadcasting on the local network
         and by directly querying any/all supplied addresses. The goal of
         this discovery is to populate a local cache including any/all stores
-        known to these brokers, for all future queries. This is especially
+        known to these registries, for all future queries. This is especially
         helpful if the local client is not on the same network as the
-        brokers of interest.
+        registries of interest.
     """
 
-    brokers = protocol.discover.search(wait=True, targets=targets)
+    registries = protocol.discover.search(wait=True, targets=targets)
 
-    if len(brokers) == 0:
-        raise RuntimeError('no brokers available')
+    if len(registries) == 0:
+        raise RuntimeError('no registries available')
 
     # Hacking the timeout for discovery, this is not expected to throw
     # errors with minimal delay.
@@ -49,8 +49,8 @@ def discover(*targets):
     old_timeout = protocol.request.Client.timeout
     protocol.request.Client.timeout = 0.5
 
-    for address,port in brokers:
-        request = protocol.message.Request('HASH')
+    for address,port in registries:
+        request = protocol.message.Request('GET', '_hash')
         try:
             payload = protocol.request.send(address, port, request)
         except:
@@ -59,7 +59,8 @@ def discover(*targets):
         hashes = payload.value
 
         for store in hashes.keys():
-            request = protocol.message.Request('CONFIG', store)
+            key = store + '._config'
+            request = protocol.message.Request('GET', key)
             payload = protocol.request.send(address, port, request)
 
             blocks = payload.value
@@ -133,12 +134,13 @@ def get(store, key=None):
 
     if len(configuration) == 0:
         # Nothing valid cached locally. Broadcast for responses.
-        brokers = protocol.discover.search()
-        if len(brokers) == 0:
+        registries = protocol.discover.search()
+        if len(registries) == 0:
             raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
 
-        hostname,port = brokers[0]
-        message = protocol.message.Request('CONFIG', store)
+        hostname,port = registries[0]
+        key = store + '._config'
+        message = protocol.message.Request('GET', key)
         payload = protocol.request.send(hostname, port, message)
 
         blocks = payload.value
@@ -199,8 +201,9 @@ def refresh(configuration):
             hostname = stratum['hostname']
             rep = stratum['rep']
 
+            key = store + '._hash'
             client = protocol.request.client(hostname, rep)
-            request = protocol.message.Request('HASH', store)
+            request = protocol.message.Request('GET', key)
 
             try:
                 client.send(request)
@@ -216,7 +219,11 @@ def refresh(configuration):
                 # No response from this daemon; it's broken somehow. Move on.
                 continue
 
-            hashes = response.payload.value
+            try:
+                hashes = response.payload.value
+            except AttributeError:
+                hashes = None
+
             if hashes is None:
                 # No response available.
                 continue
@@ -235,7 +242,8 @@ def refresh(configuration):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                message = protocol.message.Request('CONFIG', store)
+                key = store + '._config'
+                message = protocol.message.Request('GET', key)
                 client.send(message)
                 ### Again, exception handling may be required, though the
                 ### previous request went through, so there shouldn't be a
@@ -255,7 +263,7 @@ def refresh(configuration):
 
                 # This is not checking to see whether the UUID is present in the
                 # results-- it is assumed, because the UUID was present in the
-                # response to the HASH query prior to reaching this point.
+                # response to the _hash query prior to reaching this point.
 
                 new_block = new_config[uuid]
                 configuration.update(new_block)
