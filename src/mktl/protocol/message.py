@@ -19,6 +19,12 @@ from .. import json
 
 version = b'a'
 
+# Define any/all optional flags for message handling.
+
+NO_ACK = 0b1
+NO_REP = 0b10
+NO_ACK_OR_REP = NO_ACK | NO_REP
+
 # The cached origin information is used by the Payload class to (optionally)
 # provide information used to determine the origin of a message. The call to
 # os.getlogin() appears to be more expensive than the others. For that reason
@@ -77,7 +83,7 @@ class Message:
 
     valid_types = set(('ACK', 'REP'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         if type in self.valid_types:
             pass
@@ -88,6 +94,7 @@ class Message:
         # for example, publish messages do not have or need an identification
         # number or a prefix.
 
+        self.flags = flags
         self.id = id
         self.type = type
         self.payload = payload
@@ -108,6 +115,15 @@ class Message:
         return repr(self._parts)
 
 
+    @property
+    def ack(self):
+
+        if self.flags and self.flags & NO_ACK:
+            return False
+        else:
+            return True
+
+
     def _finalize(self):
         """ Take the contents of this :class:`Message`, interpet them as
             bytes, and prepare the tuple that will be used for the multipart
@@ -118,6 +134,7 @@ class Message:
             # Once finalized, always finalized.
             return
 
+        flags = self.flags
         id = self.id
         type = self.type
         target = self.target
@@ -147,6 +164,11 @@ class Message:
                 # Assume it is already bytes.
                 pass
 
+        if flags:
+            flags = flags.to_bytes(byteorder='big')
+        else:
+            flags = b''
+
         if payload is None or payload == '':
             bulk = None
             payload = b''
@@ -161,9 +183,9 @@ class Message:
         # be represented as None, distinct from being an empty byte sequence.
 
         if bulk is None:
-            parts = (version, id, type, target, payload)
+            parts = (version, id, type, target, flags, payload)
         else:
-            parts = (version, id, type, target, payload, bulk)
+            parts = (version, id, type, target, flags, payload, bulk)
 
         if self.prefix:
             parts = self.prefix + parts
@@ -211,26 +233,32 @@ class Message:
 
         quantity = len(parts)
 
-        if quantity != 5 and quantity != 6:
-            raise ValueError("expected 5 or 6 parts, got %d" % (quantity))
+        if quantity != 6 and quantity != 7:
+            raise ValueError("expected 6 or 7 parts, got %d" % (quantity))
 
         their_version = parts[0]
 
         if their_version != version:
             raise ValueError("version mismatch: expected %s, got %s" % (repr(version), repr(their_version)))
 
-        message_id = parts[1]
-        message_type = parts[2]
+        id = parts[1]
+        type = parts[2]
         target = parts[3]
-        payload = parts[4]
+        flags = parts[4]
+        payload = parts[5]
 
         try:
-            bulk = parts[5]
+            bulk = parts[6]
         except IndexError:
             bulk = None
 
-        message_type = message_type.decode()
+        type = type.decode()
         target = target.decode()
+
+        if flags == b'':
+            flags = None
+        else:
+            flags = int.from_bytes(flags, byteorder='big')
 
         if payload == b'':
             payload = None
@@ -243,8 +271,17 @@ class Message:
                 # allow it to pass, assuming the users know what they're doing.
                 pass
 
-        message = cls(message_type, target, payload, message_id)
+        message = cls(type, target, payload, id, flags)
         return message
+
+
+    @property
+    def reply(self):
+
+        if self.flags and self.flags & NO_REP:
+            return False
+        else:
+            return True
 
 
 # end of class Message
@@ -352,7 +389,7 @@ class Request(Message):
 
     valid_types = set(('GET', 'SET'))
 
-    def __init__(self, type, target=None, payload=None, id=None):
+    def __init__(self, type, target=None, payload=None, id=None, flags=None):
 
         # Requests are generally initiated without an id number, but they're
         # required to have one. The expectation is that requests will have an
@@ -367,7 +404,7 @@ class Request(Message):
         if id is None:
             id = _id_next()
 
-        Message.__init__(self, type, target, payload, id)
+        Message.__init__(self, type, target, payload, id, flags)
 
         self.response = None
 
@@ -472,6 +509,20 @@ class Payload:
         return self.encapsulate().decode()
 
 
+    def add_origin(self):
+        """ Add fields to this payload to provide information describing
+            the origin of this message. The primary use case is for debugging
+            or logging, as opposed to uniquely identifying the sender.
+        """
+
+        self._user = _origin_user
+        self._hostname = _origin_hostname
+        self._pid = _origin_pid
+        self._ppid = _origin_ppid
+        self._executable = sys.executable
+        self._argv = sys.argv
+
+
     def encapsulate(self):
         """ Add all non-omitted local attributes to a dictionary, and return
             the JSON encoding of that dictionary. For example, if the .value
@@ -509,20 +560,6 @@ class Payload:
 
         payload = json.dumps(payload)
         return payload
-
-
-    def add_origin(self):
-        """ Add fields to this payload to provide information describing
-            the origin of this message. The primary use case is for debugging
-            or logging, as opposed to uniquely identifying the sender.
-        """
-
-        self._user = _origin_user
-        self._hostname = _origin_hostname
-        self._pid = _origin_pid
-        self._ppid = _origin_ppid
-        self._executable = sys.executable
-        self._argv = sys.argv
 
 
 # end of class Payload

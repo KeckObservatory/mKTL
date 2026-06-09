@@ -40,6 +40,7 @@ class Client:
 
         self.socket = zmq_context.socket(zmq.DEALER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
         self.socket.identity = identity.encode()
         self.socket.connect(server)
 
@@ -180,6 +181,11 @@ class Client:
         self.requests.put(message)
         self.request_signal.send(b'')
 
+        if message.ack:
+            pass
+        else:
+            return
+
         ack = message.wait_ack(self.timeout)
 
         if ack == False:
@@ -221,6 +227,7 @@ class Server:
         self.hostname = hostname
         self.socket = zmq_context.socket(zmq.ROUTER)
         self.socket.setsockopt(zmq.LINGER, 0)
+        self.socket.set_hwm(0)
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
@@ -339,7 +346,14 @@ class Server:
             structure of what's happening in the daemon code.
         """
 
-        self.req_ack(request)
+
+        if request.ack:
+            self.req_ack(request)
+
+        if request.reply:
+            pass
+        else:
+            return
 
         response = message.Message('REP', target, id=request.id)
         response.prefix = request.prefix
@@ -390,7 +404,8 @@ class Server:
         if payload is None and error is None:
             # The handler should only return None when no response is
             # immediately forthcoming-- the handler has invoked some
-            # other processing chain that will issue a proper response.
+            # other processing chain that will issue a proper response,
+            # or the client explicitly requested no response.
             return
 
         if error is not None:
@@ -421,6 +436,9 @@ class Server:
                 elif self.socket == active:
                     parts = self.socket.recv_multipart()
                     # Calling submit() will block if a worker is not available.
+                    # Note that for high frequency operations this can result
+                    # in out-of-order handling of requests, for example, if a
+                    # stream of SET requests are inbound for a single item.
                     self.workers.submit(self.req_incoming, parts)
 
 

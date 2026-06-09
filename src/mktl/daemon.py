@@ -489,11 +489,12 @@ class RequestServer(protocol.request.Server):
 
 
     def req_handler(self, request):
-        """ Inspect the incoming request type and decide how a response
-            will be generated.
+        """ Inspect the incoming request type and call an appropriate
+            method to handle that specific request.
         """
 
-        self.req_ack(request)
+        if request.ack:
+            self.req_ack(request)
 
         type = request.type
         target = request.target
@@ -505,7 +506,10 @@ class RequestServer(protocol.request.Server):
         else:
             raise ValueError('unhandled request type: ' + type)
 
-        return response
+        if request.reply:
+            return response
+        else:
+            return None
 
 
     def req_get(self, request):

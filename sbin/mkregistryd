@@ -404,7 +404,8 @@ class RequestServer(mktl.protocol.request.Server):
             will be generated.
         """
 
-        self.req_ack(request)
+        if request.ack:
+            self.req_ack(request)
 
         type = request.type
         target = request.target
@@ -416,7 +417,8 @@ class RequestServer(mktl.protocol.request.Server):
         else:
             raise ValueError('unhandled request: ' + type)
 
-        return payload
+        if request.reply:
+            return payload
 
 
     def req_set(self, request):
