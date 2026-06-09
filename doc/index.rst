@@ -29,10 +29,10 @@ be expert mKTL maintainers in order to successfully develop an application.
    :maxdepth: 2
 
    overview
-   client
-   daemon
    store
    item
+   daemon
+   client
    examples
    executables
    configuration
