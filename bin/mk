@@ -124,7 +124,7 @@ def parse_command_line():
 
     parser.add_argument('requests',
         nargs='*',
-        help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of broker addresses.')
+        help='Whitespace-separated sequence of requests. For a get, watch, or describe request, this is a sequence of keys; for a set request, this is a sequence of key=value statements; for a list request this is a sequence of stores; for a discover request this is a sequence of registry addresses.')
 
 
     parsed = parser.parse_args()
@@ -503,7 +503,11 @@ def execute_set_requests(requests):
             key = request.target
             value = request.payload.value
             response = request.response
-            error = response.payload.error
+
+            try:
+                error = response.payload.error
+            except AttributeError:
+                error = None
 
             if error is not None and error != '':
                 sys.stderr.write("%s failed: %s: %s\n" % (key, error['type'], error['text']))
