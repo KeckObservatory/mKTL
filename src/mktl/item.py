@@ -203,12 +203,15 @@ class Item:
             This is the inverse of :func:`to_payload`.
         """
 
-        if payload.bulk is not None:
+        try:
+            bulk = payload.bulk
+        except AttributeError:
+            bulk = None
+
+        if bulk is not None:
 
             if numpy is None:
                 raise ImportError('numpy module not available')
-
-            bulk = payload.bulk
 
             shape = payload.shape
             dtype = payload.dtype
@@ -287,7 +290,7 @@ class Item:
         elif refresh == False:
             request = protocol.message.Request('GET', self.full_key)
         elif refresh == True:
-            payload = protocol.message.Payload(None, refresh=True)
+            payload = protocol.message.Payload(refresh=True)
             request = protocol.message.Request('GET', self.full_key, payload)
         else:
             raise TypeError('refresh argument must be a boolean')
@@ -298,7 +301,11 @@ class Item:
         if response is None:
             raise RuntimeError('GET failed: no response to request')
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -440,7 +447,12 @@ class Item:
         changed = False
 
         if repeat == False:
-            if payload.bulk is None:
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
+
+            if bulk is None:
                 changed = self._daemon_value != new_value
             else:
                 if self._daemon_value is None and new_value is not None:
@@ -645,7 +657,7 @@ class Item:
         # the contents of the response payload are not inspected.
 
         if response is None:
-            payload = protocol.message.Payload(True)
+            payload = protocol.message.Payload(value=True)
         elif isinstance(response, protocol.message.Payload):
             payload = response
         else:
@@ -661,15 +673,18 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True, formatted=False, quantity=False):
+    def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
             instance, which has a :func:`mktl.protocol.message.Request.wait`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
-            satisfied. There is no return value for a blocking request; failed
-            requests will raise exceptions.
+            satisfied. Set *reply* to False to disable all error handling and
+            acknowledgements for the request (fire and forget); setting
+            *reply to False implies *wait* is also False.
+            There is no return value for a blocking request; failed requests
+            will raise exceptions.
 
             The optional *formatted* and *quantity* options enable calling
             :func:`set` with either the string-formatted representation or
@@ -699,8 +714,16 @@ class Item:
             raise ValueError('formatted+quantity arguments must be boolean')
 
         payload = self.to_payload(new_value)
-        payload.add_origin()
-        message = protocol.message.Request('SET', self.full_key, payload)
+
+        if reply:
+            flags = None
+            payload.add_origin()
+        else:
+            flags = protocol.message.NO_ACK_OR_REP
+            wait = False
+
+        key = self.full_key
+        message = protocol.message.Request('SET', key, payload, flags=flags)
         self.req.send(message)
 
         if wait == False:
@@ -711,7 +734,11 @@ class Item:
         if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
@@ -820,9 +847,15 @@ class Item:
         """
 
         if self.authoritative == True:
-            return self._daemon_value_timestamp
+            timestamp = self._daemon_value_timestamp
         else:
-            return self._value_timestamp
+            timestamp = self._value_timestamp
+
+        if timestamp is None:
+            # This only occurs in startup conditions, but it does occur.
+            timestamp = time.time()
+
+        return timestamp
 
 
     def to_format(self, value):
@@ -833,15 +866,11 @@ class Item:
             This is the inverse of :func:`from_format`.
         """
 
-        try:
-            formatted = self.store.config.to_format(self.key, value)
-        except:
-            formatted = str(self.value)
-
+        formatted = self.store.config.to_format(self.key, value)
         return formatted
 
 
-    def to_payload(self, value=None, timestamp=None):
+    def to_payload(self, value=None, timestamp=None, **kwargs):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
             not specified the current value of this :class:`Item` will be
@@ -877,11 +906,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value=value, time=timestamp, **kwargs)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(time=timestamp, bulk=bulk, shape=shape, dtype=dtype, **kwargs)
 
         return payload
 

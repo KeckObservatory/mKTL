@@ -15,10 +15,14 @@ release = '0.1'
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ['myst_parser', 'sphinx.ext.autodoc', 'sphinx.ext.intersphinx']
+extensions = list()
+extensions.append('myst_parser')
+extensions.append('sphinx.ext.autodoc')
+extensions.append('sphinx.ext.intersphinx')
+extensions.append('sphinxcontrib.mermaid')
 
 templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+exclude_patterns = ['_build', 'README.md', '.DS_Store', 'Thumbs.db']
 intersphinx_mapping = {'pint': ('https://pint.readthedocs.io/en/stable', None),
 			'python': ('https://docs.python.org/3', None)}
 
@@ -30,6 +34,10 @@ html_theme = 'sphinx_rtd_theme'
 html_static_path = ['_static']
 
 html_css_files = ['css/custom.css']
+
+mermaid_params = ['--theme', 'default']
+mermaid_dark_theme = 'default'
+mermaid_light_theme = 'default'
 
 import sys
 sys.path.append('.')
