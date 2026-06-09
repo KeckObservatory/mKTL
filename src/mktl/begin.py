@@ -23,9 +23,9 @@ def _clear(store):
         existing = _cache[store]
     except KeyError:
         return
-
-    del _cache[store]
-    return existing
+    else:
+        del _cache[store]
+        return existing
 
 
 
