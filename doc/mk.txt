@@ -16,7 +16,7 @@ positional arguments:
                         keys; for a set request, this is a sequence of
                         key=value statements; for a list request this is a
                         sequence of stores; for a discover request this is a
-                        sequence of broker addresses.
+                        sequence of registry addresses.
 
 options:
   -h, --help            show this help message and exit
