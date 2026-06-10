@@ -440,8 +440,9 @@ class Item:
         # publish() does not require a Payload instance as an argument to
         # allow flexibility in cases where the timestamp is not already
         # established, though in the average case publish() will be invoked
-        # as a result of a req_poll() call, which already has a Payload
-        # instance.
+        # as a result of a req_poll() call, which already created a Payload
+        # instance; it might be more efficient to create one and pass it to
+        # publish(), but that's not how the calls are presently structured.
 
         payload = self.to_payload(new_value, timestamp)
         changed = False
@@ -610,7 +611,8 @@ class Item:
 
             A common pattern for custom subclasses involves registering
             :func:`req_poll` as a callback on other items, so that the value
-            of this item can be refreshed when external events occur.
+            of this item can be refreshed when external events occur. The
+            :func:`watch` method exists to facilitate that pattern.
         """
 
         response = self.perform_get()
@@ -1075,6 +1077,17 @@ class Item:
             self.publish(new_value)
         else:
             self.set(new_value)
+
+
+    def watch(self, item):
+        """ Register a callback with the referenced item, such that this
+            item updates itself any time the referenced item changes. This
+            is functionally equivalent to calling::
+
+              item.register(self.req_poll)
+        """
+
+        item.register(self.req_poll)
 
 
     def _propagate(self, new_data, new_timestamp):
