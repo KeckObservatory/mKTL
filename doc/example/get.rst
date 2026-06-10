@@ -51,7 +51,17 @@ The property is used directly::
 There are two variants of the :py:attr:`Item.value` property:
 :py:attr:`Item.formatted`, and :py:attr:`Item.quantity`. They behave in the same
 fashion as :py:attr:`Item.value`, but work with different representations of
-the value.
+the value. The exact nature of what you get back will depend on the
+configuration of the individual item, but for this example you might see::
+
+    >>> print(crazy.value)
+    True
+    >>> print(crazy.formatted)
+    'Yes'
+    >>> print(crazy.quantity)
+    Traceback (most recent call last):
+    [...]
+    TypeError: Invalid magnitude for Quantity: True
 
 
 Calling :func:`Item.get`
@@ -130,3 +140,9 @@ and will behave as if :py:attr:`Item.value` is being used directly::
     else:
         print('The population is sane.')
 
+Note that the first comparison did not use ``is None``, and instead used
+``== None``, which is a departure from generally accepted practices in the
+Python community. This is because the behavior of the ``is`` operator is
+unchanged, and will compare the mktl.Item instance against None, whereas
+the equality operator will trigger the rich comparison handling provided
+by an mktl.Item, and instead compare the .value property against None.
