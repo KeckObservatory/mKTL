@@ -19,7 +19,7 @@ class Item:
     """ An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the authoritative daemon.
         The principal way for both clients and daemons to get or set the value
-        is via the :func:`value` property.
+        is via the :py:attr:`value` property.
 
         A non-authoritative Item will automatically :func:`subscribe` itself to
         any available updates.
@@ -365,10 +365,15 @@ class Item:
 
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. Return None if no new value is
-            available; if a :class:`mktl.protocol.message.Payload` instance
-            is returned it will be used as-is, otherwise the return value
-            will be passed to :func:`to_payload` for encapsulation.
+            and return it to the caller. The most common return value is any
+            Python object that can be serialized as JSON; return None if no
+            new value is available.
+
+            If a :class:`mktl.protocol.message.Payload` instance is returned
+            it will be used as-is, otherwise the return value will be passed
+            to :func:`to_payload` for encapsulation. The primary motivation
+            for returning a Payload instead of a bare value is if the embedded
+            timestamp needs to be set to some value other than the current time.
 
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
@@ -424,7 +429,7 @@ class Item:
             published value.
 
             Note that, for simple cases, an authoritative daemon can set the
-            :func:`value` property to publish a new value instead of calling
+            :py:attr:`value` property to publish a new value instead of calling
             :func:`publish` directly. In other words, these two calls are
             equivalent::
 
@@ -1080,9 +1085,9 @@ class Item:
 
 
     def watch(self, item):
-        """ Register a callback with the referenced item, such that this
-            item updates itself any time the referenced item changes. This
-            is functionally equivalent to calling::
+        """ Register a callback with the referenced item, such that the
+            current item updates itself any time the referenced item changes.
+            This is functionally equivalent to calling::
 
               item.register(self.req_poll)
         """

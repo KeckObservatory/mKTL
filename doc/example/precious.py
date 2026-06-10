@@ -20,22 +20,19 @@ class MarketPriced(mktl.Item):
 class Gold(MarketPriced):
 
     def perform_get(self):
-        current = get_spot_value('gold', 'usd', 'grams')
-        return self.to_payload(current)
+        return get_spot_value('gold', 'usd', 'grams')
 
 
 class Platinum(MarketPriced):
 
     def perform_get(self):
-        current = get_spot_value('platinum', 'usd', 'grams')
-        return self.to_payload(current)
+        return get_spot_value('platinum', 'usd', 'grams')
 
 
 class Silver(MarketPriced):
 
     def perform_get(self):
-        current = get_spot_value('silver', 'usd', 'grams')
-        return self.to_payload(current)
+        return get_spot_value('silver', 'usd', 'grams')
 
 
 def get_spot_value(metal, currency, units):

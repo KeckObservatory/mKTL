@@ -918,8 +918,7 @@ class MemoryUsage(item.Item):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
         max_usage = resources.ru_maxrss
-
-        return self.to_payload(max_usage)
+        return max_usage
 
 
 # end of class MemoryUsage

@@ -12,18 +12,21 @@ External definitions
 --------------------
 
  * **WMKO**:
-	W. M. Keck Observatory, where mKTL was initially established, in
-	collaboration with WMKO partner institutions at the University of
-	California and California Institute of Technology.
+	`W. M. Keck Observatory <https://keckobservatory.org/>`_, where mKTL
+	was initially established, in collaboration with WMKO partner
+	institutions at the
+	`University of California <https://www.universityofcalifornia.edu>`_
+	and `California Institute of Technology <https://www.caltech.edu>`_.
 
  * **KTL**:
-	Keck Task Library, the predecessor to mKTL at WMKO. KTL is a
-	key-value application programming interface (API), written in C,
-	and has been the dominant API for interprocess communication at
-	both WMKO and Lick Observatory since the 1990's.
+	:ref:`Keck Task Library <heritage>`, the predecessor to mKTL at
+	WMKO. KTL is a key-value application programming interface (API),
+	written in C, and has been the dominant API for interprocess
+	communication at both WMKO and Lick Observatory since the 1990's.
 
  * **EPICS**:
-	Experimental Physics and Industrial Control System, another
+	`Experimental Physics and Industrial Control System
+	<https://epics-controls.org>`_, another
 	key-value API that WMKO adopted for its telescope and
 	adaptive optics control systems. EPICS is one of the interprocess
 	communication APIs for which KTL provides a common abstraction.
