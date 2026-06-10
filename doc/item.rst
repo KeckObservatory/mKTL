@@ -34,6 +34,7 @@ The Item class
    .. automethod:: set
    .. automethod:: register
 
+
    .. _item_daemon_methods:
 
    All of the client functionality remains unchanged when an :class:`Item`
@@ -44,6 +45,7 @@ The Item class
    .. automethod:: poll
    .. automethod:: publish
    .. automethod:: to_payload
+
 
    .. _item_subclassing:
 
