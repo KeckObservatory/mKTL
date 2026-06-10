@@ -1,3 +1,4 @@
+.. _item:
 
 The Item class
 ==============
