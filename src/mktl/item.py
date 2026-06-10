@@ -519,6 +519,18 @@ class Item:
             to call it separately. If *prime* is set to True the callback will
             be invoked using the current value of the item, if any, before
             returning; no priming call will occur if the item has no value.
+
+            A callback method should expect three arguments: a reference to
+            the :class:`Item` from whence the callback originated, the new
+            value for the item, and the timestamp associated with the new
+            value. For example::
+
+              def my_callback(item, new_value, new_timestamp):
+
+            Callback methods should strive to be lightweight in terms of
+            their execution time; any callbacks registered for an item will
+            be called in series, and there are no provisions for shortening
+            the queue if a backlog occurs.
         """
 
         if callable(method):

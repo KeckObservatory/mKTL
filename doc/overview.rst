@@ -19,13 +19,13 @@ The protocol provides:
 Core concepts
 -------------
 
-mKTL organizes commands and telemetry using a hierarchical namespace composed of stores and items. A *store* is a collection of *items*. It is effectively an associative array, providing little additional functionality beyond being a container. A store will have a unique name within its local namespace.
+mKTL organizes commands and telemetry using a hierarchical namespace composed of :ref:`stores <store>` and :ref:`items <item>`. A store is a collection of items. It is effectively an associative array, providing little additional functionality beyond being a container. A store will have a unique name within its local namespace.
 
-An *item* is the smallest addressable unit in mKTL, a single key/value pair that may correspond to a command, a configuration parameter, a telemetry value, an image buffer, and so on. Examples of items might include a power on/off control, a device operating mode, a temperature reading, a motor position, or the most recent image from a detector.
+An item is the smallest addressable unit in mKTL, a single key/value pair that may correspond to a command, a configuration parameter, a telemetry value, an image buffer, and so on. Examples of items might include a power on/off control, a device operating mode, a temperature reading, a motor position, or the most recent image from a detector.
 
-Each item has a *key* that uniquely identifies it within its store; the same item key can be reused in multiple stores. The store name and the item key combine to create the fully qualified key, which uniquely identifies an item within a local mKTL context.
+Each item has a key that uniquely identifies it within its store; the same item key can be reused in multiple stores. The store name and the item key combine to create the fully qualified key, which uniquely identifies an item within a local mKTL context.
 
-A *daemon* is any application that is authoritative for one or more items, meaning, the daemon is responsible for publishing any new values, and for handling any requests to change the value of the item. A *client* is any application that interacts with an item for which it is not authoritative.
+A :ref:`daemon <daemon>` is any application that is authoritative for one or more items, meaning, the daemon is responsible for publishing any new values, and for handling any requests to change the value of the item. A :ref:`client <client>` is any application that interacts with an item for which it is not authoritative.
 
 .. mermaid:: overview_client.mmd
 
@@ -33,4 +33,4 @@ From a high level view, an mKTL client solely interacts with mKTL items, contain
 
 .. mermaid:: overview_daemon.mmd
 
-The perspective from an mKTL daemon is the mirror image, with daemons likewise not requiring any direct interactions with the protocol or transport, though again a daemon could bypass all interface code as long as it adheres to :ref:`mKTL standards <protocol>`.
+The perspective from an mKTL daemon is the mirror image, with daemons likewise not requiring any direct interactions with the protocol or transport, though again a daemon could bypass all interface code as long as it adheres to :ref:`the mKTL protocol <protocol>`.
