@@ -45,6 +45,7 @@ The Item class
    .. automethod:: poll
    .. automethod:: publish
    .. automethod:: to_payload
+   .. automethod:: watch
 
 
    .. _item_subclassing:
