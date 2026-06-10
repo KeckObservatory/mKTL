@@ -33,4 +33,4 @@ From a high level view, an mKTL client solely interacts with mKTL items, contain
 
 .. mermaid:: overview_daemon.mmd
 
-The perspective from an mKTL daemon is the mirror image, with daemons likewise not requiring any direct interactions with the protocol or transport, though again a daemon could bypass all interface code as long as it adheres to :ref:`mKTL standards <protocol>`.
+The perspective from an mKTL daemon is the mirror image, with daemons likewise not requiring any direct interactions with the protocol or transport, though again a daemon could bypass all interface code as long as it adheres to :ref:`the mKTL protocol <protocol>`.
