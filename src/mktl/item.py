@@ -19,7 +19,7 @@ class Item:
     """ An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the authoritative daemon.
         The principal way for both clients and daemons to get or set the value
-        is via the :func:`value` property.
+        is via the :py:attr:`value` property.
 
         A non-authoritative Item will automatically :func:`subscribe` itself to
         any available updates.
@@ -424,7 +424,7 @@ class Item:
             published value.
 
             Note that, for simple cases, an authoritative daemon can set the
-            :func:`value` property to publish a new value instead of calling
+            :py:attr:`value` property to publish a new value instead of calling
             :func:`publish` directly. In other words, these two calls are
             equivalent::
 
