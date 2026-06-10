@@ -43,33 +43,15 @@ initialization steps must occur such as defining a common communication point
 to access a hardware controller, or whether the initial state of a set of
 items needs to be manipulated before proceeding with routine operations.
 
-In nearly all cases the developer will need to create a custom
-:class:`mktl.Daemon` subclass to satisfy the operational goals of an
-individual daemon.
+In most cases the developer will need to create a custom :class:`mktl.Daemon`
+subclass to satisfy the operational goals of an application. Likewise, in most
+cases the developer will need to create custom :class:`mktl.Item` subclasses
+to implement application-specific behavior, with special attention paid to the
+:ref:`specific methods to override <item_subclassing>`, and
+:ref:`additional methods useful in a daemon context <item_daemon_methods>`.
 
 .. autoclass:: mktl.Daemon
    :members:
-
-
-The Item class, expanded
-------------------------
-
-The bulk of any daemon-specific logic will occur in :class:`mktl.Item`
-subclasses. This is where requests get handled, where data gets interpreted,
-where logic is defined that could span items within and without the boundaries
-of the containing :class:`mktl.Daemon`.
-
-The key methods to override when implementing custom behavior are
-:func:`mktl.Item.perform_get`,
-:func:`mktl.Item.perform_set`, and
-:func:`mktl.Item.validate`.
-In addition, :func:`mktl.Item.req_poll` will be of interest, used in combination
-with :func:`mktl.Item.register`, and the :py:attr:`mktl.Item.value` property,
-as well as the :py:attr:`mktl.Item.formatted` and :py:attr:`mktl.Item.quantity`
-variants, to explicitly set a new item value.
-
-.. autoclass:: mktl.Item
-   :members: from_payload, perform_get, perform_set, poll, publish, req_get, req_poll, req_set, to_payload, validate
 
 
 Configuration management
