@@ -61,7 +61,9 @@ request types that were defined in the initial prototype of the mKTL protocol.
 
 
   * - **_config**
-    - The full locally known configuration contents for a single mKTL store.
+    - .. _builtin_config:
+
+      The full locally known configuration contents for a single mKTL store.
       There is no bare ``_config`` item available to request the configuration
       data for all locally known stores; the key will always include the store
       name, such as `kpfguide._config`.
@@ -112,7 +114,7 @@ there are some exceptions.
     - *Description*
 
   * - **cfg**
-    - See the description of the ``_config`` item above.
+    - See :ref:`the description <builtin_config>` of the ``_config`` item above.
 
   * - **clk**
     - The current uptime for this daemon, measured in seconds. The value will
