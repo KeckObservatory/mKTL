@@ -365,10 +365,15 @@ class Item:
 
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. Return None if no new value is
-            available; if a :class:`mktl.protocol.message.Payload` instance
-            is returned it will be used as-is, otherwise the return value
-            will be passed to :func:`to_payload` for encapsulation.
+            and return it to the caller. The most common return value is any
+            Python object that can be serialized as JSON; return None if no
+            new value is available.
+
+            If a :class:`mktl.protocol.message.Payload` instance is returned
+            it will be used as-is, otherwise the return value will be passed
+            to :func:`to_payload` for encapsulation. The primary motivation
+            for returning a Payload instead of a bare value is if the embedded
+            timestamp needs to be set to some value other than the current time.
 
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
