@@ -19,7 +19,7 @@ class Item:
     """ An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the authoritative daemon.
         The principal way for both clients and daemons to get or set the value
-        is via the :func:`value` property.
+        is via the :py:attr:`value` property.
 
         A non-authoritative Item will automatically :func:`subscribe` itself to
         any available updates.
@@ -419,10 +419,15 @@ class Item:
 
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. Return None if no new value is
-            available; if a :class:`mktl.protocol.message.Payload` instance
-            is returned it will be used as-is, otherwise the return value
-            will be passed to :func:`to_payload` for encapsulation.
+            and return it to the caller. The most common return value is any
+            Python object that can be serialized as JSON; return None if no
+            new value is available.
+
+            If a :class:`mktl.protocol.message.Payload` instance is returned
+            it will be used as-is, otherwise the return value will be passed
+            to :func:`to_payload` for encapsulation. The primary motivation
+            for returning a Payload instead of a bare value is if the embedded
+            timestamp needs to be set to some value other than the current time.
 
             Calls to this method will be handled in a background thread with
             no restrictions on how long a get request takes to process. There
@@ -509,7 +514,7 @@ class Item:
             published value.
 
             Note that, for simple cases, an authoritative daemon can set the
-            :func:`value` property to publish a new value instead of calling
+            :py:attr:`value` property to publish a new value instead of calling
             :func:`publish` directly. In other words, these two calls are
             equivalent::
 
@@ -525,8 +530,9 @@ class Item:
         # publish() does not require a Payload instance as an argument to
         # allow flexibility in cases where the timestamp is not already
         # established, though in the average case publish() will be invoked
-        # as a result of a req_poll() call, which already has a Payload
-        # instance.
+        # as a result of a req_poll() call, which already created a Payload
+        # instance; it might be more efficient to create one and pass it to
+        # publish(), but that's not how the calls are presently structured.
 
         payload = self.to_payload(new_value, timestamp)
         changed = False
@@ -604,6 +610,18 @@ class Item:
             to call it separately. If *prime* is set to True the callback will
             be invoked using the current value of the item, if any, before
             returning; no priming call will occur if the item has no value.
+
+            A callback method should expect three arguments: a reference to
+            the :class:`Item` from whence the callback originated, the new
+            value for the item, and the timestamp associated with the new
+            value. For example::
+
+              def my_callback(item, new_value, new_timestamp):
+
+            Callback methods should strive to be lightweight in terms of
+            their execution time; any callbacks registered for an item will
+            be called in series, and there are no provisions for shortening
+            the queue if a backlog occurs.
         """
 
         if callable(method):
@@ -683,7 +701,8 @@ class Item:
 
             A common pattern for custom subclasses involves registering
             :func:`req_poll` as a callback on other items, so that the value
-            of this item can be refreshed when external events occur.
+            of this item can be refreshed when external events occur. The
+            :func:`watch` method exists to facilitate that pattern.
         """
 
         response = self.perform_get()
@@ -1148,6 +1167,17 @@ class Item:
             self.publish(new_value)
         else:
             self.set(new_value)
+
+
+    def watch(self, item):
+        """ Register a callback with the referenced item, such that the
+            current item updates itself any time the referenced item changes.
+            This is functionally equivalent to calling::
+
+              item.register(self.req_poll)
+        """
+
+        item.register(self.req_poll)
 
 
     def _propagate(self, new_data, new_timestamp):

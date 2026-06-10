@@ -53,31 +53,3 @@ All other client operations, such as getting and setting item values, are
 handled via the :class:`mktl.Item` instance.
 
 .. autofunction:: mktl.get
-
-
-The Store class
----------------
-
-The :class:`mktl.Store` class is primarily an organizational structure,
-providing a dictionary-like interface to retrieve :class:`mktl.Item` instances.
-
-.. autoclass:: mktl.Store
-   :members:
-
-
-The Item class
---------------
-
-The bulk of the client interactions will occur with the :class:`mktl.Item`
-class. In addition to the methods described here an :class:`mktl.Item` instance
-can be used with Python operators, such as addition/concatenation or
-multiplication.
-The behavior of an :class:`mktl.Item` when used in this fashion will be aligned
-with the native Python binary type for the item value; for example, if an
-item test.BAR has an integer value 12, ``test.BAR + 5`` will return the integer
-value 17. If test.BAR is instead the string value '12', the same operation
-would raise a TypeError exception; however, ``test.BAR + '5'`` would return
-the string value '125', just like you would expect for string concatenation.
-
-.. autoclass:: mktl.Item
-   :members: formatted, get, quantity, register, set, subscribe, value

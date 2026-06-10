@@ -61,7 +61,9 @@ request types that were defined in the initial prototype of the mKTL protocol.
 
 
   * - **_config**
-    - The full locally known configuration contents for a single mKTL store.
+    - .. _builtin_config:
+
+      The full locally known configuration contents for a single mKTL store.
       There is no bare ``_config`` item available to request the configuration
       data for all locally known stores; the key will always include the store
       name, such as `kpfguide._config`.
@@ -91,15 +93,16 @@ data; both are integral to the initial handshake between a client and a daemon,
 and between any intermediaries aiding in the discovery process.
 
 
-Fully functional
-----------------
+Regular items
+-------------
 
 The remaining built-in items are visible in the configuration for the store,
-and are implemented on a per-daemon basis. They are intended to represent
+and are available for each daemon in that store. They are intended to represent
 metadata about an individual daemon, will all have the store name and alias
 as the first elements of the key, including a leading underscore after the
 store name; for example, ``kpfguide._disp1``. The built-in items append a
-functional suffix to this common prefix.
+functional suffix to this common prefix, yielding full keys like
+``kpfguide._disp1cfg`` and ``kpfguide_disp1clk``.
 
 The built-in items defined in this fashion are typically read-only, though
 there are some exceptions.
@@ -111,7 +114,7 @@ there are some exceptions.
     - *Description*
 
   * - **cfg**
-    - See the description of the ``_config`` item above.
+    - See :ref:`the description <builtin_config>` of the ``_config`` item above.
 
   * - **clk**
     - The current uptime for this daemon, measured in seconds. The value will

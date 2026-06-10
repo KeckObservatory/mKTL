@@ -28,17 +28,20 @@ be expert mKTL maintainers in order to successfully develop an application.
 .. toctree::
    :maxdepth: 2
 
+   overview
    client
    daemon
+   store
+   item
    examples
    executables
    configuration
    built_ins
    protocol
    protocol_interface
-   governance
-   code_of_conduct
    heritage
+   code_of_conduct
+   governance
    glossary
 
 Indices and tables
