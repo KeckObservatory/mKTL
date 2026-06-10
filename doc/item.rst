@@ -26,9 +26,9 @@ The Item class
    The use of these properties is encouraged as the preferred approach to
    getting and setting item values.
 
-   .. automethod:: value
-   .. automethod:: formatted
-   .. automethod:: quantity
+   .. autoproperty:: value
+   .. autoproperty:: formatted
+   .. autoproperty:: quantity
 
    Outside the use of properties, three key methods are likely to be used
    in a client context:
@@ -55,5 +55,3 @@ The Item class
    .. automethod:: perform_get
    .. automethod:: perform_set
    .. automethod:: validate
-
-   :members: formatted, get, quantity, register, set, subscribe, value
