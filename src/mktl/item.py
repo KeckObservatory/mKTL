@@ -1080,9 +1080,9 @@ class Item:
 
 
     def watch(self, item):
-        """ Register a callback with the referenced item, such that this
-            item updates itself any time the referenced item changes. This
-            is functionally equivalent to calling::
+        """ Register a callback with the referenced item, such that the
+            current item updates itself any time the referenced item changes.
+            This is functionally equivalent to calling::
 
               item.register(self.req_poll)
         """
