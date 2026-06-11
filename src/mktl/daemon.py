@@ -176,6 +176,92 @@ class Daemon:
         self.logger.debug("daemon initialization complete")
 
 
+    def add_get_handler(self, key, method):
+        """ Define a method that will be called for all GET requests for
+            the specified item. See :func:`mktl.Item.req_get` for additional
+            details; inspection of the implementation for that method is
+            recommended to ensure all the necessary actions are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        self.rep._req_get_handlers[item.full_key] = method
+
+
+    def add_get_performer(self, key, method):
+        """ Define a method that will be called for all GET requests for
+            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            for additional details.
+        """
+
+        key = key.lower()
+        key = key.strip()
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_get_performer(method)
+
+
+    def add_handler(self, key, request, method):
+        """ Define a method that will be called for either GET or SET
+            requests, determined by the *request* argument, which must be one
+            of 'get' or 'set'.
+
+            See :func:`mktl.Item.req_get` and
+            :func:`mktl.Item.req_set` for additional details; inspection of
+            the implementation for those methods is recommended to ensure all
+            the necessary actions are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        request = request.lower()
+        request = request.strip()
+
+        if request == 'get':
+            self.add_get_handler(key, method)
+        elif request == 'set':
+            self.add_set_handler(key, method)
+        else:
+            raise ValueError("request must be either 'get' or 'set'")
+
+
+    def add_handlers(self, handlers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods handling GET and SET
+            requests, bypassing the usual handling chain involving
+            :class:`mktl.Item` instances.
+
+            A triplet is the key for an item (omitting the store name), whether
+            this is a 'get' or a 'set' handler, and a valid reference to a
+            method. For example::
+
+                ('temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.req_get` and
+            :func:`mktl.Item.req_set` for additional details; inspection of
+            the implementation for those methods is recommended to ensure all
+            the necessary actions are covered.
+        """
+
+        for triplet in handlers:
+            key,request,method = triplet
+            self.add_handler(key, request, method)
+
+
     def add_item(self, item_class, key, **kwargs):
         """ Add an :class:`mktl.Item` to this daemon instance; this is the entry
             point for establishing an authoritative item, one that will handle
@@ -229,6 +315,91 @@ class Daemon:
 
             if callback:
                 created.register(callback)
+
+
+    def add_performer(self, key, request, method):
+        """ Define a method that will be called for either GET or SET
+            requests, determined by the *request* argument, which must be one
+            of 'get' or 'set'.
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        # Allow this method to be called before placeholder Item instances
+        # have been established. The use of external performer methods,
+        # rather than overriding Item.perform_get() and Item.perform_set(),
+        # implies the caller will not be instantiating custom Item
+        # subclasses; instantiating them now ensures any custom code is
+        # exclusive.
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_performer(request, method)
+
+
+    def add_performers(self, performers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods performing GET and SET
+            requests onto the :class:`mktl.Item` instances receiving those
+            requests from this daemon.
+
+            A triplet is the key for an item (omitting the store name), whether
+            this is a 'get' or a 'set' performer, and a valid reference to a
+            method. For example::
+
+                ('temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        for triplet in performers:
+            key,request,method = triplet
+            self.add_performer(key, request, method)
+
+
+    def add_set_handler(self, key, method):
+        """ Define a method that will be called for all SET requests for
+            the specified item. See :func:`mktl.Item.req_set` for additional
+            details; inspection of the implementation for that method is
+            recommended to ensure all the necessary actions are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        self.rep._req_set_handlers[item.full_key] = method
+
+
+    def add_set_performer(self, key, method):
+        """ Define a method that will be called for all SET requests for
+            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            for additional details.
+        """
+
+        key = key.lower()
+        key = key.strip()
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_set_performer(method)
 
 
     def _begin_persistence(self):
@@ -481,11 +652,13 @@ class RequestServer(protocol.request.Server):
         self.daemon = daemon
         self.store = store
 
-        self._getters = dict()
-        self._getters[store + '._config'] = self.req_get_config
-        self._getters[store + '._hash'] = self.req_get_hash
-        self._getters['._hash'] = self.req_get_hash
-        self._getters['_hash'] = self.req_get_hash
+        self._req_get_handlers = dict()
+        self._req_set_handlers = dict()
+
+        self._req_get_handlers[store + '._config'] = self.req_get_config
+        self._req_get_handlers[store + '._hash'] = self.req_get_hash
+        self._req_get_handlers['._hash'] = self.req_get_hash
+        self._req_get_handlers['_hash'] = self.req_get_hash
 
 
     def req_handler(self, request):
@@ -515,11 +688,12 @@ class RequestServer(protocol.request.Server):
     def req_get(self, request):
 
         try:
-            getter = self._getters[request.target]
+            getter = self._req_get_handlers[request.target]
         except KeyError:
             pass
         else:
             return getter(request)
+
 
         # Look up the conventional req_get() method for this item.
 
@@ -576,6 +750,22 @@ class RequestServer(protocol.request.Server):
 
     def req_set(self, request):
 
+        ### This may be the right place to send a publish message indicating
+        ### that a set request has been received. This would largely be a
+        ### debug message, structured exactly like a publish request, but
+        ### with a leading 'set:' for the topic to distinguish it from anything
+        ### that might be a normal broadcast.
+
+        ### This would allow a debug client to subscribe to all messages with
+        ### a leading 'set:' topic.
+
+        try:
+            setter = self._req_set_handlers[request.target]
+        except KeyError:
+            pass
+        else:
+            return setter(request)
+
         store, key = request.target.split('.', 1)
 
         if store != self.daemon.store.name:
@@ -588,17 +778,9 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        ### This may be the right place to send a publish message indicating
-        ### that a set request has been received. This would largely be a
-        ### debug message, structured exactly like a publish request, but
-        ### with a leading 'set:' for the topic to distinguish it from anything
-        ### that might be a normal broadcast.
-
-        ### This would allow a debug client to subscribe to all messages with
-        ### a leading 'set:' topic.
-
-        response = self.daemon.store[key].req_set(request)
-        return response
+        setter = self.daemon.store[key].req_set
+        self._req_set_handlers[request.target] = setter
+        return setter(request)
 
 
 # end of class RequestServer
