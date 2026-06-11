@@ -10,6 +10,7 @@
 
 import os
 import socket
+import struct
 import threading
 import time
 
@@ -20,6 +21,11 @@ call = call.encode()
 
 response = 'on the X:'
 response = response.encode()
+
+# Multicast address used by the discovery mechanism. 239.0.0.0/8 is the
+# administratively scoped range intended for 'private' use.
+
+multicast_address = '239.23.29.239'
 
 # There's nothing special about this port number, other than it is not
 # privileged, and happens to be prime. It is effectively a shared secret.
@@ -56,13 +62,17 @@ class Server:
         rep = rep.encode()
         self.response = response + rep
 
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
         try:
-            sock.bind(('', self.port))
+            sock.bind((multicast_address, self.port))
         except OSError:
             return
+
+        multicast_number = socket.inet_aton(multicast_address)
+        packed = struct.pack('4sl', multicast_number, socket.INADDR_ANY)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, packed)
 
         self.socket = sock
         self.thread = threading.Thread(target=self.run)
@@ -137,9 +147,7 @@ def search(port=default_port, wait=False, targets=tuple()):
         in the returned list and there will be no additional delay.
     """
 
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
     sock.settimeout(1)
 
     targets = list(targets)
@@ -148,12 +156,13 @@ def search(port=default_port, wait=False, targets=tuple()):
         cached = preload_registries()
         targets.extend(cached)
 
+    ## This won't work with multicast.
+
     for target in targets:
         targeted_address = (target, port)
         sock.sendto(call, targeted_address)
 
-    broadcast_address = ('255.255.255.255', port)
-    sock.sendto(call, broadcast_address)
+    sock.sendto(call, (multicast_address, port))
 
     start = time.time()
     expiration = 1
