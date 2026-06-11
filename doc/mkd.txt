@@ -20,11 +20,12 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   -m, --module MODULE   Module to import which contains the mktl.Daemon
-                        subclass to invoke.
+                        subclass to invoke. The default module is "mktl".
   -s, --subclass SUBCLASS
                         Specific mktl.Daemon subclass to invoke; this is the
                         bare class name (Daemon), not a fully qualified class
-                        name (mktl.Daemon).
+                        name (mktl.Daemon). The default subclass name is
+                        "Daemon".
   -c, --configuration CONFIGURATION
                         File containing daemon-specific mKTL configuration of
                         items; if specified, the contents of this file will
