@@ -282,7 +282,7 @@ allowed, but a standard mKTL client will not notice or handle them.
       value, no error occurred. If it is present, it will have these fields:
 
       =========	============================================
-      **type**	Analagous to the Python exception type
+      **type**	Analogous to the Python exception type
                 (ValueError, TypeError, etc.).
 
       **text**	Descriptive text of the error.

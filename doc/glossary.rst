@@ -60,12 +60,12 @@ mKTL-specific terms
 	A persistent process responsible for some or all of the key-value
 	pairs in a given store. When client requests are initiated it is
 	the daemon that will be contacted to satisfy the request. This is
-	analagous to a KTL dispatcher or an EPICS IOC.
+	analogous to a KTL dispatcher or an EPICS IOC.
 
  * **Store**:
 	A store is an aggregation of individual key-value pairs.
 	Within a given deployment of mKTL the store will have a
-	unique name. This is analagous to a KTL service, or an
+	unique name. This is analogous to a KTL service, or an
 	EPICS database, and is effectively an associative array,
 	or a Python dictionary. "Database" is another term used
 	in similar contexts, but that term is more commonly used
@@ -75,7 +75,7 @@ mKTL-specific terms
 
  * **Key**:
 	A unique name within a store, identifying a single key-value
-	pair. This is analagous to a KTL keyword, or an EPICS channel.
+	pair. This is analogous to a KTL keyword, or an EPICS channel.
 	mKTL treats the key as case-insensitive, any actual usage will
 	render it as all upper-case.
 
@@ -94,13 +94,13 @@ mKTL-specific terms
  * **Get**:
 	Retrieve a value corresponding to an individual key in a store.
 	A typical client can issue a blocking or a non-blocking
-	(synchronous or asynchronous) operation. This is analagous to
+	(synchronous or asynchronous) operation. This is analogous to
 	a KTL read or an EPICS get.
 
  * **Set**:
 	Establish a new value for an individual key in a store. A typical
 	client can request a blocking or a non-blocking (synchronous or
-	asynchronous) operation. This is analagous to a KTL modify or an
+	asynchronous) operation. This is analogous to a KTL modify or an
 	EPICS put.
 
  * **Publish**:
@@ -111,7 +111,7 @@ mKTL-specific terms
 
  * **Subscribe**:
 	Request the receipt of any/all published broadcasts of an
-	individual key in a store. This is analagous to a KTL monitor
+	individual key in a store. This is analogous to a KTL monitor
 	or EPICS monitor request.
 
  * **Callback**:
