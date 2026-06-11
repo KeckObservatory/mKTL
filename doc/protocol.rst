@@ -420,7 +420,7 @@ are you allowed to have multiple listeners on the same port, but they will all
 respond to an incoming broadcast message. Some care thus needs to be taken to
 make sure these responses do not lend themselves to a denial of service attack.
 Regardless, this feature allows every daemon to create a listener on the same
-port, which greatly simplfies periodic discovery.
+port, which greatly simplifies periodic discovery.
 
 The discovery of daemons is a two-part process; rather than ask every daemon
 to cache the configuration for every other daemon on its local network, the
