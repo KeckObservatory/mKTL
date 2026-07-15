@@ -13,6 +13,7 @@ if they already know where to find a registry.
 
 import argparse
 import logging
+import socket
 import sys
 import threading
 import time
@@ -31,7 +32,10 @@ def main():
 
     config = parse_command_line()
 
-    main.req = RequestServer()
+
+    store = 'registry:' + socket.getfqdn()
+
+    main.daemon = RegistryDaemon(store)
     main.beacon = mktl.protocol.discover.Server(main.req.port)
 
     delay = 30
