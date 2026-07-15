@@ -65,8 +65,7 @@ An example subclass would have a structure like the following::
             self.poll(86400)
 
         def perform_get(self):
-            # Determine the current value for this item and return it
-            # encapsulated as an mktl.Payload instance.
+            # Determine the current value for this item and return it.
             pass
 
         def perform_set(self, new_value):
@@ -184,6 +183,53 @@ to publish a new value::
     other.publish(33.67)
 
 
+Reacting to external events
+---------------------------
+
+Event-driven logic involves responding to asynchronous updates. A common
+pattern for custom Item subclasses involves watching other mKTL items for
+new values, and update the local value (or otherwise respond) whenever one
+of those other items publishes a new value.
+
+The canonical way for an item to determine its current value is via the
+:func:`Item.perform_get` method, as described above. ``The MarketPriced``
+class in the example uses :func:`Item.poll` to drive its updates, but what
+if we wanted to respond instantly to external changes? The :func:`Item.watch`
+method will register an appropriate callback on a remote item, and effectively
+enable asynchonous polling of the local value, invoking the exact same calling
+sequence as would occur during a polling operation.
+
+Here's what that would look like in practice::
+
+    class MarketPriced(mktl.Item):
+
+        def __init__(self, *args, **kwargs):
+            mktl.Item.__init__(self, *args, **kwargs)
+
+            # Always update at least once per day:
+            self.poll(86400)
+
+	    # Update immediately if other market values change.
+
+	    dow = mktl.get('dow_jones.futures')
+	    sp500 = mktl.get('sp500.futures')
+	    nasdaq = mktl.get('nasdaq.futures')
+
+	    self.watch(dow)
+	    self.watch(sp500)
+	    self.watch(nasdaq)
+
+
+        def perform_get(self):
+            # Determine the current value for this item and return it.
+            pass
+
+        def perform_set(self, new_value):
+            # Receive a request to set a new value for this item; return
+            # once the request is complete.
+            pass
+
+
 JSON description of items
 -------------------------
 
@@ -221,9 +267,9 @@ example:
 Starting the daemon
 -------------------
 
-The :ref:`mkbrokerd` executable is a persistent application that enables
+The :ref:`mkregistryd` executable is a persistent application that enables
 clients to easily find authoritative mKTL daemons. Having one instance of
-:ref:`mkbrokerd` running on the local network is recommended.
+:ref:`mkregistryd` running on the local network is recommended.
 
 The :ref:`mkd` executable provides a common entry point for a persistent
 daemon. Assuming the default search path is set up correctly, for the example
@@ -231,5 +277,5 @@ outlined here the invocation would resemble::
 
     mkd metal precious --module metal.precious -c precious_metals.json
 
-Both :ref:`mkbrokerd` and :ref:`mkd` should be running before mKTL client
+Both :ref:`mkregistryd` and :ref:`mkd` should be running before mKTL client
 interactions are attempted.

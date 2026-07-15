@@ -12,18 +12,21 @@ External definitions
 --------------------
 
  * **WMKO**:
-	W. M. Keck Observatory, where mKTL was initially established, in
-	collaboration with WMKO partner institutions at the University of
-	California and California Institute of Technology.
+	`W. M. Keck Observatory <https://keckobservatory.org/>`_, where mKTL
+	was initially established, in collaboration with WMKO partner
+	institutions at the
+	`University of California <https://www.universityofcalifornia.edu>`_
+	and `California Institute of Technology <https://www.caltech.edu>`_.
 
  * **KTL**:
-	Keck Task Library, the predecessor to mKTL at WMKO. KTL is a
-	key-value application programming interface (API), written in C,
-	and has been the dominant API for interprocess communication at
-	both WMKO and Lick Observatory since the 1990's.
+	:ref:`Keck Task Library <heritage>`, the predecessor to mKTL at
+	WMKO. KTL is a key-value application programming interface (API),
+	written in C, and has been the dominant API for interprocess
+	communication at both WMKO and Lick Observatory since the 1990's.
 
  * **EPICS**:
-	Experimental Physics and Industrial Control System, another
+	`Experimental Physics and Industrial Control System
+	<https://epics-controls.org>`_, another
 	key-value API that WMKO adopted for its telescope and
 	adaptive optics control systems. EPICS is one of the interprocess
 	communication APIs for which KTL provides a common abstraction.
@@ -57,12 +60,12 @@ mKTL-specific terms
 	A persistent process responsible for some or all of the key-value
 	pairs in a given store. When client requests are initiated it is
 	the daemon that will be contacted to satisfy the request. This is
-	analagous to a KTL dispatcher or an EPICS IOC.
+	analogous to a KTL dispatcher or an EPICS IOC.
 
  * **Store**:
 	A store is an aggregation of individual key-value pairs.
 	Within a given deployment of mKTL the store will have a
-	unique name. This is analagous to a KTL service, or an
+	unique name. This is analogous to a KTL service, or an
 	EPICS database, and is effectively an associative array,
 	or a Python dictionary. "Database" is another term used
 	in similar contexts, but that term is more commonly used
@@ -72,7 +75,7 @@ mKTL-specific terms
 
  * **Key**:
 	A unique name within a store, identifying a single key-value
-	pair. This is analagous to a KTL keyword, or an EPICS channel.
+	pair. This is analogous to a KTL keyword, or an EPICS channel.
 	mKTL treats the key as case-insensitive, any actual usage will
 	render it as all upper-case.
 
@@ -91,13 +94,13 @@ mKTL-specific terms
  * **Get**:
 	Retrieve a value corresponding to an individual key in a store.
 	A typical client can issue a blocking or a non-blocking
-	(synchronous or asynchronous) operation. This is analagous to
+	(synchronous or asynchronous) operation. This is analogous to
 	a KTL read or an EPICS get.
 
  * **Set**:
 	Establish a new value for an individual key in a store. A typical
 	client can request a blocking or a non-blocking (synchronous or
-	asynchronous) operation. This is analagous to a KTL modify or an
+	asynchronous) operation. This is analogous to a KTL modify or an
 	EPICS put.
 
  * **Publish**:
@@ -108,7 +111,7 @@ mKTL-specific terms
 
  * **Subscribe**:
 	Request the receipt of any/all published broadcasts of an
-	individual key in a store. This is analagous to a KTL monitor
+	individual key in a store. This is analogous to a KTL monitor
 	or EPICS monitor request.
 
  * **Callback**:

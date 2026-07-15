@@ -7,7 +7,7 @@ Protocol interface
 Each aspect of the mKTL protocol is split into two different components: the
 client-facing half, and a server-facing half. The interfaces described here
 are generally not exposed to direct usage, they support the end-user
-functionality exposed in the :ref:`client` and :ref:`daemon` code.
+functionality exposed in the :class:`mktl.Item` class.
 
 .. py:module:: mktl.protocol.message
 
@@ -23,6 +23,8 @@ Message classes
 
 .. autoclass:: Message
    :members:
+
+   .. automethod:: _finalize
 
 .. autoclass:: Broadcast
    :members:
@@ -41,7 +43,7 @@ Request client
 .. autofunction:: send
 
 .. autoclass:: Client
-   :members:
+   :members: send
 
 Request server
 --------------
@@ -64,5 +66,5 @@ Publish server
 --------------
 
 .. autoclass:: Server
-   :members:
+   :members: publish
 

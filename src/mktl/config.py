@@ -5,7 +5,7 @@ import sys
 import threading
 import time
 import uuid
-import zmq
+import weakref
 
 # Importing pint is expensive, representing something like 30% of the
 # user runtime for a simple mKTL command. It will be imported on a
@@ -23,6 +23,8 @@ from . import protocol
 
 _cache = dict()
 _cache_lock = threading.Lock()
+
+_callbacks = list()
 
 
 class Configuration:
@@ -48,6 +50,8 @@ class Configuration:
         self._by_uuid = dict()
         self._by_alias = dict()
         self._by_key = dict()
+
+        self.callbacks = list()
 
         if store in _cache:
             raise ValueError('Configuration class is a singleton')
@@ -160,12 +164,12 @@ class Configuration:
 
         if type == 'boolean' or type == 'enumerated':
             unformatted = self.from_format_enumerated(key, value)
-
         elif type == 'mask':
             unformatted = self.from_format_mask(key, value)
-
         elif type == 'numeric':
             unformatted = self.from_format_numeric(key, value)
+        elif type == 'numeric array':
+            unformatted = self.from_format_numeric_array(key, value)
 
         if unformatted is None:
             return value
@@ -201,7 +205,7 @@ class Configuration:
                 break
 
         if unformatted is None:
-            raise KeyError('invalid enumerator: ' + repr(value))
+            raise KeyError('invalid enumeration value: ' + repr(value))
 
         return unformatted
 
@@ -278,6 +282,24 @@ class Configuration:
                 value = float(value)
 
             unformatted = self.from_format_units(key, value)
+
+        return unformatted
+
+
+    def from_format_numeric_array(self, key, value):
+        """ Return a Python-native sequence (either integer or floating point)
+            derived from a string-formatted sequence of numbers.
+        """
+
+        # JSON expects a list-like format, with square brackets. Convert a
+        # tuple-like format before handing it off to the JSON parser for
+        # conversion.
+
+        if value[0] == '(' and value[-1] == ')':
+            value = '[' + value[1:-1] + ']'
+
+        value = value.encode()
+        unformatted = json.loads(value)
 
         return unformatted
 
@@ -536,6 +558,59 @@ class Configuration:
         return configuration,target_uuid
 
 
+    def _propagate(self):
+        """ Invoke any registered callbacks upon a configuration update.
+        """
+
+        if self.callbacks:
+            pass
+        else:
+            return
+
+        invalid = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            self.callbacks.remove(reference)
+
+        invalid = list()
+
+        for reference in _callbacks:
+            callback = reference()
+
+            if callback is None:
+                invalid.append(reference)
+            else:
+                callback()
+
+        for reference in invalid:
+            _callbacks.remove(reference)
+
+
+    def register(self, method):
+        """ Register a callback to be invoked whenever this configuration
+            instance receives an update. The callback should take no additional
+            arguments.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the registered method must be callable')
+
+        reference = weakref.ref(method)
+        self.callbacks.append(reference)
+
+        method()
+
+
     def _reject_units(self, *args, **kwargs):
         """ The 'pint' Python module is required in order to translate between
             units.
@@ -638,12 +713,12 @@ class Configuration:
 
         if type == 'boolean' or type == 'enumerated':
             formatted = self.to_format_enumerated(key, value)
-
         elif type == 'mask':
             formatted = self.to_format_mask(key, value)
-
         elif type == 'numeric':
             formatted = self.to_format_numeric(key, value)
+        elif type == 'numeric array':
+            formatted = self.to_format_numeric_array(key, value)
 
         if formatted is None:
             return str(value)
@@ -665,12 +740,18 @@ class Configuration:
 
         # {"0": "No", "1": "Yes", "2": "Unknown"}
 
+        if value is None:
+            return ''
+
+        if isinstance(value, bool):
+            value = int(value)
+
         value = str(value)
 
         try:
             formatted = enumerators[value]
         except KeyError:
-            formatted = value
+            raise KeyError('invalid enumerator: ' + repr(value))
 
         return formatted
 
@@ -694,6 +775,7 @@ class Configuration:
 
         value = int(value)
         formatted = list()
+        verified = 0
 
         for bit,name in enumerators.items():
             if bit == 'None':
@@ -703,6 +785,10 @@ class Configuration:
             bit_value = 1 << bit
             if value & bit_value:
                 formatted.append(name)
+                verified += bit_value
+
+        if verified != value:
+            raise KeyError('value contains unknown active bits: ' + str(value))
 
         if len(formatted) == 0:
             try:
@@ -746,6 +832,14 @@ class Configuration:
 
             formatted = format % (value)
 
+        return formatted
+
+
+    def to_format_numeric_array(self, key, value):
+        """ Return a string representing this numeric array.
+        """
+
+        formatted = str(value)
         return formatted
 
 
@@ -947,9 +1041,8 @@ class Configuration:
             del items[key]
             items[lower] = item
 
-        # Allow for the possibility that a boolean item does not include
-        # enumerators in its description. This check is only necessary
-        # for authoritative blocks.
+        # Normalize the formatting of enumerators for any relevant items.
+        # This check is only necessary for authoritative blocks.
 
         if uuid == self.authoritative_uuid:
             for key in items.keys():
@@ -960,22 +1053,48 @@ class Configuration:
                 except KeyError:
                     continue
 
-                if type == 'boolean':
+                # First pass: make sure the enumerators are in with
+                # strings as keys instead of integers.
+
+                if type == 'boolean' or type == 'enumerated' or type == 'mask':
+                    additions = dict()
+                    deletions = list()
+
                     try:
                         enumerators = item_config['enumerators']
                     except KeyError:
                         enumerators = dict()
                         item_config['enumerators'] = enumerators
 
+                    for enumerator in enumerators.keys():
+                        # This would be a nice place to handle the enumerator
+                        # being None for a mask, but if that were the case an
+                        # exception would already be thrown when trying to
+                        # convert the configuration block to JSON.
+
+                        if isinstance(enumerator, int):
+                            additions[str(enumerator)] = enumerators[enumerator]
+                            deletions.append(enumerator)
+
+                    enumerators.update(additions)
+
+                    for deletion in deletions:
+                        del enumerators[deletion]
+
+                # Second pass: fill in default boolean values if they
+                # are not specified.
+
+                if type == 'boolean':
                     try:
                         enumerators['0']
-                    except:
+                    except KeyError:
                         enumerators['0'] = 'False'
 
                     try:
                         enumerators['1']
-                    except:
+                    except KeyError:
                         enumerators['1'] = 'True'
+
 
 
         # It's possible the contents of the local authoritative block changed.
@@ -1099,6 +1218,8 @@ class Configuration:
         if save == True:
             self._save_client(block)
 
+        self._propagate()
+
 
     def uuids(self, authoritative=False):
         """ Return an iterable sequence of UUIDs represented in this
@@ -1182,28 +1303,35 @@ def announce(config, uuid, override=False):
     """
 
     store = config.store
+    key = store + '.config'
+
     block = config[uuid]
     block = dict(block)
 
     if override == True:
         block['override'] = True
 
-    payload = protocol.message.Payload(block)
-    message = protocol.message.Request('CONFIG', store, payload)
+    payload = protocol.message.Payload(value=block)
+    payload.add_origin()
+    message = protocol.message.Request('SET', key, payload)
 
-    brokers = protocol.discover.search(wait=True)
+    registries = protocol.discover.search(wait=True)
 
-    for address,port in brokers:
+    for address,port in registries:
         try:
             payload = protocol.request.send(address, port, message)
-        except zmq.error.ZMQError:
+        except TimeoutError:
             continue
 
-        error = payload.error
+        try:
+            error = payload.error
+        except AttributeError:
+            continue
+
         if error is None or error == '':
             continue
 
-        # The broker daemon will return errors for a variety of circumstances,
+        # The registry daemon will return errors for a variety of circumstances,
         # but in every case the immediate meaning is the same: do not proceed.
 
         e_type = error['type']
@@ -1450,6 +1578,24 @@ def match_provenance(full_provenance1, full_provenance2):
 
         matched = True
         index += 1
+
+
+
+def register(method):
+    """ Register a callback to be invoked whenever any configuration
+        instance receives an update. The callback should take no additional
+        arguments.
+    """
+
+    if callable(method):
+        pass
+    else:
+        raise TypeError('the registered method must be callable')
+
+    reference = weakref.ref(method)
+    _callbacks.append(reference)
+
+    method()
 
 
 

@@ -1,9 +1,9 @@
 
+import logging
 import queue
 import threading
 import time
 import traceback
-import zmq
 
 try:
     import numpy
@@ -19,7 +19,7 @@ class Item:
     """ An Item represents a key/value pair, where the key is the name of the
         Item, and the value is whatever is provided by the authoritative daemon.
         The principal way for both clients and daemons to get or set the value
-        is via the :func:`value` property.
+        is via the :py:attr:`value` property.
 
         A non-authoritative Item will automatically :func:`subscribe` itself to
         any available updates.
@@ -28,6 +28,7 @@ class Item:
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
         :ivar config: The JSON description of this item.
+        :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
 
@@ -42,6 +43,7 @@ class Item:
         self.store = store
         self.config = store.config[key]
         self.callbacks = list()
+        self.log_on_set = True
         self.publish_on_set = True
         self.subscribed = False
         self.timeout = 120
@@ -181,9 +183,9 @@ class Item:
         try:
             unformatted = self.store.config.from_format(self.key, value)
         except:
-            ###
-            print("DEBUG: format conversion failed for %s:" % (self.full_key))
-            print(traceback.format_exc())
+            message = "format conversion failed for %s:"
+            logger = logging.getLogger(__name__)
+            logger.exception(message, self.full_key)
             raise
 
         return unformatted
@@ -201,12 +203,15 @@ class Item:
             This is the inverse of :func:`to_payload`.
         """
 
-        if payload.bulk is not None:
+        try:
+            bulk = payload.bulk
+        except AttributeError:
+            bulk = None
+
+        if bulk is not None:
 
             if numpy is None:
                 raise ImportError('numpy module not available')
-
-            bulk = payload.bulk
 
             shape = payload.shape
             dtype = payload.dtype
@@ -285,7 +290,7 @@ class Item:
         elif refresh == False:
             request = protocol.message.Request('GET', self.full_key)
         elif refresh == True:
-            payload = protocol.message.Payload(None, refresh=True)
+            payload = protocol.message.Payload(refresh=True)
             request = protocol.message.Request('GET', self.full_key, payload)
         else:
             raise TypeError('refresh argument must be a boolean')
@@ -296,19 +301,28 @@ class Item:
         if response is None:
             raise RuntimeError('GET failed: no response to request')
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote GET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote GET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -351,10 +365,15 @@ class Item:
 
     def perform_get(self):
         """ Acquire the most up-to-date value available for this :class:`Item`
-            and return it to the caller. Return None if no new value is
-            available; if a :class:`mktl.protocol.message.Payload` instance
-            is returned it will be used as-is, otherwise the return value
-            will be passed to :func:`to_payload` for encapsulation.
+            and return it to the caller. The most common return value is any
+            Python object that can be serialized as JSON; return None if no
+            new value is available.
+
+            If a :class:`mktl.protocol.message.Payload` instance is returned
+            it will be used as-is, otherwise the return value will be passed
+            to :func:`to_payload` for encapsulation. The primary motivation
+            for returning a Payload instead of a bare value is if the embedded
+            timestamp needs to be set to some value other than the current time.
 
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
@@ -405,10 +424,12 @@ class Item:
             representation of the new value. If *timestamp* is set it is
             expected to be a UNIX epoch timestamp; the current time will be
             used if it is not provided. Newly published values are always
-            cached locally.
+            cached locally. If *repeat* is set to True the value will be
+            published regardless of whether it is a repeat of the previously
+            published value.
 
             Note that, for simple cases, an authoritative daemon can set the
-            :func:`value` property to publish a new value instead of calling
+            :py:attr:`value` property to publish a new value instead of calling
             :func:`publish` directly. In other words, these two calls are
             equivalent::
 
@@ -424,14 +445,20 @@ class Item:
         # publish() does not require a Payload instance as an argument to
         # allow flexibility in cases where the timestamp is not already
         # established, though in the average case publish() will be invoked
-        # as a result of a req_poll() call, which already has a Payload
-        # instance.
+        # as a result of a req_poll() call, which already created a Payload
+        # instance; it might be more efficient to create one and pass it to
+        # publish(), but that's not how the calls are presently structured.
 
         payload = self.to_payload(new_value, timestamp)
         changed = False
 
         if repeat == False:
-            if payload.bulk is None:
+            try:
+                bulk = payload.bulk
+            except AttributeError:
+                bulk = None
+
+            if bulk is None:
                 changed = self._daemon_value != new_value
             else:
                 if self._daemon_value is None and new_value is not None:
@@ -498,6 +525,18 @@ class Item:
             to call it separately. If *prime* is set to True the callback will
             be invoked using the current value of the item, if any, before
             returning; no priming call will occur if the item has no value.
+
+            A callback method should expect three arguments: a reference to
+            the :class:`Item` from whence the callback originated, the new
+            value for the item, and the timestamp associated with the new
+            value. For example::
+
+              def my_callback(item, new_value, new_timestamp):
+
+            Callback methods should strive to be lightweight in terms of
+            their execution time; any callbacks registered for an item will
+            be called in series, and there are no provisions for shortening
+            the queue if a backlog occurs.
         """
 
         if callable(method):
@@ -577,7 +616,8 @@ class Item:
 
             A common pattern for custom subclasses involves registering
             :func:`req_poll` as a callback on other items, so that the value
-            of this item can be refreshed when external events occur.
+            of this item can be refreshed when external events occur. The
+            :func:`watch` method exists to facilitate that pattern.
         """
 
         response = self.perform_get()
@@ -617,7 +657,12 @@ class Item:
         if payload is None:
             return
 
+        if self.log_on_set:
+            logger = logging.getLogger(__name__)
+            request.log(logger)
+
         new_value = self.from_payload(payload)
+        new_value = self.validate_type(new_value)
         new_value = self.validate(new_value)
 
         # All custom logic is expected to occur in the perform_set() method,
@@ -631,7 +676,7 @@ class Item:
         # the contents of the response payload are not inspected.
 
         if response is None:
-            payload = protocol.message.Payload(True)
+            payload = protocol.message.Payload(value=True)
         elif isinstance(response, protocol.message.Payload):
             payload = response
         else:
@@ -647,15 +692,18 @@ class Item:
         return payload
 
 
-    def set(self, new_value, wait=True, formatted=False, quantity=False):
+    def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
             instance, which has a :func:`mktl.protocol.message.Request.wait`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
-            satisfied. There is no return value for a blocking request; failed
-            requests will raise exceptions.
+            satisfied. Set *reply* to False to disable all error handling and
+            acknowledgements for the request (fire and forget); setting
+            *reply to False implies *wait* is also False.
+            There is no return value for a blocking request; failed requests
+            will raise exceptions.
 
             The optional *formatted* and *quantity* options enable calling
             :func:`set` with either the string-formatted representation or
@@ -685,7 +733,16 @@ class Item:
             raise ValueError('formatted+quantity arguments must be boolean')
 
         payload = self.to_payload(new_value)
-        message = protocol.message.Request('SET', self.full_key, payload)
+
+        if reply:
+            flags = None
+            payload.add_origin()
+        else:
+            flags = protocol.message.NO_ACK_OR_REP
+            wait = False
+
+        key = self.full_key
+        message = protocol.message.Request('SET', key, payload, flags=flags)
         self.req.send(message)
 
         if wait == False:
@@ -696,19 +753,28 @@ class Item:
         if response is None:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        error = response.payload.error
+        try:
+            error = response.payload.error
+        except AttributeError:
+            error = None
+
         if error is not None and error != '':
             e_type = error['type']
             e_text = error['text']
 
-            ### This debug print should be removed.
+            # Logging this error may not have lasting value; remote errors
+            # should not occur, and there ought to be a good way to expose
+            # them without overwhelming the caller.
+
             try:
                 error['debug']
             except KeyError:
                 pass
             else:
-                print("DEBUG: remote SET error for %s:" % (self.full_key))
-                print(error['debug'])
+                message = "remote SET error for %s:"
+                logger = logging.getLogger(__name__)
+                logger.error(message, self.full_key)
+                logger.error(error['debug'])
 
             ### The exception type here should be something unique
             ### instead of a RuntimeError.
@@ -779,8 +845,8 @@ class Item:
         if prime == True:
             try:
                 self.get(refresh=True)
-            except (zmq.ZMQError, RuntimeError):
-                # Connection errors and remote errors on priming reads are
+            except (TimeoutError, RuntimeError):
+                # Timeout errors and remote errors on priming reads are
                 # thrown away; an error here means the remote daemon is not
                 # available to respond to requests, but despite that error
                 # the subscription will still be valid when the remote daemon
@@ -800,9 +866,15 @@ class Item:
         """
 
         if self.authoritative == True:
-            return self._daemon_value_timestamp
+            timestamp = self._daemon_value_timestamp
         else:
-            return self._value_timestamp
+            timestamp = self._value_timestamp
+
+        if timestamp is None:
+            # This only occurs in startup conditions, but it does occur.
+            timestamp = time.time()
+
+        return timestamp
 
 
     def to_format(self, value):
@@ -813,15 +885,11 @@ class Item:
             This is the inverse of :func:`from_format`.
         """
 
-        try:
-            formatted = self.store.config.to_format(self.key, value)
-        except:
-            formatted = str(self.value)
-
+        formatted = self.store.config.to_format(self.key, value)
         return formatted
 
 
-    def to_payload(self, value=None, timestamp=None):
+    def to_payload(self, value=None, timestamp=None, **kwargs):
         """ Interpret the provided arguments into a
             :class:`mktl.protocol.message.Payload` instance; if the *value* is
             not specified the current value of this :class:`Item` will be
@@ -857,11 +925,11 @@ class Item:
             bulk = value.tobytes()
         except AttributeError:
             bulk = None
-            payload = protocol.message.Payload(value, timestamp)
+            payload = protocol.message.Payload(value=value, time=timestamp, **kwargs)
         else:
             shape = value.shape
             dtype = str(value.dtype)
-            payload = protocol.message.Payload(None, timestamp, bulk=bulk, shape=shape, dtype=dtype)
+            payload = protocol.message.Payload(time=timestamp, bulk=bulk, shape=shape, dtype=dtype, **kwargs)
 
         return payload
 
@@ -886,13 +954,105 @@ class Item:
     def validate(self, value):
         """ A hook for a daemon to validate a new value. The default behavior
             is a no-op; any checks should raise exceptions if they encounter
-            a problem with the incoming value. The 'validated' value should
-            be returned by this method; this allows for the possibility that
+            a problem with the incoming value. The 'validated' value must be
+            returned by this method; this allows for the possibility that
             the incoming value has been translated to a more acceptable format,
             for example, converting the string '123' to the integer 123 for a
             numeric item type.
         """
 
+        return value
+
+
+    def validate_type(self, value):
+        """ Inspect the type of this item, if any, and reassign the reference
+            to this method to the appropriate type-specific validation.
+        """
+
+        try:
+            type = self.config['type']
+        except KeyError:
+            type = None
+        else:
+            if type == '':
+                type = None
+
+        if type is None:
+            self.validate_type = self._validate_typeless
+        else:
+            type = type.lower()
+
+            if type == 'boolean':
+                self.validate_type = self._validate_boolean
+            elif type == 'enumerated':
+                self.validate_type = self._validate_enumerated
+            elif type == 'mask':
+                self.validate_type = self._validate_enumerated
+            elif type == 'numeric':
+                self.validate_type = self._validate_numeric
+            elif type == 'numeric array':
+                self.validate_type = self._validate_numeric_array
+            else:
+                # This includes the 'string' type, for which there is no
+                # additional validation, hence typeless for this purpose.
+                self.validate_type = self._validate_typeless
+
+        return self.validate_type(value)
+
+
+    def _validate_boolean(self, value):
+        value = self._validate_enumerated(value)
+
+        # The unformatted value for a boolean is a boolean. A successful return
+        # from _validate_enumerated() will provide an integer, normalize that
+        # value here.
+
+        if value:
+            value = True
+        else:
+            value = False
+
+        return value
+
+
+    def _validate_enumerated(self, value):
+        # Performing the format conversion confirms that the provided value
+        # is valid for the locally defined enumeration (or mask).
+        self.to_format(value)
+
+        # The unformatted value for an enumeration (or mask) is an integer.
+        value = int(value)
+
+        return value
+
+
+    def _validate_numeric(self, value):
+
+        if isinstance(value, float):
+            pass
+        else:
+            try:
+                value = int(value)
+            except:
+                value = float(value)
+
+        # This is where a range check should go.
+
+        return value
+
+
+    def _validate_numeric_array(self, value):
+
+        validated = list()
+
+        for field in value:
+            field = self._validate_numeric(field)
+            validated.append(field)
+
+        return validated
+
+
+    def _validate_typeless(self, value):
         return value
 
 
@@ -924,6 +1084,17 @@ class Item:
             self.set(new_value)
 
 
+    def watch(self, item):
+        """ Register a callback with the referenced item, such that the
+            current item updates itself any time the referenced item changes.
+            This is functionally equivalent to calling::
+
+              item.register(self.req_poll)
+        """
+
+        item.register(self.req_poll)
+
+
     def _propagate(self, new_data, new_timestamp):
         """ Invoke any registered callbacks upon receipt of a new value.
         """
@@ -944,9 +1115,9 @@ class Item:
             try:
                 callback(self, new_data, new_timestamp)
             except:
-                ### This should probably be logged in a more graceful fashion.
-                print("DEBUG: callback failed for %s:" % (self.full_key))
-                print(traceback.format_exc())
+                message = "callback failed for %s:"
+                logger = logging.getLogger(__name__)
+                logger.exception(message, self.full_key)
                 continue
 
         for reference in invalid:

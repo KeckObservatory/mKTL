@@ -1,0 +1,8 @@
+sequenceDiagram
+    autonumber
+    Participant Client
+    Participant Daemon
+
+    Client->>+Daemon: GET: foo
+    Daemon->>Client: ACK
+    Daemon->>-Client: REP: JSON payload

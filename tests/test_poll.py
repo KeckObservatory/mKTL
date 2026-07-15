@@ -22,6 +22,9 @@ def test_references():
     def callback():
         pass
 
+    period = mktl.poll.period(callback)
+    assert period is None
+
     mktl.poll.start(callback, period=1)
     period = mktl.poll.period(callback)
     assert period is not None

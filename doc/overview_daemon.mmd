@@ -1,0 +1,35 @@
+flowchart LR
+
+    linkStyle default stroke:#555555
+
+    ZMQ0(((Transport)))
+    Proto0([REP+PUB<br>protocol])
+    ZMQ0<-->Proto0
+
+    subgraph Store0 [Store]
+    Item0(Item)
+    Item1(Item)
+    Item2(Item)
+    end
+
+    Proto0 <--> Item0
+    Proto0 <--> Item1
+    Proto0 <--> Item2
+
+    Item0 -.- Daemon0[Daemon]
+    Item1 -.- Daemon0
+    Daemon0 <--> Device0@{ shape: cyl, label: "Device<br>logic" }
+    Item2 -.- Daemon1[Daemon]
+    Daemon1 <--> Device1@{ shape: cyl, label: "Device<br>logic" }
+
+    style Daemon0 fill:#dd8bd3,color:black,stroke:#888888
+    style Daemon1 fill:#dd8bd3,color:black,stroke:#888888
+    style Device0 fill:#dd8bd3,color:black,stroke:#888888
+    style Device1 fill:#dd8bd3,color:black,stroke:#888888
+    style Item0 fill:#fff5ad,color:black,stroke:#888888
+    style Item1 fill:#fff5ad,color:black,stroke:#888888
+    style Item2 fill:#fff5ad,color:black,stroke:#888888
+    style Proto0 fill:#ececff,color:black,stroke:#888888
+    style Store0 fill:#ffffde,color:black,stroke:#888888
+    style ZMQ0 fill:#ececff,color:black,stroke:#888888
+

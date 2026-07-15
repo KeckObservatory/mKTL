@@ -1,5 +1,6 @@
 
 import atexit
+import logging
 import os
 import platform
 import queue
@@ -9,7 +10,6 @@ import subprocess
 import sys
 import threading
 import time
-import zmq
 
 from . import begin
 from . import config
@@ -47,6 +47,9 @@ class Daemon:
 
     def __init__(self, store, alias, override=False, options=None):
 
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("daemon starting for store %s, alias %s", store, alias)
+
         self.alias = alias
         self.options = options
         self.config = None
@@ -68,6 +71,8 @@ class Daemon:
             # This isn't supposed to happen. Catching it here just in case.
             raise RuntimeError('mktl.config did not set my UUID!')
 
+        self.logger.info("local UUID is %s", self.uuid)
+
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
@@ -86,17 +91,20 @@ class Daemon:
 
         try:
             self.pub = protocol.publish.Server(port=pub, avoid=avoid)
-        except zmq.error.ZMQError:
+        except ConnectionError:
             self.pub = protocol.publish.Server(port=None, avoid=avoid)
 
         avoid = _used_ports()
 
         try:
-            self.rep = RequestServer(self, port=rep, avoid=avoid)
-        except zmq.error.ZMQError:
-            self.rep = RequestServer(self, port=None, avoid=avoid)
+            self.rep = RequestServer(self, store, port=rep, avoid=avoid)
+        except ConnectionError:
+            self.rep = RequestServer(self, store, port=None, avoid=avoid)
 
         _save_port(store, self.uuid, self.rep.port, self.pub.port)
+
+        self.logger.info("REP server listening on port %d", self.rep.port)
+        self.logger.info("PUB server listening on port %d", self.pub.port)
 
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
@@ -131,6 +139,8 @@ class Daemon:
         # before filling in with empty caching Item classes.
 
         atexit.register(self.cleanup)
+
+        self.logger.debug("starting setup() sequence")
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -157,11 +167,13 @@ class Daemon:
         # is ready, but before we go on the air.
 
         self.setup_final()
+        self.logger.debug("setup() sequence complete")
 
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
         config.announce(self.config, self.uuid, override)
+        self.logger.debug("daemon initialization complete")
 
 
     def add_item(self, item_class, key, **kwargs):
@@ -177,6 +189,13 @@ class Daemon:
             self.config.authoritative_items[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
+
+
+        # Allow for the possibility that a daemon is establishing an
+        # authoritative item where before a default item was created
+        # by a just-in-time process. We cannot assume the daemon is
+        # using a default Item instance; if it was, it would be enough
+        # to set the .authoritative attribute and move on.
 
         existing = self.store._items[key]
 
@@ -297,12 +316,18 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
+        key = '_' + self.alias + 'cfg'
+        items[key] = dict()
+        items[key]['description'] = 'JSON description of all items for this daemon.'
+        items[key]['settable'] = False
+
         key = '_' + self.alias + 'clk'
         items[key] = dict()
         items[key]['description'] = 'Uptime for this daemon.'
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'seconds'
         items[key]['format'] = '%.3f'
+        items[key]['settable'] = False
 
         key = '_' + self.alias + 'cpu'
         items[key] = dict()
@@ -340,19 +365,25 @@ class Daemon:
         items[key]['initial'] = os.getpid()
         items[key]['settable'] = False
 
+        key = '_' + self.alias + 'uuid'
+        items[key] = dict()
+        items[key]['description'] = 'Universally unique identifier (UUID) for this daemon.'
+        items[key]['type'] = 'string'
+        items[key]['initial'] = self.uuid
+        items[key]['settable'] = False
+
         self.config.update(block, save=False)
         self.store._update_config()
 
 
-        # Having updated the configuration, now instantiate the built-in items.
+        # Instantiate any custom item subclasses for the newly defined
+        # built-in items; this is only possible after the configuration
+        # has been updated.
 
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
+        self.add_item(DaemonConfiguration, '_' + self.alias + 'cfg')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
-
-        for suffix in ('dev', 'host'):
-            key = '_' + self.alias + suffix
-            self.add_item(item.Item, key)
+        self.add_item(MemoryUsage, '_' + self.alias + 'mem')
 
 
     def _setup_missing(self):
@@ -386,7 +417,7 @@ class Daemon:
                 continue
 
             item = self.store[key]
-            payload = protocol.message.Payload(initial)
+            payload = protocol.message.Payload(value=initial)
             request = protocol.message.Request('SET', item.full_key, payload)
             item.req_initialize(request)
 
@@ -417,19 +448,16 @@ class Daemon:
         """
 
         hostname = socket.getfqdn()
-        request = protocol.message.Request('CONFIG', store)
+        key = store + '._config'
+        request = protocol.message.Request('GET', key)
 
         try:
             payload = protocol.request.send(hostname, port, request)
-        except zmq.ZMQError:
+        except TimeoutError:
             # Not running; perfect.
             return
 
         blocks = payload.value
-
-        # There should only be one UUID in this block, because we're asking
-        # a direct question of an authoritative daemon running on the same
-        # host we're trying to run on. But that assumption is not being checked.
 
         for uuid,block in blocks.items():
             alias = block['alias']
@@ -448,61 +476,52 @@ class Daemon:
 
 class RequestServer(protocol.request.Server):
 
-    def __init__(self, daemon, *args, **kwargs):
+    def __init__(self, daemon, store, *args, **kwargs):
         protocol.request.Server.__init__(self, *args, **kwargs)
         self.daemon = daemon
+        self.store = store
 
-
-    def req_config(self, request):
-
-        target = request.target
-        response = dict()
-
-        if self.daemon.store is None:
-            raise RuntimeError('daemon not ready to accept CONFIG request')
-
-        if target == self.daemon.store.name:
-            uuid = self.daemon.uuid
-            configuration = dict(self.daemon.config[uuid])
-            response[uuid] = configuration
-        else:
-            configuration = config.get(target)
-            uuids = configuration.uuids()
-            for uuid in uuids:
-                response[uuid] = config[uuid]
-
-        payload = protocol.message.Payload(response)
-        return payload
+        self._getters = dict()
+        self._getters[store + '._config'] = self.req_get_config
+        self._getters[store + '._hash'] = self.req_get_hash
+        self._getters['._hash'] = self.req_get_hash
+        self._getters['_hash'] = self.req_get_hash
 
 
     def req_handler(self, request):
-        """ Inspect the incoming request type and decide how a response
-            will be generated.
+        """ Inspect the incoming request type and call an appropriate
+            method to handle that specific request.
         """
 
-        self.req_ack(request)
+        if request.ack:
+            self.req_ack(request)
 
         type = request.type
         target = request.target
 
-        if target == '' and type != 'HASH' and type != 'CONFIG':
-            raise KeyError("invalid %s request, 'target' not set" % (type))
-
-        if type == 'HASH':
-            response = self.req_hash(request)
-        elif type == 'SET':
+        if type == 'SET':
             response = self.req_set(request)
         elif type == 'GET':
             response = self.req_get(request)
-        elif type == 'CONFIG':
-            response = self.req_config(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
-        return response
+        if request.reply:
+            return response
+        else:
+            return None
 
 
     def req_get(self, request):
+
+        try:
+            getter = self._getters[request.target]
+        except KeyError:
+            pass
+        else:
+            return getter(request)
+
+        # Look up the conventional req_get() method for this item.
 
         store, key = request.target.split('.', 1)
 
@@ -516,8 +535,43 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        response = self.daemon.store[key].req_get(request)
-        return response
+        # There's an argument for optimizing the behavior here by storing
+        # the getter reference to prevent the need to look it up all over
+        # again. There's a bootstrapping problem though, and Item instances
+        # can be replaced in authoritative daemons partway through the
+        # initialization process.
+
+        # This suggested optimization also doesn't buy us a measurable
+        # improvement in transactions per second.
+
+        getter = self.daemon.store[key].req_get
+        return getter(request)
+
+
+    def req_get_config(self, request):
+
+        store, key = request.target.split('.', 1)
+
+        configuration = config.get(store)
+        configuration = configuration._by_uuid
+        payload = protocol.message.Payload(value=configuration)
+        return payload
+
+
+    def req_get_hash(self, request):
+
+        target = request.target
+
+        if target == '_hash':
+            store = None
+        else:
+            store, key = target.split('.', 1)
+            if store == '':
+                store = None
+
+        hashes = config.get_hashes(store)
+        payload = protocol.message.Payload(value=hashes)
+        return payload
 
 
     def req_set(self, request):
@@ -545,17 +599,6 @@ class RequestServer(protocol.request.Server):
 
         response = self.daemon.store[key].req_set(request)
         return response
-
-
-    def req_hash(self, request):
-
-        store = request.target
-        if store == '':
-            store = None
-
-        hashes = config.get_hashes(store)
-        payload = protocol.message.Payload(hashes)
-        return payload
 
 
 # end of class RequestServer
@@ -743,8 +786,13 @@ def _save_persistent(item, *args, **kwargs):
     by_prefix = dict()
     payload = item.to_payload()
 
-    if payload.bulk is not None:
-        by_prefix['bulk'] = payload.bulk
+    try:
+        bulk = payload.bulk
+    except AttributeError:
+        pass
+    else:
+        if bulk is not None:
+            by_prefix['bulk'] = bulk
 
     by_prefix[''] = payload.encapsulate()
 
@@ -844,6 +892,21 @@ class PendingPersistence:
 
 
 
+class DaemonConfiguration(item.Item):
+
+    def perform_get(self):
+
+        uuid = self.store._daemon.uuid
+        configuration = config.get(self.store.name)
+        configuration = configuration[uuid]
+
+        return configuration
+
+
+# end of class DaemonConfiguration
+
+
+
 class MemoryUsage(item.Item):
 
     def __init__(self, *args, **kwargs):
@@ -855,8 +918,7 @@ class MemoryUsage(item.Item):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
         max_usage = resources.ru_maxrss
-
-        return self.to_payload(max_usage)
+        return max_usage
 
 
 # end of class MemoryUsage

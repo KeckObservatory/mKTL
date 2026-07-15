@@ -10,6 +10,7 @@ packages, or something similar:
 	python3-myst-parser
 	python3-sphinx
 	python3-sphinx-rtd-theme
+	python3-sphinxcontrib-mermaid
 
 If the Read the Docs theme is not available on your platform you can comment
 out the `html_theme` setting in conf.py when building the documentation locally.

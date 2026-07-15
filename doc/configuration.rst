@@ -180,7 +180,7 @@ JSON null value.
 			boolean is effectively an enumerated value with only
 			two enumerators.
 
-**bulk**		A true data array, analagous to a Numpy array, unlike
+**bulk**		A true data array, analogous to a Numpy array, unlike
 			the legacy "numeric array" type, which is more like a
 			dictionary or named sequence.
 

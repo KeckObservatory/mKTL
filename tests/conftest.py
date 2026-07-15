@@ -6,18 +6,18 @@ import time
 
 
 @pytest.fixture(scope="session")
-def run_mkbrokerd():
+def run_mkregistryd():
 
     arguments = list()
     arguments.append(sys.executable)
-    arguments.append('../sbin/mkbrokerd')
+    arguments.append('../sbin/mkregistryd')
 
     pipe = subprocess.PIPE
-    mkbrokerd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
+    mkregistryd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     yield
 
-    mkbrokerd.terminate()
+    mkregistryd.terminate()
 
 
 @pytest.fixture(scope="session")
