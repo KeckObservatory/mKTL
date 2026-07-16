@@ -56,14 +56,20 @@ def discover(*targets):
         except:
             continue
 
-        hashes = payload.value
+        if payload:
+            hashes = payload.value
+        else:
+            hashes = dict()
 
         for store in hashes.keys():
             key = store + '._config'
             request = protocol.message.Request('GET', key)
             payload = protocol.request.send(address, port, request)
 
-            blocks = payload.value
+            if payload:
+                blocks = payload.value
+            else:
+                blocks = None
 
             if blocks:
                 configuration = config.get(store)
