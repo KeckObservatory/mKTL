@@ -62,9 +62,6 @@ class Item:
         self._update_thread = None
         self._updated = threading.Event()
 
-        self._perform_get_external = None
-        self._perform_set_external = None
-
         # An Item is a singleton in practice; enforce that constraint.
 
         try:
