@@ -179,8 +179,9 @@ class Daemon:
     def add_get_handler(self, key, method):
         """ Assign a method that will be called for all GET requests for
             the specified item. See :func:`mktl.Item.req_get` for additional
-            details; inspection of the implementation for that method is
-            recommended to ensure all the necessary actions are covered.
+            details on the expected behavior; inspection of the implementation
+            for that method is recommended to ensure all the necessary actions
+            are covered.
         """
 
         try:
@@ -218,9 +219,9 @@ class Daemon:
             of 'get' or 'set'.
 
             See :func:`mktl.Item.req_get` and
-            :func:`mktl.Item.req_set` for additional details; inspection of
-            the implementation for those methods is recommended to ensure all
-            the necessary actions are covered.
+            :func:`mktl.Item.req_set` for additional details on the expected
+            behavior; inspection of the implementation for those methods is
+            recommended to ensure all the necessary actions are covered.
         """
 
         try:
@@ -369,8 +370,9 @@ class Daemon:
     def add_set_handler(self, key, method):
         """ Assign a method that will be called for all SET requests for
             the specified item. See :func:`mktl.Item.req_set` for additional
-            details; inspection of the implementation for that method is
-            recommended to ensure all the necessary actions are covered.
+            details on the expected behavior; inspection of the implementation
+            for that method is recommended to ensure all the necessary actions
+            are covered.
         """
 
         try:

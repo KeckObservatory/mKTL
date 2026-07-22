@@ -126,10 +126,12 @@ class Item:
 
 
     def add_get_performer(self, method):
-        """ Assign a method that will be called for all GET requests for
-            this item. This will replace the :func:`perform_get` method.
-            The performer method must accept no arguments; refer to
-            :func:`perform_get` for additional details.
+        """ Assign a method that will be called for all GET requests for this
+            item. This will replace the :func:`perform_get` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_get` directly. The performer method must
+            accept no arguments; refer to :func:`perform_get` for additional
+            details on the expected behavior.
         """
 
         if callable(method):
@@ -159,11 +161,13 @@ class Item:
 
 
     def add_set_performer(self, method):
-        """ Assign a method that will be called for all SET requests for
-            this item. This will replace the :func:`perform_set` method.
-            The performer method must accept one argument, the 'unformatted'
-            Python native representation of the item value; refer to
-            :func:`perform_set` for additional details.
+        """ Assign a method that will be called for all SET requests for this
+            item. This will replace the :func:`perform_set` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_set` directly. The performer method must
+            accept one argument, the 'unformatted' Python-native representation
+            of the item value; refer to :func:`perform_set` for additional
+            details on the expected behavior.
         """
 
         if callable(method):
