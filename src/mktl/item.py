@@ -126,7 +126,7 @@ class Item:
 
 
     def add_get_performer(self, method):
-        """ Define a method that will be called for all GET requests for
+        """ Assign a method that will be called for all GET requests for
             this item. This will replace the :func:`perform_get` method.
             The performer method must accept no arguments; refer to
             :func:`perform_get` for additional details.
@@ -141,7 +141,7 @@ class Item:
 
 
     def add_performer(self, request, method):
-        """ Define a method that will be called for either GET or SET requests,
+        """ Assign a method that will be called for either GET or SET requests,
             determined by the *request* argument, which must be one of 'get' or
             'set'. See :func:`add_get_performer` and :func:`add_set_performer`
             for additional information.
@@ -159,7 +159,7 @@ class Item:
 
 
     def add_set_performer(self, method):
-        """ Define a method that will be called for all SET requests for
+        """ Assign a method that will be called for all SET requests for
             this item. This will replace the :func:`perform_set` method.
             The performer method must accept one argument, the 'unformatted'
             Python native representation of the item value; refer to

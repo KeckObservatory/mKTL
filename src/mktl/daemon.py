@@ -177,7 +177,7 @@ class Daemon:
 
 
     def add_get_handler(self, key, method):
-        """ Define a method that will be called for all GET requests for
+        """ Assign a method that will be called for all GET requests for
             the specified item. See :func:`mktl.Item.req_get` for additional
             details; inspection of the implementation for that method is
             recommended to ensure all the necessary actions are covered.
@@ -192,7 +192,7 @@ class Daemon:
 
 
     def add_get_performer(self, key, method):
-        """ Define a method that will be called for all GET requests for
+        """ Assign a method that will be called for all GET requests for
             the specified item. Refer to :func:`mktl.Item.add_set_performer`
             for additional details.
         """
@@ -213,7 +213,7 @@ class Daemon:
 
 
     def add_handler(self, key, request, method):
-        """ Define a method that will be called for either GET or SET
+        """ Assign a method that will be called for either GET or SET
             requests, determined by the *request* argument, which must be one
             of 'get' or 'set'.
 
@@ -318,7 +318,7 @@ class Daemon:
 
 
     def add_performer(self, key, request, method):
-        """ Define a method that will be called for either GET or SET
+        """ Assign a method that will be called for either GET or SET
             requests, determined by the *request* argument, which must be one
             of 'get' or 'set'.
 
@@ -367,7 +367,7 @@ class Daemon:
 
 
     def add_set_handler(self, key, method):
-        """ Define a method that will be called for all SET requests for
+        """ Assign a method that will be called for all SET requests for
             the specified item. See :func:`mktl.Item.req_set` for additional
             details; inspection of the implementation for that method is
             recommended to ensure all the necessary actions are covered.
@@ -382,7 +382,7 @@ class Daemon:
 
 
     def add_set_performer(self, key, method):
-        """ Define a method that will be called for all SET requests for
+        """ Assign a method that will be called for all SET requests for
             the specified item. Refer to :func:`mktl.Item.add_set_performer`
             for additional details.
         """
