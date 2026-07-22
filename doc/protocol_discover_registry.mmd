@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    Participant Registry
+    Participant Daemon as Any Daemon
+
+    Registry->>+Daemon: Hello?
+    Daemon->>-Registry: Try port 10234
+
+    Registry->>+Daemon: GET: _hash
+    Daemon->>-Registry: REP: JSON payload
+
+    Registry->>+Daemon: GET: store1._config
+    Daemon->>-Registry: REP: JSON payload
