@@ -140,8 +140,7 @@ class Item:
         else:
             raise TypeError('the performer method must be callable')
 
-        self._perform_get_external = method
-        self.perform_get = self._perform_get_wrapper
+        self.perform_get = method
 
 
     def add_performer(self, request, method):
@@ -175,8 +174,7 @@ class Item:
         else:
             raise TypeError('the performer method must be callable')
 
-        self._perform_set_external = method
-        self.perform_set = self._perform_set_wrapper
+        self.perform_set = method
 
 
     def _cleanup(self):
@@ -452,14 +450,6 @@ class Item:
         return payload
 
 
-    def _perform_get_wrapper(self):
-        """ The only purpose of this wrapper method is to strip the 'self'
-            argument from a call to an external method.
-        """
-
-        return self._perform_get_external()
-
-
     def perform_set(self, new_value):
         """ Implement any custom behavior that should occur as a result of
             a set request for this item. No return value is expected. Any
@@ -484,14 +474,6 @@ class Item:
         # is published.
 
         pass
-
-
-    def _perform_set_wrapper(self, new_value):
-        """ The only purpose of this wrapper method is to strip the 'self'
-            argument from a call to an external method.
-        """
-
-        return self._perform_set_external(new_value)
 
 
     def poll(self, period):
