@@ -27,96 +27,50 @@ logger = logging.getLogger(__name__)
 def main():
 
     # We don't use command line options here, but if we did, they would be
-    # parsed out in the following call. At the very least, it handles the
+    # handled in parse_command_line(). At the very least, it handles the
     # case where the caller specifies -h on the command line.
 
     config = parse_command_line()
-
-
     store = 'registry:' + socket.getfqdn()
 
-    main.daemon = RegistryDaemon(store)
-    main.beacon = mktl.protocol.discover.Server(main.req.port)
+    description = generate_description()
+    mktl.config.authoritative(store, store, description)
 
-    delay = 30
+    daemon = RegistryDaemon(store)
+    beacon = mktl.protocol.discover.Server(daemon.req.port)
+
+    # Run discovery once upon startup, rely on daemon announcements to
+    # learn of any additions to the local network.
+
+    main.discover_daemons()
 
     while True:
-        not_seen = set(main.known)
-        discovered = mktl.protocol.discover.search_direct()
-
-        for seen in discovered:
-            if seen in main.known:
-                not_seen.remove(seen)
-                continue
-
-            # This is a new daemon to us. Request its known hashes, which
-            # also tells us which store names it has access to; cache any/all
-            # configuration blocks discovered in this fashion.
-
-            address,port = seen
-            request = mktl.protocol.message.Request('GET', '_hash')
-            try:
-                payload = mktl.protocol.request.send(address, port, request)
-            except:
-                logger.warning("HASH request from %s:%d failed" % (address, port))
-                continue
-
-            if payload:
-                hashes = payload.value
-            else:
-                hashes = None
-
-            if hashes is None:
-                # Error requesting the hashes.
-                logger.warning("HASH request from %s:%d failed" % (address, port))
-
-                if payload:
-                    error = payload.error
-                else:
-                    error = None
-
-                if error:
-                    e_type = error['type']
-                    e_text = error['text']
-                    e_debug = error['debug']
-                    logger.warning("Remote exception: %s: %s\n%s" % (e_type, e_text, e_debug))
-                continue
-
-            for store in hashes.keys():
-                request = mktl.protocol.message.Request('GET', store + '._config')
-                payload = mktl.protocol.request.send(address, port, request)
-
-                blocks = payload.value
-
-                try:
-                    error = payload.error
-                except AttributeError:
-                    error = None
-
-                if error:
-                    e_type = error['type']
-                    e_text = error['text']
-                    logger.warning("CONFIG request failed: %s: %s" % (e_type, e_text))
-
-                if blocks:
-                    for uuid,block in blocks.items():
-                        block['override'] = True
-                        main.req.process_block(block)
-
-            main.known.add(seen)
-
-        for missed in not_seen:
-            main.known.remove(missed)
-
         try:
             main.shutdown.wait(delay)
         except (KeyboardInterrupt, SystemExit):
             break
 
 
-main.known = set()
+
+
 main.shutdown = threading.Event()
-main.req = None
+
+
+
+def generate_description():
+
+    items = dict()
+
+    items['daemons'] = dict()
+    items['daemon_count']['description'] = 'Quantity of active daemons seen by this registry.'
+    items['daemon_count']['type'] = 'numeric'
+    items['daemon_count']['initial'] = 0
+    items['daemon_count']['settable'] = False
+
+    items['log'] = dict()
+    items['log']['description'] = 'Log message describing recent events.'
+    items['log']['initial'] = ''
+    items['log']['settable'] = False
 
 
 
@@ -134,10 +88,15 @@ def parse_command_line():
 
 
 
-class RequestServer(mktl.protocol.request.Server):
-    """ Subclass the generic :class:mktl.protocol.request.Server`, adding
-        additional logic to locally handle requests.
-    """
+class RegistryDaemon(mktl.Daemon):
+
+    def setup(self):
+
+        # This would normally be a call to self.add_get_handler() but
+        # the _config concept is not a fully qualified item.
+
+        self.rep._req_set_handlers['_config'] = self.req_set_config
+
 
     def check_keys(self, new, override):
         """ Confirm that any keys unique to this new configuration block are
@@ -266,6 +225,63 @@ class RequestServer(mktl.protocol.request.Server):
         return False
 
 
+    def discover_daemons(self):
+
+        discovered = mktl.protocol.discover.search_direct()
+
+        for seen in discovered:
+
+            address,port = seen
+            request = mktl.protocol.message.Request('GET', '_hash')
+            try:
+                payload = mktl.protocol.request.send(address, port, request)
+            except:
+                logger.warning("HASH request from %s:%d failed" % (address, port))
+                continue
+
+            if payload:
+                hashes = payload.value
+            else:
+                hashes = None
+
+            if hashes is None:
+                # Error requesting the hashes.
+                logger.warning("HASH request from %s:%d failed" % (address, port))
+
+                if payload:
+                    error = payload.error
+                else:
+                    error = None
+
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+                    e_debug = error['debug']
+                    logger.warning("Remote exception: %s: %s\n%s" % (e_type, e_text, e_debug))
+                continue
+
+            for store in hashes.keys():
+                request = mktl.protocol.message.Request('GET', store + '._config')
+                payload = mktl.protocol.request.send(address, port, request)
+
+                blocks = payload.value
+
+                try:
+                    error = payload.error
+                except AttributeError:
+                    error = None
+
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+                    logger.warning("CONFIG request failed: %s: %s" % (e_type, e_text))
+
+                if blocks:
+                    for uuid,block in blocks.items():
+                        block['override'] = True
+                        self.process_block(block)
+
+
     def process_block(self, new):
 
         store = new['store']
@@ -375,65 +391,36 @@ class RequestServer(mktl.protocol.request.Server):
         port = new['provenance'][0]['rep']
         host = new['provenance'][0]['hostname']
 
+        # Dynamically update the request handling to know how to handle
+        # requests for the configuration for this store.
+
+        key = store + '._config'
+        self.rep._req_get_handlers[key] = self.req_get_config
+
         logger.info("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
         config.update(new)
 
 
-    def req_get(self, request):
+    def req_get_config(self, request):
         """ We are expecting queries for hash and configuration data, aimed
-            at specially named built-in keys '_hash' and '_config'.
+            at special 'store._config' items.
         """
 
         target = request.target
+        store, key = target.split('.', 1)
 
-        if target == '_hash':
-            store = None
-            key = '_hash'
+        try:
+            config = mktl.config.get(store)
+        except KeyError:
+            payload_data = tuple()
         else:
-            store, key = target.split('.', 1)
-            if store == '':
-                store = None
-
-        if key == '_hash':
-            payload_data = mktl.config.get_hashes(store)
-        elif key == '_config':
-            try:
-                config = mktl.config.get(store)
-            except KeyError:
-                payload_data = tuple()
-            else:
-                payload_data = config._by_uuid
-        else:
-            raise ValueError('unhandled key: ' + target)
-
+            payload_data = config._by_uuid
 
         payload = mktl.Payload(value=payload_data)
         return payload
 
 
-    def req_handler(self, request):
-        """ Inspect the incoming request type and decide how a response
-            will be generated.
-        """
-
-        if request.ack:
-            self.req_ack(request)
-
-        type = request.type
-        target = request.target
-
-        if type == 'GET':
-            payload = self.req_get(request)
-        elif type == 'SET':
-            payload = self.req_set(request)
-        else:
-            raise ValueError('unhandled request: ' + type)
-
-        if request.reply:
-            return payload
-
-
-    def req_set(self, request):
+    def req_set_config(self, request):
         """ We are expecting queries for configuration data, aimed
             at specially named built-in keys.
         """
@@ -454,7 +441,8 @@ class RequestServer(mktl.protocol.request.Server):
         return payload
 
 
-# end of class RequestServer
+# end of class RegistryDaemon
+
 
 
 class ProvenanceLoopError(RuntimeError):
