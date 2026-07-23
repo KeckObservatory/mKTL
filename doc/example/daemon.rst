@@ -4,7 +4,9 @@ Daemon: basics
 ==============
 
 This example will establish a 'metal' store and items intended to portray
-market prices for various precious metals.
+market prices for various precious metals. Refer to the :ref:`unabridged_daemon`
+example to see these different aspects of a daemon presented in a single
+block of code.
 
 
 Getting started

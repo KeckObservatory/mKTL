@@ -1,3 +1,5 @@
+.. _unabridged_daemon:
+
 Daemon: unabridged
 ==================
 
