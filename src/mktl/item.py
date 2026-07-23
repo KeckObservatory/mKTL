@@ -125,6 +125,59 @@ class Item:
             self.subscribe(prime=prime)
 
 
+    def add_get_performer(self, method):
+        """ Assign a method that will be called for all GET requests for this
+            item. This will replace the :func:`perform_get` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_get` directly. The performer method must
+            accept no arguments; refer to :func:`perform_get` for additional
+            details on the expected behavior.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self.perform_get = method
+
+
+    def add_performer(self, request, method):
+        """ Assign a method that will be called for either GET or SET requests,
+            determined by the *request* argument, which must be one of 'get' or
+            'set'. See :func:`add_get_performer` and :func:`add_set_performer`
+            for additional information.
+        """
+
+        request = request.lower()
+        request = request.strip()
+
+        if request == 'get':
+            return self.add_get_performer(method)
+        elif request == 'set':
+            return self.add_set_performer(method)
+        else:
+            raise ValueError("request must be either 'get' or 'set'")
+
+
+    def add_set_performer(self, method):
+        """ Assign a method that will be called for all SET requests for this
+            item. This will replace the :func:`perform_set` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_set` directly. The performer method must
+            accept one argument, the 'unformatted' Python-native representation
+            of the item value; refer to :func:`perform_set` for additional
+            details on the expected behavior.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self.perform_set = method
+
+
     def _cleanup(self):
         """ Shut down any background processing involved with this item.
             In the general case this is not required; :class:`Item` instances
@@ -375,6 +428,14 @@ class Item:
             for returning a Payload instead of a bare value is if the embedded
             timestamp needs to be set to some value other than the current time.
 
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a get request takes to process. There
+            are also no restrictions on concurrency, though ideally a get
+            request is trivial to execute; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
+
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
             'value'; this is not expected to be a common occurrence, but if a
@@ -395,6 +456,13 @@ class Item:
             a set request for this item. No return value is expected. Any
             subclass implementations should raise an exception in order to
             trigger an error response.
+
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a set request takes to process. There
+            are also no restrictions on concurrency; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
 
             Any return value, though again none is expected, will be
             encapsulated via :func:`to_payload`, after the same fashion as

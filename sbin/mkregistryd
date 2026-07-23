@@ -61,12 +61,20 @@ def main():
                 logger.warning("HASH request from %s:%d failed" % (address, port))
                 continue
 
-            hashes = payload.value
+            if payload:
+                hashes = payload.value
+            else:
+                hashes = None
 
             if hashes is None:
                 # Error requesting the hashes.
                 logger.warning("HASH request from %s:%d failed" % (address, port))
-                error = payload.error
+
+                if payload:
+                    error = payload.error
+                else:
+                    error = None
+
                 if error:
                     e_type = error['type']
                     e_text = error['text']

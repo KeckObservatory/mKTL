@@ -41,6 +41,9 @@ The Item class
    is used in a daemon context. The following methods have utility when
    a daemon is authoritative for an item.
 
+   .. automethod:: add_performer
+   .. automethod:: add_get_performer
+   .. automethod:: add_set_performer
    .. automethod:: from_payload
    .. automethod:: poll
    .. automethod:: publish

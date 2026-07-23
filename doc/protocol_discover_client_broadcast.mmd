@@ -1,0 +1,10 @@
+sequenceDiagram
+    autonumber
+    Participant Client
+    Participant Registry as Any Registry
+
+    Client->>+Registry: Hello?
+    Registry->>-Client: Try port 10059
+
+    Client->>+Registry: GET: store._config
+    Registry->>-Client: REP: JSON payload
