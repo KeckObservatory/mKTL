@@ -31,19 +31,22 @@ def main():
     # case where the caller specifies -h on the command line.
 
     config = parse_command_line()
-    store = 'registry:' + socket.getfqdn()
+    main.hostname = socket.getfqdn()
+    store = 'registry:' + main.hostname
 
     description = generate_description()
     mktl.config.authoritative(store, store, description)
 
-    daemon = RegistryDaemon(store)
-    beacon = mktl.protocol.discover.Server(daemon.req.port)
+    daemon = RegistryDaemon(store, store, override=True)
+    beacon = mktl.protocol.discover.Server(daemon.rep.port)
 
     # Run discovery once upon startup, rely on daemon announcements to
     # learn of any additions to the local network.
 
-    main.discover_daemons()
+    daemon.discover_daemons()
 
+
+    delay = 30
     while True:
         try:
             main.shutdown.wait(delay)
@@ -52,7 +55,7 @@ def main():
 
 
 
-
+main.hostname = None
 main.shutdown = threading.Event()
 
 
@@ -61,7 +64,7 @@ def generate_description():
 
     items = dict()
 
-    items['daemons'] = dict()
+    items['daemon_count'] = dict()
     items['daemon_count']['description'] = 'Quantity of active daemons seen by this registry.'
     items['daemon_count']['type'] = 'numeric'
     items['daemon_count']['initial'] = 0
@@ -72,6 +75,7 @@ def generate_description():
     items['log']['initial'] = ''
     items['log']['settable'] = False
 
+    return items
 
 
 def parse_command_line():
@@ -174,8 +178,8 @@ class RegistryDaemon(mktl.Daemon):
         """
 
         local_provenance = dict()
-        local_provenance['hostname'] = self.hostname
-        local_provenance['rep'] = self.port
+        local_provenance['hostname'] = main.hostname
+        local_provenance['rep'] = self.rep.port
 
         if mktl.config.contains_provenance(block, local_provenance):
             raise ProvenanceLoopError('circular provenance detected')
@@ -279,11 +283,16 @@ class RegistryDaemon(mktl.Daemon):
                 if blocks:
                     for uuid,block in blocks.items():
                         block['override'] = True
-                        self.process_block(block)
+                        try:
+                            self.process_block(block)
+                        except ProvenanceLoopError:
+                            # This is us, discovering ourselves.
+                            pass
 
 
     def process_block(self, new):
 
+        print('processing: ' + repr(new))
         store = new['store']
         config = mktl.config.get(store)
 
@@ -387,7 +396,7 @@ class RegistryDaemon(mktl.Daemon):
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
 
-        mktl.config.add_provenance(new, self.hostname, self.port)
+        mktl.config.add_provenance(new, main.hostname, self.rep.port)
         port = new['provenance'][0]['rep']
         host = new['provenance'][0]['hostname']
 
