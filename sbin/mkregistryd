@@ -268,7 +268,12 @@ class RegistryDaemon(mktl.Daemon):
                 request = mktl.protocol.message.Request('GET', store + '._config')
                 payload = mktl.protocol.request.send(address, port, request)
 
-                blocks = payload.value
+                try:
+                    blocks = payload.value
+                except AttributeError:
+                    # The request for the config threw an error; this shouldn't
+                    # occur, but here we are.
+                    continue
 
                 try:
                     error = payload.error
@@ -292,8 +297,18 @@ class RegistryDaemon(mktl.Daemon):
 
     def process_block(self, new):
 
-        print('processing: ' + repr(new))
         store = new['store']
+        store = store.lower()
+
+        # Dynamically update the request handling to know how to handle
+        # requests for the configuration for this store. Regardless of
+        # how we received a configuration block, the fact that we have
+        # a block at all implies we must be ready to answer queries for
+        # that store.
+
+        key = store + '._config'
+        self.rep._req_get_handlers[key] = self.req_get_config
+
         config = mktl.config.get(store)
 
         self.check_provenance(new)
@@ -399,12 +414,6 @@ class RegistryDaemon(mktl.Daemon):
         mktl.config.add_provenance(new, main.hostname, self.rep.port)
         port = new['provenance'][0]['rep']
         host = new['provenance'][0]['hostname']
-
-        # Dynamically update the request handling to know how to handle
-        # requests for the configuration for this store.
-
-        key = store + '._config'
-        self.rep._req_get_handlers[key] = self.req_get_config
 
         logger.info("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
         config.update(new)
