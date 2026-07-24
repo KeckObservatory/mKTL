@@ -38,7 +38,6 @@ def main():
     mktl.config.authoritative(store, store, description)
 
     registry = Registry(store)
-    beacon = mktl.protocol.discover.Server(registry.daemon.rep.port)
 
     # Run discovery once upon startup, rely on daemon announcements to
     # learn of any additions to the local network.
@@ -91,6 +90,11 @@ class Registry:
         # assignment for _hash because it is handled by the base Daemon class.
 
         self.daemon.rep._req_set_handlers['_config'] = self.req_set_config
+
+        # Establish the broadcast listener last, once the rest of the
+        # machinery is up and running and ready to handle requests.
+
+        beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
 
 
     def accept_requests(self, store):
