@@ -305,11 +305,10 @@ class Registry:
         store = new['store']
         store = store.lower()
 
-        # Dynamically update the request handling to know how to handle
-        # requests for the configuration for this store. Regardless of
-        # how we received a configuration block, the fact that we have
-        # a block at all implies we must be ready to answer queries for
-        # that store.
+        # Dynamically update the request handling to accept GET requests for
+        # the configuration for this store. Regardless of how we received a
+        # configuration block, the fact that we have a block at all implies
+        # we must be ready to answer queries for that store.
 
         self.accept_requests(store)
 
@@ -332,7 +331,7 @@ class Registry:
         except KeyError:
             override = False
         else:
-            # Won't be needing that going forward. The presence of an
+            # Won't be needing this flag going forward. The presence of an
             # override flag is only relevant right now, as part of these
             # checks being performed right here for an 'announce' operation.
             del new['override']
@@ -424,8 +423,9 @@ class Registry:
 
 
     def req_get_config(self, request):
-        """ We are expecting queries for hash and configuration data, aimed
-            at special 'store._config' items.
+        """ Handle all GET requests for 'store._config' items, regardless of
+            which store it is. Requests for unknown stores will not reach this
+            point.
         """
 
         target = request.target
@@ -443,8 +443,8 @@ class Registry:
 
 
     def req_set_config(self, request):
-        """ We are expecting queries for configuration data, aimed
-            at specially named built-in keys.
+        """ Handle all SET requests for the '_config' key. These requests
+            are part of a daemon's announce operation.
         """
 
         # We could be inspecting the request.target value to ensure it
