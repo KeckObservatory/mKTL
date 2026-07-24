@@ -63,18 +63,7 @@ main.shutdown = threading.Event()
 def generate_description():
 
     items = dict()
-
-    items['daemon_count'] = dict()
-    items['daemon_count']['description'] = 'Quantity of active daemons seen by this registry.'
-    items['daemon_count']['type'] = 'numeric'
-    items['daemon_count']['initial'] = 0
-    items['daemon_count']['settable'] = False
-
-    items['log'] = dict()
-    items['log']['description'] = 'Log message describing recent events.'
-    items['log']['initial'] = ''
-    items['log']['settable'] = False
-
+    # Not adding any custom items just yet.
     return items
 
 
@@ -96,10 +85,21 @@ class RegistryDaemon(mktl.Daemon):
 
     def setup(self):
 
-        # This would normally be a call to self.add_get_handler() but
-        # the _config concept is not a fully qualified item.
+        # The comment below for accept_requests() explains the motivation
+        # for making this assignment directly. There is no similar top-level
+        # assignment for _hash because it is handled by the base Daemon class.
 
         self.rep._req_set_handlers['_config'] = self.req_set_config
+
+
+    def accept_requests(self, store):
+        # Normally this would be a call to self.add_get_handler(),
+        # but that method has a safety check verifying the local
+        # store has a matching item-- that is not the case for the
+        # registry. So the handler dictionary is manipulated directly.
+
+        key = store + '._config'
+        self.rep._req_get_handlers[key] = self.req_get_config
 
 
     def check_keys(self, new, override):
@@ -306,8 +306,7 @@ class RegistryDaemon(mktl.Daemon):
         # a block at all implies we must be ready to answer queries for
         # that store.
 
-        key = store + '._config'
-        self.rep._req_get_handlers[key] = self.req_get_config
+        self.accept_requests(store)
 
         config = mktl.config.get(store)
 
