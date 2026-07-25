@@ -56,6 +56,9 @@ main.shutdown = threading.Event()
 
 
 def generate_description():
+    """ Return a dictionary describing all custom authoritative items
+        provided by the registry.
+    """
 
     items = dict()
     # Not adding any custom items just yet.
@@ -95,18 +98,24 @@ class Registry:
 
 
     def accept_requests(self, store):
+        """ Dynamically establish a handler for future GET requests
+            for a store's configuration.
+        """
+
         # Normally this would be a call to self.add_get_handler(),
         # but that method has a safety check verifying the local
-        # store has a matching item-- that is not the case for the
-        # registry. So the handler dictionary is manipulated directly.
+        # store has a matching item-- that will not be the case for
+        # any store._config reqeusts added at runtime.
+        #
+        # Thus the handler dictionary is manipulated directly.
 
         key = store + '._config'
         self.daemon.rep._req_get_handlers[key] = self.req_get_config
 
 
-    def check_keys(self, new, override):
-        """ Confirm that any keys unique to this new configuration block are
-            not present in any other blocks.
+    def check_duplicates(self, new, override):
+        """ Confirm that any keys in a configuration block are not present
+            in any already known blocks.
         """
 
         store = new['store']
@@ -232,6 +241,10 @@ class Registry:
 
 
     def discover_daemons(self):
+        """ Look for any daemons on the local network; if any are found,
+            request the current configuration for their store, and process
+            that configuration locally.
+        """
 
         discovered = mktl.protocol.discover.search_direct()
 
@@ -298,6 +311,12 @@ class Registry:
 
 
     def process_block(self, new):
+        """ This is the entry point for the handling and future caching of
+            a new configuration block. All calls to the check_*() methods
+            ultimately originate from this method; only after all checks
+            pass will the new configuration block be cached for future
+            reference.
+        """
 
         store = new['store']
         store = store.lower()
@@ -403,10 +422,10 @@ class Registry:
 
         # Reject a configuration block if it contains keys that collide
         # with another block in the cache. Not looking for a return
-        # value from check_keys(), exceptions are raised when there are
-        # problems.
+        # value from check_duplicates(), exceptions are raised when
+        # there are problems.
 
-        self.check_keys(new, override)
+        self.check_duplicates(new, override)
 
         # Now that all the checks have passed it's time to update the local
         # cache of configuration data.
