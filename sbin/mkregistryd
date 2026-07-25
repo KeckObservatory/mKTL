@@ -128,6 +128,8 @@ class Registry:
 
         items = new['items']
         uuid = new['uuid']
+        new_port = new['provenance'][0]['rep']
+        new_host = new['provenance'][0]['hostname']
         to_remove = set()
 
         for old_uuid in config.uuids():
@@ -138,6 +140,8 @@ class Registry:
                 continue
 
             old = config[old_uuid]
+            old_port = old['provenance'][0]['rep']
+            old_host = old['provenance'][0]['hostname']
             running = None
 
             old_items = old['items']
@@ -149,8 +153,6 @@ class Registry:
 
                         if running == True:
                             alias = old['alias']
-                            old_port = old['provenance'][0]['rep']
-                            old_host = old['provenance'][0]['hostname']
                             raise RuntimeError("%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port))
                         else:
                             # Override requested, and the old daemon is not
@@ -160,9 +162,7 @@ class Registry:
 
                     else:
                         alias = new['alias']
-                        port = new['provenance'][0]['rep']
-                        host = new['provenance'][0]['hostname']
-                        logger.error("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
+                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                         raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
 
         # This set will be empty unless overrides were requested.
@@ -354,6 +354,8 @@ class Registry:
 
         uuid = new['uuid']
         alias = new['alias']
+        new_port = new['provenance'][0]['rep']
+        new_host = new['provenance'][0]['hostname']
 
         try:
             old = config[uuid]
@@ -374,24 +376,20 @@ class Registry:
                     if running == True:
                         old_port = old['provenance'][0]['rep']
                         old_host = old['provenance'][0]['hostname']
-                        new_port = new['provenance'][0]['rep']
-                        new_host = new['provenance'][0]['hostname']
                         logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                         raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
         if old and authoritative == True:
+            old_port = old['provenance'][0]['rep']
+            old_host = old['provenance'][0]['hostname']
+
             # Does the provenance match? If not, we need an override to
             # proceed, but even then we should only proceed if the previous
             # daemon is offline.
 
             match = mktl.config.match_provenance(old['provenance'], new['provenance'])
             if match == False and override == False:
-                old_port = old['provenance'][0]['rep']
-                old_host = old['provenance'][0]['hostname']
-                new_port = new['provenance'][0]['rep']
-                new_host = new['provenance'][0]['hostname']
-
                 logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
@@ -399,17 +397,13 @@ class Registry:
                 running = self.check_running(old)
 
                 if running == True:
-                    port = old['provenance'][0]['rep']
-                    host = old['provenance'][0]['hostname']
-                    raise ValueError("%s daemon already running at %s:%s" % (alias, host, port))
+                    raise ValueError("%s daemon already running at %s:%s" % (alias, old_host, old_port))
 
                 # Else the local configuration should be updated to reflect
                 # this new configuration block. Remove the old one to streamline
                 # further checks.
 
-                port = old['provenance'][0]['rep']
-                host = old['provenance'][0]['hostname']
-                logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
+                logger.info("forget: %s from %s:%s (%s)" % (alias, old_host, old_port, uuid))
                 config.remove(uuid)
 
             # We've already seen a block for this UUID. Accept the new block
@@ -431,10 +425,8 @@ class Registry:
         # cache of configuration data.
 
         mktl.config.add_provenance(new, main.hostname, self.daemon.rep.port)
-        port = new['provenance'][0]['rep']
-        host = new['provenance'][0]['hostname']
 
-        logger.info("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
+        logger.info("remember: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
         config.update(new)
 
 
