@@ -33,12 +33,12 @@ def main():
     description = generate_description()
     mktl.config.authoritative(store, store, description)
 
-    registry = Registry(store)
+    daemon = RegistryDaemon(store, alias=store, override=True)
 
     # Run discovery once upon startup, rely on daemon announcements to
     # learn of any additions to the local network.
 
-    registry.discover_daemons()
+    daemon.registry.discover_daemons()
 
 
     delay = 30
@@ -77,20 +77,21 @@ def parse_command_line():
 
 
 class Registry:
+    """ The registry-specific behavior is in this subclass to sequester it
+        from the rest of the daemon functionality. Normally this wouldn't
+        be necessary if the application behavior was encapsulated in items,
+        but that is not the case for the registry.
+    """
 
-    def __init__(self, store):
-        self.daemon = RegistryDaemon(store, alias=store, override=True)
+    def __init__(self, daemon):
+        self.daemon = daemon
 
-        # The comment for Registry.accept_requests() explains the motivation
-        # for making this assignment directly. There is no similar top-level
-        # assignment for _hash because it is handled by the base Daemon class.
 
-        self.daemon.rep._req_set_handlers['_config'] = self.req_set_config
-
+    def setup_final(self):
         # Establish the broadcast listener last, once the rest of the
         # machinery is up and running and ready to handle requests.
 
-        beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
+        self.beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
 
 
     def accept_requests(self, store):
@@ -467,8 +468,23 @@ class RegistryDaemon(mktl.Daemon):
 
     def setup(self):
 
-        # Not doing anything just yet.
-        pass
+        # The registry-specific functionality is in the Registry class.
+        # It's instantiated as part of the daemon so that any items can
+        # access the registry functionality.
+
+        registry = Registry(self)
+        self.registry = registry
+
+        # The comment for Registry.accept_requests() explains the motivation
+        # for making this assignment directly. There is no similar top-level
+        # assignment for _hash because it is handled by the base Daemon class.
+
+        self.rep._req_set_handlers['_config'] = registry.req_set_config
+
+
+    def setup_final(self):
+        self.registry.setup_final()
+
 
 # end of class RegistryDaemon
 
