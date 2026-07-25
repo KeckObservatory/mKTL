@@ -3,12 +3,12 @@
 description = """
 The registry daemon acts as a clearing house for configuration requests;
 when daemons first start running they will seek out any registries on their
-local network and announce configuration updates; any clients broadcasting
-will discover a local registry, and ask for any available configuration
-information.
+local network and announce the configuration for their authoritative items;
+any clients broadcasting will discover a local registry, and ask for any
+available configuration information.
 
-Daemons and clients can both bypass broadcast discovery for a local registry
-if they already know where to find a registry.
+Clients can bypass broadcast discovery for a local registry if they already
+know where to find a registry.
 """
 
 import argparse
@@ -25,10 +25,6 @@ logger = logging.getLogger(__name__)
 
 
 def main():
-
-    # We don't use command line options here, but if we did, they would be
-    # handled in parse_command_line(). At the very least, it handles the
-    # case where the caller specifies -h on the command line.
 
     config = parse_command_line()
     main.hostname = socket.getfqdn()
