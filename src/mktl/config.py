@@ -1296,14 +1296,14 @@ def add_provenance(block, hostname, rep, pub=None):
 
 
 def announce(config, uuid, override=False):
-    """ Announce an authoritative configuration to the local network.
-        Raise an exception if a conflict is detected. Setting *override*
-        to True will request any/all available recipients update their
-        local cache to clear any conflicting data.
+    """ Announce an authoritative configuration to the local network. This
+        announcement is received and processed by a registry, if one is
+        running. Raise an exception if the SET operation is rejected.
+        Setting *override* to True will request any/all available recipients
+        update their local cache to clear any conflicting data, though the
+        recipient may still reject the request if the conflicting daemon is
+        still online.
     """
-
-    store = config.store
-    key = store + '.config'
 
     block = config[uuid]
     block = dict(block)
@@ -1313,7 +1313,7 @@ def announce(config, uuid, override=False):
 
     payload = protocol.message.Payload(value=block)
     payload.add_origin()
-    message = protocol.message.Request('SET', key, payload)
+    message = protocol.message.Request('SET', '_config', payload)
 
     registries = protocol.discover.search(wait=True)
 

@@ -461,9 +461,11 @@ running configuration.
 
 Daemons are expected to self-announce on startup,
 which involves discovering local registries, and pushing the description of
-the daemon's authoritative items to any discovered registries; the registry
-will reconcile the description against what it already has cached, and will
-reject any announcement that introduces a conflict.
+the daemon's authoritative items to any discovered registries; the daemon
+will issue a SET request to the registry's _config item to initiate further
+processing. The registry will reconcile the new description against what it
+already has cached, and will reject any announcement that introduces a
+conflict.
 
 There are four shared secrets used in the discovery exchange:
 
