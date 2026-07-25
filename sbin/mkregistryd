@@ -33,7 +33,7 @@ def main():
     description = generate_description()
     mktl.config.authoritative(store, store, description)
 
-    daemon = RegistryDaemon(store, alias=store, override=True)
+    daemon = Daemon(store, alias=store, override=True)
 
     # Run discovery once upon startup, rely on daemon announcements to
     # learn of any additions to the local network.
@@ -464,7 +464,7 @@ class Registry:
 
 
 
-class RegistryDaemon(mktl.Daemon):
+class Daemon(mktl.Daemon):
 
     def setup(self):
 
@@ -486,7 +486,7 @@ class RegistryDaemon(mktl.Daemon):
         self.registry.setup_final()
 
 
-# end of class RegistryDaemon
+# end of class Daemon
 
 
 
