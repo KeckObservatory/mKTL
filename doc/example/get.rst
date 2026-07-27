@@ -120,11 +120,10 @@ Putting it all together::
 
     if craziness is None:
         print('The population craziness is unknown.')
+    elif craziness == True:
+        print('The population is crazy.')
     else:
-        if craziness == True:
-            print('The population is crazy.')
-        else:
-            print('The population is sane.')
+        print('The population is sane.')
 
 The above comparison can be further simplified:
 an :class:`Item` instance can be used directly in comparison operations,
@@ -146,3 +145,33 @@ Python community. This is because the behavior of the ``is`` operator is
 unchanged, and will compare the mktl.Item instance against None, whereas
 the equality operator will trigger the rich comparison handling provided
 by an mktl.Item, and instead compare the .value property against None.
+
+Speaking of generally accepted practices in the Python community, the
+first condition can be rearranged slightly to use a tighter set of
+comparisons, omitting the explicit comparison against a boolean::
+
+    import mktl
+    crazy = mktl.get('population.CRAZY')
+    craziness = crazy.value
+
+    if craziness:
+        print('The population is crazy.')
+    elif craziness is None:
+        print('The population craziness is unknown.')
+    else:
+        print('The population is sane.')
+
+This also works for the second style above, which, depending on your choice
+of variable names, may wind up being the most readable, in addition to being
+the most concise::
+
+    import mktl
+    crazy = mktl.get('population.CRAZY')
+
+    if crazy:
+        print('The population is crazy.')
+    elif crazy == None:
+        print('The population craziness is unknown.')
+    else:
+        print('The population is sane.')
+
