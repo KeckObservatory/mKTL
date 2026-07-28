@@ -489,7 +489,7 @@ class Daemon:
         block = self.config.authoritative_block
         items = block['items']
 
-        key = '_' + self.alias + 'cfg'
+        key = '_' + self.alias + 'cat'
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
         items[key]['settable'] = False
@@ -553,8 +553,8 @@ class Daemon:
         # built-in items; this is only possible after the configuration
         # has been updated.
 
+        self.add_item(DaemonCatalog, '_' + self.alias + 'cat')
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(DaemonConfiguration, '_' + self.alias + 'cfg')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
 
@@ -1076,7 +1076,7 @@ class PendingPersistence:
 
 
 
-class DaemonConfiguration(item.Item):
+class DaemonCatalog(item.Item):
 
     def perform_get(self):
 
@@ -1087,7 +1087,7 @@ class DaemonConfiguration(item.Item):
         return configuration
 
 
-# end of class DaemonConfiguration
+# end of class DaemonCatalog
 
 
 

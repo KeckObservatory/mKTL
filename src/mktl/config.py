@@ -27,14 +27,14 @@ _cache_lock = threading.Lock()
 _callbacks = list()
 
 
-class Configuration:
+class Catalog:
     """ A convenience class to represent mKTL configuration data. To first
         order an instance acts like a dictionary, returning the configuration
         for a single key, or the full configuration block for a single UUID or
         unique alias.
 
         In addition to acting as a repository for the description of all items,
-        the Configuration instance also provides translation routines for some
+        the Catalog instance also provides translation routines for some
         item values; the behavior of these translations is fully driven by the
         configuration, and does not depend on custom :class:`mktl.Item`
         subclasses.
@@ -54,7 +54,7 @@ class Configuration:
         self.callbacks = list()
 
         if store in _cache:
-            raise ValueError('Configuration class is a singleton')
+            raise ValueError('Catalog class is a singleton')
 
         if pint is None:
             self._unit_registry = None
@@ -644,7 +644,7 @@ class Configuration:
 
 
     def save(self):
-        """ Save the contents of this :class:`Configuration` instance
+        """ Save the contents of this :class:`Catalog` instance
             to the local disk cache for future client access.
         """
 
@@ -1236,7 +1236,7 @@ class Configuration:
             return tuple(self._by_uuid.keys())
 
 
-# end of class Configuration
+# end of class Catalog
 
 
 
@@ -1478,7 +1478,7 @@ def generate_hash(dumpable):
 
 
 def get(store, alias=None):
-    """ Retrieve the locally cached :class:`Configuration` instance for
+    """ Retrieve the locally cached :class:`Catalog` instance for
         the specified *store*.
         A KeyError exception is raised if there are no locally cached
         configuration blocks for that store. A typical client will only
@@ -1498,7 +1498,7 @@ def get(store, alias=None):
         try:
             config = _cache[store]
         except KeyError:
-            config = Configuration(store, alias)
+            config = Catalog(store, alias)
             _cache[store] = config
         finally:
             _cache_lock.release()

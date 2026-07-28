@@ -13,7 +13,7 @@ class Store:
         connections is managed in the :mod:`mktl.protocol` submodule, not here.
 
         :ivar name: The name of this store.
-        :ivar catalog: The :class:`mktl.config.Configuration` instance for this store.
+        :ivar catalog: The :class:`mktl.config.Catalog` instance for this store.
     """
 
     def __init__(self, name):
