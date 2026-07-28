@@ -1,3 +1,7 @@
+""" This submodule contains classes and methods related to the handling of
+    mKTL metadata, such as store catalogs, item descriptions, and caching,
+    hashing, and other manipulation of this metadata.
+"""
 
 import hashlib
 import os
