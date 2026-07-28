@@ -30,7 +30,7 @@ def main():
     store = 'registry:' + main.hostname
 
     description = generate_description()
-    mktl.config.authoritative(store, store, description)
+    mktl.meta.authoritative(store, store, description)
 
     daemon = Daemon(store, alias=store, override=True)
 
@@ -98,7 +98,7 @@ class Registry:
 
     def accept_requests(self, store):
         """ Dynamically establish a handler for future GET requests
-            for a store's configuration.
+            for a store's catalog.
         """
 
         # Normally this would be a call to self.add_get_handler(),
@@ -113,14 +113,14 @@ class Registry:
 
 
     def check_duplicates(self, new, override):
-        """ Confirm that any keys in a configuration block are not present
+        """ Confirm that any keys in a catalog block are not present
             in any already known blocks.
         """
 
         store = new['store']
-        config = mktl.config.get(store)
+        catalog = mktl.meta.get(store)
 
-        if len(config) == 0:
+        if len(catalog) == 0:
             # No previously stored blocks to check against. That means all of
             # the keys are unique, and there are no conflicts.
             return
@@ -131,14 +131,14 @@ class Registry:
         new_host = new['provenance'][0]['hostname']
         to_remove = set()
 
-        for old_uuid in config.uuids():
+        for old_uuid in catalog.uuids():
 
             if uuid == old_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
-            old = config[old_uuid]
+            old = catalog[old_uuid]
             old_port = old['provenance'][0]['rep']
             old_host = old['provenance'][0]['hostname']
             running = None
@@ -162,13 +162,13 @@ class Registry:
                     else:
                         alias = new['alias']
                         logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-                        raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+                        raise KeyError('key in new catalog block conflicts with an existing key: ' + key)
 
         # This set will be empty unless overrides were requested.
 
         for uuid in to_remove:
             try:
-                block = config[uuid]
+                block = catalog[uuid]
             except KeyError:
                 # Already gone. Not entirely sure how that might have happened,
                 # but it does, and there's no sense trying to remove it twice.
@@ -179,7 +179,7 @@ class Registry:
             host = block['provenance'][0]['hostname']
 
             logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
-            config.remove(uuid)
+            catalog.remove(uuid)
 
 
     def check_provenance(self, block):
@@ -191,13 +191,13 @@ class Registry:
         local_provenance['hostname'] = main.hostname
         local_provenance['rep'] = self.daemon.rep.port
 
-        if mktl.config.contains_provenance(block, local_provenance):
+        if mktl.meta.contains_provenance(block, local_provenance):
             raise ProvenanceLoopError('circular provenance detected')
 
 
     def check_running(self, block):
         """ Check to see whether the daemon associated with this
-            configuration block is still running.
+            catalog block is still running.
         """
 
         # Take advantage of a built-in keyword to probe whether the
@@ -241,8 +241,8 @@ class Registry:
 
     def discover_daemons(self):
         """ Look for any daemons on the local network; if any are found,
-            request the current configuration for their store, and process
-            that configuration locally.
+            request the current catalog for their store, and process
+            that catalog locally.
         """
 
         discovered = mktl.protocol.discover.search_direct()
@@ -285,7 +285,7 @@ class Registry:
                 try:
                     blocks = payload.value
                 except AttributeError:
-                    # The request for the config threw an error; this shouldn't
+                    # The request for the catalog threw an error; this shouldn't
                     # occur, but here we are.
                     continue
 
@@ -311,9 +311,9 @@ class Registry:
 
     def process_block(self, new):
         """ This is the entry point for the handling and future caching of
-            a new configuration block. All calls to the check_*() methods
+            a new catalog block. All calls to the check_*() methods
             ultimately originate from this method; only after all checks
-            pass will the new configuration block be cached for future
+            pass will the new catalog block be cached for future
             reference.
         """
 
@@ -321,13 +321,13 @@ class Registry:
         store = store.lower()
 
         # Dynamically update the request handling to accept GET requests for
-        # the configuration for this store. Regardless of how we received a
-        # configuration block, the fact that we have a block at all implies
+        # the catalog for this store. Regardless of how we received a
+        # catalog block, the fact that we have a block at all implies
         # we must be ready to answer queries for that store.
 
         self.accept_requests(store)
 
-        config = mktl.config.get(store)
+        catalog = mktl.meta.get(store)
 
         self.check_provenance(new)
 
@@ -357,7 +357,7 @@ class Registry:
         new_host = new['provenance'][0]['hostname']
 
         try:
-            old = config[uuid]
+            old = catalog[uuid]
         except KeyError:
             old = None
 
@@ -365,7 +365,7 @@ class Registry:
             # Maybe it's a different UUID, but the same alias.
 
             try:
-                old = config[alias]
+                old = catalog[alias]
             except KeyError:
                 pass
 
@@ -387,7 +387,7 @@ class Registry:
             # proceed, but even then we should only proceed if the previous
             # daemon is offline.
 
-            match = mktl.config.match_provenance(old['provenance'], new['provenance'])
+            match = mktl.meta.match_provenance(old['provenance'], new['provenance'])
             if match == False and override == False:
                 logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
@@ -398,12 +398,12 @@ class Registry:
                 if running == True:
                     raise ValueError("%s daemon already running at %s:%s" % (alias, old_host, old_port))
 
-                # Else the local configuration should be updated to reflect
-                # this new configuration block. Remove the old one to streamline
+                # Else the local catalog should be updated to reflect
+                # this new catalog block. Remove the old one to streamline
                 # further checks.
 
                 logger.info("forget: %s from %s:%s (%s)" % (alias, old_host, old_port, uuid))
-                config.remove(uuid)
+                catalog.remove(uuid)
 
             # We've already seen a block for this UUID. Accept the new block
             # for processing if and only if it is different, or has a newer
@@ -413,7 +413,7 @@ class Registry:
                 # We already know this block.
                 return
 
-        # Reject a configuration block if it contains keys that collide
+        # Reject a catalog block if it contains keys that collide
         # with another block in the cache. Not looking for a return
         # value from check_duplicates(), exceptions are raised when
         # there are problems.
@@ -421,12 +421,12 @@ class Registry:
         self.check_duplicates(new, override)
 
         # Now that all the checks have passed it's time to update the local
-        # cache of configuration data.
+        # cache of catalog data.
 
-        mktl.config.add_provenance(new, main.hostname, self.daemon.rep.port)
+        mktl.meta.add_provenance(new, main.hostname, self.daemon.rep.port)
 
         logger.info("remember: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-        config.update(new)
+        catalog.update(new)
 
 
     def req_get_config(self, request):
@@ -439,11 +439,11 @@ class Registry:
         store, key = target.split('.', 1)
 
         try:
-            config = mktl.config.get(store)
+            catalog = mktl.meta.get(store)
         except KeyError:
             payload_data = tuple()
         else:
-            payload_data = config._by_uuid
+            payload_data = catalog._by_uuid
 
         payload = mktl.Payload(value=payload_data)
         return payload
@@ -455,7 +455,7 @@ class Registry:
         """
 
         # We could be inspecting the request.target value to ensure it
-        # matches the provided configuration blocks. For now, just process
+        # matches the provided catalog blocks. For now, just process
         # whatever we get.
 
         block = request.payload.value

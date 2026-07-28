@@ -307,7 +307,7 @@ def execute_describe_requests(requests):
 
 def execute_discover_requests(requests):
     mktl.discover(*requests.discover)
-    hashes = mktl.config.get_hashes()
+    hashes = mktl.meta.get_hashes()
 
     stores = hashes.keys()
     stores = list(stores)

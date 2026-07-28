@@ -13,7 +13,7 @@ import socket
 import threading
 import time
 
-from .. import config
+from .. import meta
 
 call = 'I heard it'
 call = call.encode()
@@ -222,7 +222,7 @@ def preload_registries():
         disk to build a list of addresses to check for registry availability.
     """
 
-    directory = config.directory()
+    directory = meta.directory()
     client = os.path.join(directory, 'client')
     manual = os.path.join(client, 'registries')
     cached = os.path.join(client, 'registries.cache')
@@ -268,7 +268,7 @@ def remember_registries(found):
         rather than a minor inefficiency.
     """
 
-    directory = config.directory()
+    directory = meta.directory()
     client = os.path.join(directory, 'client')
     cached = os.path.join(client, 'registries.cache')
 

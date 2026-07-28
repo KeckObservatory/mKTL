@@ -12,9 +12,9 @@ import threading
 import time
 
 from . import begin
-from . import config
 from . import item
 from . import json
+from . import meta
 from . import poll
 from . import protocol
 from . import store
@@ -22,7 +22,7 @@ from . import store
 
 class Daemon:
     """ The mKTL :class:`Daemon` is a facilitator for common mKTL actions taken
-        in a daemon context: loading a configuration file, instantiating
+        in a daemon context: loading a catalog file, instantiating
         :class:`mktl.Item` instances, and commencing routine operations.
 
         The developer is expected to subclass the :class:`Daemon` class and
@@ -33,7 +33,7 @@ class Daemon:
 
         The *store* argument is the name of the store that this daemon is
         providing items for; *alias* is the unique name of this mKTL daemon,
-        and is used to locate the configuration file that defines the items
+        and is used to locate the catalog file that defines the items
         for which this daemon is authoritative.
 
         *options* is expected to be an :class:`argparse.ArgumentParser`
@@ -52,7 +52,7 @@ class Daemon:
 
         self.alias = alias
         self.options = options
-        self.config = None
+        self.catalog = None
         self.store = None
         self.uuid = None
 
@@ -64,12 +64,12 @@ class Daemon:
         self.cleanup = self._cleanup_wrapper
         self.shutdown = threading.Event()
 
-        self.config = config.get(store, alias)
-        self.uuid = self.config.authoritative_uuid
+        self.catalog = meta.get(store, alias)
+        self.uuid = self.catalog.authoritative_uuid
 
         if self.uuid is None:
             # This isn't supposed to happen. Catching it here just in case.
-            raise RuntimeError('mktl.config did not set my UUID!')
+            raise RuntimeError('mktl.meta did not set my UUID!')
 
         self.logger.info("local UUID is %s", self.uuid)
 
@@ -109,15 +109,15 @@ class Daemon:
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
         # the listener ports without knowing our UUID; we don't know the UUID
-        # until the configuration is loaded. We're doctoring the configuration
+        # until the catalog is loaded. We're doctoring the catalog
         # after-the-fact, and thus need to refresh the local cache to ensure
         # consistency.
 
-        block = self.config.authoritative_block
-        config.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
-        self.config.update(block)
+        block = self.catalog.authoritative_block
+        meta.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
+        self.catalog.update(block)
 
-        # The cached configuration needs to be in its final form before creating
+        # The cached catalog needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
         # to be sure that there are no existing instances in the cache, all
         # local calls to mktl.get() need to retrun the instance containing
@@ -145,13 +145,13 @@ class Daemon:
         self._setup_builtin_items()
         self._setup_missing()
 
-        # The configuration should now be finalized. Make sure it is written
+        # The catalog should now be finalized. Make sure it is written
         # out to disk so that subprocesses (if any) can load it before we're
         # fully on the air.
 
-        self.config.save()
+        self.catalog.save()
 
-        # Apply any initial values according to the configuration contents.
+        # Apply any initial values according to the catalog contents.
 
         self._setup_initial_values()
 
@@ -172,7 +172,7 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        config.announce(self.config, self.uuid, override)
+        meta.announce(self.catalog, self.uuid, override)
         self.logger.debug("daemon initialization complete")
 
 
@@ -273,7 +273,7 @@ class Daemon:
         key = key.lower()
 
         try:
-            self.config.authoritative_items[key]
+            self.catalog.authoritative_items[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
@@ -483,10 +483,10 @@ class Daemon:
             assigned to this daemon.
         """
 
-        # The configuration needs to be updated with these items before they
+        # The catalog needs to be updated with these items before they
         # can be instantiated.
 
-        block = self.config.authoritative_block
+        block = self.catalog.authoritative_block
         items = block['items']
 
         key = '_' + self.alias + 'cat'
@@ -545,12 +545,12 @@ class Daemon:
         items[key]['initial'] = self.uuid
         items[key]['settable'] = False
 
-        self.config.update(block, save=False)
+        self.catalog.update(block, save=False)
         self.store._update_catalog()
 
 
         # Instantiate any custom item subclasses for the newly defined
-        # built-in items; this is only possible after the configuration
+        # built-in items; this is only possible after the catalog
         # has been updated.
 
         self.add_item(DaemonCatalog, '_' + self.alias + 'cat')
@@ -566,7 +566,7 @@ class Daemon:
             :func:`setup_final` is invoked.
         """
 
-        for key in self.config.authoritative_items.keys():
+        for key in self.catalog.authoritative_items.keys():
             existing = self.store._items[key]
 
             if existing is None or existing.authoritative == False:
@@ -574,18 +574,18 @@ class Daemon:
 
 
     def _setup_initial_values(self):
-        """ Apply all initial values defined in the configuration for all
+        """ Apply all initial values defined in the catalog for all
             local authoritative items. If a persistent value is available
             it will override the default initial value.
         """
 
-        items = self.config[self.uuid]['items']
+        items = self.catalog[self.uuid]['items']
 
         for key in items.keys():
 
-            configuration = items[key]
+            catalog = items[key]
             try:
-                initial = configuration['initial']
+                initial = catalog['initial']
             except KeyError:
                 continue
 
@@ -704,7 +704,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        block = self.daemon.config[self.daemon.uuid]
+        block = self.daemon.catalog[self.daemon.uuid]
         items = block['items']
         if key in items:
             pass
@@ -728,9 +728,9 @@ class RequestServer(protocol.request.Server):
 
         store, key = request.target.split('.', 1)
 
-        configuration = config.get(store)
-        configuration = configuration._by_uuid
-        payload = protocol.message.Payload(value=configuration)
+        catalog = meta.get(store)
+        catalog = catalog._by_uuid
+        payload = protocol.message.Payload(value=catalog)
         return payload
 
 
@@ -745,7 +745,7 @@ class RequestServer(protocol.request.Server):
             if store == '':
                 store = None
 
-        hashes = config.get_hashes(store)
+        hashes = meta.get_hashes(store)
         payload = protocol.message.Payload(value=hashes)
         return payload
 
@@ -773,7 +773,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        block = self.daemon.config[self.daemon.uuid]
+        block = self.daemon.catalog[self.daemon.uuid]
         items = block['items']
         if key in items:
             pass
@@ -796,7 +796,7 @@ def _load_port(store, uuid):
         value cannot be retrieved.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -826,7 +826,7 @@ def _save_port(store, uuid, req=None, pub=None):
         restarts of a persistent daemon.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -870,7 +870,7 @@ def _used_ports():
         ports available.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port')
 
     ports = set()
@@ -914,7 +914,7 @@ def _load_persistent(store, uuid):
 
     loaded = dict()
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
     try:
@@ -1009,7 +1009,7 @@ class PendingPersistence:
         self.uuid = uuid
         persist_queues[uuid] = self
 
-        base_directory = config.directory()
+        base_directory = meta.directory()
         uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
         if os.path.exists(uuid_directory):
@@ -1081,10 +1081,10 @@ class DaemonCatalog(item.Item):
     def perform_get(self):
 
         uuid = self.store._daemon.uuid
-        configuration = config.get(self.store.name)
-        configuration = configuration[uuid]
+        catalog = meta.get(self.store.name)
+        catalog = catalog[uuid]
 
-        return configuration
+        return catalog
 
 
 # end of class DaemonCatalog

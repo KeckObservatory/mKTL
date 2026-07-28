@@ -1,7 +1,7 @@
 
 import threading
 
-from . import config
+from . import meta
 from .item import Item
 
 
@@ -13,13 +13,13 @@ class Store:
         connections is managed in the :mod:`mktl.protocol` submodule, not here.
 
         :ivar name: The name of this store.
-        :ivar catalog: The :class:`mktl.config.Catalog` instance for this store.
+        :ivar catalog: The :class:`mktl.meta.Catalog` instance for this store.
     """
 
     def __init__(self, name):
 
         self.name = name
-        self.catalog = config.get(name)
+        self.catalog = meta.get(name)
         self._daemon = None
         self._items = dict()
         self._items_lock = threading.Lock()
