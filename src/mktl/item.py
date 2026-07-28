@@ -41,7 +41,7 @@ class Item:
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
-        self.config = store.config[key]
+        self.config = store.catalog[key]
         self.callbacks = list()
         self.log_on_set = True
         self.publish_on_set = True
@@ -234,7 +234,7 @@ class Item:
         """
 
         try:
-            unformatted = self.store.config.from_format(self.key, value)
+            unformatted = self.store.catalog.from_format(self.key, value)
         except:
             message = "format conversion failed for %s:"
             logger = logging.getLogger(__name__)
@@ -288,7 +288,7 @@ class Item:
             This is the inverse of :func:`to_quantity`.
         """
 
-        value = self.store.config.from_quantity(self.key, quantity)
+        value = self.store.catalog.from_quantity(self.key, quantity)
         return value
 
 
@@ -953,7 +953,7 @@ class Item:
             This is the inverse of :func:`from_format`.
         """
 
-        formatted = self.store.config.to_format(self.key, value)
+        formatted = self.store.catalog.to_format(self.key, value)
         return formatted
 
 
@@ -1015,7 +1015,7 @@ class Item:
             This is the inverse of :func:`from_quantity`.
         """
 
-        quantity = self.store.config.to_quantity(self.key, value, units)
+        quantity = self.store.catalog.to_quantity(self.key, value, units)
         return quantity
 
 

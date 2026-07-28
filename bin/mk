@@ -294,7 +294,7 @@ def execute_describe_requests(requests):
             keys.sort()
 
             for key in keys:
-                description[key] = store.config[key]
+                description[key] = store.catalog[key]
         else:
             description[key] = item.config
 
@@ -372,7 +372,7 @@ def execute_list_requests(requests):
             line.append(full_name.ljust(key_justify))
 
             try:
-                type = store.config[key]['type']
+                type = store.catalog[key]['type']
             except KeyError:
                 pass
             else:
@@ -380,12 +380,12 @@ def execute_list_requests(requests):
                 line.append(type.ljust(11))
 
             try:
-                gettable = store.config[key]['gettable']
+                gettable = store.catalog[key]['gettable']
             except KeyError:
                 gettable = True
 
             try:
-                settable = store.config[key]['settable']
+                settable = store.catalog[key]['settable']
             except KeyError:
                 settable = True
 

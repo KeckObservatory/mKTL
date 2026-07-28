@@ -6,13 +6,13 @@ mktl.Daemon (if any); this executable parses command-line flags, invokes
 a mktl.Daemon instance to handle any/all requests, and otherwise waits
 until the program is terminated.
 
-The store name and configuration alias must be specified in order for
+The store name and catalog alias must be specified in order for
 this daemon to function correctly; all other arguments are optional.
 """
 
 epilog = """
 For example, to run mkd for the store 'rosebud', using the existing
-on-disk configuration identified as 'innocence', first using the default
+on-disk catalog identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
 mktl.Daemon, one might invoke:
 
@@ -49,29 +49,29 @@ def parse_command_line():
     parser = argparse.ArgumentParser(**arguments)
 
     parser.add_argument('store', help='Name of this mKTL store.')
-    parser.add_argument('alias', help='Unique alias for the mKTL configuration associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
+    parser.add_argument('alias', help='Unique alias for the mKTL catalog associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
 
     parser.add_argument('-m', '--module', help='Module to import which contains the mktl.Daemon subclass to invoke. The default module is "mktl".', default='mktl')
     parser.add_argument('-s', '--subclass', help='Specific mktl.Daemon subclass to invoke; this is the bare class name (Daemon), not a fully qualified class name (mktl.Daemon). The default subclass name is "Daemon".', default='Daemon')
-    parser.add_argument('-c', '--configuration', help='File containing daemon-specific mKTL configuration of items; if specified, the contents of this file will supplant any cached daemon-specific configuration for this store+alias.')
+    parser.add_argument('-c', '--catalog', help='File containing daemon-specific mKTL catalog of items; if specified, the contents of this file will supplant any cached daemon-specific catalog for this store+alias.')
     parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the mktl.Daemon subclass. How this directive is used is entirely up to the application-specific subclass code.')
-    parser.add_argument('-o', '--override', default=False, action='store_true', help='Request that the local network clear any cached configuration conflicting with what this daemon will announce. The override will only be permitted if the conflicting daemons are all offline.')
+    parser.add_argument('-o', '--override', default=False, action='store_true', help='Request that the local network clear any cached catalog conflicting with what this daemon will announce. The override will only be permitted if the conflicting daemons are all offline.')
 
 
     parsed = parser.parse_args()
     return parsed
 
 
-def load_configuration(store, alias, filename):
-    """ Pre-load the user-specified mKTL configuration; this is expected to
+def load_catalog(store, alias, filename):
+    """ Pre-load the user-specified mKTL catalog; this is expected to
         be a JSON-formatted description of a sequence of items, as defined
-        in the configuration syntax section of the mKTL documentation:
+        in the catalog syntax section of the mKTL documentation:
 
-        https://keckobservatory.github.io/mKTL/configuration.html#storage
+        https://keckobservatory.github.io/mKTL/catalog.html#storage
 
         Allowing the caller to specify the location of this file prevents
-        the need for tight coupling between mKTL's configuration storage
-        scheme and any external configuration management scheme employed
+        the need for tight coupling between mKTL's catalog storage
+        scheme and any external catalog management scheme employed
         by the caller.
     """
 
@@ -92,8 +92,8 @@ def start_daemon(config):
     alias = config.alias
     override = config.override
 
-    if config.configuration is not None:
-        load_configuration(store, alias, config.configuration)
+    if config.catalog is not None:
+        load_catalog(store, alias, config.catalog)
 
     if config.module == 'mktl':
         # The mKTL import is here (as opposed to the top of the script) to allow

@@ -546,7 +546,7 @@ class Daemon:
         items[key]['settable'] = False
 
         self.config.update(block, save=False)
-        self.store._update_config()
+        self.store._update_catalog()
 
 
         # Instantiate any custom item subclasses for the newly defined
