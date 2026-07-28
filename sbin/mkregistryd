@@ -29,8 +29,8 @@ def main():
     main.hostname = socket.getfqdn()
     store = 'registry:' + main.hostname
 
-    description = generate_description()
-    mktl.meta.authoritative(store, store, description)
+    catalog = generate_catalog()
+    mktl.meta.authoritative(store, store, catalog)
 
     daemon = Daemon(store, alias=store, override=True)
 
@@ -54,7 +54,7 @@ main.shutdown = threading.Event()
 
 
 
-def generate_description():
+def generate_catalog():
     """ Return a dictionary describing all custom authoritative items
         provided by the registry.
     """
