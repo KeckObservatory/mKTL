@@ -11,8 +11,8 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, store, alias, *args, **kwargs):
 
-        items = generate_config()
-        mktl.config.authoritative(store, alias, items)
+        items = generate_catalog()
+        mktl.meta.authoritative(store, alias, items)
         mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
 
@@ -20,7 +20,7 @@ class Daemon(mktl.Daemon):
 
 
 
-def generate_config():
+def generate_catalog():
 
     items = dict()
 
