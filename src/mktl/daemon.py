@@ -621,7 +621,7 @@ class Daemon:
         """
 
         hostname = socket.getfqdn()
-        key = store + '._config'
+        key = store + '._catalog'
         request = protocol.message.Request('GET', key)
 
         try:
@@ -657,7 +657,7 @@ class RequestServer(protocol.request.Server):
         self._req_get_handlers = dict()
         self._req_set_handlers = dict()
 
-        self._req_get_handlers[store + '._config'] = self.req_get_config
+        self._req_get_handlers[store + '._catalog'] = self.req_get_catalog
         self._req_get_handlers[store + '._hash'] = self.req_get_hash
         self._req_get_handlers['._hash'] = self.req_get_hash
         self._req_get_handlers['_hash'] = self.req_get_hash
@@ -724,7 +724,7 @@ class RequestServer(protocol.request.Server):
         return getter(request)
 
 
-    def req_get_config(self, request):
+    def req_get_catalog(self, request):
 
         store, key = request.target.split('.', 1)
 

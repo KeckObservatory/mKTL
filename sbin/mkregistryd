@@ -104,12 +104,12 @@ class Registry:
         # Normally this would be a call to self.add_get_handler(),
         # but that method has a safety check verifying the local
         # store has a matching item-- that will not be the case for
-        # any store._config reqeusts added at runtime.
+        # any store._catalog reqeusts added at runtime.
         #
         # Thus the handler dictionary is manipulated directly.
 
-        key = store + '._config'
-        self.daemon.rep._req_get_handlers[key] = self.req_get_config
+        key = store + '._catalog'
+        self.daemon.rep._req_get_handlers[key] = self.req_get_catalog
 
 
     def check_duplicates(self, new, override):
@@ -279,7 +279,7 @@ class Registry:
                 continue
 
             for store in hashes.keys():
-                request = mktl.protocol.message.Request('GET', store + '._config')
+                request = mktl.protocol.message.Request('GET', store + '._catalog')
                 payload = mktl.protocol.request.send(address, port, request)
 
                 try:
@@ -429,8 +429,8 @@ class Registry:
         catalog.update(new)
 
 
-    def req_get_config(self, request):
-        """ Handle all GET requests for 'store._config' items, regardless of
+    def req_get_catalog(self, request):
+        """ Handle all GET requests for 'store._catalog' items, regardless of
             which store it is. Requests for unknown stores will not reach this
             point.
         """
@@ -449,8 +449,8 @@ class Registry:
         return payload
 
 
-    def req_set_config(self, request):
-        """ Handle all SET requests for the '_config' key. These requests
+    def req_set_catalog(self, request):
+        """ Handle all SET requests for the '_catalog' key. These requests
             are part of a daemon's announce operation.
         """
 
@@ -463,7 +463,7 @@ class Registry:
         try:
             self.process_block(block)
         except ProvenanceLoopError:
-            # This configuration block came from us. Pay no mind.
+            # This catalog block came from us. Pay no mind.
             pass
 
         payload = mktl.Payload(value=True)
@@ -489,7 +489,7 @@ class Daemon(mktl.Daemon):
         # for making this assignment directly. There is no similar top-level
         # assignment for _hash because it is handled by the base Daemon class.
 
-        self.rep._req_set_handlers['_config'] = registry.req_set_config
+        self.rep._req_set_handlers['_catalog'] = registry.req_set_catalog
 
 
     def setup_final(self):

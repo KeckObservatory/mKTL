@@ -62,7 +62,7 @@ def discover(*targets):
             hashes = dict()
 
         for store in hashes.keys():
-            key = store + '._config'
+            key = store + '._catalog'
             request = protocol.message.Request('GET', key)
             payload = protocol.request.send(address, port, request)
 
@@ -145,7 +145,7 @@ def get(store, key=None):
             raise RuntimeError("no catalog available for '%s' (local or remote)" % (store))
 
         hostname,port = registries[0]
-        key = store + '._config'
+        key = store + '._catalog'
         message = protocol.message.Request('GET', key)
         payload = protocol.request.send(hostname, port, message)
 
@@ -248,7 +248,7 @@ def refresh(catalog):
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                key = store + '._config'
+                key = store + '._catalog'
                 message = protocol.message.Request('GET', key)
                 client.send(message)
                 ### Again, exception handling may be required, though the
