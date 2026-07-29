@@ -27,7 +27,7 @@ class Item:
         :ivar key: The key (name) for this item.
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
-        :ivar config: The JSON description of this item.
+        :ivar description: The JSON description of this item.
         :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
@@ -41,7 +41,7 @@ class Item:
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
-        self.config = store.catalog[key]
+        self.description = store.catalog[key]
         self.callbacks = list()
         self.log_on_set = True
         self.publish_on_set = True
@@ -79,7 +79,7 @@ class Item:
         # field in the provenance; this may be made more declarative in the
         # future, instead of the implied role being assumed here.
 
-        provenance = self.config['provenance']
+        provenance = self.description['provenance']
         hostname = None
 
         for stratum in provenance:
@@ -94,14 +94,14 @@ class Item:
 
         if hostname is None:
             # This should never occur, it should not be possible to have a
-            # configuration that doesn't contain a provenance.
+            # description that doesn't contain a provenance.
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
         self.sub = protocol.publish.client(hostname, pub)
         self.req = protocol.request.client(hostname, rep)
 
         try:
-            settable = self.config['settable']
+            settable = self.description['settable']
         except KeyError:
             settable = True
 
@@ -109,7 +109,7 @@ class Item:
             self.req_set = self.reject_set
 
         try:
-            gettable = self.config['gettable']
+            gettable = self.description['gettable']
         except KeyError:
             gettable = True
 
@@ -200,7 +200,7 @@ class Item:
             For example, the formatted variant of an enumerated type
             is the string string representation, as opposed to the integer
             reported as the current item value. These permutations are driven
-            by the JSON configuration of the item. In the absence of any
+            by the JSON description of the item. In the absence of any
             configured formatting the current value will be returned as a
             string.
 
@@ -228,7 +228,7 @@ class Item:
     def from_format(self, value):
         """ Convert the supplied value from its human-readable formatted
             representation, if any, to the on-the-wire representation for
-            this item. This conversion is driven by the configuration.
+            this item. This conversion is driven by the item description.
 
             This is the inverse of :func:`to_format`.
         """
@@ -322,7 +322,7 @@ class Item:
                 # be degrees instead of radians.
 
                 try:
-                    units = self.config['units']
+                    units = self.description['units']
                 except KeyError:
                     units = None
                 else:
@@ -396,7 +396,7 @@ class Item:
             return self.value
         elif formatted == True and quantity == True:
             try:
-                units = self.config['units']
+                units = self.description['units']
             except KeyError:
                 units = None
             else:
@@ -948,7 +948,7 @@ class Item:
     def to_format(self, value):
         """ Convert the supplied value to its human-readable formatted
             representation, if any. This conversion is driven by the
-            configuration for this item.
+            description for this item.
 
             This is the inverse of :func:`from_format`.
         """
@@ -986,7 +986,7 @@ class Item:
 
         # Perhaps there is a more declarative way to know whether a given
         # value is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
+        # description? Or does an attribute need to be set to make the
         # expected behavior explicit?
 
         try:
@@ -1038,7 +1038,7 @@ class Item:
         """
 
         try:
-            type = self.config['type']
+            type = self.description['type']
         except KeyError:
             type = None
         else:
