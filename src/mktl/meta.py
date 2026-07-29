@@ -32,15 +32,15 @@ _callbacks = list()
 
 
 class Catalog:
-    """ A convenience class to represent mKTL configuration data. To first
-        order an instance acts like a dictionary, returning the configuration
-        for a single key, or the full configuration block for a single UUID or
+    """ A convenience class to represent the JSON description of an mKTL store.
+        To first order this acts like a dictionary, returning the description
+        for a single key, or the full catalog block for a single UUID or
         unique alias.
 
         In addition to acting as a repository for the description of all items,
         the Catalog instance also provides translation routines for some
         item values; the behavior of these translations is fully driven by the
-        configuration, and does not depend on custom :class:`mktl.Item`
+        item description, and does not depend on custom :class:`mktl.Item`
         subclasses.
     """
 
@@ -150,7 +150,7 @@ class Catalog:
 
 
     def from_format(self, key, value):
-        """ Translate the provided *value* according to the configuration of
+        """ Translate the provided *value* according to the description of
             the item identified by the supplied *key*. For example, if the
             item is enumerated, this method will enable one-way mapping from
             string values to integers; for example, 'Off' to 0, 'On' to 1, etc.
@@ -158,11 +158,11 @@ class Catalog:
             This is the inverse of :func:`to_format`.
         """
 
-        item_config = self[key]
+        description = self[key]
         unformatted = None
 
         try:
-            type = item_config['type']
+            type = description['type']
         except KeyError:
             type = None
 
@@ -188,10 +188,10 @@ class Catalog:
             fashion.
         """
 
-        item_config = self[key]
+        description = self[key]
         value = str(value)
         value = value.lower()
-        enumerators = item_config['enumerators']
+        enumerators = description['enumerators']
 
         unformatted = None
 
@@ -220,14 +220,14 @@ class Catalog:
             basis.
         """
 
-        item_config = self[key]
+        description = self[key]
         value = str(value)
         value = value.lower()
 
         if value == '' or value == 'none':
             return 0
 
-        enumerators = item_config['enumerators']
+        enumerators = description['enumerators']
         lowered = dict()
 
         for bit,name in enumerators.items():
@@ -263,10 +263,10 @@ class Catalog:
             unformatted value.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            format = item_config['format']
+            format = description['format']
         except KeyError:
             format = '%s'
 
@@ -315,10 +315,10 @@ class Catalog:
             are handled.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            units = item_config['units']
+            units = description['units']
         except KeyError:
             return value
 
@@ -376,10 +376,10 @@ class Catalog:
             units.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            units = item_config['units']
+            units = description['units']
         except KeyError:
             return value
 
@@ -404,10 +404,10 @@ class Catalog:
             for items that do not have units.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            units = item_config['units']
+            units = description['units']
         except:
             units = None
         else:
@@ -431,9 +431,9 @@ class Catalog:
 
 
     def hashes(self):
-        """ Retrieve known hashes for this store's known configuration blocks.
+        """ Retrieve known hashes for this store's known catalog blocks.
             The hashes are always returned as a dictionary, keyed by UUID for
-            each configuration block.
+            each catalog block.
         """
 
         hashes = dict()
@@ -445,7 +445,7 @@ class Catalog:
 
     def keys(self, authoritative=False):
         """ Return an iterable sequence of keys for the items represented in
-            this configuration. If *authoritative* is set to True, only
+            this catalog. If *authoritative* is set to True, only
             return the keys for locally authoritative items; any keys with
             a leading underscore (built-in items) will be omitted from the
             reported authoritative set.
@@ -465,14 +465,14 @@ class Catalog:
 
 
     def load(self):
-        """ Load the configuration from disk for this store, and alias,
+        """ Load the catalog from disk for this store, and alias,
             if provided.
         """
 
         base_dir = directory()
 
         if base_dir is None:
-            raise RuntimeError('cannot determine location of mKTL configuration files')
+            raise RuntimeError('cannot determine location of mKTL catalog files')
 
         cache_dir = os.path.join(base_dir, 'client', 'cache', self.store)
         daemon_dir = os.path.join(base_dir, 'daemon', 'store', self.store)
@@ -494,7 +494,7 @@ class Catalog:
         if os.path.isdir(cache_dir):
             pass
         elif self.alias is None:
-            raise ValueError('no locally stored configuration for ' + repr(self.store))
+            raise ValueError('no locally stored catalog for ' + repr(self.store))
 
         filenames = list()
 
@@ -520,19 +520,19 @@ class Catalog:
 
 
     def _load_client(self, filename):
-        """ Load a single client configuration file.
+        """ Load a single catalog block from the client-side cache.
         """
 
         base_filename = filename[:-5]
         target_uuid = os.path.basename(base_filename)
 
         raw_json = open(filename, 'r').read()
-        configuration = json.loads(raw_json)
-        return configuration
+        block = json.loads(raw_json)
+        return block
 
 
     def _load_daemon(self, filename):
-        """ Load a single daemon configuration file.
+        """ Load a single catalog block from the daemon-side cacahe.
         """
 
         base_filename = filename[:-5]
@@ -551,19 +551,19 @@ class Catalog:
         try:
             raw_json = open(filename, 'r').read()
         except FileNotFoundError:
-            configuration = None
+            block = None
         else:
-            configuration = dict()
+            block = dict()
 
-            configuration['store'] = self.store
-            configuration['uuid'] = target_uuid
-            configuration['items'] = json.loads(raw_json)
+            block['store'] = self.store
+            block['uuid'] = target_uuid
+            block['items'] = json.loads(raw_json)
 
-        return configuration,target_uuid
+        return block,target_uuid
 
 
     def _propagate(self):
-        """ Invoke any registered callbacks upon a configuration update.
+        """ Invoke any registered callbacks upon a catalog update.
         """
 
         if self.callbacks:
@@ -599,7 +599,7 @@ class Catalog:
 
 
     def register(self, method):
-        """ Register a callback to be invoked whenever this configuration
+        """ Register a callback to be invoked whenever this catalog
             instance receives an update. The callback should take no additional
             arguments.
         """
@@ -657,7 +657,7 @@ class Catalog:
 
 
     def _save_client(self, block):
-        """ Save a configuration block to the cache directory.
+        """ Save a catalog block to the client cache directory.
         """
 
         store = self.store
@@ -698,7 +698,7 @@ class Catalog:
 
 
     def to_format(self, key, value):
-        """ Translate the provided *value* according to the configuration of
+        """ Translate the provided *value* according to the description of
             the item identified by the supplied *key*. For example, if the
             item is enumerated, this method will enable one-way mapping from
             integer values to representative strings; for example, 0 to 'Off',
@@ -707,11 +707,11 @@ class Catalog:
             This is the inverse of :func:`from_format`.
         """
 
-        item_config = self[key]
+        description = self[key]
         formatted = None
 
         try:
-            type = item_config['type']
+            type = description['type']
         except KeyError:
             type = None
 
@@ -736,8 +736,8 @@ class Catalog:
             cast to a string, if there is no matching enumerator.
         """
 
-        item_config = self[key]
-        enumerators = item_config['enumerators']
+        description = self[key]
+        enumerators = description['enumerators']
 
         # The JSON representation of the enumerators has the integer keys as
         # strings. For example:
@@ -766,8 +766,8 @@ class Catalog:
             no bits being set.
         """
 
-        item_config = self[key]
-        enumerators = item_config['enumerators']
+        description = self[key]
+        enumerators = description['enumerators']
 
         # Similar to the enumerated case, the mask bits are defined in the
         # JSON as strings. But we have to treat the unformmatted value as
@@ -812,7 +812,7 @@ class Catalog:
             to the units specific to the formatted value.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         if isinstance(value, int):
             pass
@@ -820,7 +820,7 @@ class Catalog:
             value = float(value)
 
         try:
-            format = item_config['format']
+            format = description['format']
         except KeyError:
             format = '%s'
 
@@ -853,10 +853,10 @@ class Catalog:
             degrees-minutes-seconds representations are handled.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            units = item_config['units']
+            units = description['units']
         except KeyError:
             return str(value)
 
@@ -880,7 +880,7 @@ class Catalog:
         value = quantity.to('degrees').magnitude
 
         formatted = formatted.lower()
-        format = item_config['format']
+        format = description['format']
         fields = format.split(':')
 
         values = list()
@@ -942,10 +942,10 @@ class Catalog:
             units.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            units = item_config['units']
+            units = description['units']
         except KeyError:
             return value
 
@@ -971,7 +971,7 @@ class Catalog:
 
 
     def to_quantity(self, key, value, units=None):
-        """ Translate the provided *value* according to the configuraton of
+        """ Translate the provided *value* according to the description of
             the item identified by the supplied *key* to a
             :class:`pint.Quantity` instance. This is only relevant for numeric
             types that have defined units; a TypeError exception will be raised
@@ -980,10 +980,10 @@ class Catalog:
             default 'unformatted' units are used.
         """
 
-        item_config = self[key]
+        description = self[key]
 
         try:
-            default = item_config['units']
+            default = description['units']
         except:
             default = None
 
@@ -1008,10 +1008,10 @@ class Catalog:
 
 
     def update(self, block, save=True):
-        """ Update the locally cached configuration to include any/all contents
-            in the provided *block*. A configuration block is a Python
+        """ Update the locally cached catalog to include any/all contents
+            in the provided *block*. A catalog block is a Python
             dictionary in the on-disk client format, minimally including the
-            keys 'store', 'uuid', and 'items'.
+            keys 'store', 'alias', 'uuid', and 'items'.
         """
 
         store = block['store']
@@ -1030,7 +1030,7 @@ class Catalog:
             self.authoritative_items = block['items']
 
         # Enforce case-insensitivity for keys. Doing this for every
-        # configuration block may not be necessary, it should only be
+        # catalog block may not be necessary, it should only be
         # necessary for blocks originating with a daemon.
 
         fixes = list()
@@ -1050,10 +1050,10 @@ class Catalog:
 
         if uuid == self.authoritative_uuid:
             for key in items.keys():
-                item_config = items[key]
+                description = items[key]
 
                 try:
-                    type = item_config['type']
+                    type = description['type']
                 except KeyError:
                     continue
 
@@ -1065,16 +1065,16 @@ class Catalog:
                     deletions = list()
 
                     try:
-                        enumerators = item_config['enumerators']
+                        enumerators = description['enumerators']
                     except KeyError:
                         enumerators = dict()
-                        item_config['enumerators'] = enumerators
+                        description['enumerators'] = enumerators
 
                     for enumerator in enumerators.keys():
                         # This would be a nice place to handle the enumerator
                         # being None for a mask, but if that were the case an
                         # exception would already be thrown when trying to
-                        # convert the configuration block to JSON.
+                        # convert the catalog block to JSON.
 
                         if isinstance(enumerator, int):
                             additions[str(enumerator)] = enumerators[enumerator]
@@ -1102,7 +1102,7 @@ class Catalog:
 
 
         # It's possible the contents of the local authoritative block changed.
-        # Update the hash and configuration timestamp if that is the case.
+        # Update the hash and block timestamp if that is the case.
 
         if uuid == self.authoritative_uuid:
             new_hash = generate_hash(items)
@@ -1133,7 +1133,7 @@ class Catalog:
         hash = block['hash']
         for known_uuid in self.uuids():
             if uuid == known_uuid:
-                # Replacing the config block for the same UUID is fine.
+                # Replacing the catalog block for the same UUID is fine.
                 break
 
             collision = None
@@ -1169,8 +1169,8 @@ class Catalog:
                     # Maybe it doesn't make sense to give the first-seen
                     # block an edge in this case. It's not like the files
                     # on disk are stored in some significant order. But
-                    # every configuration should have a timestamp, so the
-                    # odds of reaching a condition where both configurations
+                    # every block should have a timestamp, so the
+                    # odds of reaching a condition where both blocks
                     # are missing their timestamp should be vanishingly low.
                     known_time = 1
 
@@ -1196,7 +1196,7 @@ class Catalog:
         except KeyError:
             self._by_alias[alias] = block
 
-        # Regenerate the by-key configuration cache, which is what gets
+        # Regenerate the by-key catalog cache, which is what gets
         # used by mktl.Item instances.
 
         for key in items.keys():
@@ -1205,7 +1205,7 @@ class Catalog:
             # A fresh dictionary is made here so we don't modify what's stored
             # in the Cache, which is supposed to be representative of the
             # on-the-wire representation. We want the daemon's UUID and
-            # provenance to be present in the per-item configuration for use
+            # provenance to be present in the per-item description for use
             # within the Item class.
 
             copied = dict(item)
@@ -1227,7 +1227,7 @@ class Catalog:
 
     def uuids(self, authoritative=False):
         """ Return an iterable sequence of UUIDs represented in this
-            configuration. If *authoritative* is set to True, only
+            catalog. If *authoritative* is set to True, only
             return the authoritative UUID.
         """
 
@@ -1263,13 +1263,13 @@ def to_block(store, alias, uuid, items):
 
 
 def add_provenance(block, hostname, rep, pub=None):
-    """ Add the provenance of this daemon to the supplied configuration
+    """ Add the provenance of this daemon to the supplied catalog
         block. The block is provided as a Python dictionary; the hostname
         and port definitions provide potential clients with enough information
         to initiate connections with further requests.
 
         The newly added provenance entry is returned for convenient access,
-        though the provided configuration block will be modified to include
+        though the provided catalog block will be modified to include
         the new entry.
     """
 
@@ -1299,8 +1299,8 @@ def add_provenance(block, hostname, rep, pub=None):
 
 
 
-def announce(config, uuid, override=False):
-    """ Announce an authoritative configuration to the local network. This
+def announce(catalog, uuid, override=False):
+    """ Announce an authoritative catalog block to the local network. This
         announcement is received and processed by a registry, if one is
         running. Raise an exception if the SET operation is rejected.
         Setting *override* to True will request any/all available recipients
@@ -1309,7 +1309,7 @@ def announce(config, uuid, override=False):
         still online.
     """
 
-    block = config[uuid]
+    block = catalog[uuid]
     block = dict(block)
 
     if override == True:
@@ -1317,7 +1317,7 @@ def announce(config, uuid, override=False):
 
     payload = protocol.message.Payload(value=block)
     payload.add_origin()
-    message = protocol.message.Request('SET', '_config', payload)
+    message = protocol.message.Request('SET', '_catalog', payload)
 
     registries = protocol.discover.search(wait=True)
 
@@ -1354,20 +1354,20 @@ def announce(config, uuid, override=False):
 
 
 def authoritative(store, alias, items):
-    """ Declare an authoritative configuration block for use by a local
+    """ Declare an authoritative catalog block for use by a local
         authoritative daemon. This is the expected entry point for a daemon
-        that generates or otherwise provides its own JSON configuration via
+        that generates or otherwise provides its own JSON catalog via
         custom routines.
     """
 
-    config = get(store, alias)
-    block = to_block(store, alias, config.authoritative_uuid, items)
-    config.update(block)
+    catalog = get(store, alias)
+    block = to_block(store, alias, catalog.authoritative_uuid, items)
+    catalog.update(block)
 
 
 
 def contains_provenance(block, provenance):
-    """ Does this configuration block contain this provenance? The stratum
+    """ Does this catalog block contain this provenance? The stratum
         field of the provenance is ignored for this check.
     """
 
@@ -1413,7 +1413,7 @@ def create_provenance(stratum, hostname, rep, pub=None):
 
 def directory(default=None):
     """ Return the directory location where we should be loading and/or saving
-        configuration files. This defaults to ``$HOME/.mKTL``, but can be
+        catalog files. This defaults to ``$HOME/.mKTL``, but can be
         overridden by calling this method with a valid path, or by setting
         the ``MKTL_HOME`` environment variable. Note that changes to the
         environment variable will be ignored unless it is set prior to the
@@ -1454,7 +1454,7 @@ def directory(default=None):
     try:
         home = os.environ['HOME']
     except KeyError:
-        raise RuntimeError('MKTL_HOME and HOME environment variables not set, cannot determine mKTL configuration directory')
+        raise RuntimeError('MKTL_HOME and HOME environment variables not set, cannot determine mKTL metadata directory')
 
     found = os.path.join(home, '.mKTL')
 
@@ -1485,7 +1485,7 @@ def get(store, alias=None):
     """ Retrieve the locally cached :class:`Catalog` instance for
         the specified *store*.
         A KeyError exception is raised if there are no locally cached
-        configuration blocks for that store. A typical client will only
+        catalog blocks for that store. A typical client will only
         interact with :func:`mktl.get`, which in turn calls this method.
     """
 
@@ -1495,33 +1495,33 @@ def get(store, alias=None):
         raise ValueError('store name cannot be the empty string')
 
     try:
-        config = _cache[store]
+        catalog = _cache[store]
     except KeyError:
         _cache_lock.acquire()
 
         try:
-            config = _cache[store]
+            catalog = _cache[store]
         except KeyError:
-            config = Catalog(store, alias)
-            _cache[store] = config
+            catalog = Catalog(store, alias)
+            _cache[store] = catalog
         finally:
             _cache_lock.release()
 
-    if alias and config.alias is None:
-        config.alias = alias
+    if alias and catalog.alias is None:
+        catalog.alias = alias
 
-    elif alias and alias != config.alias:
+    elif alias and alias != catalog.alias:
         raise ValueError('not ready to handle two aliases in a single daemon')
 
-    return config
+    return catalog
 
 
 
 def get_hashes(store=None):
-    """ Retrieve known hashes for a store's cached configuration blocks. Return
+    """ Retrieve known hashes for a store's cached catalog blocks. Return
         all known hashes if no *store* is specified. The hashes are always
         returned as a dictionary, keyed first by store name, then by UUID for
-        the associated configuration block.
+        the associated catalog block.
     """
 
     hashes = dict()
@@ -1533,14 +1533,14 @@ def get_hashes(store=None):
         stores = (store,)
 
     for store in stores:
-        config = get(store)
-        config_hashes = config.hashes()
+        catalog = get(store)
+        catalog_hashes = catalog.hashes()
 
-        if len(config_hashes) > 0:
-            hashes[store] = config_hashes
+        if len(catalog_hashes) > 0:
+            hashes[store] = catalog_hashes
 
     if requested_store and len(hashes) == 0:
-        raise KeyError('no local configuration for ' + repr(requested_store))
+        raise KeyError('no local catalog for ' + repr(requested_store))
 
     return hashes
 
@@ -1586,7 +1586,7 @@ def match_provenance(full_provenance1, full_provenance2):
 
 
 def register(method):
-    """ Register a callback to be invoked whenever any configuration
+    """ Register a callback to be invoked whenever any catalog
         instance receives an update. The callback should take no additional
         arguments.
     """
