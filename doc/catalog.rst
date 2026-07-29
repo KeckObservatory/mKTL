@@ -1,7 +1,7 @@
 .. _catalog:
 
-JSON description of a store
-===========================
+JSON metadata
+=============
 
 The catalog syntax describes what it means to be a mKTL store,
 enumerating the available items and all their intrinsic metadata. This
@@ -255,7 +255,7 @@ like for a store named 'pie'::
 Storage
 -------
 
-Configuration files are stored on-disk as part of a bootstrapping mechanism
+Catalog files are stored on-disk as part of a bootstrapping mechanism
 to prevent transmission of catalog blocks for every new connection.
 Two directory trees have been established; one, an automatic cache for any
 received catalog blocks, and two, a tree for meta data used

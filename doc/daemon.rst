@@ -59,7 +59,7 @@ Store metadata
 
 Largely for internal use, there are some aspects of the
 :class:`mktl.meta.Catalog` class that are directly relevant for use
-within a daemon. A reference to the appropriate Configuration instance can
+within a daemon. A reference to the appropriate Catalog instance can
 be accesssed as an attribute of the :class:`mktl.Store`, or via the
 :func:`mktl.meta.get` method; :class:`mktl.meta.Catalog` instances
 are singletons.
