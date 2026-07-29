@@ -6,13 +6,13 @@ mktl.Daemon (if any); this executable parses command-line flags, invokes
 a mktl.Daemon instance to handle any/all requests, and otherwise waits
 until the program is terminated.
 
-The store name and catalog alias must be specified in order for
+The store name and daemon alias must be specified in order for
 this daemon to function correctly; all other arguments are optional.
 """
 
 epilog = """
 For example, to run mkd for the store 'rosebud', using the existing
-on-disk catalog identified as 'innocence', first using the default
+on-disk catalog block identified as 'innocence', first using the default
 caching implementation, and then with a custom Kane.Sled subclass of
 mktl.Daemon, one might invoke:
 
@@ -49,7 +49,7 @@ def parse_command_line():
     parser = argparse.ArgumentParser(**arguments)
 
     parser.add_argument('store', help='Name of this mKTL store.')
-    parser.add_argument('alias', help='Unique alias for the mKTL catalog associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
+    parser.add_argument('alias', help='Unique alias for the mKTL catalog block associated with this specific daemon; this is an arbitrary string, and must be unique for this daemon within this store.')
 
     parser.add_argument('-m', '--module', help='Module to import which contains the mktl.Daemon subclass to invoke. The default module is "mktl".', default='mktl')
     parser.add_argument('-s', '--subclass', help='Specific mktl.Daemon subclass to invoke; this is the bare class name (Daemon), not a fully qualified class name (mktl.Daemon). The default subclass name is "Daemon".', default='Daemon')
