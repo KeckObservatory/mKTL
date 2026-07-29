@@ -54,25 +54,25 @@ to implement application-specific behavior, with special attention paid to the
    :members:
 
 
-Configuration management
-------------------------
+Store metadata
+--------------
 
 Largely for internal use, there are some aspects of the
-:class:`mktl.config.Configuration` class that are directly relevant for use
+:class:`mktl.meta.Catalog` class that are directly relevant for use
 within a daemon. A reference to the appropriate Configuration instance can
 be accesssed as an attribute of the :class:`mktl.Store`, or via the
-:func:`mktl.config.get` method; :class:`mktl.config.Configuration` instances
+:func:`mktl.meta.get` method; :class:`mktl.meta.Catalog` instances
 are singletons.
 
-.. autoclass:: mktl.config.Configuration
+.. autoclass:: mktl.meta.Catalog
    :members: convert_units, from_format, from_quantity, keys, to_format, to_quantity, update, uuids
 
 In addition to the class itself there are an assortment of helper methods,
 two of which are potentially relevant in a daemon context:
 
-.. autofunction:: mktl.config.authoritative
+.. autofunction:: mktl.meta.authoritative
 
-.. autofunction:: mktl.config.get
+.. autofunction:: mktl.meta.get
 
 
 mkd executable

@@ -15,7 +15,7 @@ leading underscore.
 Protocol only
 -------------
 
-The ``_hash`` and ``_config`` items are replacements for the HASH and CONFIG
+The ``_hash`` and ``_catalog`` items are replacements for the HASH and CONFIG
 request types that were defined in the initial prototype of the mKTL protocol.
 
 .. list-table::
@@ -24,13 +24,13 @@ request types that were defined in the initial prototype of the mKTL protocol.
     - *Description*
 
   * - **_hash**
-    - Request the current hash identifiers for any known configuration blocks
+    - Request the current hash identifiers for any known catalog blocks
       of a single mKTL store. All available hash identifiers, for all known
       stores, will be returned for a query of the bare ``_hash`` item; with a
       store name prefix, such as `kpfguide._hash`, only the hashes for that
       specific store will be returned. An error will be returned if a store
       is requested and the responding daemon does not have a cached
-      configuration for that store.
+      catalog for that store.
 
       To rephrase, the scope for a ``_hash`` item is at two levels:
 
@@ -60,29 +60,29 @@ request types that were defined in the initial prototype of the mKTL protocol.
                     'uuid9': 0x531c14fd...}}
 
 
-  * - **_config**
-    - .. _builtin_config:
+  * - **_catalog**
+    - .. _builtin_catalog:
 
-      The full locally known configuration contents for a single mKTL store.
-      There is no bare ``_config`` item available to request the configuration
-      data for all locally known stores; the key will always include the store
-      name, such as `kpfguide._config`.
+      The full locally known catalog contents for a single mKTL store.
+      There is no bare ``_catalog`` item available to request the catalog
+      for all locally known stores; the key used for GET requests will
+      always include the store name, such as `kpfguide._catalog`.
 
-      The scope for a ``_config`` item is at two levels:
+      The scope for a ``_catalog`` item is at two levels:
 
-        * ``store._config``: represents the config data for the requested store
-        * ``store._aliascfg``: represents the config data for a single daemon
+        * ``store._catalog``: represents the catalog for the requested store
+        * ``store._aliascat``: represents the catalog for a single daemon
 
-      A typical client interaction will request the configuration hash first,
+      A typical client interaction will request the catalog hash first,
       and if the hash for the cached local copy is not a match, request the
       full contents from the daemon to update the local cache.
 
-      The configuration contents are not fully described here, this is just
+      The catalog syntax is not fully described here, this is just
       a description of the request. See the
-      :ref:`configuration documentation <configuration>` for a full description
+      :ref:`catalog syntax documentation <catalog>` for a full description
       of the data format.
 
-      A SET operation on a ``_config`` item should only originate from an
+      A SET operation on a ``_catalog`` item should only originate from an
       authoritative daemon; as such, it will be treated as an announcement,
       and any errors raised by the recipient have to be treated as a rejection
       of the announcement.
@@ -96,7 +96,7 @@ and between any intermediaries aiding in the discovery process.
 Regular items
 -------------
 
-The remaining built-in items are visible in the configuration for the store,
+The remaining built-in items are visible in the catalog for the store,
 and are available for each daemon in that store. They are intended to represent
 metadata about an individual daemon, will all have the store name and alias
 as the first elements of the key, including a leading underscore after the
@@ -113,8 +113,8 @@ there are some exceptions.
   * - *Key suffix*
     - *Description*
 
-  * - **cfg**
-    - See :ref:`the description <builtin_config>` of the ``_config`` item above.
+  * - **cat**
+    - See :ref:`the description <builtin_catalog>` of the ``_catalog`` item above.
 
   * - **clk**
     - The current uptime for this daemon, measured in seconds. The value will

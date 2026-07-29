@@ -455,14 +455,14 @@ discover a registry daemon, and a single port is used to discover a daemon.
 
 The registry will run this discovery process exactly once upon startup, in an
 attempt to identify all available daemons on the local network, and cache their
-running configuration.
+locally authoritative catalog blocks.
 
 .. mermaid:: protocol_discover_daemon.mmd
 
 Daemons are expected to self-announce on startup,
 which involves discovering local registries, and pushing the description of
 the daemon's authoritative items to any discovered registries; the daemon
-will issue a SET request to the registry's _config item to initiate further
+will issue a SET request to the registry's _catalog item to initiate further
 processing. The registry will reconcile the new description against what it
 already has cached, and will reject any announcement that introduces a
 conflict.
