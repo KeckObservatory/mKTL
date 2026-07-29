@@ -296,7 +296,7 @@ def execute_describe_requests(requests):
             for key in keys:
                 description[key] = store.catalog[key]
         else:
-            description[key] = item.config
+            description[key] = item.description
 
     # The presentation here could be improved, but for early debugging this
     # will get the job done.
@@ -458,7 +458,7 @@ def execute_set_requests(requests):
                 sys.exit(1)
 
             try:
-                units = item.config['units']
+                units = item.description['units']
             except KeyError:
                 units = None
             else:
@@ -470,7 +470,7 @@ def execute_set_requests(requests):
         else:
             new_value = request
             try:
-                units = item.config['units']
+                units = item.description['units']
             except KeyError:
                 units = None
             else:
@@ -527,7 +527,7 @@ def execute_set_requests(requests):
                     item = mktl.get(key)
                     value = item.to_format(value)
                     try:
-                        units = item.config['units']
+                        units = item.description['units']
                     except KeyError:
                         units = None
                     else:
@@ -538,7 +538,7 @@ def execute_set_requests(requests):
 
                 else:
                     try:
-                        units = item.config['units']
+                        units = item.description['units']
                     except KeyError:
                         units = None
                     else:
@@ -590,7 +590,7 @@ def print_item(item, value, timestamp):
                 time_string = time_string[:milliseconds]
 
         try:
-            units = item.config['units']
+            units = item.description['units']
         except KeyError:
             unformatted_units = None
             formatted_units = None
