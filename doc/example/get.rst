@@ -30,7 +30,7 @@ shown, always returning the same object-- not copies of the same mKTL item,
 the exact same Python object. The important part is that we now have a
 :class:`Item` that can be used for subsequent calls. A ``ValueError`` exception
 will be raised if no
-configuration is available for that store (i.e., the store does not exist);
+catalog is available for that store (i.e., the store does not exist);
 a ``KeyError`` exception will be raised if the key does not exist.
 
 
@@ -52,7 +52,7 @@ There are two variants of the :py:attr:`Item.value` property:
 :py:attr:`Item.formatted`, and :py:attr:`Item.quantity`. They behave in the same
 fashion as :py:attr:`Item.value`, but work with different representations of
 the value. The exact nature of what you get back will depend on the
-configuration of the individual item, but for this example you might see::
+description of the individual item, but for this example you might see::
 
     >>> print(crazy.value)
     True
