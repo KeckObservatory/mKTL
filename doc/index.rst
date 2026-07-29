@@ -20,7 +20,7 @@ applications that wish to query a daemon; the :ref:`daemon` focuses on
 the needs of a persistent application providing a structured interface to some
 well-defined entity, whether it is logical, hardware, or otherwise; and lastly,
 the maintainer view, focusing on mKTL internals such as the complete description
-of the mKTL :ref:`protocol` and :ref:`configuration`. To put it another way,
+of the mKTL :ref:`protocol` and :ref:`catalog`. To put it another way,
 the intent of mKTL is that users of the interface code should not need to
 be expert mKTL maintainers in order to successfully develop an application.
 
@@ -35,7 +35,7 @@ be expert mKTL maintainers in order to successfully develop an application.
    item
    examples
    executables
-   configuration
+   catalog
    built_ins
    protocol
    protocol_interface

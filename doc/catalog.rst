@@ -1,59 +1,58 @@
-.. _configuration:
+.. _catalog:
 
-Configuration syntax
-====================
+JSON description of a store
+===========================
 
-The configuration syntax describes what it means to be a mKTL store,
+The catalog syntax describes what it means to be a mKTL store,
 enumerating the available items and all their intrinsic metadata. This
 document lays out the configuration syntax, as might be returned from
-a CONFIG request or loaded from a local cache on disk, and additional
-conventions applied to configuration data.
+a _catalog GET request or loaded from a local cache on disk, and additional
+conventions around the handling of a catalog.
 
-Daemons
--------
+Catalog syntax
+--------------
 
-Refer to the :ref:`protocol document <protocol>` for the expected format
-of a :ref:`CONFIG request and response <request>`. Only one aspect of the
-response is addressed here: the 'data' value included in the response, which
-is a dictionary of dictionaries, each dictionary representing a configuration
-'block', keyed by the unique identifier (UUID) associated with that block,
-providing a complete description of a single daemon's items; the sum of the
-per-UUID blocks is intended to represent the full namespace of a store,
-spanning the full set of daemons composing that store.
+Each daemon will have a single catalog block for which it is authoritative.
+This block will define any/all metadata associated with the daemon, including
+the full description of each item belonging to that daemon.
+
+A store may be composed of multiple daemons. Each daemon will contribute its
+own block to the store's full catalog; the full catalog is represented as
+a JSON dictionary, with each catalog block keyed by the unique identifier
+(UUID) associated with its respective daemon.
 
 For example, the 'kpfguide' store may contain multiple daemons, and therefore
-multiple configuration blocks::
+multiple catalog blocks::
 
 	{'uuid1': {'store': 'kpfguide', 'time': 1724892333.924, ...},
 	 'uuid2': {'store': 'kpfguide', 'time': 1725892343.567, ...}}
 
-A per-daemon configuration block will contain the following fields:
+Each catalog block will contain the following fields:
 
 =============== ===============================================================
 *Field*         *Description*
 =============== ===============================================================
 **store**	The name of the store. This is perhaps redundant,
-		being implied by the structure of the configuration
+		being implied by the structure of the catalog
 		block, but the extra assertion is inexpensive and
 		convenient.
 
 **uuid**	The unique identifier associated with this block.
 		The UUID is generated internally and does not need
 		to be manipulated directly; it is used to uniquely
-		associate a specific daemon with its configuration
+		associate a specific daemon with its catalog
 		block, as might be necessary when a client needs
 		to apply continuity (such as clearing local cache)
-		when a remotely-served configuration block changes.
+		when a remotely-served catalog block changes.
 
 **alias**	A recognizable identifier for this daemon. This
-		alias is optional in the configuration contents,
-		but it allows the daemon to check whether the
-		alias it provided at run-time matches the
-		specified configuration. Among other things, the
-		alias will be used to build keys for built-in
-		items provided by the daemon.
+		identifier will be unique to the daemon, and is
+		one of two components, along with the UUID, used
+		to determine uniqueness within this store. The
+		alias is also used to build keys for built-in
+		items associated with all daemons.
 
-**provenance**	The chain of handling for this configuration
+**provenance**	The chain of handling for this catalog
 		block. The provenance is a sequence, listing every
 		daemon between the client and the original source
 		of authority for the block. Each element in the
@@ -85,10 +84,10 @@ A per-daemon configuration block will contain the following fields:
 
 .. _items:
 
-Items
------
+Item description
+----------------
 
-Similar to the configuration block for a store, the dictionary describing
+Similar to the catalog block for a store, the dictionary describing
 an item contains a set of fields that provide a complete description of the
 item.
 
@@ -97,7 +96,7 @@ item.
 =============== ===============================================================
 **key**		The unique name for this item. The uniqueness
 		constraint is applied across the entire store, not
-		just within this configuration block.
+		just within this catalog block.
 
 **type**	The data type for the value associated with this
 		item. The type is one of: boolean, bulk, enumerated,
@@ -194,7 +193,7 @@ JSON null value.
 
 **enumerated**		An integer value with a string representation
 			for each valid value. The valid enumerators are listed
-			in the 'enumerators' configuration property.
+			in the 'enumerators' description property.
 
 **mask**		An integer value with a string representation for each
 			of the possible bits in the integer. The enumerators
@@ -214,7 +213,7 @@ JSON null value.
 Example
 -------
 
-Here is a complete two-item example for what a configuration block may look
+Here is a complete two-item example for what a catalog block may look
 like for a store named 'pie'::
 
       {
@@ -257,9 +256,9 @@ Storage
 -------
 
 Configuration files are stored on-disk as part of a bootstrapping mechanism
-to prevent transmission of configuration blocks for every new connection.
+to prevent transmission of catalog blocks for every new connection.
 Two directory trees have been established; one, an automatic cache for any
-received configuration blocks, and two, a tree for configuration data used
+received catalog blocks, and two, a tree for meta data used
 by 'stratum 0' daemons providing authoritative access to a set of items.
 
 The MKTL_HOME environment variable, if set, determines the top-level directory
@@ -274,9 +273,9 @@ The cache directory structure is as follows::
         $MKTL_HOME/client/cache/some_store_name/some_uuid.json
         $MKTL_HOME/client/cache/some_store_name/some_other_uuid.json
 
-For each store name, each configuration block within a store is written to a
+For each store name, each catalog block within a store is written to a
 separate file, where each file is named for the UUID associated with that
-configuration block.
+catalog block.
 
 The daemon directory structure is as follows::
 
@@ -290,9 +289,9 @@ items it provides. The adjacent .uuid file is auto-generated; the only content
 of the file is a single UUID. If the .uuid file exists it will be used,
 regardless of its origins, but there is no need for the developer to establish
 it as part of the daemon's initial configuration. Unlike the cached client
-side configuration file, the daemon configuration file only includes the
-'items' component, the structure above that is missing. This would be the
-daemon-side .json file for the above two-item example::
+side catalog file, the daemon catalog file only includes the
+'items' component. This would be the daemon-side .json file for the above
+two-item example::
 
 	{
           "ANGLE": {
