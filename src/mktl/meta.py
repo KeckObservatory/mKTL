@@ -1349,7 +1349,7 @@ def announce(catalog, uuid, override=False):
 
         ### The exception type here could be something unique
         ### instead of a RuntimeError.
-        raise RuntimeError("CONFIG announce failed: %s: %s" % (e_type, e_text))
+        raise RuntimeError("announce failed: %s: %s" % (e_type, e_text))
 
 
 

@@ -279,7 +279,8 @@ class Registry:
                 continue
 
             for store in hashes.keys():
-                request = mktl.protocol.message.Request('GET', store + '._catalog')
+                key = store + '.catalog'
+                request = mktl.protocol.message.Request('GET', key)
                 payload = mktl.protocol.request.send(address, port, request)
 
                 try:
@@ -297,7 +298,7 @@ class Registry:
                 if error:
                     e_type = error['type']
                     e_text = error['text']
-                    logger.warning("CONFIG request failed: %s: %s" % (e_type, e_text))
+                    logger.warning("GET %s request failed: %s: %s" % (key, e_type, e_text))
 
                 if blocks:
                     for uuid,block in blocks.items():
