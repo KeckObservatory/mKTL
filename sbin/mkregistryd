@@ -1,18 +1,18 @@
 #! /usr/bin/env python3
 
 description = """
-The registry daemon acts as a clearing house for configuration requests;
-when daemons first start running they will seek out any registries on their
-local network and announce configuration updates; any clients broadcasting
-will discover a local registry, and ask for any available configuration
-information.
+The registry daemon acts as a clearing house for catalog requests; when daemons
+first start running they will seek out any registries on their local network and
+announce the catalog for their authoritative items; any clients broadcasting will
+discover a local registry, and ask for any available catalog information.
 
-Daemons and clients can both bypass broadcast discovery for a local registry
-if they already know where to find a registry.
+Clients can bypass broadcast discovery for a local registry if they already
+know where to find a registry.
 """
 
 import argparse
 import logging
+import socket
 import sys
 import threading
 import time
@@ -25,87 +25,43 @@ logger = logging.getLogger(__name__)
 
 def main():
 
-    # We don't use command line options here, but if we did, they would be
-    # parsed out in the following call. At the very least, it handles the
-    # case where the caller specifies -h on the command line.
-
     config = parse_command_line()
+    main.hostname = socket.getfqdn()
+    store = 'registry:' + main.hostname
 
-    main.req = RequestServer()
-    main.beacon = mktl.protocol.discover.Server(main.req.port)
+    catalog = generate_catalog()
+    mktl.meta.authoritative(store, store, catalog)
+
+    daemon = Daemon(store, alias=store, override=True)
+
+    # Run discovery once upon startup, rely on daemon announcements to
+    # learn of any additions to the local network.
+
+    daemon.registry.discover_daemons()
+
 
     delay = 30
-
     while True:
-        not_seen = set(main.known)
-        discovered = mktl.protocol.discover.search_direct()
-
-        for seen in discovered:
-            if seen in main.known:
-                not_seen.remove(seen)
-                continue
-
-            # This is a new daemon to us. Request its known hashes, which
-            # also tells us which store names it has access to; cache any/all
-            # configuration blocks discovered in this fashion.
-
-            address,port = seen
-            request = mktl.protocol.message.Request('GET', '_hash')
-            try:
-                payload = mktl.protocol.request.send(address, port, request)
-            except:
-                logger.warning("HASH request from %s:%d failed" % (address, port))
-                continue
-
-            hashes = payload.value
-
-            if hashes is None:
-                # Error requesting the hashes.
-                logger.warning("HASH request from %s:%d failed" % (address, port))
-                error = payload.error
-                if error:
-                    e_type = error['type']
-                    e_text = error['text']
-                    e_debug = error['debug']
-                    logger.warning("Remote exception: %s: %s\n%s" % (e_type, e_text, e_debug))
-                continue
-
-            for store in hashes.keys():
-                request = mktl.protocol.message.Request('GET', store + '._config')
-                payload = mktl.protocol.request.send(address, port, request)
-
-                blocks = payload.value
-
-                try:
-                    error = payload.error
-                except AttributeError:
-                    error = None
-
-                if error:
-                    e_type = error['type']
-                    e_text = error['text']
-                    logger.warning("CONFIG request failed: %s: %s" % (e_type, e_text))
-
-                if blocks:
-                    for uuid,block in blocks.items():
-                        block['override'] = True
-                        main.req.process_block(block)
-
-            main.known.add(seen)
-
-        for missed in not_seen:
-            main.known.remove(missed)
-
         try:
             main.shutdown.wait(delay)
         except (KeyboardInterrupt, SystemExit):
             break
 
 
-main.known = set()
-main.shutdown = threading.Event()
-main.req = None
 
+main.hostname = None
+main.shutdown = threading.Event()
+
+
+
+def generate_catalog():
+    """ Return a dictionary describing all custom authoritative items
+        provided by the registry.
+    """
+
+    items = dict()
+    # Not adding any custom items just yet.
+    return items
 
 
 def parse_command_line():
@@ -122,36 +78,69 @@ def parse_command_line():
 
 
 
-class RequestServer(mktl.protocol.request.Server):
-    """ Subclass the generic :class:mktl.protocol.request.Server`, adding
-        additional logic to locally handle requests.
+class Registry:
+    """ The registry-specific behavior is in this subclass to sequester it
+        from the rest of the daemon functionality. Normally this wouldn't
+        be necessary if the application behavior was encapsulated in items,
+        but that is not the case for the registry.
     """
 
-    def check_keys(self, new, override):
-        """ Confirm that any keys unique to this new configuration block are
-            not present in any other blocks.
+    def __init__(self, daemon):
+        self.daemon = daemon
+
+
+    def setup_final(self):
+        # Establish the broadcast listener last, once the rest of the
+        # machinery is up and running and ready to handle requests.
+
+        self.beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
+
+
+    def accept_requests(self, store):
+        """ Dynamically establish a handler for future GET requests
+            for a store's catalog.
+        """
+
+        # Normally this would be a call to self.add_get_handler(),
+        # but that method has a safety check verifying the local
+        # store has a matching item-- that will not be the case for
+        # any store._catalog reqeusts added at runtime.
+        #
+        # Thus the handler dictionary is manipulated directly.
+
+        key = store + '._catalog'
+        self.daemon.rep._req_get_handlers[key] = self.req_get_catalog
+
+
+    def check_duplicates(self, new, override):
+        """ Confirm that any keys in a catalog block are not present
+            in any already known blocks.
         """
 
         store = new['store']
-        config = mktl.config.get(store)
+        catalog = mktl.meta.get(store)
 
-        if len(config) == 0:
+        if len(catalog) == 0:
             # No previously stored blocks to check against. That means all of
             # the keys are unique, and there are no conflicts.
             return
 
         items = new['items']
         uuid = new['uuid']
+        new_port = new['provenance'][0]['rep']
+        new_host = new['provenance'][0]['hostname']
         to_remove = set()
 
-        for old_uuid in config.uuids():
+        for old_uuid in catalog.uuids():
 
             if uuid == old_uuid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
-            old = config[old_uuid]
+            old = catalog[old_uuid]
+            old_port = old['provenance'][0]['rep']
+            old_host = old['provenance'][0]['hostname']
             running = None
 
             old_items = old['items']
@@ -163,8 +152,6 @@ class RequestServer(mktl.protocol.request.Server):
 
                         if running == True:
                             alias = old['alias']
-                            old_port = old['provenance'][0]['rep']
-                            old_host = old['provenance'][0]['hostname']
                             raise RuntimeError("%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port))
                         else:
                             # Override requested, and the old daemon is not
@@ -174,16 +161,14 @@ class RequestServer(mktl.protocol.request.Server):
 
                     else:
                         alias = new['alias']
-                        port = new['provenance'][0]['rep']
-                        host = new['provenance'][0]['hostname']
-                        logger.error("reject: %s from %s:%s (%s)" % (alias, host, port, uuid))
-                        raise KeyError('key in new configuration block conflicts with an existing key: ' + key)
+                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                        raise KeyError('key in new catalog block conflicts with an existing key: ' + key)
 
         # This set will be empty unless overrides were requested.
 
         for uuid in to_remove:
             try:
-                block = config[uuid]
+                block = catalog[uuid]
             except KeyError:
                 # Already gone. Not entirely sure how that might have happened,
                 # but it does, and there's no sense trying to remove it twice.
@@ -194,7 +179,7 @@ class RequestServer(mktl.protocol.request.Server):
             host = block['provenance'][0]['hostname']
 
             logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
-            config.remove(uuid)
+            catalog.remove(uuid)
 
 
     def check_provenance(self, block):
@@ -203,16 +188,16 @@ class RequestServer(mktl.protocol.request.Server):
         """
 
         local_provenance = dict()
-        local_provenance['hostname'] = self.hostname
-        local_provenance['rep'] = self.port
+        local_provenance['hostname'] = main.hostname
+        local_provenance['rep'] = self.daemon.rep.port
 
-        if mktl.config.contains_provenance(block, local_provenance):
+        if mktl.meta.contains_provenance(block, local_provenance):
             raise ProvenanceLoopError('circular provenance detected')
 
 
     def check_running(self, block):
         """ Check to see whether the daemon associated with this
-            configuration block is still running.
+            catalog block is still running.
         """
 
         # Take advantage of a built-in keyword to probe whether the
@@ -254,10 +239,96 @@ class RequestServer(mktl.protocol.request.Server):
         return False
 
 
+    def discover_daemons(self):
+        """ Look for any daemons on the local network; if any are found,
+            request the current catalog for their store, and process
+            that catalog locally.
+        """
+
+        discovered = mktl.protocol.discover.search_direct()
+
+        for seen in discovered:
+
+            address,port = seen
+            request = mktl.protocol.message.Request('GET', '_hash')
+            try:
+                payload = mktl.protocol.request.send(address, port, request)
+            except:
+                logger.warning("HASH request from %s:%d failed" % (address, port))
+                continue
+
+            if payload:
+                hashes = payload.value
+            else:
+                hashes = None
+
+            if hashes is None:
+                # Error requesting the hashes.
+                logger.warning("HASH request from %s:%d failed" % (address, port))
+
+                if payload:
+                    error = payload.error
+                else:
+                    error = None
+
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+                    e_debug = error['debug']
+                    logger.warning("Remote exception: %s: %s\n%s" % (e_type, e_text, e_debug))
+                continue
+
+            for store in hashes.keys():
+                key = store + '.catalog'
+                request = mktl.protocol.message.Request('GET', key)
+                payload = mktl.protocol.request.send(address, port, request)
+
+                try:
+                    blocks = payload.value
+                except AttributeError:
+                    # The request for the catalog threw an error; this shouldn't
+                    # occur, but here we are.
+                    continue
+
+                try:
+                    error = payload.error
+                except AttributeError:
+                    error = None
+
+                if error:
+                    e_type = error['type']
+                    e_text = error['text']
+                    logger.warning("GET %s request failed: %s: %s" % (key, e_type, e_text))
+
+                if blocks:
+                    for uuid,block in blocks.items():
+                        block['override'] = True
+                        try:
+                            self.process_block(block)
+                        except ProvenanceLoopError:
+                            # This is us, discovering ourselves.
+                            pass
+
+
     def process_block(self, new):
+        """ This is the entry point for the handling and future caching of
+            a new catalog block. All calls to the check_*() methods
+            ultimately originate from this method; only after all checks
+            pass will the new catalog block be cached for future
+            reference.
+        """
 
         store = new['store']
-        config = mktl.config.get(store)
+        store = store.lower()
+
+        # Dynamically update the request handling to accept GET requests for
+        # the catalog for this store. Regardless of how we received a
+        # catalog block, the fact that we have a block at all implies
+        # we must be ready to answer queries for that store.
+
+        self.accept_requests(store)
+
+        catalog = mktl.meta.get(store)
 
         self.check_provenance(new)
 
@@ -276,16 +347,18 @@ class RequestServer(mktl.protocol.request.Server):
         except KeyError:
             override = False
         else:
-            # Won't be needing that going forward. The presence of an
+            # Won't be needing this flag going forward. The presence of an
             # override flag is only relevant right now, as part of these
             # checks being performed right here for an 'announce' operation.
             del new['override']
 
         uuid = new['uuid']
         alias = new['alias']
+        new_port = new['provenance'][0]['rep']
+        new_host = new['provenance'][0]['hostname']
 
         try:
-            old = config[uuid]
+            old = catalog[uuid]
         except KeyError:
             old = None
 
@@ -293,7 +366,7 @@ class RequestServer(mktl.protocol.request.Server):
             # Maybe it's a different UUID, but the same alias.
 
             try:
-                old = config[alias]
+                old = catalog[alias]
             except KeyError:
                 pass
 
@@ -303,24 +376,20 @@ class RequestServer(mktl.protocol.request.Server):
                     if running == True:
                         old_port = old['provenance'][0]['rep']
                         old_host = old['provenance'][0]['hostname']
-                        new_port = new['provenance'][0]['rep']
-                        new_host = new['provenance'][0]['hostname']
                         logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                         raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
         if old and authoritative == True:
+            old_port = old['provenance'][0]['rep']
+            old_host = old['provenance'][0]['hostname']
+
             # Does the provenance match? If not, we need an override to
             # proceed, but even then we should only proceed if the previous
             # daemon is offline.
 
-            match = mktl.config.match_provenance(old['provenance'], new['provenance'])
+            match = mktl.meta.match_provenance(old['provenance'], new['provenance'])
             if match == False and override == False:
-                old_port = old['provenance'][0]['rep']
-                old_host = old['provenance'][0]['hostname']
-                new_port = new['provenance'][0]['rep']
-                new_host = new['provenance'][0]['hostname']
-
                 logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
                 raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
 
@@ -328,18 +397,14 @@ class RequestServer(mktl.protocol.request.Server):
                 running = self.check_running(old)
 
                 if running == True:
-                    port = old['provenance'][0]['rep']
-                    host = old['provenance'][0]['hostname']
-                    raise ValueError("%s daemon already running at %s:%s" % (alias, host, port))
+                    raise ValueError("%s daemon already running at %s:%s" % (alias, old_host, old_port))
 
-                # Else the local configuration should be updated to reflect
-                # this new configuration block. Remove the old one to streamline
+                # Else the local catalog should be updated to reflect
+                # this new catalog block. Remove the old one to streamline
                 # further checks.
 
-                port = old['provenance'][0]['rep']
-                host = old['provenance'][0]['hostname']
-                logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
-                config.remove(uuid)
+                logger.info("forget: %s from %s:%s (%s)" % (alias, old_host, old_port, uuid))
+                catalog.remove(uuid)
 
             # We've already seen a block for this UUID. Accept the new block
             # for processing if and only if it is different, or has a newer
@@ -349,85 +414,49 @@ class RequestServer(mktl.protocol.request.Server):
                 # We already know this block.
                 return
 
-        # Reject a configuration block if it contains keys that collide
+        # Reject a catalog block if it contains keys that collide
         # with another block in the cache. Not looking for a return
-        # value from check_keys(), exceptions are raised when there are
-        # problems.
+        # value from check_duplicates(), exceptions are raised when
+        # there are problems.
 
-        self.check_keys(new, override)
+        self.check_duplicates(new, override)
 
         # Now that all the checks have passed it's time to update the local
-        # cache of configuration data.
+        # cache of catalog data.
 
-        mktl.config.add_provenance(new, self.hostname, self.port)
-        port = new['provenance'][0]['rep']
-        host = new['provenance'][0]['hostname']
+        mktl.meta.add_provenance(new, main.hostname, self.daemon.rep.port)
 
-        logger.info("remember: %s from %s:%s (%s)" % (alias, host, port, uuid))
-        config.update(new)
+        logger.info("remember: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+        catalog.update(new)
 
 
-    def req_get(self, request):
-        """ We are expecting queries for hash and configuration data, aimed
-            at specially named built-in keys '_hash' and '_config'.
+    def req_get_catalog(self, request):
+        """ Handle all GET requests for 'store._catalog' items, regardless of
+            which store it is. Requests for unknown stores will not reach this
+            point.
         """
 
         target = request.target
+        store, key = target.split('.', 1)
 
-        if target == '_hash':
-            store = None
-            key = '_hash'
+        try:
+            catalog = mktl.meta.get(store)
+        except KeyError:
+            payload_data = tuple()
         else:
-            store, key = target.split('.', 1)
-            if store == '':
-                store = None
-
-        if key == '_hash':
-            payload_data = mktl.config.get_hashes(store)
-        elif key == '_config':
-            try:
-                config = mktl.config.get(store)
-            except KeyError:
-                payload_data = tuple()
-            else:
-                payload_data = config._by_uuid
-        else:
-            raise ValueError('unhandled key: ' + target)
-
+            payload_data = catalog._by_uuid
 
         payload = mktl.Payload(value=payload_data)
         return payload
 
 
-    def req_handler(self, request):
-        """ Inspect the incoming request type and decide how a response
-            will be generated.
-        """
-
-        if request.ack:
-            self.req_ack(request)
-
-        type = request.type
-        target = request.target
-
-        if type == 'GET':
-            payload = self.req_get(request)
-        elif type == 'SET':
-            payload = self.req_set(request)
-        else:
-            raise ValueError('unhandled request: ' + type)
-
-        if request.reply:
-            return payload
-
-
-    def req_set(self, request):
-        """ We are expecting queries for configuration data, aimed
-            at specially named built-in keys.
+    def req_set_catalog(self, request):
+        """ Handle all SET requests for the '_catalog' key. These requests
+            are part of a daemon's announce operation.
         """
 
         # We could be inspecting the request.target value to ensure it
-        # matches the provided configuration blocks. For now, just process
+        # matches the provided catalog blocks. For now, just process
         # whatever we get.
 
         block = request.payload.value
@@ -435,14 +464,41 @@ class RequestServer(mktl.protocol.request.Server):
         try:
             self.process_block(block)
         except ProvenanceLoopError:
-            # This configuration block came from us. Pay no mind.
+            # This catalog block came from us. Pay no mind.
             pass
 
         payload = mktl.Payload(value=True)
         return payload
 
 
-# end of class RequestServer
+# end of class Registry
+
+
+
+class Daemon(mktl.Daemon):
+
+    def setup(self):
+
+        # The registry-specific functionality is in the Registry class.
+        # It's instantiated as part of the daemon so that any items can
+        # access the registry functionality.
+
+        registry = Registry(self)
+        self.registry = registry
+
+        # The comment for Registry.accept_requests() explains the motivation
+        # for making this assignment directly. There is no similar top-level
+        # assignment for _hash because it is handled by the base Daemon class.
+
+        self.rep._req_set_handlers['_catalog'] = registry.req_set_catalog
+
+
+    def setup_final(self):
+        self.registry.setup_final()
+
+
+# end of class Daemon
+
 
 
 class ProvenanceLoopError(RuntimeError):

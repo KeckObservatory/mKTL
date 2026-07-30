@@ -1,7 +1,7 @@
 
 import threading
 
-from . import config
+from . import meta
 from .item import Item
 
 
@@ -13,18 +13,18 @@ class Store:
         connections is managed in the :mod:`mktl.protocol` submodule, not here.
 
         :ivar name: The name of this store.
-        :ivar config: The :class:`mktl.config.Configuration` instance for this store.
+        :ivar catalog: The :class:`mktl.meta.Catalog` instance for this store.
     """
 
     def __init__(self, name):
 
         self.name = name
-        self.config = config.get(name)
+        self.catalog = meta.get(name)
         self._daemon = None
         self._items = dict()
         self._items_lock = threading.Lock()
 
-        self._update_config()
+        self._update_catalog()
 
 
     def __contains__(self, key):
@@ -122,9 +122,9 @@ class Store:
         raise NotImplementedError("you cannot update a Store's keys directly")
 
 
-    def _update_config(self):
+    def _update_catalog(self):
 
-        for key in self.config.keys():
+        for key in self.catalog.keys():
             try:
                 self._items[key]
             except KeyError:

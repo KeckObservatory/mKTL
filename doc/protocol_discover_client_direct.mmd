@@ -1,0 +1,19 @@
+sequenceDiagram
+    autonumber
+    Participant Client
+    Participant Registry as Specific Registry
+
+    Client->>+Registry: Hello?
+    Registry->>-Client: Try port 10234
+
+    Client->>+Registry: GET: _hash
+    Registry->>-Client: REP: JSON payload
+
+    Client->>+Registry: GET: store1._catalog
+    Registry->>-Client: REP: JSON payload
+
+    Client->>+Registry: GET: store2._catalog
+    Registry->>-Client: REP: JSON payload
+
+    Client->>+Registry: GET: store3._catalog
+    Registry->>-Client: REP: JSON payload

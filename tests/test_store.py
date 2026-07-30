@@ -69,7 +69,7 @@ def test_store(run_mkregistryd, run_mkd):
     assert len(store) == len(store.keys())
 
     for key in store.keys():
-        assert key in store.config
+        assert key in store.catalog
 
     # The actual result from str() and repr() is not inspected, it's only
     # used for debug purposes.

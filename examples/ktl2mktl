@@ -1,9 +1,9 @@
 #! /usr/bin/env kpython3
 
 description = """
-Generate a mKTL JSON configuration for a designated KTL service name. This tool
+Generate a mKTL JSON catalog for a designated KTL service name. This tool
 requires a working kroot environment with the service installed locally in order
-to function. The generated JSON configuration will be written to standard
+to function. The generated JSON catalog will be written to standard
 output.
 """
 
@@ -38,7 +38,7 @@ if KTL is None:
 def main():
 
     config = parse_command_line()
-    print_configuration(config.service)
+    print_catalog(config.service)
 
 
 
@@ -58,7 +58,7 @@ def parse_command_line():
 
 
 
-def print_configuration(service):
+def print_catalog(service):
 
     description = KTL.describe_service(service)
     description = json.dumps(description, indent=4)

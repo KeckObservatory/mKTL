@@ -30,7 +30,7 @@ shown, always returning the same object-- not copies of the same mKTL item,
 the exact same Python object. The important part is that we now have a
 :class:`Item` that can be used for subsequent calls. A ``ValueError`` exception
 will be raised if no
-configuration is available for that store (i.e., the store does not exist);
+catalog is available for that store (i.e., the store does not exist);
 a ``KeyError`` exception will be raised if the key does not exist.
 
 
@@ -52,7 +52,7 @@ There are two variants of the :py:attr:`Item.value` property:
 :py:attr:`Item.formatted`, and :py:attr:`Item.quantity`. They behave in the same
 fashion as :py:attr:`Item.value`, but work with different representations of
 the value. The exact nature of what you get back will depend on the
-configuration of the individual item, but for this example you might see::
+description of the individual item, but for this example you might see::
 
     >>> print(crazy.value)
     True
@@ -120,11 +120,10 @@ Putting it all together::
 
     if craziness is None:
         print('The population craziness is unknown.')
+    elif craziness == True:
+        print('The population is crazy.')
     else:
-        if craziness == True:
-            print('The population is crazy.')
-        else:
-            print('The population is sane.')
+        print('The population is sane.')
 
 The above comparison can be further simplified:
 an :class:`Item` instance can be used directly in comparison operations,
@@ -146,3 +145,33 @@ Python community. This is because the behavior of the ``is`` operator is
 unchanged, and will compare the mktl.Item instance against None, whereas
 the equality operator will trigger the rich comparison handling provided
 by an mktl.Item, and instead compare the .value property against None.
+
+Speaking of generally accepted practices in the Python community, the
+first condition can be rearranged slightly to use a tighter set of
+comparisons, omitting the explicit comparison against a boolean::
+
+    import mktl
+    crazy = mktl.get('population.CRAZY')
+    craziness = crazy.value
+
+    if craziness:
+        print('The population is crazy.')
+    elif craziness is None:
+        print('The population craziness is unknown.')
+    else:
+        print('The population is sane.')
+
+This also works for the second style above, which, depending on your choice
+of variable names, may wind up being the most readable, in addition to being
+the most concise::
+
+    import mktl
+    crazy = mktl.get('population.CRAZY')
+
+    if crazy:
+        print('The population is crazy.')
+    elif crazy == None:
+        print('The population craziness is unknown.')
+    else:
+        print('The population is sane.')
+

@@ -417,25 +417,55 @@ Discovery
 
 The UDP discovery layer takes advantage of a feature of UDP listeners: not only
 are you allowed to have multiple listeners on the same port, but they will all
-respond to an incoming broadcast message. Some care thus needs to be taken to
-make sure these responses do not lend themselves to a denial of service attack.
-Regardless, this feature allows every daemon to create a listener on the same
-port, which greatly simplifies periodic discovery.
+respond to an incoming broadcast message. This feature allows every listening
+participant to create a listener on the same port, which allows an arbitrary
+number of processes to participate in discovery.
 
-The discovery of daemons is a two-part process; rather than ask every daemon
-to cache the configuration for every other daemon on its local network, the
-caching of configuration data is handled by :ref:`mkregistryd`; when a client
-issues a discovery broadcast, it is not looking for responses from individual
-daemons, it is looking for responses from a :ref:`mkregistryd` process.
+There are two phases to a client automatically discovering a daemon; these
+phases are separated by an intermediary, the registry process
+(:ref:`mkregistryd`). The first phase is for the registry daemon to discover
+all local daemons; the second phase is for a client to discover available
+registry daemons.
 
-This two-step approach, of contacting the registry process, and subsequently
-contacting the authoritative daemon, could be avoided if every local daemon
-caching the configuration of every other local daemon; however, a typical
-client will cache the response, and discovery is only invoked if the cached
-daemon cannot be reached, so the impact of the additional inefficiency is
-low. The upside of splitting the discovery into two steps is that reduces
-the need for consistent chatter between daemons, which would otherwise grow
-exponentially with the number of locally reachable daemons.
+The discovery process is identical for the two phases, except that the listeners
+are on different port numbers. Clients looking for registries, and registries
+looking for daemons, they both start with a UDP broadcast; the recipient then
+responds with a port number that can be used for REQ/REP mKTL queries.
+
+.. mermaid:: protocol_discover_client_broadcast.mmd
+
+The client/registry interaction is narrower than the registry/daemon
+exchange: a client wants to know about a specific store,
+and if the registry doesn't know about that store the query will fail. This
+sequence is the only time a client will initiate or otherwise participate in
+any form of broadcast discovery. Enumeration of available stores can also
+occur in a form of directed discovery: if a client already knows where a
+registry is running it can issue a directed UDP query to that host, though
+instead of asking for a single store the client will ask for all available
+stores. This specific exchange is intended to populate a local cache on
+the client side, and will not occur unless explicitly requested.
+
+.. mermaid:: protocol_discover_client_direct.mmd
+
+The discovery exchange between a registry and a daemon uses the same structure,
+but with the listener running on a different UDP port; a single port is used to
+discover a registry daemon, and a single port is used to discover a daemon.
+
+.. mermaid:: protocol_discover_registry.mmd
+
+The registry will run this discovery process exactly once upon startup, in an
+attempt to identify all available daemons on the local network, and cache their
+locally authoritative catalog blocks.
+
+.. mermaid:: protocol_discover_daemon.mmd
+
+Daemons are expected to self-announce on startup,
+which involves discovering local registries, and pushing the description of
+the daemon's authoritative items to any discovered registries; the daemon
+will issue a SET request to the registry's _catalog item to initiate further
+processing. The registry will reconcile the new description against what it
+already has cached, and will reject any announcement that introduces a
+conflict.
 
 There are four shared secrets used in the discovery exchange:
 
@@ -443,12 +473,13 @@ There are four shared secrets used in the discovery exchange:
 *Secret*	  *Description*
 ================= ==============================================================
 **registry port** The UDP port used to discover locally accessible
-		  :ref:`mkregistryd` processes. Clients use this port to find
-		  all such processes. The port number is 10103.
+		  :ref:`mkregistryd` processes. Clients and daemons send
+		  broadcasts to this port to initiate a discovery exchange.
+		  The port number is 10103.
 
 **daemon port**	  The UDP port used to discover locally accessible mKTL daemons.
-		  :ref:`mkregistryd` uses this port to find all such daemons.
-		  The port number is 10111.
+		  :ref:`mkregistryd` sends a broadcast to this port to initiate
+		  a discovery exchange. The port number is 10111.
 
 **call**	  An arbitrary string used by the discoverer to trigger a
 		  response from the listener. The string value is
@@ -459,8 +490,9 @@ There are four shared secrets used in the discovery exchange:
 
 ================= ==============================================================
 
-The purpose of discovery is to convey a single piece of information: what is
-the port number of an actual mKTL request handler on this host? That port
+The purpose of the discovery response is to convey a single piece of
+information: the REQ/REP port number that process is using to receive
+proper mKTL requests. The port
 number, encoded as a string representation of an integer, is the sole additional
 component of the response after the colon. For example, if a daemon has a
 request port listening on port 10079, the full exchange (discovery request,

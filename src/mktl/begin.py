@@ -4,7 +4,7 @@
 
 import threading
 
-from . import config
+from . import meta
 from . import protocol
 from .store import Store
 
@@ -56,19 +56,25 @@ def discover(*targets):
         except:
             continue
 
-        hashes = payload.value
+        if payload:
+            hashes = payload.value
+        else:
+            hashes = dict()
 
         for store in hashes.keys():
-            key = store + '._config'
+            key = store + '._catalog'
             request = protocol.message.Request('GET', key)
             payload = protocol.request.send(address, port, request)
 
-            blocks = payload.value
+            if payload:
+                blocks = payload.value
+            else:
+                blocks = None
 
             if blocks:
-                configuration = config.get(store)
+                catalog = meta.get(store)
                 for uuid,block in blocks.items():
-                    configuration.update(block)
+                    catalog.update(block)
 
 
     protocol.request.Client.timeout = old_timeout
@@ -109,7 +115,7 @@ def get(store, key=None):
 
     # Work from the in-memory cache of Store instances first. This sequence
     # of checks is replicated at the end of the routine, after all the
-    # handling of configuration data.
+    # handling of catalog data.
 
     try:
         store = _cache[store]
@@ -124,22 +130,22 @@ def get(store, key=None):
 
     # Start with whatever is available in memory, or the local disk cache.
 
-    configuration = config.get(store)
+    catalog = meta.get(store)
 
     # Try the network if that didn't yield results.
 
-    if len(configuration) > 0:
+    if len(catalog) > 0:
         # Confirm the on-disk contents are still valid.
-        refresh(configuration)
+        refresh(catalog)
 
-    if len(configuration) == 0:
+    if len(catalog) == 0:
         # Nothing valid cached locally. Broadcast for responses.
         registries = protocol.discover.search()
         if len(registries) == 0:
-            raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
+            raise RuntimeError("no catalog available for '%s' (local or remote)" % (store))
 
         hostname,port = registries[0]
-        key = store + '._config'
+        key = store + '._catalog'
         message = protocol.message.Request('GET', key)
         payload = protocol.request.send(hostname, port, message)
 
@@ -147,13 +153,13 @@ def get(store, key=None):
 
         if blocks:
             for uuid,block in blocks.items():
-                configuration.update(block)
+                catalog.update(block)
         else:
-            raise RuntimeError("no configuration available for '%s' (local or remote)" % (store))
+            raise RuntimeError("no catalog available for '%s' (local or remote)" % (store))
 
 
     # If we made it this far without raising an exception there must be a valid
-    # configuration available for use.
+    # catalog available for use.
 
     _cache_lock.acquire()
     try:
@@ -171,22 +177,22 @@ def get(store, key=None):
 
 
 
-def refresh(configuration):
+def refresh(catalog):
     """ This is a helper method for :func:`get` defined in this file. The
-        *configuration* passed in here was loaded from a file. Inspect the
+        *catalog* passed in here was loaded from a file. Inspect the
         provenance for each block and attempt to refresh the local contents.
         Save any changes back to disk for future clients.
     """
 
-    store = configuration.store
+    store = catalog.store
 
-    for uuid in configuration.uuids():
-        block = configuration[uuid]
+    for uuid in catalog.uuids():
+        block = catalog[uuid]
         local_hash = block['hash']
         updated = False
 
         # Make a copy of the provenance sequence, traversing it in reverse
-        # order (highest stratum first) looking for an updated configuration.
+        # order (highest stratum first) looking for an updated catalog.
 
         try:
             provenance = block['provenance']
@@ -237,12 +243,12 @@ def refresh(configuration):
                 # keep looking for a better answer; we're still iterating over
                 # the previously known provenance.
 
-                configuration.remove(uuid)
+                catalog.remove(uuid)
                 continue
 
             if local_hash != remote_hash:
                 # Mismatch; need to request an update before proceeding.
-                key = store + '._config'
+                key = store + '._catalog'
                 message = protocol.message.Request('GET', key)
                 client.send(message)
                 ### Again, exception handling may be required, though the
@@ -255,9 +261,9 @@ def refresh(configuration):
                     # No response available.
                     continue
 
-                new_config = response.payload.value
+                new_catalog = response.payload.value
 
-                if new_config is None:
+                if new_catalog is None:
                     # No response available.
                     continue
 
@@ -265,8 +271,8 @@ def refresh(configuration):
                 # results-- it is assumed, because the UUID was present in the
                 # response to the _hash query prior to reaching this point.
 
-                new_block = new_config[uuid]
-                configuration.update(new_block)
+                new_block = new_catalog[uuid]
+                catalog.update(new_block)
                 break
 
 

@@ -12,9 +12,9 @@ import threading
 import time
 
 from . import begin
-from . import config
 from . import item
 from . import json
+from . import meta
 from . import poll
 from . import protocol
 from . import store
@@ -22,7 +22,7 @@ from . import store
 
 class Daemon:
     """ The mKTL :class:`Daemon` is a facilitator for common mKTL actions taken
-        in a daemon context: loading a configuration file, instantiating
+        in a daemon context: loading a catalog file, instantiating
         :class:`mktl.Item` instances, and commencing routine operations.
 
         The developer is expected to subclass the :class:`Daemon` class and
@@ -33,7 +33,7 @@ class Daemon:
 
         The *store* argument is the name of the store that this daemon is
         providing items for; *alias* is the unique name of this mKTL daemon,
-        and is used to locate the configuration file that defines the items
+        and is used to locate the catalog file that defines the items
         for which this daemon is authoritative.
 
         *options* is expected to be an :class:`argparse.ArgumentParser`
@@ -52,7 +52,7 @@ class Daemon:
 
         self.alias = alias
         self.options = options
-        self.config = None
+        self.catalog = None
         self.store = None
         self.uuid = None
 
@@ -64,12 +64,12 @@ class Daemon:
         self.cleanup = self._cleanup_wrapper
         self.shutdown = threading.Event()
 
-        self.config = config.get(store, alias)
-        self.uuid = self.config.authoritative_uuid
+        self.catalog = meta.get(store, alias)
+        self.uuid = self.catalog.authoritative_uuid
 
         if self.uuid is None:
             # This isn't supposed to happen. Catching it here just in case.
-            raise RuntimeError('mktl.config did not set my UUID!')
+            raise RuntimeError('mktl.meta did not set my UUID!')
 
         self.logger.info("local UUID is %s", self.uuid)
 
@@ -109,15 +109,15 @@ class Daemon:
         # A bit of a chicken and egg problem with the provenance. It can't be
         # established until the listener ports are known; we can't establish
         # the listener ports without knowing our UUID; we don't know the UUID
-        # until the configuration is loaded. We're doctoring the configuration
+        # until the catalog is loaded. We're doctoring the catalog
         # after-the-fact, and thus need to refresh the local cache to ensure
         # consistency.
 
-        block = self.config.authoritative_block
-        config.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
-        self.config.update(block)
+        block = self.catalog.authoritative_block
+        meta.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
+        self.catalog.update(block)
 
-        # The cached configuration needs to be in its final form before creating
+        # The cached catalog needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
         # to be sure that there are no existing instances in the cache, all
         # local calls to mktl.get() need to retrun the instance containing
@@ -145,13 +145,13 @@ class Daemon:
         self._setup_builtin_items()
         self._setup_missing()
 
-        # The configuration should now be finalized. Make sure it is written
+        # The catalog should now be finalized. Make sure it is written
         # out to disk so that subprocesses (if any) can load it before we're
         # fully on the air.
 
-        self.config.save()
+        self.catalog.save()
 
-        # Apply any initial values according to the configuration contents.
+        # Apply any initial values according to the catalog contents.
 
         self._setup_initial_values()
 
@@ -172,8 +172,95 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        config.announce(self.config, self.uuid, override)
+        meta.announce(self.catalog, self.uuid, override)
         self.logger.debug("daemon initialization complete")
+
+
+    def add_get_handler(self, key, method):
+        """ Assign a method that will be called for all GET requests for
+            the specified item. See :func:`mktl.Item.req_get` for additional
+            details on the expected behavior; inspection of the implementation
+            for that method is recommended to ensure all the necessary actions
+            are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        self.rep._req_get_handlers[item.full_key] = method
+
+
+    def add_get_performer(self, key, method):
+        """ Assign a method that will be called for all GET requests for
+            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            for additional details.
+        """
+
+        key = key.lower()
+        key = key.strip()
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_get_performer(method)
+
+
+    def add_handler(self, key, request, method):
+        """ Assign a method that will be called for either GET or SET
+            requests, determined by the *request* argument, which must be one
+            of 'get' or 'set'.
+
+            See :func:`mktl.Item.req_get` and
+            :func:`mktl.Item.req_set` for additional details on the expected
+            behavior; inspection of the implementation for those methods is
+            recommended to ensure all the necessary actions are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        request = request.lower()
+        request = request.strip()
+
+        if request == 'get':
+            self.add_get_handler(key, method)
+        elif request == 'set':
+            self.add_set_handler(key, method)
+        else:
+            raise ValueError("request must be either 'get' or 'set'")
+
+
+    def add_handlers(self, handlers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods handling GET and SET
+            requests, bypassing the usual handling chain involving
+            :class:`mktl.Item` instances.
+
+            A triplet is the key for an item (omitting the store name), whether
+            this is a 'get' or a 'set' handler, and a valid reference to a
+            method. For example::
+
+                ('temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.req_get` and
+            :func:`mktl.Item.req_set` for additional details; inspection of
+            the implementation for those methods is recommended to ensure all
+            the necessary actions are covered.
+        """
+
+        for triplet in handlers:
+            key,request,method = triplet
+            self.add_handler(key, request, method)
 
 
     def add_item(self, item_class, key, **kwargs):
@@ -186,7 +273,7 @@ class Daemon:
         key = key.lower()
 
         try:
-            self.config.authoritative_items[key]
+            self.catalog.authoritative_items[key]
         except KeyError:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
@@ -229,6 +316,92 @@ class Daemon:
 
             if callback:
                 created.register(callback)
+
+
+    def add_performer(self, key, request, method):
+        """ Assign a method that will be called for either GET or SET
+            requests, determined by the *request* argument, which must be one
+            of 'get' or 'set'.
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        # Allow this method to be called before placeholder Item instances
+        # have been established. The use of external performer methods,
+        # rather than overriding Item.perform_get() and Item.perform_set(),
+        # implies the caller will not be instantiating custom Item
+        # subclasses; instantiating them now ensures any custom code is
+        # exclusive.
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_performer(request, method)
+
+
+    def add_performers(self, performers):
+        """ This method is intended to be a single call, accepting a sequence
+            of triplets mapping external methods performing GET and SET
+            requests onto the :class:`mktl.Item` instances receiving those
+            requests from this daemon.
+
+            A triplet is the key for an item (omitting the store name), whether
+            this is a 'get' or a 'set' performer, and a valid reference to a
+            method. For example::
+
+                ('temperature', 'get', mkwc.get_temperature)
+
+            See :func:`mktl.Item.add_get_performer` and
+            :func:`mktl.Item.add_set_performer` for additional details.
+        """
+
+        for triplet in performers:
+            key,request,method = triplet
+            self.add_performer(key, request, method)
+
+
+    def add_set_handler(self, key, method):
+        """ Assign a method that will be called for all SET requests for
+            the specified item. See :func:`mktl.Item.req_set` for additional
+            details on the expected behavior; inspection of the implementation
+            for that method is recommended to ensure all the necessary actions
+            are covered.
+        """
+
+        try:
+            item = self.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        self.rep._req_set_handlers[item.full_key] = method
+
+
+    def add_set_performer(self, key, method):
+        """ Assign a method that will be called for all SET requests for
+            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            for additional details.
+        """
+
+        key = key.lower()
+        key = key.strip()
+
+        try:
+            existing = self.store._items[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if existing is None or existing.authoritative == False:
+            self.add_item(item.Item, key)
+            existing = self.store[key]
+
+        existing.add_set_performer(method)
 
 
     def _begin_persistence(self):
@@ -310,13 +483,13 @@ class Daemon:
             assigned to this daemon.
         """
 
-        # The configuration needs to be updated with these items before they
+        # The catalog needs to be updated with these items before they
         # can be instantiated.
 
-        block = self.config.authoritative_block
+        block = self.catalog.authoritative_block
         items = block['items']
 
-        key = '_' + self.alias + 'cfg'
+        key = '_' + self.alias + 'cat'
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
         items[key]['settable'] = False
@@ -372,16 +545,16 @@ class Daemon:
         items[key]['initial'] = self.uuid
         items[key]['settable'] = False
 
-        self.config.update(block, save=False)
-        self.store._update_config()
+        self.catalog.update(block, save=False)
+        self.store._update_catalog()
 
 
         # Instantiate any custom item subclasses for the newly defined
-        # built-in items; this is only possible after the configuration
+        # built-in items; this is only possible after the catalog
         # has been updated.
 
+        self.add_item(DaemonCatalog, '_' + self.alias + 'cat')
         self.add_item(Uptime, '_' + self.alias + 'clk')
-        self.add_item(DaemonConfiguration, '_' + self.alias + 'cfg')
         self.add_item(ProcessorUsage, '_' + self.alias + 'cpu')
         self.add_item(MemoryUsage, '_' + self.alias + 'mem')
 
@@ -393,7 +566,7 @@ class Daemon:
             :func:`setup_final` is invoked.
         """
 
-        for key in self.config.authoritative_items.keys():
+        for key in self.catalog.authoritative_items.keys():
             existing = self.store._items[key]
 
             if existing is None or existing.authoritative == False:
@@ -401,18 +574,18 @@ class Daemon:
 
 
     def _setup_initial_values(self):
-        """ Apply all initial values defined in the configuration for all
+        """ Apply all initial values defined in the catalog for all
             local authoritative items. If a persistent value is available
             it will override the default initial value.
         """
 
-        items = self.config[self.uuid]['items']
+        items = self.catalog[self.uuid]['items']
 
         for key in items.keys():
 
-            configuration = items[key]
+            catalog = items[key]
             try:
-                initial = configuration['initial']
+                initial = catalog['initial']
             except KeyError:
                 continue
 
@@ -448,7 +621,7 @@ class Daemon:
         """
 
         hostname = socket.getfqdn()
-        key = store + '._config'
+        key = store + '._catalog'
         request = protocol.message.Request('GET', key)
 
         try:
@@ -481,11 +654,13 @@ class RequestServer(protocol.request.Server):
         self.daemon = daemon
         self.store = store
 
-        self._getters = dict()
-        self._getters[store + '._config'] = self.req_get_config
-        self._getters[store + '._hash'] = self.req_get_hash
-        self._getters['._hash'] = self.req_get_hash
-        self._getters['_hash'] = self.req_get_hash
+        self._req_get_handlers = dict()
+        self._req_set_handlers = dict()
+
+        self._req_get_handlers[store + '._catalog'] = self.req_get_catalog
+        self._req_get_handlers[store + '._hash'] = self.req_get_hash
+        self._req_get_handlers['._hash'] = self.req_get_hash
+        self._req_get_handlers['_hash'] = self.req_get_hash
 
 
     def req_handler(self, request):
@@ -515,11 +690,12 @@ class RequestServer(protocol.request.Server):
     def req_get(self, request):
 
         try:
-            getter = self._getters[request.target]
+            getter = self._req_get_handlers[request.target]
         except KeyError:
             pass
         else:
             return getter(request)
+
 
         # Look up the conventional req_get() method for this item.
 
@@ -528,7 +704,7 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        block = self.daemon.config[self.daemon.uuid]
+        block = self.daemon.catalog[self.daemon.uuid]
         items = block['items']
         if key in items:
             pass
@@ -548,13 +724,13 @@ class RequestServer(protocol.request.Server):
         return getter(request)
 
 
-    def req_get_config(self, request):
+    def req_get_catalog(self, request):
 
         store, key = request.target.split('.', 1)
 
-        configuration = config.get(store)
-        configuration = configuration._by_uuid
-        payload = protocol.message.Payload(value=configuration)
+        catalog = meta.get(store)
+        catalog = catalog._by_uuid
+        payload = protocol.message.Payload(value=catalog)
         return payload
 
 
@@ -569,24 +745,12 @@ class RequestServer(protocol.request.Server):
             if store == '':
                 store = None
 
-        hashes = config.get_hashes(store)
+        hashes = meta.get_hashes(store)
         payload = protocol.message.Payload(value=hashes)
         return payload
 
 
     def req_set(self, request):
-
-        store, key = request.target.split('.', 1)
-
-        if store != self.daemon.store.name:
-            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
-
-        block = self.daemon.config[self.daemon.uuid]
-        items = block['items']
-        if key in items:
-            pass
-        else:
-            raise KeyError('this daemon does not contain ' + repr(key))
 
         ### This may be the right place to send a publish message indicating
         ### that a set request has been received. This would largely be a
@@ -597,8 +761,28 @@ class RequestServer(protocol.request.Server):
         ### This would allow a debug client to subscribe to all messages with
         ### a leading 'set:' topic.
 
-        response = self.daemon.store[key].req_set(request)
-        return response
+        try:
+            setter = self._req_set_handlers[request.target]
+        except KeyError:
+            pass
+        else:
+            return setter(request)
+
+        store, key = request.target.split('.', 1)
+
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        block = self.daemon.catalog[self.daemon.uuid]
+        items = block['items']
+        if key in items:
+            pass
+        else:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        setter = self.daemon.store[key].req_set
+        self._req_set_handlers[request.target] = setter
+        return setter(request)
 
 
 # end of class RequestServer
@@ -612,7 +796,7 @@ def _load_port(store, uuid):
         value cannot be retrieved.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -642,7 +826,7 @@ def _save_port(store, uuid, req=None, pub=None):
         restarts of a persistent daemon.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port', store)
     pub_filename = os.path.join(port_directory, uuid + '.pub')
     req_filename = os.path.join(port_directory, uuid + '.req')
@@ -686,7 +870,7 @@ def _used_ports():
         ports available.
     """
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     port_directory = os.path.join(base_directory, 'daemon', 'port')
 
     ports = set()
@@ -730,7 +914,7 @@ def _load_persistent(store, uuid):
 
     loaded = dict()
 
-    base_directory = config.directory()
+    base_directory = meta.directory()
     uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
     try:
@@ -776,7 +960,7 @@ def _save_persistent(item, *args, **kwargs):
         callback for a :class:`mktl.Item` instance.
     """
 
-    uuid = item.config['uuid']
+    uuid = item.description['uuid']
 
     try:
         pending = persist_queues[uuid]
@@ -825,7 +1009,7 @@ class PendingPersistence:
         self.uuid = uuid
         persist_queues[uuid] = self
 
-        base_directory = config.directory()
+        base_directory = meta.directory()
         uuid_directory = os.path.join(base_directory, 'daemon', 'persist', uuid)
 
         if os.path.exists(uuid_directory):
@@ -892,18 +1076,18 @@ class PendingPersistence:
 
 
 
-class DaemonConfiguration(item.Item):
+class DaemonCatalog(item.Item):
 
     def perform_get(self):
 
         uuid = self.store._daemon.uuid
-        configuration = config.get(self.store.name)
-        configuration = configuration[uuid]
+        catalog = meta.get(self.store.name)
+        catalog = catalog[uuid]
 
-        return configuration
+        return catalog
 
 
-# end of class DaemonConfiguration
+# end of class DaemonCatalog
 
 
 

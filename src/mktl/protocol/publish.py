@@ -317,7 +317,7 @@ class Server:
         except AttributeError:
             self.broadcasts = queue.Queue()
 
-        internal = "inproc://publish.Server.signal:%d" % (port)
+        internal = "inproc://publish.Server.signal:%d" % (self.port)
         self.broadcast_address = internal
         self.broadcast_receive = zmq_context.socket(zmq.PAIR)
         self.broadcast_receive.bind(internal)

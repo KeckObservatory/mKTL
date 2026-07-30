@@ -27,7 +27,7 @@ class Item:
         :ivar key: The key (name) for this item.
         :ivar full_key: The store and key for this item, in `store.key` format.
         :ivar store: The :class:`mktl.Store` instance containing this item.
-        :ivar config: The JSON description of this item.
+        :ivar description: The JSON description of this item.
         :ivar log_on_set: Indicates whether this item will log SET requests. The default is True.
         :ivar publish_on_set: Indicates whether this item will publish a new value whenever :func:`perform_set` is successfully invoked. The default is True.
     """
@@ -41,7 +41,7 @@ class Item:
         self.key = key
         self.full_key = store.name + '.' + key
         self.store = store
-        self.config = store.config[key]
+        self.description = store.catalog[key]
         self.callbacks = list()
         self.log_on_set = True
         self.publish_on_set = True
@@ -79,7 +79,7 @@ class Item:
         # field in the provenance; this may be made more declarative in the
         # future, instead of the implied role being assumed here.
 
-        provenance = self.config['provenance']
+        provenance = self.description['provenance']
         hostname = None
 
         for stratum in provenance:
@@ -94,14 +94,14 @@ class Item:
 
         if hostname is None:
             # This should never occur, it should not be possible to have a
-            # configuration that doesn't contain a provenance.
+            # description that doesn't contain a provenance.
             raise RuntimeError('cannot find daemon for ' + self.full_key)
 
         self.sub = protocol.publish.client(hostname, pub)
         self.req = protocol.request.client(hostname, rep)
 
         try:
-            settable = self.config['settable']
+            settable = self.description['settable']
         except KeyError:
             settable = True
 
@@ -109,7 +109,7 @@ class Item:
             self.req_set = self.reject_set
 
         try:
-            gettable = self.config['gettable']
+            gettable = self.description['gettable']
         except KeyError:
             gettable = True
 
@@ -123,6 +123,59 @@ class Item:
                 prime = True
 
             self.subscribe(prime=prime)
+
+
+    def add_get_performer(self, method):
+        """ Assign a method that will be called for all GET requests for this
+            item. This will replace the :func:`perform_get` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_get` directly. The performer method must
+            accept no arguments; refer to :func:`perform_get` for additional
+            details on the expected behavior.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self.perform_get = method
+
+
+    def add_performer(self, request, method):
+        """ Assign a method that will be called for either GET or SET requests,
+            determined by the *request* argument, which must be one of 'get' or
+            'set'. See :func:`add_get_performer` and :func:`add_set_performer`
+            for additional information.
+        """
+
+        request = request.lower()
+        request = request.strip()
+
+        if request == 'get':
+            return self.add_get_performer(method)
+        elif request == 'set':
+            return self.add_set_performer(method)
+        else:
+            raise ValueError("request must be either 'get' or 'set'")
+
+
+    def add_set_performer(self, method):
+        """ Assign a method that will be called for all SET requests for this
+            item. This will replace the :func:`perform_set` method in situations
+            where the caller does not want to establish custom subclasses and
+            override :func:`perform_set` directly. The performer method must
+            accept one argument, the 'unformatted' Python-native representation
+            of the item value; refer to :func:`perform_set` for additional
+            details on the expected behavior.
+        """
+
+        if callable(method):
+            pass
+        else:
+            raise TypeError('the performer method must be callable')
+
+        self.perform_set = method
 
 
     def _cleanup(self):
@@ -147,7 +200,7 @@ class Item:
             For example, the formatted variant of an enumerated type
             is the string string representation, as opposed to the integer
             reported as the current item value. These permutations are driven
-            by the JSON configuration of the item. In the absence of any
+            by the JSON description of the item. In the absence of any
             configured formatting the current value will be returned as a
             string.
 
@@ -175,13 +228,13 @@ class Item:
     def from_format(self, value):
         """ Convert the supplied value from its human-readable formatted
             representation, if any, to the on-the-wire representation for
-            this item. This conversion is driven by the configuration.
+            this item. This conversion is driven by the item description.
 
             This is the inverse of :func:`to_format`.
         """
 
         try:
-            unformatted = self.store.config.from_format(self.key, value)
+            unformatted = self.store.catalog.from_format(self.key, value)
         except:
             message = "format conversion failed for %s:"
             logger = logging.getLogger(__name__)
@@ -235,7 +288,7 @@ class Item:
             This is the inverse of :func:`to_quantity`.
         """
 
-        value = self.store.config.from_quantity(self.key, quantity)
+        value = self.store.catalog.from_quantity(self.key, quantity)
         return value
 
 
@@ -269,7 +322,7 @@ class Item:
                 # be degrees instead of radians.
 
                 try:
-                    units = self.config['units']
+                    units = self.description['units']
                 except KeyError:
                     units = None
                 else:
@@ -343,7 +396,7 @@ class Item:
             return self.value
         elif formatted == True and quantity == True:
             try:
-                units = self.config['units']
+                units = self.description['units']
             except KeyError:
                 units = None
             else:
@@ -375,6 +428,14 @@ class Item:
             for returning a Payload instead of a bare value is if the embedded
             timestamp needs to be set to some value other than the current time.
 
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a get request takes to process. There
+            are also no restrictions on concurrency, though ideally a get
+            request is trivial to execute; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
+
             Returning None will not clear the currently known value, that will
             only occur if the returned Payload instance is assigned None as the
             'value'; this is not expected to be a common occurrence, but if a
@@ -395,6 +456,13 @@ class Item:
             a set request for this item. No return value is expected. Any
             subclass implementations should raise an exception in order to
             trigger an error response.
+
+            Calls to this method will be handled in a background thread with
+            no restrictions on how long a set request takes to process. There
+            are also no restrictions on concurrency; this method will be called
+            repeatedly if multiple requests arrive and one or more requests are
+            already in progress. Management of concurrent requests is left
+            entirely to the implementer.
 
             Any return value, though again none is expected, will be
             encapsulated via :func:`to_payload`, after the same fashion as
@@ -880,12 +948,12 @@ class Item:
     def to_format(self, value):
         """ Convert the supplied value to its human-readable formatted
             representation, if any. This conversion is driven by the
-            configuration for this item.
+            description for this item.
 
             This is the inverse of :func:`from_format`.
         """
 
-        formatted = self.store.config.to_format(self.key, value)
+        formatted = self.store.catalog.to_format(self.key, value)
         return formatted
 
 
@@ -918,7 +986,7 @@ class Item:
 
         # Perhaps there is a more declarative way to know whether a given
         # value is expected to be bulk data; perhaps reference the per-Item
-        # configuration? Or does an attribute need to be set to make the
+        # description? Or does an attribute need to be set to make the
         # expected behavior explicit?
 
         try:
@@ -947,7 +1015,7 @@ class Item:
             This is the inverse of :func:`from_quantity`.
         """
 
-        quantity = self.store.config.to_quantity(self.key, value, units)
+        quantity = self.store.catalog.to_quantity(self.key, value, units)
         return quantity
 
 
@@ -970,7 +1038,7 @@ class Item:
         """
 
         try:
-            type = self.config['type']
+            type = self.description['type']
         except KeyError:
             type = None
         else:
