@@ -11,11 +11,12 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, store, alias=None, *args, **kwargs):
 
-        # Generate the configuration matching this set of EPICS channels. Since this
-        # configuration is not in the default location it must be declared
+        # Generate the catalog matching this set of EPICS channels. Since this
+        # catalog is not in the default location it must be declared
         # prior to initializing the Daemon.
-        # store is the mktl store name for the epics object (i.e. k1:mySystem:myDevice)
-        # alias is the name mKTL can use if you don't want to use pvname (i.e. myDevice)
+
+        # store is the mKTL store name for this collection of PVs (i.e. k1:mySystem:myDevice)
+        # alias is a unique, human-readable string to identify this daemon
         mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
     def setup(self):
@@ -23,7 +24,7 @@ class Daemon(mktl.Daemon):
             instance for each and every channel being proxied by this
             daemon, as opposed to letting them be the default mktl.Item.
         """
-        keys = self.config.keys(authoritative=True)
+        keys = self.catalog.keys(authoritative=True)
 
         for key in keys:
             self.add_item(Item, key)
@@ -33,12 +34,12 @@ class Daemon(mktl.Daemon):
         """ This is the last step before broadcasts go out. This is the
             right time to fire up monitoring of all EPICS PVs.
         """
-        keys = self.config.keys(authoritative=True)
+        keys = self.catalog.keys(authoritative=True)
         for key in keys:
             if key.startswith('_'): # may not need this anymore
                 continue
             item = self.store[key]
-            pvname = self.config[key]['channel'] 
+            pvname = self.catalog[key]['channel'] 
             pv = epics.PV(pvname)
             pv.add_callback(item.publish_broadcast) 
 
@@ -92,14 +93,14 @@ class Item(mktl.Item):
     def _get_pv_with_metadata(self):
         """ Return the EPICS PV object associated with this item.
         """
-        pv = epics.PV(self.config['channel'])
+        pv = epics.PV(self.description['channel'])
         resp = None
         tries = 0
         while resp is None:  # try up to 5 times to get a valid response
             resp = pv.get_with_metadata(as_string=True) # get the value and metadata
             tries += 1
             if tries >= 5:
-                raise RuntimeError(f"Could not get metadata for PV {self.config['channel']}")
+                raise RuntimeError(f"Could not get metadata for PV {self.description['channel']}")
         return resp 
 
 
@@ -110,8 +111,10 @@ class Item(mktl.Item):
             relies on epics callbacks to receive asynchronous broadcasts
             (see :func:`publish_broadcast`).
         """
-        if 'channel' not in self.config.keys():
+
+        if 'channel' not in self.description.keys():
             return None
+
         resp = self._get_pv_with_metadata()
         timestamp = self._get_timestamp(resp.get('timestamp'))
         value = resp.get('value')
@@ -127,16 +130,16 @@ class Item(mktl.Item):
             to ensure they are interpreted (or not interpreted, as the case
             may be) properly.
         """
-        if not self.config.get('settable'):
+        if not self.description.get('settable'):
             return None
-        pv = epics.PV(self.config['channel'])
+        pv = epics.PV(self.description['channel'])
         pv.put(new_value, wait=True)
 
 # end of class Item
 
 
 def describeChannel(name):
-    """ Construct an mKTL configuration block to describe the named Epics channel.
+    """ Construct an mKTL catalog block to describe the named Epics channel.
     """
     pv = epics.PV(name)
     slice = pv.get_with_metadata(as_string=True)  # populate metadata
@@ -144,7 +147,7 @@ def describeChannel(name):
 
 
 def describePV(pv: epics.PV):
-    """ Construct an item-specific mKTL configuration block for a single
+    """ Construct an item-specific mKTL catalog block for a single
         Epics channel.
     """
 
