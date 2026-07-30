@@ -294,9 +294,9 @@ def execute_describe_requests(requests):
             keys.sort()
 
             for key in keys:
-                description[key] = store.config[key]
+                description[key] = store.catalog[key]
         else:
-            description[key] = item.config
+            description[key] = item.description
 
     # The presentation here could be improved, but for early debugging this
     # will get the job done.
@@ -307,7 +307,7 @@ def execute_describe_requests(requests):
 
 def execute_discover_requests(requests):
     mktl.discover(*requests.discover)
-    hashes = mktl.config.get_hashes()
+    hashes = mktl.meta.get_hashes()
 
     stores = hashes.keys()
     stores = list(stores)
@@ -372,7 +372,7 @@ def execute_list_requests(requests):
             line.append(full_name.ljust(key_justify))
 
             try:
-                type = store.config[key]['type']
+                type = store.catalog[key]['type']
             except KeyError:
                 pass
             else:
@@ -380,12 +380,12 @@ def execute_list_requests(requests):
                 line.append(type.ljust(11))
 
             try:
-                gettable = store.config[key]['gettable']
+                gettable = store.catalog[key]['gettable']
             except KeyError:
                 gettable = True
 
             try:
-                settable = store.config[key]['settable']
+                settable = store.catalog[key]['settable']
             except KeyError:
                 settable = True
 
@@ -458,7 +458,7 @@ def execute_set_requests(requests):
                 sys.exit(1)
 
             try:
-                units = item.config['units']
+                units = item.description['units']
             except KeyError:
                 units = None
             else:
@@ -470,7 +470,7 @@ def execute_set_requests(requests):
         else:
             new_value = request
             try:
-                units = item.config['units']
+                units = item.description['units']
             except KeyError:
                 units = None
             else:
@@ -527,7 +527,7 @@ def execute_set_requests(requests):
                     item = mktl.get(key)
                     value = item.to_format(value)
                     try:
-                        units = item.config['units']
+                        units = item.description['units']
                     except KeyError:
                         units = None
                     else:
@@ -538,7 +538,7 @@ def execute_set_requests(requests):
 
                 else:
                     try:
-                        units = item.config['units']
+                        units = item.description['units']
                     except KeyError:
                         units = None
                     else:
@@ -590,7 +590,7 @@ def print_item(item, value, timestamp):
                 time_string = time_string[:milliseconds]
 
         try:
-            units = item.config['units']
+            units = item.description['units']
         except KeyError:
             unformatted_units = None
             formatted_units = None

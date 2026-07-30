@@ -10,12 +10,12 @@ class Daemon(mktl.Daemon):
 
     def __init__(self, store, alias, *args, **kwargs):
 
-        # Generate the configuration matching this KTL service. Since this
-        # configuration is not in the default location it must be declared
+        # Generate the catalog matching this KTL service. Since this
+        # catalog is not in the default location it must be declared
         # prior to initializing the Daemon.
 
         items = describe_service(store)
-        mktl.config.authoritative(store, alias, items)
+        mktl.meta.authoritative(store, alias, items)
         mktl.Daemon.__init__(self, store, alias, *args, **kwargs)
 
 
@@ -25,7 +25,7 @@ class Daemon(mktl.Daemon):
             daemon, as opposed to letting them be the default mktl.Item.
         """
 
-        keys = self.config.keys(authoritative=True)
+        keys = self.catalog.keys(authoritative=True)
 
         for key in keys:
             self.add_item(Item, key)
@@ -126,7 +126,7 @@ class Item(mktl.Item):
 
 
 def describe_service(name):
-    """ Construct an mKTL configuration block to describe the named KTL service.
+    """ Construct an mKTL catalog block to describe the named KTL service.
     """
 
     service = ktl.cache(name)
@@ -143,7 +143,7 @@ def describe_service(name):
 
 
 def describe_keyword(keyword):
-    """ Construct an item-specific mKTL configuration block for a single
+    """ Construct an item-specific mKTL catalog block for a single
         KTL keyword.
     """
 

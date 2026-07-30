@@ -31,8 +31,8 @@ def main():
 
     for item in store:
         key = item.key
-        config = store.config[key]
-        item_uuid = config['uuid']
+        description = store.catalog[key]
+        item_uuid = description['uuid']
 
         if item_uuid != uuid:
             continue
@@ -40,7 +40,7 @@ def main():
         matches += 1
 
         try:
-            persist = config['persist']
+            persist = description['persist']
         except KeyError:
             continue
 

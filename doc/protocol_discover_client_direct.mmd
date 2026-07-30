@@ -9,11 +9,11 @@ sequenceDiagram
     Client->>+Registry: GET: _hash
     Registry->>-Client: REP: JSON payload
 
-    Client->>+Registry: GET: store1._config
+    Client->>+Registry: GET: store1._catalog
     Registry->>-Client: REP: JSON payload
 
-    Client->>+Registry: GET: store2._config
+    Client->>+Registry: GET: store2._catalog
     Registry->>-Client: REP: JSON payload
 
-    Client->>+Registry: GET: store3._config
+    Client->>+Registry: GET: store3._catalog
     Registry->>-Client: REP: JSON payload

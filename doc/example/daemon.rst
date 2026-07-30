@@ -235,9 +235,9 @@ Here's what that would look like in practice::
 JSON description of items
 -------------------------
 
-The :ref:`configuration syntax <configuration>` describing a set of items is a
+The :ref:`catalog syntax <catalog>` describing a set of items is a
 JSON associative array. When a daemon first starts it must have a complete JSON
-description of every item; this forms the core of the configuration managed by
+description of every item; this forms the core of the catalog block managed by
 that daemon, which is responsible for adding the metadata required for proper
 client interactions.
 
@@ -249,18 +249,18 @@ lines like the following in its initialization method::
 
     def __init__(self, *args, **kwargs):
 
-        items = generate_config()
-        mktl.config.authoritative('metal', 'precious', items)
+        items = generate_catalog()
+        mktl.meta.authoritative('metal', 'precious', items)
         mktl.Daemon.__init__(self, *args, **kwargs)
 
-It's more likely that the JSON configuration is written out as a file, ready
+The catalog can also be written out as a JSON file, ready
 to be used by the daemon. The file can be anywhere, so long as it is accessible
 upon startup, after which the file is no longer referenced in any way. The
-configuration file is expected to contain a single JSON-formatted dictionary,
+catalog file is expected to contain a single JSON-formatted dictionary,
 with a :ref:`dictionary for each item <items>`. Whitespace is not important,
 so long as JSON parsers understand the file contents.
 
-The following is a configuration block appropriate for the items used in this
+The following is a catalog block appropriate for the items used in this
 example:
 
 .. literalinclude:: ./precious.json
