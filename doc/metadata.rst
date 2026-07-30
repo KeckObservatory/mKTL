@@ -1,4 +1,4 @@
-.. _catalog:
+.. _metadata:
 
 JSON metadata
 =============
@@ -8,6 +8,9 @@ enumerating the available items and all their intrinsic metadata. This
 document lays out the configuration syntax, as might be returned from
 a _catalog GET request or loaded from a local cache on disk, and additional
 conventions around the handling of a catalog.
+
+
+.. _catalog:
 
 Catalog syntax
 --------------
