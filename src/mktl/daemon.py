@@ -960,7 +960,7 @@ def _save_persistent(item, *args, **kwargs):
         callback for a :class:`mktl.Item` instance.
     """
 
-    uuid = item.config['uuid']
+    uuid = item.description['uuid']
 
     try:
         pending = persist_queues[uuid]
