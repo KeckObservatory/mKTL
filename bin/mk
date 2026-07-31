@@ -313,7 +313,13 @@ def execute_discover_requests(requests):
     stores = list(stores)
     stores.sort()
 
-    print("%d stores available: %s" % (len(stores), ' '.join(stores)))
+    count = len(stores)
+    stores = ', '.join(stores)
+
+    if count == 1:
+        print('1 store discovered: ' + stores)
+    else:
+        print("%d stores discovered: %s" % (count, stores))
 
 
 
