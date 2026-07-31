@@ -96,22 +96,6 @@ class Registry:
         self.beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
 
 
-    def accept_requests(self, store):
-        """ Dynamically establish a handler for future GET requests
-            for a store's catalog.
-        """
-
-        # Normally this would be a call to self.add_get_handler(),
-        # but that method has a safety check verifying the local
-        # store has a matching item-- that will not be the case for
-        # any store._catalog reqeusts added at runtime.
-        #
-        # Thus the handler dictionary is manipulated directly.
-
-        key = store + '._catalog'
-        self.daemon.rep._req_get_handlers[key] = self.req_get_catalog
-
-
     def check_duplicates(self, new, override):
         """ Confirm that any keys in a catalog block are not present
             in any already known blocks.
@@ -326,7 +310,7 @@ class Registry:
         # catalog block, the fact that we have a block at all implies
         # we must be ready to answer queries for that store.
 
-        self.accept_requests(store)
+        self.daemon.accept_catalog_requests(store)
 
         catalog = mktl.meta.get(store)
 
@@ -430,6 +414,48 @@ class Registry:
         catalog.update(new)
 
 
+# end of class Registry
+
+
+
+class Daemon(mktl.Daemon):
+
+    def setup(self):
+
+        # The registry-specific functionality is in the Registry class.
+        # It's instantiated as part of the daemon so that any items can
+        # access the registry functionality.
+
+        registry = Registry(self)
+        self.registry = registry
+
+        # The comment for Registry.accept_requests() explains the motivation
+        # for making this assignment directly. There is no similar top-level
+        # assignment for _hash because it is handled by the base Daemon class.
+
+        self.rep._req_set_handlers['_catalog'] = self.req_set_catalog
+
+
+    def setup_final(self):
+        self.registry.setup_final()
+
+
+    def accept_catalog_requests(self, store):
+        """ Dynamically establish a handler for future GET requests
+            for a store's catalog.
+        """
+
+        # Normally this would be a call to self.add_get_handler(),
+        # but that method has a safety check verifying the local
+        # store has a matching item-- that will not be the case for
+        # any store._catalog reqeusts added at runtime.
+        #
+        # Thus the handler dictionary is manipulated directly.
+
+        key = store + '._catalog'
+        self.rep._req_get_handlers[key] = self.req_get_catalog
+
+
     def req_get_catalog(self, request):
         """ Handle all GET requests for 'store._catalog' items, regardless of
             which store it is. Requests for unknown stores will not reach this
@@ -462,39 +488,13 @@ class Registry:
         block = request.payload.value
 
         try:
-            self.process_block(block)
+            self.registry.process_block(block)
         except ProvenanceLoopError:
             # This catalog block came from us. Pay no mind.
             pass
 
         payload = mktl.Payload(value=True)
         return payload
-
-
-# end of class Registry
-
-
-
-class Daemon(mktl.Daemon):
-
-    def setup(self):
-
-        # The registry-specific functionality is in the Registry class.
-        # It's instantiated as part of the daemon so that any items can
-        # access the registry functionality.
-
-        registry = Registry(self)
-        self.registry = registry
-
-        # The comment for Registry.accept_requests() explains the motivation
-        # for making this assignment directly. There is no similar top-level
-        # assignment for _hash because it is handled by the base Daemon class.
-
-        self.rep._req_set_handlers['_catalog'] = registry.req_set_catalog
-
-
-    def setup_final(self):
-        self.registry.setup_final()
 
 
 # end of class Daemon
