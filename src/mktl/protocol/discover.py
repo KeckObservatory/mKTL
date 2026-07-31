@@ -15,10 +15,10 @@ import time
 
 from .. import meta
 
-call = 'I heard it'
+call = 'Aloha mKTL'
 call = call.encode()
 
-response = 'on the X:'
+response = 'E komo mai:'
 response = response.encode()
 
 # There's nothing special about this port number, other than it is not
