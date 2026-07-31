@@ -483,10 +483,10 @@ There are four shared secrets used in the discovery exchange:
 
 **call**	  An arbitrary string used by the discoverer to trigger a
 		  response from the listener. The string value is
-		  ``I heard it``.
+		  ``Aloha mKTL``.
 
 **response**	  An arbitrary string used by the listener to respond to any
-		  received calls. The string value is ``on the X:``.
+		  received calls. The string value is ``E komo mai:``.
 
 ================= ==============================================================
 
@@ -498,7 +498,7 @@ component of the response after the colon. For example, if a daemon has a
 request port listening on port 10079, the full exchange (discovery request,
 discovery response) would be::
 
-    b'I heard it'
+    b'Aloha mKTL'
 
-    b'on the X:10079'
+    b'E komo mai:10079'
 
