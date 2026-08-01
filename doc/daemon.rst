@@ -61,7 +61,7 @@ Largely for internal use, there are some aspects of the
 :class:`mktl.meta.Catalog` class that are directly relevant for use
 within a daemon. A reference to the appropriate Catalog instance can
 be accesssed as an attribute of the :class:`mktl.Store`, or via the
-:func:`mktl.meta.get` method; :class:`mktl.meta.Catalog` instances
+:func:`mktl.meta.catalog` method; :class:`mktl.meta.Catalog` instances
 are singletons.
 
 .. autoclass:: mktl.meta.Catalog
@@ -72,7 +72,7 @@ two of which are potentially relevant in a daemon context:
 
 .. autofunction:: mktl.meta.authoritative
 
-.. autofunction:: mktl.meta.get
+.. autofunction:: mktl.meta.catalog
 
 
 mkd executable

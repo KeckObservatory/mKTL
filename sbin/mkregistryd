@@ -102,7 +102,7 @@ class Registry:
         """
 
         store = new['store']
-        catalog = mktl.meta.get(store)
+        catalog = mktl.meta.catalog(store)
 
         if len(catalog) == 0:
             # No previously stored blocks to check against. That means all of
@@ -312,7 +312,7 @@ class Registry:
 
         self.daemon.accept_catalog_requests(store)
 
-        catalog = mktl.meta.get(store)
+        catalog = mktl.meta.catalog(store)
 
         self.check_provenance(new)
 
@@ -466,7 +466,7 @@ class Daemon(mktl.Daemon):
         store, key = target.split('.', 1)
 
         try:
-            catalog = mktl.meta.get(store)
+            catalog = mktl.meta.catalog(store)
         except KeyError:
             payload_data = tuple()
         else:

@@ -64,7 +64,7 @@ class Daemon:
         self.cleanup = self._cleanup_wrapper
         self.shutdown = threading.Event()
 
-        self.catalog = meta.get(store, alias)
+        self.catalog = meta.catalog(store, alias)
         self.uuid = self.catalog.authoritative_uuid
 
         if self.uuid is None:
@@ -120,7 +120,7 @@ class Daemon:
         # The cached catalog needs to be in its final form before creating
         # a local Store instance. For the sake of future calls to get() we need
         # to be sure that there are no existing instances in the cache, all
-        # local calls to mktl.get() need to retrun the instance containing
+        # local calls to mktl.catalog() need to retrun the instance containing
         # authoritative items.
 
         existing = begin._clear(store)
@@ -728,7 +728,7 @@ class RequestServer(protocol.request.Server):
 
         store, key = request.target.split('.', 1)
 
-        catalog = meta.get(store)
+        catalog = meta.catalog(store)
         catalog = catalog._by_uuid
         payload = protocol.message.Payload(value=catalog)
         return payload
@@ -1081,7 +1081,7 @@ class DaemonCatalog(item.Item):
     def perform_get(self):
 
         uuid = self.store._daemon.uuid
-        catalog = meta.get(self.store.name)
+        catalog = meta.catalog(self.store.name)
         catalog = catalog[uuid]
 
         return catalog
