@@ -1238,6 +1238,10 @@ class Item:
         return bytes
 
 
+    def __getitem__(self, key):
+        return self.value[key]
+
+
     def __hash__(self):
         """ The __hash__() method needs to be defined in order for Items to
             be usable in dictionaries. Note there is a difference between the
