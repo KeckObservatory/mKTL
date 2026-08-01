@@ -72,7 +72,7 @@ def discover(*targets):
                 blocks = None
 
             if blocks:
-                catalog = meta.get(store)
+                catalog = meta.catalog(store)
                 for uuid,block in blocks.items():
                     catalog.update(block)
 
@@ -130,7 +130,7 @@ def get(store, key=None):
 
     # Start with whatever is available in memory, or the local disk cache.
 
-    catalog = meta.get(store)
+    catalog = meta.catalog(store)
 
     # Try the network if that didn't yield results.
 

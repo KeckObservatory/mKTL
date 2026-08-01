@@ -19,7 +19,7 @@ class Store:
     def __init__(self, name):
 
         self.name = name
-        self.catalog = meta.get(name)
+        self.catalog = meta.catalog(name)
         self._daemon = None
         self._items = dict()
         self._items_lock = threading.Lock()

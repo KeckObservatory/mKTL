@@ -1360,9 +1360,45 @@ def authoritative(store, alias, items):
         custom routines.
     """
 
-    catalog = get(store, alias)
-    block = to_block(store, alias, catalog.authoritative_uuid, items)
-    catalog.update(block)
+    cached = catalog(store, alias)
+    block = to_block(store, alias, cached.authoritative_uuid, items)
+    cached.update(block)
+
+
+
+def catalog(store, alias=None):
+    """ Retrieve the locally cached :class:`Catalog` instance for
+        the specified *store*.
+        A KeyError exception is raised if there are no locally cached
+        catalog blocks for that store. A typical client will only
+        interact with :func:`mktl.get`, which in turn calls this method.
+    """
+
+    store = store.lower()
+
+    if store == '':
+        raise ValueError('store name cannot be the empty string')
+
+    try:
+        catalog = _cache[store]
+    except KeyError:
+        _cache_lock.acquire()
+
+        try:
+            catalog = _cache[store]
+        except KeyError:
+            catalog = Catalog(store, alias)
+            _cache[store] = catalog
+        finally:
+            _cache_lock.release()
+
+    if alias and catalog.alias is None:
+        catalog.alias = alias
+
+    elif alias and alias != catalog.alias:
+        raise ValueError('not ready to handle two aliases in a single daemon')
+
+    return catalog
 
 
 
@@ -1481,42 +1517,6 @@ def generate_hash(dumpable):
 
 
 
-def get(store, alias=None):
-    """ Retrieve the locally cached :class:`Catalog` instance for
-        the specified *store*.
-        A KeyError exception is raised if there are no locally cached
-        catalog blocks for that store. A typical client will only
-        interact with :func:`mktl.get`, which in turn calls this method.
-    """
-
-    store = store.lower()
-
-    if store == '':
-        raise ValueError('store name cannot be the empty string')
-
-    try:
-        catalog = _cache[store]
-    except KeyError:
-        _cache_lock.acquire()
-
-        try:
-            catalog = _cache[store]
-        except KeyError:
-            catalog = Catalog(store, alias)
-            _cache[store] = catalog
-        finally:
-            _cache_lock.release()
-
-    if alias and catalog.alias is None:
-        catalog.alias = alias
-
-    elif alias and alias != catalog.alias:
-        raise ValueError('not ready to handle two aliases in a single daemon')
-
-    return catalog
-
-
-
 def get_hashes(store=None):
     """ Retrieve known hashes for a store's cached catalog blocks. Return
         all known hashes if no *store* is specified. The hashes are always
@@ -1533,8 +1533,7 @@ def get_hashes(store=None):
         stores = (store,)
 
     for store in stores:
-        catalog = get(store)
-        catalog_hashes = catalog.hashes()
+        catalog_hashes = catalog(store).hashes()
 
         if len(catalog_hashes) > 0:
             hashes[store] = catalog_hashes
