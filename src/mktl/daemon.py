@@ -2,7 +2,6 @@
 import atexit
 import logging
 import os
-import platform
 import queue
 import resource
 import socket
@@ -521,7 +520,7 @@ class Daemon:
         items[key] = dict()
         items[key]['description'] = 'The hostname where this daemon is running.'
         items[key]['type'] = 'string'
-        items[key]['initial'] = platform.node()
+        items[key]['initial'] = socket.getfqdn()
         items[key]['settable'] = False
 
         key = '_' + self.alias + 'mem'
