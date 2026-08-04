@@ -66,7 +66,7 @@ class Daemon:
         # Allow subclasses to parse their own configuration file prior to
         # describing or substantiating any items.
 
-        self.parse_options()
+        self.parse_options(self.options)
 
 
         # Allow subclasses to provide a generated dictionary of item
@@ -509,15 +509,16 @@ class Daemon:
         return None
 
 
-    def parse_options(self):
+    def parse_options(self, options):
         """ Subclasses should override the :func:`parse_options` method to
             interpret the :py:attr:`options` attribute, which is a
-            :class:`argparse.ArgumentParser` instance. This method is called
+            :class:`argparse.ArgumentParser` instance, and is passed as an
+            argument to this method for convenience. This method is called
             early in the initialization of the Daemon, allowing the subclass
             to establish its local configuration prior to describing or
             instantiating any items.
 
-            For example, the self.options.appconfig value may indicate the
+            For example, the options.appconfig attribute may indicate the
             location of a configparser-formatted configuration file. A subclass
             would use this method to read the file, parse its contents, and
             establish local variables for subsequent use by other methods.
