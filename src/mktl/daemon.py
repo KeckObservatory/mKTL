@@ -63,6 +63,12 @@ class Daemon:
         self.cleanup = self._cleanup_wrapper
         self.shutdown = threading.Event()
 
+        # Allow subclasses to parse their own configuration file prior to
+        # describing or substantiating any items.
+
+        self.parse_options()
+
+
         # Allow subclasses to provide a generated dictionary of item
         # descriptions; this hook needs to be exercised prior to any
         # queries for the authoritative UUID, since it's possible this
@@ -72,6 +78,7 @@ class Daemon:
         generated = self.describe_items()
         if generated:
             meta.authoritative(store, alias, generated)
+
 
         self.catalog = meta.catalog(store, alias)
         self.uuid = self.catalog.authoritative_uuid
@@ -495,9 +502,30 @@ class Daemon:
               items['watermelons']['format'] = "%d"
 
               return items
+
+            The default implementation of this method takes no actions.
         """
 
         return None
+
+
+    def parse_options(self):
+        """ Subclasses should override the :func:`parse_options` method to
+            interpret the :py:attr:`options` attribute, which is a
+            :class:`argparse.ArgumentParser` instance. This method is called
+            early in the initialization of the Daemon, allowing the subclass
+            to establish its local configuration prior to describing or
+            instantiating any items.
+
+            For example, the self.options.appconfig value may indicate the
+            location of a configparser-formatted configuration file. A subclass
+            would use this method to read the file, parse its contents, and
+            establish local variables for subsequent use by other methods.
+
+            The default implementation of this method takes no actions.
+        """
+
+        pass
 
 
     def setup(self):
