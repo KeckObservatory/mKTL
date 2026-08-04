@@ -103,7 +103,7 @@ class Item(mktl.Item):
         timestamp = slice.time
         unformatted = slice.binary
 
-        payload = mktl.Payload(unformatted, timestamp)
+        payload = mktl.Payload(value=unformatted, time=timestamp)
         return payload
 
 
