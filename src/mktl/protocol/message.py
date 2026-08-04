@@ -5,7 +5,7 @@
 import itertools
 import logging
 import os
-import platform
+import socket
 import sys
 import threading
 import time
@@ -42,7 +42,7 @@ except:
     _origin_user = None
 
 try:
-    _origin_hostname = platform.node()
+    _origin_hostname = socket.getfqdn()
 except:
     _origin_hostname = None
 

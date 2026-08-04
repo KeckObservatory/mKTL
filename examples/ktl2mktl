@@ -15,7 +15,6 @@ For example, to run ktl2mktl for the KTL service 'kpfpower', one might invoke:
 
 import argparse
 import json
-import ktl
 import sys
 
 try:
@@ -32,7 +31,7 @@ if KTL is None:
     try:
         import KTL
     except ImportError:
-        raise ImportError('unable to import either mktl or KTL.py')
+        raise ImportError('unable to import mktl.KTL')
 
 
 def main():

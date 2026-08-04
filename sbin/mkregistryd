@@ -27,7 +27,15 @@ def main():
 
     config = parse_command_line()
     main.hostname = socket.getfqdn()
-    store = 'registry:' + main.hostname
+
+    # It's problematic to use the FQDN as part of the store name because
+    # a proper FQDN will have dot-separated fields, and mKTL relies on
+    # dot-separation for fully qualified item keys. The store name generated
+    # here is expected to be unique for this host; this may need to be
+    # revisited in the future.
+
+    sanitized_hostname = main.hostname.replace('.', '_')
+    store = 'registry:' + sanitized_hostname
 
     catalog = generate_catalog()
     mktl.meta.authoritative(store, store, catalog)

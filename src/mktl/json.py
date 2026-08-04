@@ -5,19 +5,19 @@
 dumps = None
 loads = None
 
-# The msgspec 'encode' operation returns bytes, as does orjson.dumps(). To
-# maintain alignment all dumps() methods need to do so as well. The loads()
-# methods in each implementation will accept bytes as input.
-
-def json_dumps(*args, **kwargs):
-    return json.dumps(*args, **kwargs).encode()
-
 
 def use_json():
 
     import json
     global dumps
     global loads
+
+    # The msgspec 'encode' operation returns bytes, as does orjson.dumps(). To
+    # maintain alignment all dumps() methods need to do so as well. The loads()
+    # methods in each implementation will accept bytes as input.
+
+    def json_dumps(*args, **kwargs):
+        return json.dumps(*args, **kwargs).encode()
 
     # One could use cached instances of json.JSONEncoder and json.JSONDecoder
     # here, but it doesn't appear to be any more efficient than calling the
