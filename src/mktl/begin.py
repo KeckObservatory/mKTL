@@ -149,7 +149,10 @@ def get(store, key=None):
         message = protocol.message.Request('GET', key)
         payload = protocol.request.send(hostname, port, message)
 
-        blocks = payload.value
+        try:
+            blocks = payload.value
+        except AttributeError:
+            blocks = None
 
         if blocks:
             for uuid,block in blocks.items():
