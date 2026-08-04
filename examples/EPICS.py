@@ -118,7 +118,7 @@ class Item(mktl.Item):
         resp = self._get_pv_with_metadata()
         timestamp = self._get_timestamp(resp.get('timestamp'))
         value = resp.get('value')
-        payload = mktl.Payload(value, timestamp)
+        payload = mktl.Payload(value=value, time=timestamp)
         return payload
 
 
