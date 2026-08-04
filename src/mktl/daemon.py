@@ -63,6 +63,16 @@ class Daemon:
         self.cleanup = self._cleanup_wrapper
         self.shutdown = threading.Event()
 
+        # Allow subclasses to provide a generated dictionary of item
+        # descriptions; this hook needs to be exercised prior to any
+        # queries for the authoritative UUID, since it's possible this
+        # may be the first (and only) declaration of meta.authoritative()
+        # that occurs for a given daemon.
+
+        generated = self.describe_items()
+        if generated:
+            meta.authoritative(store, alias, generated)
+
         self.catalog = meta.catalog(store, alias)
         self.uuid = self.catalog.authoritative_uuid
 
@@ -461,6 +471,33 @@ class Daemon:
         else:
             self._cleanup_invoked = True
             return self._cleanup(*args, **kwargs)
+
+
+    def describe_items(self):
+        """ Subclasses should override the :func:`describe_items` method to
+            supplement the daemon's authoritative catalog block with any
+            items whose description is generated at run time, as opposed to
+            loaded from a file.
+
+            The sole return argument is a dictionary, keyed by mKTL item
+            keys, and the value is another dictionary containing the fields
+            of the item description.
+
+            For example::
+
+              items = dict()
+
+              items['watermelons'] = dict()
+              items['watermelons']['description'] = 'Quantity of watermelons.'
+              items['watermelons']['units'] = 'melons'
+              items['watermelons']['persist'] = True
+              items['watermelons']['type'] = 'numeric'
+              items['watermelons']['format'] = "%d"
+
+              return items
+        """
+
+        return None
 
 
     def setup(self):
