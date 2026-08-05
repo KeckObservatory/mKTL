@@ -9,7 +9,7 @@
 import configparser
 import mktl
 
-# This file, which does not exist, implements a simple interface to
+# This module, which does not exist, implements a simple interface to
 # the hardware controller itself.
 
 import heatercontroller
@@ -56,11 +56,11 @@ class Daemon(mktl.Daemon):
             outputs = tuple()
 
         for input in inputs:
-            prefix = main.config.get('inputs', input)
+            prefix = self.heater_config.get('inputs', input)
             items.update(self.describe_input_items(prefix))
 
         for output in outputs:
-            prefix = main.config.get('outputs', output)
+            prefix = self.heater_config.get('outputs', output)
             items.update(self.describe_output_items(prefix))
 
         return items
@@ -107,10 +107,12 @@ class Daemon(mktl.Daemon):
 
         items = dict()
 
+        channel = self.heater_config.get(prefix, 'input')
         chi = prefix + 'chi'
         items[chi] = dict()
         items[chi]['description'] = 'Channel for this temperature input.'
         items[chi]['settable'] = False
+        items[chi]['initial'] = channel
 
         tmp = prefix + 'tmp'
         items[tmp] = dict()
@@ -129,10 +131,12 @@ class Daemon(mktl.Daemon):
 
         items = dict()
 
+        channel = self.heater_config.get(prefix, 'output')
         cho = prefix + 'cho'
         items[cho] = dict()
         items[cho]['description'] = 'Channel for this heater output.'
         items[cho]['settable'] = False
+        items[chi]['initial'] = channel
 
         out = prefix + 'out'
         items[out] = dict()
@@ -168,11 +172,11 @@ class Daemon(mktl.Daemon):
             outputs = tuple()
 
         for input in inputs:
-            prefix = main.config.get('inputs', input)
+            prefix = self.heater_config.get('inputs', input)
             self.setup_input_items(prefix, controller)
 
         for output in outputs:
-            prefix = main.config.get('outputs', output)
+            prefix = self.heater_config.get('outputs', output)
             self.setup_output_items(prefix, controller)
 
 
@@ -186,45 +190,121 @@ class Daemon(mktl.Daemon):
         self.add_item(AuxiliaryCommand, aux, controller)
 
 
-class Auxiliary(mktl.Item):
+    def setup_input_items(self, prefix, controller):
 
-    def __init__(self, store, key...
-        
-
-
+        tmp = prefix + 'tmp'
+        self.add_item(InputTemperature, tmp, controller)
 
 
+    def setup_output_items(self, prefix, controller):
 
-class Gold(MarketPriced):
+        out = prefix + 'out'
+        self.add_item(OutputPower, out, controller)
+
+        trg = prefix + 'trg'
+        self.add_item(OutputSetpoint, trg, controller)
+
+
+class ControllerItem(mktl.Item):
+
+    def __init__(self, store, key, controller):
+
+        mktl.Item.__init__(self, store, key)
+        self.controller = controller
+
+        # The custom item subclasses defined here all manage published values
+        # via some mechanism other than the default publish-on-set behavior.
+
+        self.publish_on_set = False
+
+
+class AuxiliaryCommand(ControllerItem):
+
+    def perform_set(self, value):
+
+        self.value = value
+        response = self.controller.command(value)
+        self.value = value + ' => ' + response
+
+
+class InputChannel(ControllerItem):
+
+    def __init__(self, *args, **kwargs):
+        ControllerItem.__init__(self, *args, **kwargs)
+
+        channel = self.key[:-3] + 'chi'
+        channel = self.store[channel]
+        self.channel = channel
+
+        self.poll(0.5)
+
 
     def perform_get(self):
-        return get_spot_value('gold', 'usd', 'grams')
+
+        channel = self.channel.value
+        command = 'TEMP? ' + channel
+        value = self.controller.command(command)
+
+        return value
 
 
-class Platinum(MarketPriced):
+class OutputPower(ControllerItem):
+
+    def __init__(self, *args, **kwargs):
+        ControllerItem.__init__(self, *args, **kwargs)
+
+        channel = self.key[:-3] + 'cho'
+        channel = self.store[channel]
+        self.channel = channel
+
+        self.poll(0.5)
+
 
     def perform_get(self):
-        return get_spot_value('platinum', 'usd', 'grams')
+
+        channel = self.channel.value
+        command = 'OUT? ' + channel
+        value = self.controller.command(command)
+
+        return value
 
 
-class Silver(MarketPriced):
+class OutputSetpoint(ControllerItem):
+
+    def __init__(self, *args, **kwargs):
+        ControllerItem.__init__(self, *args, **kwargs)
+
+        channel = self.key[:-3] + 'cho'
+        channel = self.store[channel]
+        self.channel = channel
+
+        # The setpoint is not expected to change absent commands, so the
+        # polling rate here is lower than for the temperature and power
+        # outputs. But the controller is still considered the authoritative
+        # source of the setpoint value.
+
+        self.poll(10)
+
 
     def perform_get(self):
-        return get_spot_value('silver', 'usd', 'grams')
+
+        channel = self.channel.value
+        command = 'SETP? ' + channel
+        value = self.controller.command(command)
+
+        return value
 
 
-def get_spot_value(metal, currency, units):
+    def perform_set(self, value):
 
-    # Presumably this involves something like a curl/wget call to an
-    # external website. Assume that is exactly what would occur in this
-    # space, and we retrieved a bare number for the metal, currency,
-    # and units of interest.
-    #
-    # current_price = some magical invocation of external resources
-    current_price = 100.4
+        channel = self.channel.value
+        command = 'SETP ' + channel + ' ' + str(value)
+        self.controller.command(command)
 
-    current_price = float(current_price)
-    return current_price
+        # Read the current setpoint back from the controller rather than
+        # assume it matches the value commanded.
+
+        self.req_poll()
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
