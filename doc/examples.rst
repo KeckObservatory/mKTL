@@ -22,3 +22,4 @@ words, that ``import mktl`` will succeed.
    example/callback
    example/daemon
    example/daemon_unabridged
+   example/heater
