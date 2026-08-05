@@ -279,11 +279,13 @@ class Daemon:
             self.add_handler(key, request, method)
 
 
-    def add_item(self, item_class, key, **kwargs):
+    def add_item(self, item_class, key, *args, **kwargs):
         """ Add an :class:`mktl.Item` to this daemon instance; this is the entry
             point for establishing an authoritative item, one that will handle
-            inbound get/set request and the like. The *kwargs* will be passed
-            directly to the *item_class* when it is called to be instantiated.
+            inbound get/set request and the like. The *args* and *kwargs* will
+            be passed directly to the *item_class* when it is called to be
+            instantiated; note that a default :class:`mktl.Item` takes no
+            additional arguments, this is only meaningful for custom subclasses.
         """
 
         key = key.lower()
@@ -319,7 +321,7 @@ class Daemon:
             preserved_callbacks = tuple()
 
 
-        created = item_class(self.store, key, **kwargs)
+        created = item_class(self.store, key, *args, **kwargs)
         created._authoritative(self.pub)
         created.subscribe(prime=False)
 
