@@ -319,9 +319,9 @@ class Daemon:
             preserved_callbacks = tuple()
 
 
-        kwargs['authoritative'] = True
-        kwargs['pub'] = self.pub
         created = item_class(self.store, key, **kwargs)
+        created._authoritative(self.pub)
+        created.subscribe(prime=False)
 
         # Instantiating the item results in a persistent reference in
         # self.store._items, there is no need to manipulate that dictionary

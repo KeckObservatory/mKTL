@@ -76,6 +76,14 @@ class Store:
             # step in its initialization process, there is no need to manipulate
             # it directly.
 
+            # All Item instances instantiated here are client-facing, and expect
+            # to be subscribed to broadcast events by default. This used to
+            # occur at the tail end of Item.__init__(), but there is variance
+            # in how that should be handled depending on whether the item is
+            # authoritative.
+
+            item.subscribe()
+
         return item
 
 

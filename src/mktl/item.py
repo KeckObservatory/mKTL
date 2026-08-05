@@ -34,17 +34,18 @@ class Item:
 
     untruths = set((None, False, 0, 'false', 'f', 'no', 'n', 'off', 'disable', ''))
 
-    def __init__(self, store, key, subscribe=True, authoritative=False, pub=None):
+    def __init__(self, store, key):
 
-        self.authoritative = authoritative
         key = key.lower()
-        self.key = key
-        self.full_key = store.name + '.' + key
-        self.store = store
-        self.description = store.catalog[key]
+
+        self.authoritative = False
         self.callbacks = list()
+        self.description = store.catalog[key]
+        self.full_key = store.name + '.' + key
+        self.key = key
         self.log_on_set = True
         self.publish_on_set = True
+        self.store = store
         self.subscribed = False
         self.timeout = 120
 
@@ -53,7 +54,7 @@ class Item:
         self._daemon_value = None
         self._daemon_value_timestamp = None
 
-        self.pub = pub
+        self.pub = None
         self.sub = None
         self.req = None
         self.rep = None
@@ -116,14 +117,6 @@ class Item:
         if gettable == False:
             self.req_get = self.reject_get
 
-        if subscribe == True:
-            if self.authoritative == True:
-                prime = False
-            else:
-                prime = True
-
-            self.subscribe(prime=prime)
-
 
     def add_get_performer(self, method):
         """ Assign a method that will be called for all GET requests for this
@@ -176,6 +169,17 @@ class Item:
             raise TypeError('the performer method must be callable')
 
         self.perform_set = method
+
+
+    def _authoritative(self, pub):
+        """ This method is invoked by a :class:`Daemon` instance in its
+            :func:`Daemon.add_item` method. The changes made here are
+            what distinguishes a client-facing item from the authoritative
+            daemon variant.
+        """
+
+        self.pub = pub
+        self.authoritative = True
 
 
     def _cleanup(self):
