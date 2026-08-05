@@ -9,6 +9,11 @@
 import configparser
 import mktl
 
+# This file, which does not exist, implements a simple interface to
+# the hardware controller itself.
+
+import heatercontroller
+
 
 class Daemon(mktl.Daemon):
 
@@ -147,16 +152,47 @@ class Daemon(mktl.Daemon):
 
     def setup(self):
 
-        self.add_item(Gold, 'GOLD')
-        self.add_item(Silver, 'SILVER')
-        self.add_item(Platinum, 'PLATINUM')
+        controller = heatercontroller.Controller(self.heater_config)
+
+        controller_number = self.heater_config.get('main', 'controller')
+        self.setup_controller_items(controller_number, controller)
+
+        try:
+            inputs = self.heater_config.options('inputs')
+        except configparser.NoSectionError:
+            inputs = tuple()
+
+        try:
+            outputs = self.heater_config.options('outputs')
+        except configparser.NoSectionError:
+            outputs = tuple()
+
+        for input in inputs:
+            prefix = main.config.get('inputs', input)
+            self.setup_input_items(prefix, controller)
+
+        for output in outputs:
+            prefix = main.config.get('outputs', output)
+            self.setup_output_items(prefix, controller)
 
 
-class MarketPriced(mktl.Item):
+    def setup_controller_items(self, number, controller):
 
-    def __init__(self, *args, **kwargs):
-        mktl.Item.__init__(self, *args, **kwargs)
-        self.poll(86400)    # Update once per day.
+        number = str(number)
+        prefix = 'ctrl' + number
+
+        aux = prefix + 'aux'
+
+        self.add_item(AuxiliaryCommand, aux, controller)
+
+
+class Auxiliary(mktl.Item):
+
+    def __init__(self, store, key...
+        
+
+
+
 
 
 class Gold(MarketPriced):
