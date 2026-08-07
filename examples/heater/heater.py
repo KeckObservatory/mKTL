@@ -304,7 +304,7 @@ class OutputSetpoint(ControllerItem):
         # Read the current setpoint back from the controller rather than
         # assume it matches the value commanded.
 
-        self.req_poll()
+        self.perform_poll()
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

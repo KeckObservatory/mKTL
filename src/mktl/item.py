@@ -455,6 +455,38 @@ class Item:
         return payload
 
 
+    def perform_poll(self, repeat=False):
+        """ Handle a background poll request, established by calling
+            :func:`poll`. :func:`perform_get` is where custom handling by
+            subclasses is expected to occur. The payload returned from
+            :func:`perform_poll` is identical to the payload returned by
+            :func:`perform_get`.
+
+            A common pattern for custom subclasses involves registering
+            :func:`perform_poll` as a callback on other items, so that the value
+            of this item can be refreshed when external events occur. The
+            :func:`watch` method exists to facilitate that pattern.
+        """
+
+        response = self.perform_get()
+
+        if response is None:
+            # Direct assertion that there is no new value. In this case,
+            # return the current value(s), and discontinue further processing.
+            return self.to_payload()
+        elif isinstance(response, protocol.message.Payload):
+            payload = response
+        else:
+            payload = self.to_payload(response)
+
+        # The default behavior is to only publish a value if the value has
+        # changed. That check is made is in the publish() method.
+
+        self.publish(payload.value, payload.time, repeat)
+
+        return payload
+
+
     def perform_set(self, new_value):
         """ Implement any custom behavior that should occur as a result of
             a set request for this item. No return value is expected. Any
@@ -484,11 +516,11 @@ class Item:
     def poll(self, period):
         """ Poll for a new value every *period* seconds. Polling will be
             discontinued if *period* is set to None or zero. Polling will
-            invoke :func:`req_poll`, and occurs at the requested interval
+            invoke :func:`perform_poll`, and occurs at the requested interval
             within a background thread unique to this item.
         """
 
-        poll.start(self.req_poll, period)
+        poll.start(self.perform_poll, period)
 
 
     def publish(self, new_value, timestamp=None, repeat=False):
@@ -517,7 +549,7 @@ class Item:
         # publish() does not require a Payload instance as an argument to
         # allow flexibility in cases where the timestamp is not already
         # established, though in the average case publish() will be invoked
-        # as a result of a req_poll() call, which already created a Payload
+        # as a result of a perform_poll() call, which already created a Payload
         # instance; it might be more efficient to create one and pass it to
         # publish(), but that's not how the calls are presently structured.
 
@@ -656,7 +688,7 @@ class Item:
             refresh = False
 
         if refresh == True:
-            payload = self.req_poll()
+            payload = self.perform_poll()
         else:
             payload = self.to_payload()
 
@@ -677,38 +709,6 @@ class Item:
 
         new_value = self.from_payload(payload)
         self.publish(new_value)
-
-
-    def req_poll(self, repeat=False):
-        """ Handle a background poll request, established by calling
-            :func:`poll`. :func:`perform_get` is where custom handling by
-            subclasses is expected to occur. The payload returned from
-            :func:`req_poll` is identical to the payload returned by
-            :func:`perform_get`.
-
-            A common pattern for custom subclasses involves registering
-            :func:`req_poll` as a callback on other items, so that the value
-            of this item can be refreshed when external events occur. The
-            :func:`watch` method exists to facilitate that pattern.
-        """
-
-        response = self.perform_get()
-
-        if response is None:
-            # Direct assertion that there is no new value. In this case,
-            # return the current value(s), and discontinue further processing.
-            return self.to_payload()
-        elif isinstance(response, protocol.message.Payload):
-            payload = response
-        else:
-            payload = self.to_payload(response)
-
-        # The default behavior is to only publish a value if the value has
-        # changed. That check is made is in the publish() method.
-
-        self.publish(payload.value, payload.time, repeat)
-
-        return payload
 
 
     def req_set(self, request):
@@ -1161,10 +1161,10 @@ class Item:
             current item updates itself any time the referenced item changes.
             This is functionally equivalent to calling::
 
-              item.register(self.req_poll)
+              item.register(self.perform_poll)
         """
 
-        item.register(self.req_poll)
+        item.register(self.perform_poll)
 
 
     def _propagate(self, new_data, new_timestamp):

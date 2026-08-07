@@ -59,6 +59,7 @@ The Item class
    of the application.
 
    .. automethod:: perform_get
+   .. automethod:: perform_poll
    .. automethod:: perform_set
    .. automethod:: validate
 
@@ -67,6 +68,5 @@ The Item class
    should not be necessary.
 
    .. automethod:: req_get
-   .. automethod:: req_poll
    .. automethod:: req_set
 
