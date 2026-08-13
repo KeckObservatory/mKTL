@@ -4,7 +4,6 @@
 
 import atexit
 import concurrent.futures
-import itertools
 import queue
 import socket
 import sys
