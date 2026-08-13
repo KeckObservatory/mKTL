@@ -3,7 +3,6 @@
 """
 
 import atexit
-import itertools
 import queue
 import threading
 import traceback
