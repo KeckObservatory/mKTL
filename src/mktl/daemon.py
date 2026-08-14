@@ -308,6 +308,8 @@ class Daemon:
             if existing.authoritative:
                 raise RuntimeError('duplicate item not allowed: ' + key)
 
+            self.rep.clear_handlers(existing.full_key)
+
             # It's possible that some other item registered callbacks against
             # this item before the local, authoritative variant could be
             # established; we'll want to preserve the callbacks established
@@ -321,13 +323,13 @@ class Daemon:
             preserved_callbacks = tuple()
 
 
-        created = item_class(self.store, key, *args, **kwargs)
-        created._authoritative(self.pub)
-        created.subscribe(prime=False)
-
         # Instantiating the item results in a persistent reference in
         # self.store._items, there is no need to manipulate that dictionary
         # directly.
+
+        created = item_class(self.store, key, *args, **kwargs)
+        created._authoritative(self.pub)
+        created.subscribe(prime=False)
 
         for reference in preserved_callbacks:
             callback = reference()
@@ -730,6 +732,21 @@ class RequestServer(protocol.request.Server):
         self._req_get_handlers['_hash'] = self.req_get_hash
 
 
+    def clear_handlers(self, key):
+        """ Forget all request handlers associated with the specified key.
+        """
+
+        try:
+            del self._req_get_handlers[key]
+        except KeyError:
+            pass
+
+        try:
+            del self._req_set_handlers[key]
+        except KeyError:
+            pass
+
+
     def req_handler(self, request):
         """ Inspect the incoming request type and call an appropriate
             method to handle that specific request.
@@ -778,16 +795,8 @@ class RequestServer(protocol.request.Server):
         else:
             raise KeyError('this daemon does not contain ' + repr(key))
 
-        # There's an argument for optimizing the behavior here by storing
-        # the getter reference to prevent the need to look it up all over
-        # again. There's a bootstrapping problem though, and Item instances
-        # can be replaced in authoritative daemons partway through the
-        # initialization process.
-
-        # This suggested optimization also doesn't buy us a measurable
-        # improvement in transactions per second.
-
         getter = self.daemon.store[key].req_get
+        self._req_get_handlers[request.target] = getter
         return getter(request)
 
 
