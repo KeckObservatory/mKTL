@@ -1418,7 +1418,7 @@ class Item:
 
 
 
-class _UpdaterWake(RuntimeError):
+class _WakeAlarm(Exception):
     pass
 
 
@@ -1451,7 +1451,7 @@ class _Updater:
             except queue.Empty:
                 continue
 
-            if isinstance(dequeued, _UpdaterWake):
+            if isinstance(dequeued, _WakeAlarm):
                 continue
 
             self.method(dequeued)
@@ -1463,10 +1463,10 @@ class _Updater:
 
 
     def wake(self):
-        self.queue.put(_UpdaterWake())
+        self.queue.put(_WakeAlarm())
 
 
-# end of class Updater
+# end of class _Updater
 
 
 ### Additional subclasses would go here, if they existed. Numeric types, bulk
