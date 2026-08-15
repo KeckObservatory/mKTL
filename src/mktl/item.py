@@ -106,7 +106,26 @@ class Item:
         except KeyError:
             settable = True
 
-        if settable == False:
+        if settable:
+            try:
+                concurrency = self.description['concurrency']
+            except KeyError:
+                concurrency = 'serial'
+
+            ### Adjust to handle different concurrency types.
+            ### Right now, serial handling is the only handling.
+
+            def req_set_wrapper(request, req_set=self.req_set):
+                ### Create a task instance
+                ### put it in the queue
+                ## self._req_set_queue.put((request, req_set))
+                ## _Sequencer.queue.put(self._req_set_queue)
+                ### wait for a result
+                ### return result
+                return req_set(request)
+
+            self.req_set = req_set_wrapper
+        else:
             self.req_set = self.reject_set
 
         try:
