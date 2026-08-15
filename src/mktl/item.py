@@ -58,6 +58,13 @@ class Item:
         self.sub = None
         self.req = None
         self.rep = None
+
+        try:
+            # Available in Python 3.7+.
+            self._req_set_queue = queue.SimpleQueue()
+        except AttributeError:
+            self._req_set_queue = queue.Queue()
+
         self._update_queue = None
         self._update_queue_put = None
         self._update_thread = None
@@ -115,16 +122,16 @@ class Item:
             ### Adjust to handle different concurrency types.
             ### Right now, serial handling is the only handling.
 
-            def req_set_wrapper(request, req_set=self.req_set):
+            def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
                 ### Create a task instance
                 ### put it in the queue
-                ## self._req_set_queue.put((request, req_set))
-                ## _Sequencer.queue.put(self._req_set_queue)
+                ## queue.put((request, req_set))
+                ## _Sequencer.queue.put(queue)
                 ### wait for a result
                 ### return result
                 return req_set(request)
 
-            self.req_set = req_set_wrapper
+            self.req_set = wrap
         else:
             self.req_set = self.reject_set
 
@@ -1436,9 +1443,72 @@ class Item:
 # end of class Item
 
 
+### Additional subclasses would go here, if they existed. Numeric types, bulk
+### keyword types, etc.
 
-class _WakeAlarm(Exception):
-    pass
+
+class _Sequencer:
+    """ Background thread to manage incoming requests. Requests are put
+        into a per-item queue, and that queue is in turn queued here; if
+        the queue needs a worker assigned to it, that worker is assigned
+        here.
+    """
+
+    queue = queue.Queue()
+
+    def __init__(self):
+
+        self.shutdown = False
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+
+    def run(self):
+
+        while True:
+            if self.shutdown == True:
+                break
+
+            try:
+                dequeued = self.queue.get(timeout=300)
+            except queue.Empty:
+                continue
+
+            if isinstance(dequeued, _WakeAlarm):
+                continue
+
+            self.method(dequeued)
+
+
+    def stop(self):
+        self.shutdown = True
+        self.wake()
+
+
+    def wake(self):
+        self.queue.put(_WakeAlarm())
+
+
+# end of class _Sequencer
+
+
+_sequencer = None
+
+
+def _start_sequencer():
+    """ Invoked from daemon.py, if and only if authoritative items are
+        instantiated. Otherwise the _Sequencer is not used.
+    """
+
+    global _sequencer
+
+    if _sequencer:
+        return
+
+    _sequencer = _Sequencer()
+
 
 
 class _Updater:
@@ -1488,8 +1558,10 @@ class _Updater:
 # end of class _Updater
 
 
-### Additional subclasses would go here, if they existed. Numeric types, bulk
-### keyword types, etc.
+
+class _WakeAlarm(Exception):
+    pass
+
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

@@ -296,6 +296,12 @@ class Daemon:
             raise KeyError("this daemon is not authoritative for the key '%s'" %(key))
 
 
+        # The sequencer is only enabled to support authoritative items.
+        # Otherwise it is not used.
+
+        item._start_sequencer()
+
+
         # Allow for the possibility that a daemon is establishing an
         # authoritative item where before a default item was created
         # by a just-in-time process. We cannot assume the daemon is
