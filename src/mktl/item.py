@@ -1494,20 +1494,10 @@ class _Sequencer:
 # end of class _Sequencer
 
 
-_sequencer = None
+# Always start the _Sequencer instance, there are no meaningful interactions
+# where it won't be used.
 
-
-def _start_sequencer():
-    """ Invoked from daemon.py, if and only if authoritative items are
-        instantiated. Otherwise the _Sequencer is not used.
-    """
-
-    global _sequencer
-
-    if _sequencer:
-        return
-
-    _sequencer = _Sequencer()
+_sequencer = _Sequencer()
 
 
 
