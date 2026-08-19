@@ -376,12 +376,19 @@ class Server:
             error['text'] = str(e_instance)
             error['debug'] = traceback.format_exc()
 
-        if payload is None and error is None:
-            # The handler should only return None when no response is
-            # immediately forthcoming-- the handler has invoked some
-            # other processing chain that will issue a proper response,
-            # or the client explicitly requested no response.
-            return
+        if payload or error:
+            self.respond(request, payload, error)
+
+        # The handler should only return None when no response is
+        # immediately forthcoming-- the handler has invoked some
+        # other processing chain that will issue a proper response,
+        # or the client explicitly requested no response.
+
+
+    def respond(self, request, payload, error):
+        """ Issue a response for the specified request. This is broken out
+            as a separate method to allow for background processing of requests.
+        """
 
         if error is not None:
             if payload is None:
