@@ -126,9 +126,20 @@ class Item:
             ### in parallel.
 
             def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
+                """ The wrapper around self.req_set() allows the request to
+                    be handled by a background worker thread, assigned by the
+                    _Sequencer background thread.
+                """
+
                 task = _Task(req_set, request)
                 queue.put(task)
                 _Sequencer.pending.put(queue)
+
+                ### This wait() is not desirable in this context, this
+                ### means that handling this request will cause all inbound
+                ### requests to block in the meantime. This needs to be
+                ### properly backgrounded so the protocol-level request
+                ### handler can efficiently move to the next request.
 
                 task.wait()
 
