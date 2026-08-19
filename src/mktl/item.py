@@ -120,8 +120,10 @@ class Item:
             except KeyError:
                 concurrency = 'serial'
 
-            ### Adjust to handle different concurrency types.
-            ### Right now, serial handling is the only handling.
+            ### This needs adjustment to address other potential concurrency
+            ### types. Right now, serial handling is the only handling: requests
+            ### for a single item are processed in order of receipt and not
+            ### in parallel.
 
             def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
                 task = _Task(req_set, request)
@@ -1451,6 +1453,12 @@ class _Sequencer:
         into a per-item queue, and that queue is in turn queued here; if
         the queue needs a worker assigned to it, that worker is assigned
         here.
+
+        This does represent a performance bottleneck; each step involving a
+        queue introduces meaningful latency, which means the double-queue
+        structure here has twice the latency. The upsides are a net reduction
+        in overall threads required on the client side, and guaranteed
+        in-order processing of inbound SET requests on the daemon side.
     """
 
     pending = queue.Queue()
@@ -1505,6 +1513,11 @@ class _Sequencer:
 
 
     def run(self):
+        """ This is the main loop for the _Sequencer overall. When a request
+            comes in, it is added to its destination queue; that destination
+            queue is in turned queued for processing here, so that a worker
+            can be assigned to it.
+        """
 
         while True:
             try:
