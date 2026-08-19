@@ -328,7 +328,7 @@ class Daemon:
         # directly.
 
         created = item_class(self.store, key, *args, **kwargs)
-        created._authoritative(self.pub)
+        created._authoritative(self.rep, self.pub)
         created.subscribe(prime=False)
 
         for reference in preserved_callbacks:

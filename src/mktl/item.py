@@ -215,7 +215,7 @@ class Item:
         self.perform_set = method
 
 
-    def _authoritative(self, pub):
+    def _authoritative(self, rep, pub):
         """ This method is invoked by a :class:`Daemon` instance in its
             :func:`Daemon.add_item` method. The changes made here are
             what distinguishes a client-facing item from the authoritative
@@ -223,6 +223,7 @@ class Item:
         """
 
         self.pub = pub
+        self.rep = rep
         self.authoritative = True
 
 
