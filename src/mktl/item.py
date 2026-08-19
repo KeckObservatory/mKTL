@@ -63,13 +63,10 @@ class Item:
 
         try:
             # Available in Python 3.7+.
-            self._req_set_queue = queue.SimpleQueue()
+            self._backgrounded = queue.SimpleQueue()
         except AttributeError:
-            self._req_set_queue = queue.Queue()
+            self._backgrounded = queue.Queue()
 
-        self._update_queue = None
-        self._update_queue_put = None
-        self._update_thread = None
         self._updated = threading.Event()
 
         # An Item is a singleton in practice; enforce that constraint.
@@ -126,7 +123,7 @@ class Item:
             ### for a single item are processed in order of receipt and not
             ### in parallel.
 
-            def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
+            def wrap(request, queue=self._backgrounded, req_set=self.req_set):
                 """ The wrapper around self.req_set() allows the request to
                     be handled by a background worker thread, assigned by the
                     _Sequencer background thread.
@@ -226,10 +223,6 @@ class Item:
             application. But there are some corner cases where they need
             to be replaced; this method facilitates that procedure.
         """
-
-        if self._update_thread is not None:
-            self._update_thread.stop()
-            self._update_thread = None
 
         self.callbacks = tuple()
         self.store._items[self.key] = None
@@ -567,7 +560,7 @@ class Item:
 
         # Hand off the incoming message for background processing.
 
-        pending = self._update_queue
+        pending = self._backgrounded
         task = _Task(self._update, message)
         pending.put(task)
         _Sequencer.pending.put(pending)
@@ -634,7 +627,7 @@ class Item:
             message = protocol.message.Broadcast('PUB', key, payload)
 
             # One could bypass the normal broadcast handling internally
-            # within a daemon by putting the message in self._update_queue
+            # within a daemon by putting the message in self._backgrounded
             # instead of relying on the full ZeroMQ-based broadcast handling.
             # This would be more efficient, but there is something to be said
             # for fully exercising the normal handling chain in identical
@@ -943,12 +936,6 @@ class Item:
 
         if self.subscribed == True:
             return
-
-        try:
-            # Available in Python 3.7+.
-            self._update_queue = queue.SimpleQueue()
-        except AttributeError:
-            self._update_queue = queue.Queue()
 
         self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
