@@ -124,13 +124,17 @@ class Item:
             ### Right now, serial handling is the only handling.
 
             def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
-                ### Create a task instance
-                ### put it in the queue
-                ## queue.put((req_set, request))
-                ## _Sequencer.pending.put(queue)
-                ### wait for a result
-                ### return result
-                return req_set(request)
+                task = _Task(req_set, request)
+                queue.put(task)
+                _Sequencer.pending.put(queue)
+
+                task.wait()
+
+                if task.exception:
+                    raise task.exception
+                else:
+                    return task.returned
+
 
             self.req_set = wrap
         else:
