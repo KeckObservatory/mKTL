@@ -1,4 +1,5 @@
 
+import concurrent.futures
 import logging
 import queue
 import threading
@@ -125,8 +126,8 @@ class Item:
             def wrap(request, queue=self._req_set_queue, req_set=self.req_set):
                 ### Create a task instance
                 ### put it in the queue
-                ## queue.put((request, req_set))
-                ## _Sequencer.queue.put(queue)
+                ## queue.put((req_set, request))
+                ## _Sequencer.pending.put(queue)
                 ### wait for a result
                 ### return result
                 return req_set(request)
@@ -549,6 +550,21 @@ class Item:
         poll.start(self.perform_poll, period)
 
 
+    def _pub_incoming(self, message):
+        """ This is the entry point to handle the arrival of a published
+            update; this is the callback registered with self.sub.
+        """
+
+        # Hand off the incoming message for background processing.
+
+        pending = self._update_queue
+        task = _Task(self._update, message)
+        pending.put(task)
+        _Sequencer.pending.put(pending)
+
+        # No blocking or error handling will occur here.
+
+
     def publish(self, new_value, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be the Python native
             representation of the new value. If *timestamp* is set it is
@@ -910,34 +926,13 @@ class Item:
         if self.subscribed == True:
             return
 
-        # A local thread is used to execute callbacks to ensure we don't tie
-        # up the protocol.publish.Client from moving on to the next broadcast.
-        # This does mean there's an extra background thread for every Item
-        # that receives callbacks; on older systems we are limited to 4,000
-        # such threads before running into resource limitations, modern systems
-        # allow 32,000 or more, sometimes depending on the amount of physical
-        # memory in the system.
-
-        # A thread pool might be just as performant for this purpose, but the
-        # control flow in that thread would be a lot more complex. Having a
-        # dedicated _Updater background thread for each Item with an active
-        # subscription makes the processing straightforward.
-
-        # The reference to SimpleQueue.put() gets deallocated immediately if we
-        # don't keep a local reference; the weak reference used in register()
-        # (despite using a weak method wrapper) doesn't function once it goes
-        # out of scope.
-
         try:
             # Available in Python 3.7+.
             self._update_queue = queue.SimpleQueue()
         except AttributeError:
             self._update_queue = queue.Queue()
 
-        self._update_queue_put = self._update_queue.put
-        self._update_thread = _Updater(self._update, self._update_queue)
-
-        self.sub.register(self._update_queue_put, self.full_key)
+        self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
 
         if prime == True:
@@ -1454,32 +1449,87 @@ class _Sequencer:
         here.
     """
 
-    queue = queue.Queue()
+    pending = queue.Queue()
 
     def __init__(self):
 
         self.shutdown = False
+        self.active = set()
+        self.inactive = set()
+
+        count = 64
+        self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
 
 
+    def check_inactive(self):
+        """ Confirm that any inactive queues are empty; remove them from the
+            inactive set if they are. This is intended to catch a race condition
+            between a worker thread spinning down and a request coming in after
+            the worker is done conducting the queued requests.
+        """
+
+        for idle in self.inactive:
+            self.inactive.remove(idle)
+            if idle in self.active or idle.empty():
+                pass
+            else:
+                self.spin_up(idle)
+
+
+    def conduct(self, pending):
+        """ This is the entry point for a worker thread. It is handed a queue
+            that needs to be fully processed; the queue will be processed until
+            it is empty.
+        """
+
+        # Each queued item is expected to be a method and a single argument
+        # to pass to that method. More specifically, the argument is a message,
+        # and the method will be invoked to process that message.
+
+        while True:
+            try:
+                task = pending.get(block=False)
+            except queue.Empty:
+                self.spin_down(pending)
+                break
+
+            task.execute()
+
+
     def run(self):
 
         while True:
-            if self.shutdown == True:
-                break
-
             try:
-                dequeued = self.queue.get(timeout=300)
+                pending = self.pending.get(timeout=300)
             except queue.Empty:
+                if self.shutdown == True:
+                    break
+                else:
+                    continue
+
+            if pending in self.active:
                 continue
 
-            if isinstance(dequeued, _WakeAlarm):
+            if isinstance(pending, _WakeAlarm):
+                self.check_inactive()
                 continue
 
-            self.method(dequeued)
+            self.spin_up(pending)
+
+
+    def spin_down(self, pending):
+        self.active.remove(pending)
+        self.inactive.add(pending)
+        self.wake()
+
+
+    def spin_up(self, pending):
+        self.active.add(pending)
+        self.workers.submit(self.conduct, pending)
 
 
     def stop(self):
@@ -1498,6 +1548,39 @@ class _Sequencer:
 # where it won't be used.
 
 _sequencer = _Sequencer()
+
+
+
+class _Task:
+    """ Lightweight class to manage the execution of an operation in a
+        background worker thread.
+    """
+
+    def __init__(self, method, *args, **kwargs):
+
+        self.complete = threading.Event()
+        self.exception = None
+        self.returned = None
+
+        self.method = method
+        self.args = args
+        self.kwargs = kwargs
+
+        self.wait = self.complete.wait
+
+
+    def execute(self):
+
+        try:
+            self.returned = self.method(*self.args, **self.kwargs)
+        except Exception as exception:
+            self.exception = exception
+
+        self.complete.set()
+        return self.returned
+
+
+# end of class _Task
 
 
 
