@@ -731,7 +731,32 @@ class Item:
             refresh = False
 
         if refresh == True:
-            payload = self.perform_poll()
+            def wrap(request, item=self):
+                """ This wrapper allows the request to be handled by a
+                    background worker thread, assigned by the _Sequencer
+                    background thread. This is only invoked for refresh
+                    operations as they have a higher potential to be slow.
+                """
+
+                error = None
+                payload = None
+
+                try:
+                    payload = item.perform_poll()
+                except:
+                    e_class, e_instance, e_traceback = sys.exc_info()
+                    error = dict()
+                    error['type'] = e_class.__name__
+                    error['text'] = str(e_instance)
+                    error['debug'] = traceback.format_exc()
+
+                if item.rep:
+                    item.rep.respond(request, payload, error)
+
+            task = _Task(wrap, request)
+            self._backgrounded.put(task)
+            _Sequencer.pending.put(self._backgrounded)
+            payload = None
         else:
             payload = self.to_payload()
 
