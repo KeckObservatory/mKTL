@@ -393,8 +393,14 @@ class Server:
         if error is not None:
             if payload is None:
                 payload = message.Payload(error=error)
-            elif payload.error is None:
-                payload.error = error
+            else:
+                try:
+                    payload.error
+                except AttributeError:
+                    payload.error = error
+                else:
+                    if payload.error is None:
+                        payload.error = error
 
         response = message.Message('REP', request.target, payload, request.id)
         response.prefix = request.prefix
