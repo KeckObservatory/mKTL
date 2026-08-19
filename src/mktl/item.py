@@ -136,6 +136,11 @@ class Item:
                 queue.put(task)
                 _Sequencer.pending.put(queue)
 
+                # This wrapper returns None, which req_handler() takes as an
+                # indication that we are taking responsibility for issuing a
+                # response when the request is complete; this response is
+                # issued in req_set().
+
             self.req_set = wrap
         else:
             self.req_set = self.reject_set
