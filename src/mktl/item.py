@@ -2,6 +2,7 @@
 import concurrent.futures
 import logging
 import queue
+import sys
 import threading
 import time
 import traceback
@@ -134,20 +135,6 @@ class Item:
                 task = _Task(req_set, request)
                 queue.put(task)
                 _Sequencer.pending.put(queue)
-
-                ### This wait() is not desirable in this context, this
-                ### means that handling this request will cause all inbound
-                ### requests to block in the meantime. This needs to be
-                ### properly backgrounded so the protocol-level request
-                ### handler can efficiently move to the next request.
-
-                task.wait()
-
-                if task.exception:
-                    raise task.exception
-                else:
-                    return task.returned
-
 
             self.req_set = wrap
         else:
@@ -580,8 +567,6 @@ class Item:
         pending.put(task)
         _Sequencer.pending.put(pending)
 
-        # No blocking or error handling will occur here.
-
 
     def publish(self, new_value, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be the Python native
@@ -773,11 +758,12 @@ class Item:
 
     def req_set(self, request):
         """ Handle a SET request. The *request* argument is a
-            :class:`protocol.message.Request` instance; the value returned
-            from :func:`req_set` will be returned to the caller, though no
-            such return value is expected. Any calls to :func:`req_set` are
-            expected to block until completion. Custom handling by subclasses
-            is expected to occur in :func:`perform_set`.
+            :class:`protocol.message.Request` instance; there is no return
+            value provided, this method is invoked in a background worker
+            thread, and any payload response will be issued directly by the
+            background worker. Any calls to :func:`req_set` are expected to
+            block until completion. Custom handling by subclasses is expected
+            to occur in :func:`perform_set`.
 
             If the `publish_on_set` attribute is set to True (this is the
             default) a call to :func:`publish` will occur at the tail end
@@ -785,22 +771,38 @@ class Item:
             attribute to False to inhibit that behavior.
         """
 
-        payload = request.payload
-        if payload is None:
-            return
-
         if self.log_on_set:
             logger = logging.getLogger(__name__)
             request.log(logger)
 
-        new_value = self.from_payload(payload)
-        new_value = self.validate_type(new_value)
-        new_value = self.validate(new_value)
+        error = None
+        response = None
 
-        # All custom logic is expected to occur in the perform_set() method,
-        # similar to perform_get().
+        try:
+            payload = request.payload
 
-        response = self.perform_set(new_value)
+            new_value = self.from_payload(payload)
+            new_value = self.validate_type(new_value)
+            new_value = self.validate(new_value)
+
+            # All custom logic is expected to occur in the perform_set() method,
+            # similar to perform_get().
+
+            response = self.perform_set(new_value)
+
+            # Not all custom implementations want req_set() to publish the
+            # newly set value. The publish_on_set attribute allows subclasses
+            # to inhibit this behavior.
+
+            if self.publish_on_set == True:
+                self.publish(new_value)
+
+        except:
+            e_class, e_instance, e_traceback = sys.exc_info()
+            error = dict()
+            error['type'] = e_class.__name__
+            error['text'] = str(e_instance)
+            error['debug'] = traceback.format_exc()
 
         # Provide a default, effectively empty response to indicate the set
         # request is complete. If the custom implementation had something
@@ -814,14 +816,7 @@ class Item:
         else:
             payload = self.to_payload(response)
 
-        # Not all custom implementations want req_set() to publish the newly
-        # set value. The publish_on_set attribute allows subclasses to inhibit
-        # this behavior.
-
-        if self.publish_on_set == True:
-            self.publish(new_value)
-
-        return payload
+        self.rep.respond(request, payload, error)
 
 
     def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
@@ -1521,7 +1516,14 @@ class _Sequencer:
                 self.spin_down(pending)
                 break
 
-            task.execute()
+            try:
+                task.execute()
+            except:
+                debug = traceback.format_exc()
+                message = 'mKTL background task error:'
+                logger = logging.getLogger(__name__)
+                logger.error(message)
+                logger.error(debug)
 
 
     def run(self):
@@ -1558,7 +1560,11 @@ class _Sequencer:
 
     def spin_up(self, pending):
         self.active.add(pending)
-        self.workers.submit(self.conduct, pending)
+        try:
+            self.workers.submit(self.conduct, pending)
+        except RuntimeError:
+            # Job submitted after interpreter shutdown.
+            pass
 
 
     def stop(self):
@@ -1587,7 +1593,6 @@ class _Task:
 
     def __init__(self, method, *args, **kwargs):
 
-        self.complete = threading.Event()
         self.exception = None
         self.returned = None
 
@@ -1595,18 +1600,9 @@ class _Task:
         self.args = args
         self.kwargs = kwargs
 
-        self.wait = self.complete.wait
-
 
     def execute(self):
-
-        try:
-            self.returned = self.method(*self.args, **self.kwargs)
-        except Exception as exception:
-            self.exception = exception
-
-        self.complete.set()
-        return self.returned
+        return self.method(*self.args, **self.kwargs)
 
 
 # end of class _Task
