@@ -1513,7 +1513,13 @@ class _Sequencer:
         self.active = set()
         self.inactive = set()
 
-        count = 64
+        # Processing inbound requests will block once the maximum worker
+        # count is reached. It's possible this threshold may need to be
+        # settable, or at least easily inspected; a high maximum always
+        # works for low volume cases, as worker threads are only created
+        # when an existing, idle worker is not available.
+
+        count = 1024
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
         self.thread = threading.Thread(target=self.run)
