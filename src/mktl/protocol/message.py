@@ -308,8 +308,11 @@ class Broadcast(Message):
         # The PUB/SUB topic has a trailing dot to prevent leading
         # substring matches from picking up extra keys.
 
-        target = target + '.'
-        target = target.encode()
+        try:
+            target = target.encode() + b'.'
+        except AttributeError:
+            # Already bytes. Assume it is in fully-qualified form.
+            pass
 
         if payload is None or payload == '':
             bulk = None

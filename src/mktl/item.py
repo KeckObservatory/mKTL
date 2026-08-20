@@ -1,6 +1,8 @@
 
+import concurrent.futures
 import logging
 import queue
+import sys
 import threading
 import time
 import traceback
@@ -58,9 +60,17 @@ class Item:
         self.sub = None
         self.req = None
         self.rep = None
-        self._update_queue = None
-        self._update_queue_put = None
-        self._update_thread = None
+
+        try:
+            # Available in Python 3.7+.
+            self._get_queue = queue.SimpleQueue()
+            self._pub_queue = queue.SimpleQueue()
+            self._set_queue = queue.SimpleQueue()
+        except AttributeError:
+            self._get_queue = queue.Queue()
+            self._pub_queue = queue.Queue()
+            self._set_queue = queue.Queue()
+
         self._updated = threading.Event()
 
         # An Item is a singleton in practice; enforce that constraint.
@@ -106,7 +116,34 @@ class Item:
         except KeyError:
             settable = True
 
-        if settable == False:
+        if settable:
+            try:
+                concurrency = self.description['concurrency']
+            except KeyError:
+                concurrency = 'serial'
+
+            ### This needs adjustment to address other potential concurrency
+            ### types. Right now, serial handling is the only handling: requests
+            ### for a single item are processed in order of receipt and not
+            ### in parallel.
+
+            def wrap(request, queue=self._set_queue, req_set=self.req_set):
+                """ The wrapper around self.req_set() allows the request to
+                    be handled by a background worker thread, assigned by the
+                    _Sequencer background thread.
+                """
+
+                task = _Task(req_set, request)
+                queue.put(task)
+                _Sequencer.pending.put(queue)
+
+                # This wrapper returns None, which req_handler() takes as an
+                # indication that we are taking responsibility for issuing a
+                # response when the request is complete; this response is
+                # issued in req_set().
+
+            self.req_set = wrap
+        else:
             self.req_set = self.reject_set
 
         try:
@@ -171,7 +208,7 @@ class Item:
         self.perform_set = method
 
 
-    def _authoritative(self, pub):
+    def _authoritative(self, rep, pub):
         """ This method is invoked by a :class:`Daemon` instance in its
             :func:`Daemon.add_item` method. The changes made here are
             what distinguishes a client-facing item from the authoritative
@@ -179,6 +216,7 @@ class Item:
         """
 
         self.pub = pub
+        self.rep = rep
         self.authoritative = True
 
 
@@ -189,10 +227,6 @@ class Item:
             application. But there are some corner cases where they need
             to be replaced; this method facilitates that procedure.
         """
-
-        if self._update_thread is not None:
-            self._update_thread.stop()
-            self._update_thread = None
 
         self.callbacks = tuple()
         self.store._items[self.key] = None
@@ -523,6 +557,19 @@ class Item:
         poll.start(self.perform_poll, period)
 
 
+    def _pub_incoming(self, message):
+        """ This is the entry point to handle the arrival of a published
+            update; this is the callback registered with self.sub.
+        """
+
+        # Hand off the incoming message for background processing.
+
+        pending = self._pub_queue
+        task = _Task(self._update, message)
+        pending.put(task)
+        _Sequencer.pending.put(pending)
+
+
     def publish(self, new_value, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be the Python native
             representation of the new value. If *timestamp* is set it is
@@ -584,7 +631,7 @@ class Item:
             message = protocol.message.Broadcast('PUB', key, payload)
 
             # One could bypass the normal broadcast handling internally
-            # within a daemon by putting the message in self._update_queue
+            # within a daemon by putting the message in self._pub_queue
             # instead of relying on the full ZeroMQ-based broadcast handling.
             # This would be more efficient, but there is something to be said
             # for fully exercising the normal handling chain in identical
@@ -688,7 +735,32 @@ class Item:
             refresh = False
 
         if refresh == True:
-            payload = self.perform_poll()
+            def wrap(request, item=self):
+                """ This wrapper allows the request to be handled by a
+                    background worker thread, assigned by the _Sequencer
+                    background thread. This is only invoked for refresh
+                    operations as they have a higher potential to be slow.
+                """
+
+                error = None
+                payload = None
+
+                try:
+                    payload = item.perform_poll()
+                except:
+                    e_class, e_instance, e_traceback = sys.exc_info()
+                    error = dict()
+                    error['type'] = e_class.__name__
+                    error['text'] = str(e_instance)
+                    error['debug'] = traceback.format_exc()
+
+                if item.rep:
+                    item.rep.respond(request, payload, error)
+
+            task = _Task(wrap, request)
+            self._get_queue.put(task)
+            _Sequencer.pending.put(self._get_queue)
+            payload = None
         else:
             payload = self.to_payload()
 
@@ -713,11 +785,12 @@ class Item:
 
     def req_set(self, request):
         """ Handle a SET request. The *request* argument is a
-            :class:`protocol.message.Request` instance; the value returned
-            from :func:`req_set` will be returned to the caller, though no
-            such return value is expected. Any calls to :func:`req_set` are
-            expected to block until completion. Custom handling by subclasses
-            is expected to occur in :func:`perform_set`.
+            :class:`protocol.message.Request` instance; there is no return
+            value provided, this method is invoked in a background worker
+            thread, and any payload response will be issued directly by the
+            background worker. Any calls to :func:`req_set` are expected to
+            block until completion. Custom handling by subclasses is expected
+            to occur in :func:`perform_set`.
 
             If the `publish_on_set` attribute is set to True (this is the
             default) a call to :func:`publish` will occur at the tail end
@@ -725,22 +798,38 @@ class Item:
             attribute to False to inhibit that behavior.
         """
 
-        payload = request.payload
-        if payload is None:
-            return
-
         if self.log_on_set:
             logger = logging.getLogger(__name__)
             request.log(logger)
 
-        new_value = self.from_payload(payload)
-        new_value = self.validate_type(new_value)
-        new_value = self.validate(new_value)
+        error = None
+        response = None
 
-        # All custom logic is expected to occur in the perform_set() method,
-        # similar to perform_get().
+        try:
+            payload = request.payload
 
-        response = self.perform_set(new_value)
+            new_value = self.from_payload(payload)
+            new_value = self.validate_type(new_value)
+            new_value = self.validate(new_value)
+
+            # All custom logic is expected to occur in the perform_set() method,
+            # similar to perform_get().
+
+            response = self.perform_set(new_value)
+
+            # Not all custom implementations want req_set() to publish the
+            # newly set value. The publish_on_set attribute allows subclasses
+            # to inhibit this behavior.
+
+            if self.publish_on_set == True:
+                self.publish(new_value)
+
+        except:
+            e_class, e_instance, e_traceback = sys.exc_info()
+            error = dict()
+            error['type'] = e_class.__name__
+            error['text'] = str(e_instance)
+            error['debug'] = traceback.format_exc()
 
         # Provide a default, effectively empty response to indicate the set
         # request is complete. If the custom implementation had something
@@ -754,14 +843,7 @@ class Item:
         else:
             payload = self.to_payload(response)
 
-        # Not all custom implementations want req_set() to publish the newly
-        # set value. The publish_on_set attribute allows subclasses to inhibit
-        # this behavior.
-
-        if self.publish_on_set == True:
-            self.publish(new_value)
-
-        return payload
+        self.rep.respond(request, payload, error)
 
 
     def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
@@ -884,34 +966,7 @@ class Item:
         if self.subscribed == True:
             return
 
-        # A local thread is used to execute callbacks to ensure we don't tie
-        # up the protocol.publish.Client from moving on to the next broadcast.
-        # This does mean there's an extra background thread for every Item
-        # that receives callbacks; on older systems we are limited to 4,000
-        # such threads before running into resource limitations, modern systems
-        # allow 32,000 or more, sometimes depending on the amount of physical
-        # memory in the system.
-
-        # A thread pool might be just as performant for this purpose, but the
-        # control flow in that thread would be a lot more complex. Having a
-        # dedicated _Updater background thread for each Item with an active
-        # subscription makes the processing straightforward.
-
-        # The reference to SimpleQueue.put() gets deallocated immediately if we
-        # don't keep a local reference; the weak reference used in register()
-        # (despite using a weak method wrapper) doesn't function once it goes
-        # out of scope.
-
-        try:
-            # Available in Python 3.7+.
-            self._update_queue = queue.SimpleQueue()
-        except AttributeError:
-            self._update_queue = queue.Queue()
-
-        self._update_queue_put = self._update_queue.put
-        self._update_thread = _Updater(self._update, self._update_queue)
-
-        self.sub.register(self._update_queue_put, self.full_key)
+        self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
 
         if prime == True:
@@ -1417,9 +1472,160 @@ class Item:
 # end of class Item
 
 
+### Additional subclasses would go here, if they existed. Numeric types, bulk
+### keyword types, etc.
 
-class _UpdaterWake(RuntimeError):
-    pass
+
+class _Sequencer:
+    """ Background thread to manage incoming requests. Requests are put
+        into a per-item queue, and that queue is in turn queued here; if
+        the queue needs a worker assigned to it, that worker is assigned
+        here.
+
+        This does represent a performance bottleneck; each step involving a
+        queue introduces meaningful latency, which means the double-queue
+        structure here has twice the latency. The upsides are a net reduction
+        in overall threads required on the client side, and guaranteed
+        in-order processing of inbound SET requests on the daemon side.
+    """
+
+    pending = queue.Queue()
+
+    def __init__(self):
+
+        self.shutdown = False
+        self.active = set()
+        self.inactive = set()
+
+        count = 64
+        self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+
+    def check_inactive(self):
+        """ Confirm that any inactive queues are empty; remove them from the
+            inactive set if they are. This is intended to catch a race condition
+            between a worker thread spinning down and a request coming in after
+            the worker is done conducting the queued requests.
+        """
+
+        for idle in self.inactive:
+            self.inactive.remove(idle)
+            if idle in self.active or idle.empty():
+                pass
+            else:
+                self.spin_up(idle)
+
+
+    def conduct(self, pending):
+        """ This is the entry point for a worker thread. It is handed a queue
+            that needs to be fully processed; the queue will be processed until
+            it is empty.
+        """
+
+        # Each queued item is expected to be a method and a single argument
+        # to pass to that method. More specifically, the argument is a message,
+        # and the method will be invoked to process that message.
+
+        while True:
+            try:
+                task = pending.get(block=False)
+            except queue.Empty:
+                self.spin_down(pending)
+                break
+
+            try:
+                task.execute()
+            except:
+                logger = logging.getLogger(__name__)
+                logger.error('mKTL background task error:')
+                logger.error(traceback.format_exc())
+
+
+    def run(self):
+        """ This is the main loop for the _Sequencer overall. When a request
+            comes in, it is added to its destination queue; that destination
+            queue is in turned queued for processing here, so that a worker
+            can be assigned to it.
+        """
+
+        while True:
+            try:
+                pending = self.pending.get(timeout=300)
+            except queue.Empty:
+                if self.shutdown == True:
+                    break
+                else:
+                    continue
+
+            if pending in self.active:
+                continue
+
+            if isinstance(pending, _WakeAlarm):
+                self.check_inactive()
+                continue
+
+            self.spin_up(pending)
+
+
+    def spin_down(self, pending):
+        self.active.remove(pending)
+        self.inactive.add(pending)
+        self.wake()
+
+
+    def spin_up(self, pending):
+        self.active.add(pending)
+        try:
+            self.workers.submit(self.conduct, pending)
+        except RuntimeError:
+            # Job submitted after interpreter shutdown.
+            pass
+
+
+    def stop(self):
+        self.shutdown = True
+        self.wake()
+
+
+    def wake(self):
+        self.queue.put(_WakeAlarm())
+
+
+# end of class _Sequencer
+
+
+# Always start the _Sequencer instance, there are no meaningful interactions
+# where it won't be used.
+
+_sequencer = _Sequencer()
+
+
+
+class _Task:
+    """ Lightweight class to manage the execution of an operation in a
+        background worker thread.
+    """
+
+    def __init__(self, method, *args, **kwargs):
+
+        self.exception = None
+        self.returned = None
+
+        self.method = method
+        self.args = args
+        self.kwargs = kwargs
+
+
+    def execute(self):
+        return self.method(*self.args, **self.kwargs)
+
+
+# end of class _Task
+
 
 
 class _Updater:
@@ -1451,7 +1657,7 @@ class _Updater:
             except queue.Empty:
                 continue
 
-            if isinstance(dequeued, _UpdaterWake):
+            if isinstance(dequeued, _WakeAlarm):
                 continue
 
             self.method(dequeued)
@@ -1463,14 +1669,16 @@ class _Updater:
 
 
     def wake(self):
-        self.queue.put(_UpdaterWake())
+        self.queue.put(_WakeAlarm())
 
 
-# end of class Updater
+# end of class _Updater
 
 
-### Additional subclasses would go here, if they existed. Numeric types, bulk
-### keyword types, etc.
+
+class _WakeAlarm(Exception):
+    pass
+
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

@@ -3,8 +3,6 @@
 """
 
 import atexit
-import concurrent.futures
-import itertools
 import queue
 import socket
 import sys
@@ -214,8 +212,6 @@ class Server:
         :ivar port: The port on which this server is listening for connections.
     """
 
-    worker_count = 128
-
     def __init__(self, hostname=None, port=None, avoid=set()):
 
         # The hostname is set and stored, but not used, as we are going to
@@ -306,24 +302,6 @@ class Server:
         self.thread.daemon = True
         self.thread.start()
 
-        # The use of worker threads and a synchronization primitive is something
-        # like a 10-20% hit in performance compared to using a single thread.
-        # Multiple worker threads allow for a request to block until completion,
-        # without blocking all other request handling. A ThreadPoolExecutor is
-        # an easy way to achieve the same performance without rolling our own
-        # queueing and handling.
-
-        # Using a deque and a synchronization construct (such as a Condition)
-        # is similar in performance to using a SimpleQueue. Using a fast
-        # Condition implementation might make it worth the trouble, but the
-        # implementation in the threading module is slow enough that it's not
-        # any better.
-
-        # Using ZeroMQ sockets to implement a multithreaded queue was much
-        # slower, it's not clear whether full multiprocessing would help.
-
-        self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=self.worker_count)
-
 
     def req_ack(self, request):
         """ Acknowledge the incoming request. The client is expecting an
@@ -381,9 +359,6 @@ class Server:
         ### exceptions are passed back to the originator of the request.
         ### Presumably that means calling something like _req_incoming().
 
-        ### As it currently stands, any exceptions occurring here are being
-        ### silently eaten by the thread pool executing this method.
-
         ident = parts[0]
         parts = parts[1:]
         request = message.Request.reconstruct(parts)
@@ -401,18 +376,31 @@ class Server:
             error['text'] = str(e_instance)
             error['debug'] = traceback.format_exc()
 
-        if payload is None and error is None:
-            # The handler should only return None when no response is
-            # immediately forthcoming-- the handler has invoked some
-            # other processing chain that will issue a proper response,
-            # or the client explicitly requested no response.
-            return
+        if payload or error:
+            self.respond(request, payload, error)
+
+        # The handler should only return None when no response is
+        # immediately forthcoming-- the handler has invoked some
+        # other processing chain that will issue a proper response,
+        # or the client explicitly requested no response.
+
+
+    def respond(self, request, payload, error):
+        """ Issue a response for the specified request. This is broken out
+            as a separate method to allow for background processing of requests.
+        """
 
         if error is not None:
             if payload is None:
                 payload = message.Payload(error=error)
-            elif payload.error is None:
-                payload.error = error
+            else:
+                try:
+                    payload.error
+                except AttributeError:
+                    payload.error = error
+                else:
+                    if payload.error is None:
+                        payload.error = error
 
         response = message.Message('REP', request.target, payload, request.id)
         response.prefix = request.prefix
@@ -435,14 +423,7 @@ class Server:
 
                 elif self.socket == active:
                     parts = self.socket.recv_multipart()
-                    # Calling submit() will block if a worker is not available.
-                    # Note that for high frequency operations this can result
-                    # in out-of-order handling of requests, for example, if a
-                    # stream of SET requests are inbound for a single item.
-                    self.workers.submit(self.req_incoming, parts)
-
-
-        self.workers.shutdown()
+                    self.req_incoming(parts)
 
 
     def _rep_outgoing(self):
