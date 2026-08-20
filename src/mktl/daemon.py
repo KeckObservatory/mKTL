@@ -157,6 +157,7 @@ class Daemon:
         atexit.register(self.cleanup)
 
         self.logger.debug("starting setup() sequence")
+        self._setup_placeholders()
         self.setup()
         self._setup_builtin_items()
         self._setup_missing()
@@ -305,7 +306,12 @@ class Daemon:
         existing = self.store._items[key]
 
         if existing is not None:
-            if existing.authoritative:
+            try:
+                placeholder = existing._authoritative_placeholder
+            except KeyError:
+                placeholder = False
+
+            if existing.authoritative and placeholder == False:
                 raise RuntimeError('duplicate item not allowed: ' + key)
 
             self.rep.clear_handlers(existing.full_key)
@@ -533,6 +539,23 @@ class Daemon:
         pass
 
 
+    def _setup_placeholders(self):
+        """ Establish a complete set of local, authoritative placeholder items;
+            these may be overridden later on by custom subclasses or other
+            handling. It is necessary to have these in place in order to address
+            bootstrapping issues when a local authoritative item attempts to
+            query a different local authoriative item during initialization.
+        """
+
+        for key in self.catalog.authoritative_items.keys():
+            existing = self.store._items[key]
+
+            if existing is None or existing.authoritative == False:
+                self.add_item(item.Item, key)
+                existing = self.store._items[key]
+                existing._authoritative_placeholder = True
+
+
     def setup(self):
         """ Subclasses should override the :func:`setup` method to invoke
             :func:`add_item` for any custom :class:`mktl.Item` subclasses
@@ -638,8 +661,21 @@ class Daemon:
         for key in self.catalog.authoritative_items.keys():
             existing = self.store._items[key]
 
+            # This catches items added during other phases of the setup()
+            # sequence, for example, some built-in items may not be instantiated
+            # as custom subclasses.
+
             if existing is None or existing.authoritative == False:
                 self.add_item(item.Item, key)
+                continue
+
+            # Most Default items were already created as placeholders; remove
+            # their placeholder status.
+
+            try:
+                del existing._authoritative_placeholder
+            except AttributeError:
+                pass
 
 
     def _setup_initial_values(self):
