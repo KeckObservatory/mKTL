@@ -152,6 +152,15 @@ item.
 		for example it may not make sense for a temperature
 		probe to be settable.
 
+**concurrency** Select the concurrency used for performing SET requests
+		for this item. The two valid options are 'serial' and
+		'parallel'; serialized SET requests are performed in order
+		of receipt, where the next request does not begin processing
+		until the previous request is completed; parallelized SET
+		requests are performed immediately upon receipt, regardless
+		of whether a previous request is still underway. The default
+		concurrency option is 'serial'.
+
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
 		meaningful for boolean, enumerated, and mask types,

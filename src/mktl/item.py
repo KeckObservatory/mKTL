@@ -121,21 +121,32 @@ class Item:
                 concurrency = self.description['concurrency']
             except KeyError:
                 concurrency = 'serial'
+            finally:
+                concurrency = concurrency.lower()
 
-            ### This needs adjustment to address other potential concurrency
-            ### types. Right now, serial handling is the only handling: requests
-            ### for a single item are processed in order of receipt and not
-            ### in parallel.
+            if concurrency == 'serial':
+                pending = self._set_queue
+            elif concurrency == 'parallel':
+                pending = None
+            else:
+                raise ValueError('unhandled concurrency: ' + repr(concurrency))
 
-            def wrap(request, queue=self._set_queue, req_set=self.req_set):
+            def wrap(request, pending=pending, req_set=self.req_set):
                 """ The wrapper around self.req_set() allows the request to
                     be handled by a background worker thread, assigned by the
                     _Sequencer background thread.
                 """
 
+                # Parallel handling wants to use a unique queue for each
+                # incoming request, rather than serialize inbound requests
+                # into a single queue.
+
+                if pending is None:
+                    pending = queue.Queue()
+
                 task = _Task(req_set, request)
-                queue.put(task)
-                _Sequencer.pending.put(queue)
+                pending.put(task)
+                _Sequencer.pending.put(pending)
 
                 # This wrapper returns None, which req_handler() takes as an
                 # indication that we are taking responsibility for issuing a
@@ -1497,7 +1508,13 @@ class _Sequencer:
         self.active = set()
         self.inactive = set()
 
-        count = 64
+        # Processing inbound requests will block once the maximum worker
+        # count is reached. It's possible this threshold may need to be
+        # settable, or at least easily inspected; a high maximum always
+        # works for low volume cases, as worker threads are only created
+        # when an existing, idle worker is not available.
+
+        count = 1024
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
         self.thread = threading.Thread(target=self.run)
