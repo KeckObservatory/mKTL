@@ -124,11 +124,6 @@ class Item:
             finally:
                 concurrency = concurrency.lower()
 
-            ### This needs adjustment to address other potential concurrency
-            ### types. Right now, serial handling is the only handling: requests
-            ### for a single item are processed in order of receipt and not
-            ### in parallel.
-
             if concurrency == 'serial':
                 pending = self._set_queue
             elif concurrency == 'parallel':
