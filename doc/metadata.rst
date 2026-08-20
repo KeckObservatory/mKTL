@@ -158,7 +158,8 @@ item.
 		of receipt, where the next request does not begin processing
 		until the previous request is completed; parallelized SET
 		requests are performed immediately upon receipt, regardless
-		of whether a previous request is still underway.
+		of whether a previous request is still underway. The default
+		concurrency option is 'serial'.
 
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
