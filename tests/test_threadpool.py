@@ -12,7 +12,10 @@ def test_blocking():
     def short_block():
         time.sleep(0.1)
 
-    workers = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+    # The large number of max workers is aligned with how it is used
+    # in item.py.
+
+    workers = concurrent.futures.ThreadPoolExecutor(max_workers=1024)
 
     begin = time.time()
     workers.submit(short_block)
