@@ -57,6 +57,9 @@ class Daemon(mktl.Daemon):
         items['readonly']['initial'] = 13
         items['readonly']['settable'] = False
 
+        items['slow'] = dict()
+        items['slow']['description'] = 'A slow item.'
+
         items['string'] = dict()
         items['string']['description'] = 'A string item.'
         items['string']['type'] = 'string'
@@ -67,8 +70,22 @@ class Daemon(mktl.Daemon):
         return items
 
 
+    def setup(self):
+
+        self.add_item(Slow, 'slow')
+
+
 # end of class Daemon
 
+
+class Slow(mktl.Item):
+    """ Be a little slow on handling SET requests.
+    """
+
+    def perform_set(self, *args, **kwargs):
+        time.sleep(0.2)
+
+# end of class Slow
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
