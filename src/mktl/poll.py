@@ -159,7 +159,6 @@ class _Poller:
 
 
 def _cleanup():
-    print('poll._cleanup()')
     pollers = list(active.values())
     for poller in pollers:
         poller.stop()
