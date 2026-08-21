@@ -17,6 +17,11 @@ def test_blocking():
 
     workers = concurrent.futures.ThreadPoolExecutor(max_workers=1024)
 
+    # Having done that sanity check we want a smaller pool, in order to
+    # test the blocking behavior.
+
+    workers = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+
     begin = time.time()
     workers.submit(short_block)
     workers.submit(short_block)
