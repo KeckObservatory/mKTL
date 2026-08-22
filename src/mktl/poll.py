@@ -157,4 +157,11 @@ class _Poller:
         self.alarm.set()
 
 
+
+def _cleanup():
+    pollers = list(active.values())
+    for poller in pollers:
+        poller.stop()
+
+
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
