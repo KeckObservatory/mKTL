@@ -156,7 +156,8 @@ class Daemon:
 
         atexit.register(self.cleanup)
 
-        self.logger.debug("starting setup() sequence")
+        self.logger.debug('starting setup() sequence')
+        poll.pause()
         self._setup_placeholders()
         self.setup()
         self._setup_builtin_items()
@@ -181,16 +182,19 @@ class Daemon:
         self._begin_persistence()
 
         # The promise is that setup_final() gets invoked after everything else
-        # is ready, but before we go on the air.
+        # is ready, but before we go on the air. Polling will commence after
+        # all other setup methods have completed.
 
         self.setup_final()
-        self.logger.debug("setup() sequence complete")
+        self._setup_polling()
+        poll.resume()
+        self.logger.debug('setup() sequence complete')
 
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
         meta.announce(self.catalog, self.uuid, override)
-        self.logger.debug("daemon initialization complete")
+        self.logger.debug('daemon initialization complete')
 
 
     def add_get_handler(self, key, method):
@@ -539,6 +543,9 @@ class Daemon:
         pass
 
 
+    # The various setup*() methods are listed in order of execution rather
+    # than in alphabetical order.
+
     def _setup_placeholders(self):
         """ Establish a complete set of local, authoritative placeholder items;
             these may be overridden later on by custom subclasses or other
@@ -593,6 +600,7 @@ class Daemon:
         items[key]['units'] = 'seconds'
         items[key]['format'] = '%.3f'
         items[key]['settable'] = False
+        items[key]['interval'] = 1
 
         key = '_' + self.alias + 'cpu'
         items[key] = dict()
@@ -688,9 +696,9 @@ class Daemon:
 
         for key in items.keys():
 
-            catalog = items[key]
+            description = items[key]
             try:
-                initial = catalog['initial']
+                initial = description['initial']
             except KeyError:
                 continue
 
@@ -710,6 +718,25 @@ class Daemon:
         """
 
         pass
+
+
+    def _setup_polling(self):
+        """ Initiate polling for any items that have a polling interval defined
+            in their per-item description.
+        """
+
+        items = self.catalog[self.uuid]['items']
+
+        for key in items.keys():
+
+            description = items[key]
+            try:
+                interval = description['interval']
+            except KeyError:
+                continue
+
+            item = self.store[key]
+            item.poll(interval)
 
 
     def stop(self):
@@ -1264,7 +1291,6 @@ class Uptime(item.Item):
 
         self.starttime = time.time()
         item.Item.__init__(self, *args, **kwargs)
-        self.poll(1)
 
 
     def perform_get(self):
