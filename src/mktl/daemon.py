@@ -609,6 +609,7 @@ class Daemon:
         items[key]['units'] = 'percent'
         items[key]['settable'] = False
         items[key]['format'] = '%.2f'
+        items[key]['interval'] = 1
 
         key = '_' + self.alias + 'dev'
         items[key] = dict()
@@ -630,6 +631,7 @@ class Daemon:
         items[key]['type'] = 'numeric'
         items[key]['units'] = 'kilobytes'
         items[key]['settable'] = False
+        items[key]['interval'] = 1
 
         key = '_' + self.alias + 'pid'
         items[key] = dict()
@@ -1232,11 +1234,6 @@ class DaemonCatalog(item.Item):
 
 class MemoryUsage(item.Item):
 
-    def __init__(self, *args, **kwargs):
-        item.Item.__init__(self, *args, **kwargs)
-        self.poll(1)
-
-
     def perform_get(self):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
@@ -1256,7 +1253,6 @@ class ProcessorUsage(item.Item):
         self.previous_time = time.time()
 
         item.Item.__init__(self, *args, **kwargs)
-        self.poll(1)
 
 
     def perform_get(self):
