@@ -1,4 +1,5 @@
 
+import atexit
 import concurrent.futures
 import logging
 import queue
@@ -1529,7 +1530,7 @@ class _Sequencer:
             the worker is done conducting the queued requests.
         """
 
-        for idle in self.inactive:
+        for idle in list(self.inactive):
             self.inactive.remove(idle)
             if idle in self.active or idle.empty():
                 pass
@@ -1543,14 +1544,27 @@ class _Sequencer:
             it is empty.
         """
 
-        # Each queued item is expected to be a method and a single argument
-        # to pass to that method. More specifically, the argument is a message,
-        # and the method will be invoked to process that message.
+        # Each queued item is expected to be a method and a single message
+        # argument to pass to that method.
+
+        # A small timeout is used here to alleviate the need to hand control
+        # back to the _Sequencer thread; bursts of requests can be handled more
+        # efficiently if only a single queue needs to be invoked.
+
+        # This timeout needs to be kept very small because all worker threads
+        # will be joined when the interpreter exits, before any atexit calls
+        # are made, which otherwise prevents graceful handling of a shutdown.
+        # This auto-join behavior may motivate the need for a different worker
+        # pool handler in the future.
 
         while True:
             try:
-                task = pending.get(block=False)
+                task = pending.get(timeout=0.001)
             except queue.Empty:
+                self.spin_down(pending)
+                break
+
+            if task is None:
                 self.spin_down(pending)
                 break
 
@@ -1607,9 +1621,14 @@ class _Sequencer:
         self.shutdown = True
         self.wake()
 
+        for pending in self.active:
+            pending.put(None)
+
+        self.workers.shutdown()
+
 
     def wake(self):
-        self.queue.put(_WakeAlarm())
+        self.pending.put(_WakeAlarm())
 
 
 # end of class _Sequencer
