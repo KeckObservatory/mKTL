@@ -1,5 +1,4 @@
 
-import atexit
 import concurrent.futures
 import logging
 import queue
