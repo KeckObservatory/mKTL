@@ -1664,54 +1664,6 @@ class _Task:
 
 
 
-class _Updater:
-    """ Background thread to invoke any per-Item callbacks. This allows the
-        event processing loop sitting on the ZeroMQ socket to be consistent
-        and tight, where a user-provided callback may require an unbounded
-        amount of time to process.
-    """
-
-    def __init__(self, method, queue):
-
-        self.method = method
-        self.queue = queue
-        self.shutdown = False
-
-        self.thread = threading.Thread(target=self.run)
-        self.thread.daemon = True
-        self.thread.start()
-
-
-    def run(self):
-
-        while True:
-            if self.shutdown == True:
-                break
-
-            try:
-                dequeued = self.queue.get(timeout=300)
-            except queue.Empty:
-                continue
-
-            if isinstance(dequeued, _WakeAlarm):
-                continue
-
-            self.method(dequeued)
-
-
-    def stop(self):
-        self.shutdown = True
-        self.wake()
-
-
-    def wake(self):
-        self.queue.put(_WakeAlarm())
-
-
-# end of class _Updater
-
-
-
 class _WakeAlarm(Exception):
     pass
 
