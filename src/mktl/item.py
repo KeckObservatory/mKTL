@@ -558,14 +558,15 @@ class Item:
         pass
 
 
-    def poll(self, period):
-        """ Poll for a new value every *period* seconds. Polling will be
-            discontinued if *period* is set to None or zero. Polling will
-            invoke :func:`perform_poll`, and occurs at the requested interval
-            within a background thread unique to this item.
+    def poll(self, interval):
+        """ Poll for a new value every *interval* seconds. Polling will be
+            discontinued if *interval* is set to None or zero. Polling will
+            invoke :func:`perform_poll`, which in turn uses :func:`perform_get`
+            to retrieve a new value. Polling occurs in a dedicated background
+            thread assigned to this item.
         """
 
-        poll.start(self.perform_poll, period)
+        poll.start(self.perform_poll, interval)
 
 
     def _pub_incoming(self, message):

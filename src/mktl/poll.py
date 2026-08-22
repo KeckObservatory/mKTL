@@ -7,6 +7,18 @@ from . import weakref
 active = dict()
 
 
+def pause():
+    """ Discontinue all polling until :func:`resume` is invoked.
+    """
+
+    _Poller.resume.clear()
+    _Poller.pause = True
+
+    for poller in active.values():
+        poller.alarm.set()
+
+
+
 def period(method):
     """ Return the currently set polling period for the provided *method*.
         Returns None if no polling is presently active for that method.
@@ -20,6 +32,15 @@ def period(method):
         return None
 
     return poller.interval
+
+
+
+def resume():
+    """ Resume all polling.
+    """
+
+    _Poller.pause = False
+    _Poller.resume.set()
 
 
 
@@ -75,6 +96,9 @@ class _Poller:
     """ Background thread to invoke any polling requests.
     """
 
+    pause = False
+    resume = threading.Event()
+
     def __init__(self, method):
 
         self.method_id = id(method)
@@ -111,6 +135,9 @@ class _Poller:
             alarm.wait(1)
 
         while True:
+            if _Poller.pause:
+                _Poller.resume.wait()
+
             begin = time.time()
 
             if self.shutdown == True:
@@ -162,6 +189,8 @@ def _cleanup():
     pollers = list(active.values())
     for poller in pollers:
         poller.stop()
+
+    _Poller.resume.set()
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

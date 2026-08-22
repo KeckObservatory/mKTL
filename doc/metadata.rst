@@ -161,6 +161,10 @@ item.
 		of whether a previous request is still underway. The default
 		concurrency option is 'serial'.
 
+**interval**	Specify the polling interval used for this item by its
+		authoritative daemon. The interval is specified in seconds;
+		fractional seconds (as a floating point number) are allowed.
+
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
 		meaningful for boolean, enumerated, and mask types,
