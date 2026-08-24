@@ -769,6 +769,18 @@ class Item:
                 if item.rep:
                     item.rep.respond(request, payload, error)
 
+                    # The response we just received is appropriate to provide
+                    # as an answer for any/all pending GET+refresh requests.
+
+                    while True:
+                        try:
+                            task = self._get_queue.get(block=False)
+                        except queue.Empty:
+                            break
+
+                        request = task.message
+                        item.rep.respond(request, payload, error)
+
             task = _Task(wrap, request)
             self._get_queue.put(task)
             _Sequencer.pending.put(self._get_queue)
