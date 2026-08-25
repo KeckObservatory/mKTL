@@ -92,7 +92,10 @@ def get(store, key=None):
         (store.KEY). A :class:`Store` instance will be returned if the sole
         argument provided is a *store* name. Both the *store* and the *key*
         are case-insensitive, all arguments are translated to lower case
-        before proceeding.
+        before proceeding. For example, the following two calls are equivalent::
+
+            mktl.get('my_store', 'some_key')
+            mktl.get('my_store.some_key')
 
         If the caller always uses :func:`get` to retrieve a :class:`Store` or
         :class:`Item` they will always receive the same instance of that class.

@@ -226,6 +226,9 @@ class Item:
             daemon variant.
         """
 
+        self._value_getter = self._value_getter_authoritative
+        self._value_setter = self._value_setter_authoritative
+
         self.pub = pub
         self.rep = rep
         self.authoritative = True
@@ -397,6 +400,13 @@ class Item:
         else:
             raise TypeError('refresh argument must be a boolean')
 
+
+        # No provision is made here for executing this request in the
+        # background; only the priming call to get() is backgrounded, whereas
+        # an interactive call to get() should only take place when a client
+        # requires an out-of-band update-- otherwise, local updates to the
+        # value occur asynchronously via published broadcasts.
+
         self.req.send(request)
         response = request.wait(self.timeout)
 
@@ -567,6 +577,32 @@ class Item:
         """
 
         poll.start(self.perform_poll, interval)
+
+
+    def _prime(self):
+        """ Initiate a get() request in a background thread; this is only
+            necessary for a call to :func:`subscribe`, where it is desirable
+            for a client application to not block when mass-instantiating
+            items, but the item will need to have a value the first time it
+            is accessed.
+
+            The :py:attr:`value` property is structured to allow this
+            priming to complete before returning to the caller.
+        """
+
+        if self._value is None:
+            pass
+        else:
+            return
+
+        # Parallel handling wants to use a unique queue for each request
+        # rather than serialize requests into a single queue.
+
+        pending = queue.Queue()
+
+        task = _Task(self.get, False)
+        pending.put(task)
+        _Sequencer.pending.put(pending)
 
 
     def _pub_incoming(self, message):
@@ -769,6 +805,18 @@ class Item:
                 if item.rep:
                     item.rep.respond(request, payload, error)
 
+                    # The response we just received is appropriate to provide
+                    # as an answer for any/all pending GET+refresh requests.
+
+                    while True:
+                        try:
+                            task = self._get_queue.get(block=False)
+                        except queue.Empty:
+                            break
+
+                        request = task.message
+                        item.rep.respond(request, payload, error)
+
             task = _Task(wrap, request)
             self._get_queue.put(task)
             _Sequencer.pending.put(self._get_queue)
@@ -955,10 +1003,18 @@ class Item:
         # working as expected this wait() should return immediately.
 
         # It would be better if this delay blocked on the definite arrival
-        # of a broadcast, as opposed to hoping that one arrives. That's part
-        # of why this arbitrary wait is so short.
+        # of a broadcast, as opposed to hoping that one arrives.
 
-        self._updated.wait(0.01)
+        try:
+            gettable = self.description['gettable']
+        except KeyError:
+            gettable = True
+
+        if gettable == True:
+            updated = self._updated.wait(0.2)
+            if updated == False:
+                logger = logging.getLogger(__name__)
+                logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
 
 
     def subscribe(self, prime=True):
@@ -981,19 +1037,8 @@ class Item:
         self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
 
-        if prime == True:
-            try:
-                self.get(refresh=True)
-            except (TimeoutError, RuntimeError):
-                # Timeout errors and remote errors on priming reads are
-                # thrown away; an error here means the remote daemon is not
-                # available to respond to requests, but despite that error
-                # the subscription will still be valid when the remote daemon
-                # returns to service.
-
-                # Other exception types indicate programming errors and should
-                # still be raised.
-                pass
+        if prime:
+            self._prime()
 
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our key name.
@@ -1205,22 +1250,43 @@ class Item:
             See also :py:attr:`formatted` and :py:attr:`quantity`.
         """
 
-        if self.authoritative == True:
-            return self._daemon_value
+        return self._value_getter()
+
+
+    def _value_getter(self):
+        """ The extra conditions in this implementation are only helpful when
+            the item hasn't yet received a value.
+        """
+
+        self._updated.wait(self.timeout / 100)
 
         if self._value is None:
-            self.get(refresh=True)
+            self.get()
+        else:
+            self._value_getter = self._value_getter_primed
 
         return self._value
 
 
+    def _value_getter_primed(self):
+        return self._value
+
+
+    def _value_getter_authoritative(self):
+        return self._daemon_value
+
+
     @value.setter
     def value(self, new_value):
+        self._value_setter(new_value)
 
-        if self.authoritative == True:
-            self.publish(new_value)
-        else:
-            self.set(new_value)
+
+    def _value_setter(self, new_value):
+        self.set(new_value)
+
+
+    def _value_setter_authoritative(self, new_value):
+        self.publish(new_value)
 
 
     def watch(self, item):
@@ -1434,18 +1500,8 @@ class Item:
 
     def __inplace(self, method, value):
 
-        if self.subscribed == False:
-            self.subscribe()
-
         modified = method(value)
-        self.set(modified)
-
-        ## Though the call to set() blocks until the request is complete
-        ## there is no guarantee that the broadcast of the updated value
-        ## has arrived. Is there a good way to block until that occurs?
-        ## Some kind of wait-for-broadcast method? A transient callback
-        ## that goes out of scope?
-
+        self.value = modified
         return self
 
     def __iadd__(self, value):
@@ -1642,22 +1698,17 @@ _sequencer = _Sequencer()
 
 
 class _Task:
-    """ Lightweight class to manage the execution of an operation in a
-        background worker thread.
+    """ Lightweight class to manage the execution of a single method, receiving
+        a single argument, in a background worker thread.
     """
 
-    def __init__(self, method, *args, **kwargs):
-
-        self.exception = None
-        self.returned = None
-
+    def __init__(self, method, argument):
         self.method = method
-        self.args = args
-        self.kwargs = kwargs
+        self.argument = argument
 
 
     def execute(self):
-        return self.method(*self.args, **self.kwargs)
+        return self.method(self.argument)
 
 
 # end of class _Task
