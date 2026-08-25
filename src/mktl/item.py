@@ -226,6 +226,9 @@ class Item:
             daemon variant.
         """
 
+        self._value_getter = self._value_getter_authoritative
+        self._value_setter = self._value_setter_authoritative
+
         self.pub = pub
         self.rep = rep
         self.authoritative = True
@@ -1224,22 +1227,41 @@ class Item:
             See also :py:attr:`formatted` and :py:attr:`quantity`.
         """
 
-        if self.authoritative == True:
-            return self._daemon_value
+        return self._value_getter()
+
+
+    def _value_getter_priming(self):
+        self._updated.wait(self.timeout)
 
         if self._value is None:
             self.get(refresh=True)
+        else:
+            self._value_getter = self._value_getter_primed
 
         return self._value
 
 
+    def _value_getter_primed(self):
+        return self._value
+
+
+    def _value_getter_authoritative(self):
+        return self._daemon_value
+
+    _value_getter = _value_getter_priming
+
+
     @value.setter
     def value(self, new_value):
+        self._value_setter(new_value)
 
-        if self.authoritative == True:
-            self.publish(new_value)
-        else:
-            self.set(new_value)
+
+    def _value_setter(self, new_value):
+        self.set(new_value)
+
+
+    def _value_setter_authoritative(self, new_value):
+        self.publish(new_value)
 
 
     def watch(self, item):
