@@ -1250,10 +1250,10 @@ class Item:
             the item hasn't yet received a value.
         """
 
-        self._updated.wait(self.timeout)
+        self._updated.wait(self.timeout / 100)
 
         if self._value is None:
-            self.get(refresh=True)
+            self.get()
         else:
             self._value_getter = self._value_getter_primed
 
