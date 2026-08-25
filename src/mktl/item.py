@@ -579,6 +579,32 @@ class Item:
         poll.start(self.perform_poll, interval)
 
 
+    def _prime(self):
+        """ Initiate a get() request in a background thread; this is only
+            necessary for a call to :func:`subscribe`, where it is desirable
+            for a client application to not block when mass-instantiating
+            items, but the item will need to have a value the first time it
+            is accessed.
+
+            The :py:attr:`value` property is structured to allow this
+            priming to complete before returning to the caller.
+        """
+
+        if self._value is None:
+            pass
+        else:
+            return
+
+        # Parallel handling wants to use a unique queue for each request
+        # rather than serialize requests into a single queue.
+
+        pending = queue.Queue()
+
+        task = _Task(self.get, False)
+        pending.put(task)
+        _Sequencer.pending.put(pending)
+
+
     def _pub_incoming(self, message):
         """ This is the entry point to handle the arrival of a published
             update; this is the callback registered with self.sub.
@@ -1003,19 +1029,8 @@ class Item:
         self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
 
-        if prime == True:
-            try:
-                self.get(refresh=True)
-            except (TimeoutError, RuntimeError):
-                # Timeout errors and remote errors on priming reads are
-                # thrown away; an error here means the remote daemon is not
-                # available to respond to requests, but despite that error
-                # the subscription will still be valid when the remote daemon
-                # returns to service.
-
-                # Other exception types indicate programming errors and should
-                # still be raised.
-                pass
+        if prime:
+            self._prime()
 
         ### If this Item is a leaf of a structured Item we may need to register
         ### a callback on a topic substring of our key name.
