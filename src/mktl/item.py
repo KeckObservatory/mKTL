@@ -1230,7 +1230,11 @@ class Item:
         return self._value_getter()
 
 
-    def _value_getter_priming(self):
+    def _value_getter(self):
+        """ The extra conditions in this implementation are only helpful when
+            the item hasn't yet received a value.
+        """
+
         self._updated.wait(self.timeout)
 
         if self._value is None:
@@ -1247,8 +1251,6 @@ class Item:
 
     def _value_getter_authoritative(self):
         return self._daemon_value
-
-    _value_getter = _value_getter_priming
 
 
     @value.setter
