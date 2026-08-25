@@ -1005,10 +1005,16 @@ class Item:
         # It would be better if this delay blocked on the definite arrival
         # of a broadcast, as opposed to hoping that one arrives.
 
-        updated = self._updated.wait(0.2)
-        if updated == False:
-            logger = logging.getLogger(__name__)
-            logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
+        try:
+            gettable = self.description['gettable']
+        except KeyError:
+            gettable = True
+
+        if gettable == True:
+            updated = self._updated.wait(0.2)
+            if updated == False:
+                logger = logging.getLogger(__name__)
+                logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
 
 
     def subscribe(self, prime=True):
