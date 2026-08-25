@@ -1698,17 +1698,17 @@ _sequencer = _Sequencer()
 
 
 class _Task:
-    """ Lightweight class to manage the execution of a message handling
-        operation in a background worker thread.
+    """ Lightweight class to manage the execution of a single method, receiving
+        a single argument, in a background worker thread.
     """
 
-    def __init__(self, method, message):
+    def __init__(self, method, argument):
         self.method = method
-        self.message = message
+        self.argument = argument
 
 
     def execute(self):
-        return self.method(self.message)
+        return self.method(self.argument)
 
 
 # end of class _Task
