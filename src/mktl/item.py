@@ -1003,10 +1003,12 @@ class Item:
         # working as expected this wait() should return immediately.
 
         # It would be better if this delay blocked on the definite arrival
-        # of a broadcast, as opposed to hoping that one arrives. That's part
-        # of why this arbitrary wait is so short.
+        # of a broadcast, as opposed to hoping that one arrives.
 
-        self._updated.wait(0.01)
+        updated = self._updated.wait(0.2)
+        if updated == False:
+            logger = logging.getLogger(__name__)
+            logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
 
 
     def subscribe(self, prime=True):
@@ -1492,18 +1494,8 @@ class Item:
 
     def __inplace(self, method, value):
 
-        if self.subscribed == False:
-            self.subscribe()
-
         modified = method(value)
         self.set(modified)
-
-        ## Though the call to set() blocks until the request is complete
-        ## there is no guarantee that the broadcast of the updated value
-        ## has arrived. Is there a good way to block until that occurs?
-        ## Some kind of wait-for-broadcast method? A transient callback
-        ## that goes out of scope?
-
         return self
 
     def __iadd__(self, value):
