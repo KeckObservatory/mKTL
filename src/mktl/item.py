@@ -397,6 +397,13 @@ class Item:
         else:
             raise TypeError('refresh argument must be a boolean')
 
+
+        # No provision is made here for executing this request in the
+        # background; only the priming call to get() is backgrounded, whereas
+        # an interactive call to get() should only take place when a client
+        # requires an out-of-band update-- otherwise, local updates to the
+        # value occur asynchronously via published broadcasts.
+
         self.req.send(request)
         response = request.wait(self.timeout)
 
