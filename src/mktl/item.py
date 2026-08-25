@@ -1501,7 +1501,7 @@ class Item:
     def __inplace(self, method, value):
 
         modified = method(value)
-        self.set(modified)
+        self.value = modified
         return self
 
     def __iadd__(self, value):
