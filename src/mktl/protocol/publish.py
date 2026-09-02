@@ -226,6 +226,42 @@ class Client:
         self.subscription_signal.send(b'')
 
 
+    def unregister(self, callback, topic=None):
+        """ The inverse of :func:`register`, removing a callback from the
+            list of registered callbacks. No errors are raised if the callback
+            is not registered.
+
+            Refer to :func:`register` for a description of the arguments.
+        """
+
+        reference = weakref.ref(callback)
+
+        if topic is None:
+            references = self.callback_all
+
+        if topic is not None:
+            topic = str(topic)
+            topic = topic.strip()
+            topic = topic + '.'
+            topic = topic.encode()
+
+            try:
+                references = self.callback_specific[topic]
+            except:
+                # No callbacks registered for that item.
+                return
+
+        unregister = list()
+        for reference in references:
+            registered = reference()
+
+            if registered == callback:
+                unregister.append(reference)
+
+        for reference in unregister:
+            references.remove(reference)
+
+
 # end of class Client
 
 
