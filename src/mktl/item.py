@@ -227,12 +227,13 @@ class Item:
             daemon variant.
         """
 
+        self.authoritative = True
+
         self._value_getter = self._value_getter_authoritative
         self._value_setter = self._value_setter_authoritative
 
         self.pub = pub
         self.rep = rep
-        self.authoritative = True
 
 
     def _cleanup(self):
@@ -1000,18 +1001,19 @@ class Item:
         # Wait a smidge for local values to update in response to the set
         # request. This is not guaranteed to occur, but it often does-- and
         # typical client behavior expects the local value to be up-to-date
-        # upon returning from a blocking set() operation. If everything is
+        # upon returning from a blocking SET operation. If everything is
         # working as expected this wait() should return immediately.
 
-        # It would be better if this delay blocked on the definite arrival
-        # of a broadcast, as opposed to hoping that one arrives.
+        # There is no way to distinguish between a final broadcast+update
+        # occurring after a SET operation completes, as opposed to an
+        # intermediate update occuring while the SET operation is in progress.
 
         try:
             gettable = self.description['gettable']
         except KeyError:
             gettable = True
 
-        if gettable == True and new_value != self.value:
+        if gettable == True:
             updated = self._updated.wait(0.2)
             if updated == False:
                 logger = logging.getLogger(__name__)
@@ -1256,14 +1258,18 @@ class Item:
 
     def _value_getter(self):
         """ The extra conditions in this implementation are only helpful when
-            the item hasn't yet received a value.
+            the item hasn't yet received a value. Because the :py:attr:`value`
+            property is accessed as part of the backgrouded call to :func:`get`
+            invoked via :func:`_prime`, the rearrangement to the _primed method
+            is guaranteed to occur without invoking additional callbacks.
         """
 
         self._updated.wait(self.timeout / 100)
 
         if self._value is None:
             self.get()
-        else:
+
+        if self._value is not None:
             self._value_getter = self._value_getter_primed
 
         return self._value
