@@ -1510,6 +1510,14 @@ class Item:
         if gettable == False:
             raise TypeError('an item must be gettable to perform in-place operations')
 
+        try:
+            settable = self.description['settable']
+        except KeyError:
+            settable = True
+
+        if settable == False:
+            raise TypeError('an item must be settable to perform in-place operations')
+
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
         # that the update contains the expected value, but it does ensure
