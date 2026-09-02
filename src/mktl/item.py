@@ -1086,10 +1086,7 @@ class Item:
         """
 
         if value is None:
-            if self.authoritative == False:
-                value = self._value
-            else:
-                value = self._daemon_value
+            value = self.value
 
         elif timestamp is None:
             # If the value is specified, but the timestamp is not, use the
