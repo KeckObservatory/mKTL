@@ -72,6 +72,7 @@ class Item:
             self._set_queue = queue.Queue()
 
         self._updated = threading.Event()
+        self._updated.clear()
 
         # An Item is a singleton in practice; enforce that constraint.
 
@@ -1010,7 +1011,7 @@ class Item:
         except KeyError:
             gettable = True
 
-        if gettable == True:
+        if gettable == True and new_value != self.value:
             updated = self._updated.wait(0.2)
             if updated == False:
                 logger = logging.getLogger(__name__)
@@ -1316,6 +1317,7 @@ class Item:
 
             if callback is None:
                 invalid.append(reference)
+                continue
 
             try:
                 callback(self, new_data, new_timestamp)
@@ -1500,8 +1502,30 @@ class Item:
 
     def __inplace(self, method, value):
 
+        # Use a temporary callback to guarantee that the local value has
+        # updated before returning. This doesn't necessarily guarantee
+        # that the update contains the right or expected value.
+
+        # In-place operations for non-gettable items will fail, as there
+        # is no self.value to manipulate, so the assumption here is that
+        # any in-place manipulation will result in a broadcast-- and we
+        # want to see that broadcast before returning to the caller.
+
+        inplace_callback_event = threading.Event()
+
+        def inplace_callback(self, *args, **kwargs):
+            inplace_callback_event.set()
+
+        self.register(inplace_callback)
+
         modified = method(value)
         self.value = modified
+
+        called = inplace_callback_event.wait(0.5)
+        if called == False:
+            logger = logging.getLogger(__name__)
+            logger.warning('Warning: no broadcast received within 0.5 seconds after in-place operation')
+
         return self
 
     def __iadd__(self, value):
