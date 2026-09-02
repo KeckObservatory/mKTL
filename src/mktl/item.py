@@ -1502,14 +1502,18 @@ class Item:
 
     def __inplace(self, method, value):
 
+        try:
+            gettable = self.description['gettable']
+        except KeyError:
+            gettable = True
+
+        if gettable == False:
+            raise TypeError('an item must be gettable to perform in-place operations')
+
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
-        # that the update contains the right or expected value.
-
-        # In-place operations for non-gettable items will fail, as there
-        # is no self.value to manipulate, so the assumption here is that
-        # any in-place manipulation will result in a broadcast-- and we
-        # want to see that broadcast before returning to the caller.
+        # that the update contains the expected value, but it does ensure
+        # the operation is complete.
 
         inplace_callback_event = threading.Event()
 
@@ -1527,6 +1531,7 @@ class Item:
             logger.warning('Warning: no broadcast received within 0.5 seconds after in-place operation')
 
         return self
+
 
     def __iadd__(self, value):
         return self.__inplace(self.__add__, value)
