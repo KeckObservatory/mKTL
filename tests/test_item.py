@@ -39,6 +39,17 @@ def test_set(run_mkregistryd, run_mkd):
     with pytest.raises(RuntimeError):
         readonly.set(44)
 
+    with pytest.raises(TypeError):
+        readonly += 13
+
+    writeonly = mktl.get('unittest.writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
+    with pytest.raises(TypeError):
+        writeonly += 33
+
 
 def test_boolean(run_mkregistryd, run_mkd):
 

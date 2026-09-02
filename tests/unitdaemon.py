@@ -67,6 +67,13 @@ class Daemon(mktl.Daemon):
         items['typeless'] = dict()
         items['typeless']['description'] = 'A typeless item.'
 
+        items['writeonly'] = dict()
+        items['writeonly']['description'] = 'A write-only numeric item.'
+        items['writeonly']['type'] = 'numeric'
+        items['writeonly']['units'] = 'meaningless units'
+        items['writeonly']['initial'] = 13
+        items['writeonly']['gettable'] = False
+
         return items
 
 
