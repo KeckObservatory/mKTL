@@ -156,7 +156,7 @@ class Item:
 
             self.req_set = wrap
         else:
-            self.req_set = self.reject_set
+            self.req_set = self._reject_set
 
         try:
             gettable = self.description['gettable']
@@ -164,7 +164,7 @@ class Item:
             gettable = True
 
         if gettable == False:
-            self.req_get = self.reject_get
+            self.req_get = self._reject_get
 
 
     def add_get_performer(self, method):
@@ -754,7 +754,7 @@ class Item:
                 method(self, self.value, self.timestamp)
 
 
-    def reject_get(self, *args, **kwargs):
+    def _reject_get(self, *args, **kwargs):
         """ Reject a GET request. This method is only invoked if an Item
             is not gettable (write-only).
         """
@@ -762,7 +762,7 @@ class Item:
         raise TypeError(self.key + ' is not a gettable item')
 
 
-    def reject_set(self, *args, **kwargs):
+    def _reject_set(self, *args, **kwargs):
         """ Reject a SET request. This method is only invoked if an Item
             is not settable (read-only).
         """
