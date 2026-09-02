@@ -52,9 +52,9 @@ class Item:
         self.timeout = 120
 
         self._value = None
-        self._value_timestamp = None
+        self._value_timestamp = time.time()
         self._daemon_value = None
-        self._daemon_value_timestamp = None
+        self._daemon_value_timestamp = time.time()
 
         self.pub = None
         self.sub = None
@@ -229,6 +229,7 @@ class Item:
 
         self.authoritative = True
 
+        self._timestamp_getter = self._timestamp_getter_authoritative
         self._value_getter = self._value_getter_authoritative
         self._value_setter = self._value_setter_authoritative
 
@@ -1052,16 +1053,13 @@ class Item:
         """ Get the timestamp associated with the current value of the item.
         """
 
-        if self.authoritative == True:
-            timestamp = self._daemon_value_timestamp
-        else:
-            timestamp = self._value_timestamp
+        return self._timestamp_getter()
 
-        if timestamp is None:
-            # This only occurs in startup conditions, but it does occur.
-            timestamp = time.time()
+    def _timestamp_getter(self):
+        return self._value_timestamp
 
-        return timestamp
+    def _timestamp_getter_authoritative(self):
+        return self._daemon_value_timestamp
 
 
     def to_format(self, value):
