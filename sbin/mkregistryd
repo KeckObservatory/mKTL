@@ -314,11 +314,11 @@ class Registry:
         store = store.lower()
 
         # Dynamically update the request handling to accept GET requests for
-        # the catalog for this store. Regardless of how we received a
-        # catalog block, the fact that we have a block at all implies
-        # we must be ready to answer queries for that store.
+        # this store's catalog and associated hashes. Regardless of how we
+        # received a catalog block, the fact that we have a block at all
+        # implies we must be ready to answer queries for that store.
 
-        self.daemon.accept_catalog_requests(store)
+        self.daemon.accept_foreign_requests(store)
 
         catalog = mktl.meta.catalog(store)
 
@@ -448,9 +448,9 @@ class Daemon(mktl.Daemon):
         self.registry.setup_final()
 
 
-    def accept_catalog_requests(self, store):
+    def accept_foreign_requests(self, store):
         """ Dynamically establish a handler for future GET requests
-            for a store's catalog.
+            for a store's catalog and associated hashes.
         """
 
         # Normally this would be a call to self.add_get_handler(),
@@ -462,6 +462,9 @@ class Daemon(mktl.Daemon):
 
         key = store + '._catalog'
         self.rep._req_get_handlers[key] = self.req_get_catalog
+
+        key = store + '._hash'
+        self.rep._req_get_handlers[key] = self.rep.req_get_hash
 
 
     def req_get_catalog(self, request):
