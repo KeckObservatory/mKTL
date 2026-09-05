@@ -222,7 +222,7 @@ class Daemon:
 
     def add_get_performer(self, key, method):
         """ Assign a method that will be called for all GET requests for
-            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            the specified item. Refer to :func:`mktl.Item.add_get_performer`
             for additional details.
         """
 
