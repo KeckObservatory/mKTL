@@ -13,6 +13,12 @@ def test_get(run_mkregistryd, run_mkd):
     number = mktl.get('unittest.number')
     number.get()
 
+    number.get(refresh=False)
+    number.get(refresh=True)
+
+    with pytest.raises(TypeError):
+        number.get(refresh=None)
+
 
 def test_set(run_mkregistryd, run_mkd):
 
