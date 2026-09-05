@@ -1711,16 +1711,6 @@ class _Sequencer:
             pass
 
 
-    def stop(self):
-        self.shutdown = True
-        self.wake()
-
-        for pending in self.active:
-            pending.put(None)
-
-        self.workers.shutdown()
-
-
     def wake(self):
         self.pending.put(_WakeAlarm())
 
