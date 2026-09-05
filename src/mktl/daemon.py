@@ -319,7 +319,7 @@ class Daemon:
         if existing is not None:
             try:
                 placeholder = existing._authoritative_placeholder
-            except KeyError:
+            except AttributeError:
                 placeholder = False
 
             if existing.authoritative and placeholder == False:
