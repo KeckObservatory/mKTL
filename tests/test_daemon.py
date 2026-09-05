@@ -57,8 +57,14 @@ def test_subclass_performers(run_mkregistryd):
             self.add_performer('a_number', 'get', get_a_number)
             self.add_performer('a_number', 'set', set_a_number)
 
+            with pytest.raises(TypeError):
+                self.add_performer('a_number', 'get', 'not_callable')
+
+            with pytest.raises(TypeError):
+                self.add_performer('a_number', 'set', 'not_callable')
+
             with pytest.raises(ValueError):
-                self.add_performer('a_number', 'bad_reqest', get_a_number)
+                self.add_performer('a_number', 'bad_request', get_a_number)
 
             with pytest.raises(KeyError):
                 self.add_get_performer('invalid_key', get_a_number)
