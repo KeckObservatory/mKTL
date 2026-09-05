@@ -323,7 +323,7 @@ class Daemon:
                 placeholder = False
 
             if existing.authoritative and placeholder == False:
-                raise RuntimeError('duplicate item not allowed: ' + key)
+                raise KeyError('duplicate item not allowed: ' + key)
 
             self.rep.clear_handlers(existing.full_key)
 
