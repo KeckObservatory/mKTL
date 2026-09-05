@@ -137,6 +137,14 @@ def test_subclass_item(run_mkregistryd):
         def setup(self):
             self.add_item(Something, 'something')
 
+            with pytest.raises(KeyError):
+                # Duplicate items are not allowed.
+                self.add_item(mktl.Item, 'something')
+
+            with pytest.raises(KeyError):
+                self.add_item(mktl.Item, 'invalid_item_name')
+
+
     Daemon('unittest_daemon_subclass_item', 'unittest', override=True)
 
 
