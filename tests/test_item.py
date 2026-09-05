@@ -13,6 +13,12 @@ def test_get(run_mkregistryd, run_mkd):
     number = mktl.get('unittest.number')
     number.get()
 
+    number.get(refresh=False)
+    number.get(refresh=True)
+
+    with pytest.raises(TypeError):
+        number.get(refresh=None)
+
 
 def test_set(run_mkregistryd, run_mkd):
 
@@ -38,6 +44,17 @@ def test_set(run_mkregistryd, run_mkd):
 
     with pytest.raises(RuntimeError):
         readonly.set(44)
+
+    with pytest.raises(TypeError):
+        readonly += 13
+
+    writeonly = mktl.get('unittest.writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
+    with pytest.raises(TypeError):
+        writeonly += 33
 
 
 def test_boolean(run_mkregistryd, run_mkd):
@@ -211,6 +228,28 @@ def test_math(run_mkregistryd, run_mkd):
     number.value = 25.1
     with pytest.raises(TypeError):
         ~number
+
+    # Likewise, logical operators only work with integers.
+
+    number.value = 6
+
+    number &= 4
+    assert number == 4
+
+    number &= 2
+    assert number == 0
+
+    number |= 2
+    assert number == 2
+
+    number |= 4
+    assert number == 6
+
+    number ^= 1
+    assert number == 7
+
+    number ^= 6
+    assert number == 1
 
     # The remainder of the operations are expected to work for both integer
     # and floating point numbers.

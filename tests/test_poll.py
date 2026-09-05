@@ -87,6 +87,24 @@ def test_basics():
     assert test_basics.polled == False
 
 
+def test_cleanup():
+
+    test_cleanup.called = False
+
+    def callback():
+        test_cleanup.called = True
+
+    mktl.poll.start(callback, 0.05)
+    time.sleep (0.08)
+    assert test_cleanup.called == True
+
+    mktl.poll._cleanup()
+    test_cleanup.called = False
+
+    time.sleep (0.08)
+    assert test_cleanup.called == False
+
+
 def test_low_frequency():
     test_low_frequency.calls = list()
 

@@ -52,9 +52,9 @@ class Item:
         self.timeout = 120
 
         self._value = None
-        self._value_timestamp = None
+        self._value_timestamp = time.time()
         self._daemon_value = None
-        self._daemon_value_timestamp = None
+        self._daemon_value_timestamp = time.time()
 
         self.pub = None
         self.sub = None
@@ -72,6 +72,7 @@ class Item:
             self._set_queue = queue.Queue()
 
         self._updated = threading.Event()
+        self._updated.clear()
 
         # An Item is a singleton in practice; enforce that constraint.
 
@@ -155,7 +156,7 @@ class Item:
 
             self.req_set = wrap
         else:
-            self.req_set = self.reject_set
+            self.req_set = self._reject_set
 
         try:
             gettable = self.description['gettable']
@@ -163,7 +164,7 @@ class Item:
             gettable = True
 
         if gettable == False:
-            self.req_get = self.reject_get
+            self.req_get = self._reject_get
 
 
     def add_get_performer(self, method):
@@ -226,12 +227,14 @@ class Item:
             daemon variant.
         """
 
+        self.authoritative = True
+
+        self._timestamp_getter = self._timestamp_getter_authoritative
         self._value_getter = self._value_getter_authoritative
         self._value_setter = self._value_setter_authoritative
 
         self.pub = pub
         self.rep = rep
-        self.authoritative = True
 
 
     def _cleanup(self):
@@ -753,7 +756,7 @@ class Item:
                 method(self, self.value, self.timestamp)
 
 
-    def reject_get(self, *args, **kwargs):
+    def _reject_get(self, *args, **kwargs):
         """ Reject a GET request. This method is only invoked if an Item
             is not gettable (write-only).
         """
@@ -761,7 +764,7 @@ class Item:
         raise TypeError(self.key + ' is not a gettable item')
 
 
-    def reject_set(self, *args, **kwargs):
+    def _reject_set(self, *args, **kwargs):
         """ Reject a SET request. This method is only invoked if an Item
             is not settable (read-only).
         """
@@ -999,11 +1002,12 @@ class Item:
         # Wait a smidge for local values to update in response to the set
         # request. This is not guaranteed to occur, but it often does-- and
         # typical client behavior expects the local value to be up-to-date
-        # upon returning from a blocking set() operation. If everything is
+        # upon returning from a blocking SET operation. If everything is
         # working as expected this wait() should return immediately.
 
-        # It would be better if this delay blocked on the definite arrival
-        # of a broadcast, as opposed to hoping that one arrives.
+        # There is no way to distinguish between a final broadcast+update
+        # occurring after a SET operation completes, as opposed to an
+        # intermediate update occuring while the SET operation is in progress.
 
         try:
             gettable = self.description['gettable']
@@ -1049,16 +1053,13 @@ class Item:
         """ Get the timestamp associated with the current value of the item.
         """
 
-        if self.authoritative == True:
-            timestamp = self._daemon_value_timestamp
-        else:
-            timestamp = self._value_timestamp
+        return self._timestamp_getter()
 
-        if timestamp is None:
-            # This only occurs in startup conditions, but it does occur.
-            timestamp = time.time()
+    def _timestamp_getter(self):
+        return self._value_timestamp
 
-        return timestamp
+    def _timestamp_getter_authoritative(self):
+        return self._daemon_value_timestamp
 
 
     def to_format(self, value):
@@ -1085,10 +1086,7 @@ class Item:
         """
 
         if value is None:
-            if self.authoritative == False:
-                value = self._value
-            else:
-                value = self._daemon_value
+            value = self.value
 
         elif timestamp is None:
             # If the value is specified, but the timestamp is not, use the
@@ -1255,14 +1253,18 @@ class Item:
 
     def _value_getter(self):
         """ The extra conditions in this implementation are only helpful when
-            the item hasn't yet received a value.
+            the item hasn't yet received a value. Because the :py:attr:`value`
+            property is accessed as part of the backgrouded call to :func:`get`
+            invoked via :func:`_prime`, the rearrangement to the _primed method
+            is guaranteed to occur without invoking additional callbacks.
         """
 
         self._updated.wait(self.timeout / 100)
 
         if self._value is None:
             self.get()
-        else:
+
+        if self._value is not None:
             self._value_getter = self._value_getter_primed
 
         return self._value
@@ -1316,6 +1318,7 @@ class Item:
 
             if callback is None:
                 invalid.append(reference)
+                continue
 
             try:
                 callback(self, new_data, new_timestamp)
@@ -1500,9 +1503,44 @@ class Item:
 
     def __inplace(self, method, value):
 
+        try:
+            gettable = self.description['gettable']
+        except KeyError:
+            gettable = True
+
+        if gettable == False:
+            raise TypeError('an item must be gettable to perform in-place operations')
+
+        try:
+            settable = self.description['settable']
+        except KeyError:
+            settable = True
+
+        if settable == False:
+            raise TypeError('an item must be settable to perform in-place operations')
+
+        # Use a temporary callback to guarantee that the local value has
+        # updated before returning. This doesn't necessarily guarantee
+        # that the update contains the expected value, but it does ensure
+        # the operation is complete.
+
+        inplace_callback_event = threading.Event()
+
+        def inplace_callback(self, *args, **kwargs):
+            inplace_callback_event.set()
+
+        self.register(inplace_callback)
+
         modified = method(value)
         self.value = modified
+
+        called = inplace_callback_event.wait(0.5)
+        if called == False:
+            logger = logging.getLogger(__name__)
+            logger.warning('Warning: no broadcast received within 0.5 seconds after in-place operation')
+
         return self
+
 
     def __iadd__(self, value):
         return self.__inplace(self.__add__, value)
@@ -1671,16 +1709,6 @@ class _Sequencer:
         except RuntimeError:
             # Job submitted after interpreter shutdown.
             pass
-
-
-    def stop(self):
-        self.shutdown = True
-        self.wake()
-
-        for pending in self.active:
-            pending.put(None)
-
-        self.workers.shutdown()
 
 
     def wake(self):

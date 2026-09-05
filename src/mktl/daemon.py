@@ -130,6 +130,13 @@ class Daemon:
         # consistency.
 
         block = self.catalog.authoritative_block
+
+        if block is None:
+            # Running with an empty configuration. This is not very useful,
+            # but is not explicitly forbidden, so make allowances for it here.
+            meta.authoritative(store, alias, dict())
+            block = self.catalog.authoritative_block
+
         meta.add_provenance(block, self.rep.hostname, self.rep.port, self.pub.port)
         self.catalog.update(block)
 
@@ -215,7 +222,7 @@ class Daemon:
 
     def add_get_performer(self, key, method):
         """ Assign a method that will be called for all GET requests for
-            the specified item. Refer to :func:`mktl.Item.add_set_performer`
+            the specified item. Refer to :func:`mktl.Item.add_get_performer`
             for additional details.
         """
 
@@ -312,11 +319,11 @@ class Daemon:
         if existing is not None:
             try:
                 placeholder = existing._authoritative_placeholder
-            except KeyError:
+            except AttributeError:
                 placeholder = False
 
             if existing.authoritative and placeholder == False:
-                raise RuntimeError('duplicate item not allowed: ' + key)
+                raise KeyError('duplicate item not allowed: ' + key)
 
             self.rep.clear_handlers(existing.full_key)
 
