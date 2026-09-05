@@ -23,7 +23,7 @@ def test_subclass(run_mkregistryd):
     Daemon('unittest_daemon_subclass', 'unittest', override=True)
 
 
-def test_subclass_handlers(run_mkregistryd):
+def test_subclass_performers(run_mkregistryd):
 
     def get_a_number():
         get_a_number.custom_value += 1
@@ -68,10 +68,10 @@ def test_subclass_handlers(run_mkregistryd):
 
 
 
-    Daemon('unittest_daemon_subclass_handlers', 'unittest', override=True)
+    Daemon('unittest_daemon_subclass_performers', 'unittest', override=True)
 
 
-    a_number = mktl.get('unittest_daemon_subclass_handlers', 'a_number')
+    a_number = mktl.get('unittest_daemon_subclass_performers', 'a_number')
 
     # The initial value is -2.
 
@@ -107,7 +107,7 @@ def test_subclass_handlers(run_mkregistryd):
     a_number.get(refresh=True)
     assert a_number == 17
 
-    # Doing an in-place modification bypasses the set handler completely,
+    # Doing an in-place modification bypasses the set performer completely,
     # and just publishes the new value, because the Item we are manipulating
     # here is the authoritative Item.
 
