@@ -251,6 +251,17 @@ def test_math(run_mkregistryd, run_mkd):
     number ^= 6
     assert number == 1
 
+    number.value = 13.31
+
+    with pytest.raises(TypeError):
+        number & 1
+
+    with pytest.raises(TypeError):
+        number | 1
+
+    with pytest.raises(TypeError):
+        number ^ 1
+
     # The remainder of the operations are expected to work for both integer
     # and floating point numbers.
 
