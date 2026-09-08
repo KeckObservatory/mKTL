@@ -291,7 +291,6 @@ class Server:
     def __init__(self, port=None, avoid=set()):
 
         self.socket = zmq_context.socket(zmq.PUB)
-        self.socket_lock = threading.Lock()
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
