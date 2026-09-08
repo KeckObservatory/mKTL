@@ -195,19 +195,6 @@ def test_logic(run_mkregistryd, run_mkd):
         number ^ 1
 
 
-    string = mktl.get('unittest.string')
-    string.value = 'testing'
-
-    with pytest.raises(TypeError):
-        string & 1
-
-    with pytest.raises(TypeError):
-        string | 1
-
-    with pytest.raises(TypeError):
-        string ^ 1
-
-
 def test_mask(run_mkregistryd, run_mkd):
 
     mask = mktl.get('unittest.mask')
@@ -415,6 +402,15 @@ def test_string(run_mkregistryd, run_mkd):
 
     with pytest.raises(TypeError):
         ~string
+
+    with pytest.raises(TypeError):
+        string & 1
+
+    with pytest.raises(TypeError):
+        string | 1
+
+    with pytest.raises(TypeError):
+        string ^ 1
 
     with pytest.raises(TypeError):
         string - 't'
