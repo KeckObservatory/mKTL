@@ -438,6 +438,21 @@ def test_string(run_mkregistryd, run_mkd):
     with pytest.raises(TypeError):
         string % 2
 
+    with pytest.raises(TypeError):
+        abs(string)
+
+    with pytest.raises(TypeError):
+        round(string)
+
+    with pytest.raises(TypeError):
+        math.ceil(string)
+
+    with pytest.raises(TypeError):
+        math.floor(string)
+
+    with pytest.raises(TypeError):
+        math.trunc(string)
+
     assert string == test_value
     assert string <= test_value
     assert string <= test_value + 'z'
