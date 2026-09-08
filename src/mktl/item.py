@@ -1,6 +1,7 @@
 
 import concurrent.futures
 import logging
+import math
 import queue
 import sys
 import threading
@@ -1378,6 +1379,15 @@ class Item:
         return bytes
 
 
+    def __ceil__(self):
+        return math.ceil(self.value)
+
+    def __float__(self):
+        return float(self.value)
+
+    def __floor__(self):
+        return math.floor(self.value)
+
     def __getitem__(self, key):
         return self.value[key]
 
@@ -1392,9 +1402,20 @@ class Item:
         return id(self)
 
 
+    def __index__(self):
+        return int(self)
+
+    def __int__(self):
+        return int(self.value)
+
+    def __round__(self, digits=None):
+        return round(self.value, digits)
+
     def __str__(self):
         return str(self.formatted)
 
+    def __trunc__(self):
+        return math.trunc(self.value)
 
     def __lt__(self, other):
         return self.value < other
