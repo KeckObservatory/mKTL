@@ -290,65 +290,11 @@ class Server:
 
     def __init__(self, port=None, avoid=set()):
 
-        self.socket = zmq_context.socket(zmq.PUB)
-
-        # If the port is set, use it; otherwise, look for the first available
-        # port within the default range.
-
-        if port is None:
-            minimum = minimum_port
-            maximum = maximum_port
-        else:
-            port = int(port)
-            minimum = port
-            maximum = port
-
-        avoided = list()
-        trial = minimum
-        while trial <= maximum:
-            if port is None and trial in avoid:
-                avoided.append(trial)
-                trial += 1
-                continue
-
-            listen_address = 'tcp://*:' + str(trial)
-            try:
-                self.socket.bind(listen_address)
-            except zmq.error.ZMQError:
-                # Assume this port is in use.
-                trial += 1
-            else:
-                break
-
-        if trial > maximum and len(avoided) > 0:
-            # There are a lot of ports in the default range; surely one of
-            # them is available? Re-take something if it is not in use.
-
-            reuse = False
-            for trial in avoided:
-                listen_address = 'tcp://*:' + str(trial)
-                try:
-                    self.socket.bind(listen_address)
-                except zmq.error.ZMQError:
-                    # Assume this port is in use.
-                    continue
-                else:
-                    reuse = True
-                    break
-
-            if reuse == False:
-                # No luck. Reassert the failure condition checked below.
-                trial = maximum + 1
-
-
-        if trial > maximum:
-            if port is None:
-                error = "no ports available in range %d:%d" % (minimum, maximum)
-            else:
-                error = 'port already in use: ' + str(port)
-            raise ConnectionError(error)
-
-        self.port = trial
+        self.port = port
+        self.avoid = avoid
+        self.socket = None
+        self.bound = threading.Event()
+        self.bind_exception = None
 
         # Experiments with a multiprocessing.SimpleQueue and an ipc socket
         # for notifications result in something like a 35% slowdown compared
@@ -371,6 +317,71 @@ class Server:
         self.publishing_thread = threading.Thread(target=self.run)
         self.publishing_thread.daemon = True
         self.publishing_thread.start()
+
+        self.bound.wait()
+        if self.bind_exception:
+            raise self.bind_exception
+
+
+    def bind(self, socket, port, avoid):
+
+        # If the port is set, use it; otherwise, look for the first available
+        # port within the default range.
+
+        if port is None:
+            minimum = minimum_port
+            maximum = maximum_port
+        else:
+            port = int(port)
+            minimum = port
+            maximum = port
+
+        avoided = list()
+        trial = minimum
+        while trial <= maximum:
+            if port is None and trial in avoid:
+                avoided.append(trial)
+                trial += 1
+                continue
+
+            listen_address = 'tcp://*:' + str(trial)
+            try:
+                socket.bind(listen_address)
+            except zmq.error.ZMQError:
+                # Assume this port is in use.
+                trial += 1
+            else:
+                break
+
+        if trial > maximum and len(avoided) > 0:
+            # There are a lot of ports in the default range; surely one of
+            # them is available? Re-take something if it is not in use.
+
+            reuse = False
+            for trial in avoided:
+                listen_address = 'tcp://*:' + str(trial)
+                try:
+                    socket.bind(listen_address)
+                except zmq.error.ZMQError:
+                    # Assume this port is in use.
+                    continue
+                else:
+                    reuse = True
+                    break
+
+            if reuse == False:
+                # No luck. Reassert the failure condition checked below.
+                trial = maximum + 1
+
+
+        if trial > maximum:
+            if port is None:
+                error = "no ports available in range %d:%d" % (minimum, maximum)
+            else:
+                error = 'port already in use: ' + str(port)
+            raise ConnectionError(error)
+
+        self.port = trial
 
 
     def publish(self, message):
@@ -406,6 +417,19 @@ class Server:
             problematic as the REQ/REP case, it seems like good practice to
             mirror the same structure here.
         """
+
+        socket = zmq_context.socket(zmq.PUB)
+        self.socket = socket
+
+        try:
+            self.bind(socket, self.port, self.avoid)
+        except Exception as exception:
+            self.bind_exception = exception
+        finally:
+            self.bound.set()
+
+        if self.bind_exception:
+            return
 
         poller = zmq.Poller()
         poller.register(self.broadcast_receive, zmq.POLLIN)
