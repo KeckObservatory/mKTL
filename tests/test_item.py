@@ -181,6 +181,17 @@ def test_logic(run_mkregistryd, run_mkd):
     assert 2 ^ number == 0
     assert 1 ^ number == 3
 
+    number.value = 13.31
+
+    with pytest.raises(TypeError):
+        number & 1
+
+    with pytest.raises(TypeError):
+        number | 1
+
+    with pytest.raises(TypeError):
+        number ^ 1
+
 
 def test_mask(run_mkregistryd, run_mkd):
 
@@ -228,39 +239,6 @@ def test_math(run_mkregistryd, run_mkd):
     number.value = 25.1
     with pytest.raises(TypeError):
         ~number
-
-    # Likewise, logical operators only work with integers.
-
-    number.value = 6
-
-    number &= 4
-    assert number == 4
-
-    number &= 2
-    assert number == 0
-
-    number |= 2
-    assert number == 2
-
-    number |= 4
-    assert number == 6
-
-    number ^= 1
-    assert number == 7
-
-    number ^= 6
-    assert number == 1
-
-    number.value = 13.31
-
-    with pytest.raises(TypeError):
-        number & 1
-
-    with pytest.raises(TypeError):
-        number | 1
-
-    with pytest.raises(TypeError):
-        number ^ 1
 
     # The remainder of the operations are expected to work for both integer
     # and floating point numbers.
