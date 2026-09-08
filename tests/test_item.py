@@ -1,3 +1,4 @@
+import math
 import mktl
 import pytest
 import time
@@ -182,6 +183,18 @@ def test_logic(run_mkregistryd, run_mkd):
     assert 1 ^ number == 3
 
 
+    number.value = 13.31
+
+    with pytest.raises(TypeError):
+        number & 1
+
+    with pytest.raises(TypeError):
+        number | 1
+
+    with pytest.raises(TypeError):
+        number ^ 1
+
+
 def test_mask(run_mkregistryd, run_mkd):
 
     mask = mktl.get('unittest.mask')
@@ -229,32 +242,10 @@ def test_math(run_mkregistryd, run_mkd):
     with pytest.raises(TypeError):
         ~number
 
-    # Likewise, logical operators only work with integers.
-
-    number.value = 6
-
-    number &= 4
-    assert number == 4
-
-    number &= 2
-    assert number == 0
-
-    number |= 2
-    assert number == 2
-
-    number |= 4
-    assert number == 6
-
-    number ^= 1
-    assert number == 7
-
-    number ^= 6
-    assert number == 1
-
     # The remainder of the operations are expected to work for both integer
     # and floating point numbers.
 
-    testing = (50, 50.1)
+    testing = (50, -50, 50.1, 50.6, -50.3, -50.7)
     for test_value in testing:
         number.value = test_value
 
@@ -301,6 +292,13 @@ def test_math(run_mkregistryd, run_mkd):
         assert number == test_value / 2
         number *= 2
         assert number == test_value
+
+        assert abs(number) == abs(test_value)
+        assert round(number) == round(test_value)
+
+        assert math.ceil(number) == math.ceil(test_value)
+        assert math.floor(number) == math.floor(test_value)
+        assert math.trunc(number) == math.trunc(test_value)
 
 
 def test_quantity(run_mkregistryd, run_mkd):
@@ -408,6 +406,15 @@ def test_string(run_mkregistryd, run_mkd):
         ~string
 
     with pytest.raises(TypeError):
+        string & 1
+
+    with pytest.raises(TypeError):
+        string | 1
+
+    with pytest.raises(TypeError):
+        string ^ 1
+
+    with pytest.raises(TypeError):
         string - 't'
 
     with pytest.raises(TypeError):
@@ -430,6 +437,21 @@ def test_string(run_mkregistryd, run_mkd):
 
     with pytest.raises(TypeError):
         string % 2
+
+    with pytest.raises(TypeError):
+        abs(string)
+
+    with pytest.raises(TypeError):
+        round(string)
+
+    with pytest.raises(TypeError):
+        math.ceil(string)
+
+    with pytest.raises(TypeError):
+        math.floor(string)
+
+    with pytest.raises(TypeError):
+        math.trunc(string)
 
     assert string == test_value
     assert string <= test_value
