@@ -245,7 +245,7 @@ def test_math(run_mkregistryd, run_mkd):
     # The remainder of the operations are expected to work for both integer
     # and floating point numbers.
 
-    testing = (50, 50.1, 50.6, -50.3)
+    testing = (50, -50, 50.1, 50.6, -50.3, -50.7)
     for test_value in testing:
         number.value = test_value
 
@@ -294,6 +294,8 @@ def test_math(run_mkregistryd, run_mkd):
         assert number == test_value
 
         assert abs(number) == abs(test_value)
+        assert round(number) == round(test_value)
+
         assert math.ceil(number) == math.ceil(test_value)
         assert math.floor(number) == math.floor(test_value)
         assert math.trunc(number) == math.trunc(test_value)
