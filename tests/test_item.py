@@ -181,6 +181,7 @@ def test_logic(run_mkregistryd, run_mkd):
     assert 2 ^ number == 0
     assert 1 ^ number == 3
 
+
     number.value = 13.31
 
     with pytest.raises(TypeError):
@@ -191,6 +192,19 @@ def test_logic(run_mkregistryd, run_mkd):
 
     with pytest.raises(TypeError):
         number ^ 1
+
+
+    string = mktl.get('unittest.string')
+    string.value = 'testing'
+
+    with pytest.raises(TypeError):
+        string & 1
+
+    with pytest.raises(TypeError):
+        string | 1
+
+    with pytest.raises(TypeError):
+        string ^ 1
 
 
 def test_mask(run_mkregistryd, run_mkd):
