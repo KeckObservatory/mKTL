@@ -27,10 +27,9 @@ class Client:
 
         port = int(port)
         self.port = port
-        server = "tcp://%s:%d" % (address, port)
-
-        self.socket = zmq_context.socket(zmq.SUB)
-        self.socket.connect(server)
+        self.server = "tcp://%s:%d" % (address, port)
+        self.socket = None
+        self.connected = threading.Event()
 
         self.callback_all = list()
         self.callback_specific = dict()
@@ -53,6 +52,8 @@ class Client:
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
+
+        self.connected.wait()
 
 
     def propagate(self, message):
@@ -168,16 +169,24 @@ class Client:
 
     def run(self):
 
+        # The connection is established here in order for all calls associated
+        # with the socket to be in the same thread.
+
+        socket = zmq_context.socket(zmq.SUB)
+        socket.connect(self.server)
+        self.socket = socket
+        self.connected.set()
+
         poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
+        poller.register(socket, zmq.POLLIN)
         poller.register(self.subscription_receive, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active,flag in sockets:
 
-                if self.socket == active:
-                    parts = self.socket.recv_multipart()
+                if socket == active:
+                    parts = socket.recv_multipart()
                     self._pub_incoming(parts)
 
                 elif self.subscription_receive == active:
