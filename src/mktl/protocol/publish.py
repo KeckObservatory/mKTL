@@ -208,14 +208,21 @@ class Client:
 
 
     def _sub_incoming(self):
-        """ Clear one subscription notification and handle one subscription
-            request.
+        """ Clear one subscription notification and handle all available
+            subscription requests. Subsequent calls to this method may
+            be a no-op if the request gets dequeued and handled while
+            the notification is still buffered by the socket.
         """
 
         self.subscription_receive.recv(flags=zmq.NOBLOCK)
-        topic = self.subscriptions.get(block=False)
 
-        self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+        while True:
+            try:
+                topic = self.subscriptions.get(block=False)
+            except queue.Empty:
+                break
+
+            self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 
     def subscribe(self, topic):
@@ -404,22 +411,30 @@ class Server:
 
 
     def _pub_outgoing(self):
-        """ Clear one broadcast notification and send one pending broadcast.
+        """ Clear one broadcast notification and handle all available
+            broadcast requests. Subsequent calls to this method may
+            be a no-op if the request gets dequeued and handled while
+            the notification is still buffered by the socket.
         """
 
         self.broadcast_receive.recv(flags=zmq.NOBLOCK)
-        message = self.broadcasts.get(block=False)
 
-        parts = tuple(message)
+        while True:
+            try:
+                message = self.broadcasts.get(block=False)
+            except queue.Empty:
+                break
 
-        # A lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed
-        # together. However, this send_multipart() call is now only called
-        # from a single thread handling all send/recv calls, so the
-        # lock is no longer in place.
+            parts = tuple(message)
 
-        self.socket.send_multipart(parts)
+            # A lock around the ZeroMQ socket is necessary in a multithreaded
+            # application; otherwise, if two different threads both invoke
+            # send_multipart(), the message parts can and will get mixed
+            # together. However, this send_multipart() call is now only called
+            # from a single thread handling all send/recv calls, so the
+            # lock is no longer in place.
+
+            self.socket.send_multipart(parts)
 
 
     def run(self):
