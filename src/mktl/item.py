@@ -72,6 +72,7 @@ class Item:
             self._pub_queue = queue.Queue()
             self._set_queue = queue.Queue()
 
+        self._primed = threading.Event()
         self._updated = threading.Event()
         self._updated.clear()
 
@@ -166,6 +167,10 @@ class Item:
 
         if gettable == False:
             self.req_get = self._reject_get
+            self.subscribe = self._reject_subscribe
+        else:
+            self._set_original = self.set
+            self.set = self._set_not_primed
 
 
     def add_get_performer(self, method):
@@ -773,6 +778,14 @@ class Item:
         raise TypeError(self.key + ' is not a settable item')
 
 
+    def _reject_subscribe(self, *args, **kwargs):
+        """ Reject a SUB request. This method is only invoked if an Item
+            is not gettable (write-only).
+        """
+
+        raise TypeError(self.key + ' is not a gettable item')
+
+
     def req_get(self, request):
         """ Handle a GET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
@@ -1022,6 +1035,26 @@ class Item:
                 logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
 
 
+    def _set_not_primed(self, *args, **kwargs):
+        """ Delay calling a set operation until a priming read has successfully
+            completed.
+        """
+
+        self._primed.wait()
+        return self.set(*args, **kwargs)
+
+
+    def _set_primed(self, *args, **kwargs):
+        """ Callback indicating that at least one broadcast event or priming
+            read has occurred. Put the "real" :func:`set` back into place,
+            avoiding any future delays.
+        """
+
+        self.set = self._set_original
+        self.unregister(self._set_primed)
+        self._primed.set()
+
+
     def subscribe(self, prime=True):
         """ Subscribe to all future broadcast events. Doing so ensures that
             locally cached values will always be current, regardless of any
@@ -1041,6 +1074,8 @@ class Item:
 
         self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
+
+        self.register(self._set_primed)
 
         if prime:
             self._prime()
@@ -1132,6 +1167,26 @@ class Item:
 
         quantity = self.store.catalog.to_quantity(self.key, value, units)
         return quantity
+
+
+    def unregister(self, method):
+        """ The inverse of :func:`register`, removing a callback from the
+            list of registered callbacks. No errors are raised if the callback
+            is not registered.
+
+            Refer to :func:`register` for a description of the arguments.
+        """
+
+        unregister = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None or callback == method:
+                unregister.append(reference)
+
+        for reference in unregister:
+            self.callbacks.remove(reference)
 
 
     def validate(self, value):
