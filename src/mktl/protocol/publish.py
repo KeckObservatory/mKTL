@@ -43,11 +43,6 @@ class Client:
 
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
-        self.subscription_receive = zmq_context.socket(zmq.PAIR)
-        self.subscription_receive.bind(internal)
-
-        self.subscription_signal = zmq_context.socket(zmq.PAIR)
-        self.subscription_signal.connect(internal)
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -169,12 +164,17 @@ class Client:
 
     def run(self):
 
-        # The connection is established here in order for all calls associated
+        # The sockets are established here in order for all calls associated
         # with the socket to be in the same thread.
+
+        subscription_receive = zmq_context.socket(zmq.PAIR)
+        subscription_receive.bind(self.subscription_address)
+        self.subscription_receive = subscription_receive
 
         socket = zmq_context.socket(zmq.SUB)
         socket.connect(self.server)
         self.socket = socket
+
         self.connected.set()
 
         poller = zmq.Poller()
@@ -189,7 +189,7 @@ class Client:
                     parts = socket.recv_multipart()
                     self._pub_incoming(parts)
 
-                elif self.subscription_receive == active:
+                elif subscription_receive == active:
                     self._sub_incoming()
 
 
@@ -232,7 +232,19 @@ class Client:
             topic = topic.encode()
 
         self.subscriptions.put(topic)
-        self.subscription_signal.send(b'')
+
+        # There is no good way to ensure single-threaded control for this
+        # signaling thread. Because a subscription only occurs once for a
+        # given item, and because this is an inproc connection, we accept
+        # the potential inefficiency of making this connection each time,
+        # as opposed to re-using the same connection for every call.
+
+        # This potential inefficiency has not been quantified, and may be
+        # significant when subscribing to a lot of topics.
+
+        subscription_signal = zmq_context.socket(zmq.PAIR)
+        subscription_signal.connect(self.subscription_address)
+        subscription_signal.send(b'')
 
 
     def unregister(self, callback, topic=None):
