@@ -262,8 +262,6 @@ class Client:
             Refer to :func:`register` for a description of the arguments.
         """
 
-        reference = weakref.ref(callback)
-
         if topic is None:
             references = self.callback_all
 
