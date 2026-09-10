@@ -44,6 +44,9 @@ class Client:
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
 
+        self.subscription_signal = zmq_context.socket(zmq.PAIR)
+        self.subscription_signal.connect(self.subscription_address)
+
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
@@ -239,19 +242,7 @@ class Client:
             topic = topic.encode()
 
         self.subscriptions.put(topic)
-
-        # There is no good way to ensure single-threaded control for this
-        # signaling thread. Because a subscription only occurs once for a
-        # given item, and because this is an inproc connection, we accept
-        # the potential inefficiency of making this connection each time,
-        # as opposed to re-using the same connection for every call.
-
-        # This potential inefficiency has not been quantified, and may be
-        # significant when subscribing to a lot of topics.
-
-        subscription_signal = zmq_context.socket(zmq.PAIR)
-        subscription_signal.connect(self.subscription_address)
-        subscription_signal.send(b'')
+        self.subscription_signal.send(b'')
 
 
     def unregister(self, callback, topic=None):
