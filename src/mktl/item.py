@@ -589,29 +589,63 @@ class Item:
 
 
     def _prime(self):
-        """ Initiate a get() request in a background thread; this is only
-            necessary for a call to :func:`subscribe`, where it is desirable
-            for a client application to not block when mass-instantiating
-            items, but the item will need to have a value the first time it
-            is accessed.
+        """ Issue a PRIME request to ensure the SUB call made in
+            :func:`subscribe` has been processed. An explicit GET
+            call is additionally required in order to ensure the
+            current value of the item is updated, even in the
+            absence of a broadcast.
 
-            The :py:attr:`value` property is structured to allow this
-            priming to complete before returning to the caller.
+            Handling these operations in the background allows
+            client applications to proceed while all such priming
+            operations occur in parallel, as might occur when
+            mass-instantiating items.
+
+            The :py:attr:`value` property and :func:`set` method
+            are structured to allow this priming to complete before
+            proceeding.
         """
 
         if self._value is None:
             pass
+        elif self.set == self._set_not_primed:
+            self._set_primed()
         else:
+            # Nothing to prime, we already have a value. The subscription
+            # request must have come through early.
             return
 
-        # Parallel handling wants to use a unique queue for each request
-        # rather than serialize requests into a single queue.
+        # Calls to set() will be held until priming is complete. The
+        # _set_primed() callback is what releases any blocked set()
+        # calls to proceed.
 
-        pending = queue.Queue()
+        self.register(self._set_primed)
 
-        task = _Task(self.get, False)
-        pending.put(task)
-        _Sequencer.pending.put(pending)
+        key = self.full_key
+        self.sub.register(self._prime_incoming, 'prime:' + key)
+
+        flags = protocol.message.NO_ACK_OR_REP
+        payload = protocol.message.Payload(value=True, time=time.time())
+        request = protocol.message.Request('PRIME', key, payload, flags=flags)
+        self.req.send(request)
+
+
+    def _prime_incoming(self, message):
+        """ This is the entry point to handle the arrival of a published
+            priming value (see :func:`_prime`).
+        """
+
+        # Having received a priming broadcast we can discontinue any further
+        # interest in that message stream. The daemon will shut off priming
+        # broadcasts automatically.
+
+        self.sub.unregister(self._prime_incoming, 'prime:' + self.full_key)
+
+        # Don't process the priming read in the background; we want to
+        # guarantee that priming is complete, and issue notification
+        # accordingly.
+
+        self._update(message)
+        self._primed.set()
 
 
     def _pub_incoming(self, message):
@@ -1052,7 +1086,6 @@ class Item:
 
         self.set = self._set_original
         self.unregister(self._set_primed)
-        self._primed.set()
 
 
     def subscribe(self, prime=True):
@@ -1074,8 +1107,6 @@ class Item:
 
         self.sub.register(self._pub_incoming, self.full_key)
         self.subscribed = True
-
-        self.register(self._set_primed)
 
         if prime:
             self._prime()
