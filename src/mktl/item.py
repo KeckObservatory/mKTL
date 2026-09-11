@@ -242,6 +242,8 @@ class Item:
         self.pub = pub
         self.rep = rep
 
+        self._set_primed()
+
 
     def _cleanup(self):
         """ Shut down any background processing involved with this item.
