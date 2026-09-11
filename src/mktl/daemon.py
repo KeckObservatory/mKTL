@@ -346,7 +346,12 @@ class Daemon:
 
         created = item_class(self.store, key, *args, **kwargs)
         created._authoritative(self.rep, self.pub)
-        created.subscribe(prime=False)
+
+        try:
+            created.subscribe(prime=False)
+        except TypeError:
+            # This item is not gettable.
+            pass
 
         for reference in preserved_callbacks:
             callback = reference()
