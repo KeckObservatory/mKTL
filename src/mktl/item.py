@@ -242,7 +242,8 @@ class Item:
         self.pub = pub
         self.rep = rep
 
-        self._set_primed()
+        if self.set == self._set_not_primed:
+            self._set_primed()
 
 
     def _cleanup(self):
