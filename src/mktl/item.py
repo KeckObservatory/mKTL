@@ -168,9 +168,6 @@ class Item:
         if gettable == False:
             self.req_get = self._reject_get
             self.subscribe = self._reject_subscribe
-        else:
-            self._set_original = self.set
-            self.set = self._set_not_primed
 
 
     def add_get_performer(self, method):
@@ -241,9 +238,6 @@ class Item:
 
         self.pub = pub
         self.rep = rep
-
-        if self.set == self._set_not_primed:
-            self._set_primed()
 
 
     def _cleanup(self):
@@ -610,18 +604,11 @@ class Item:
 
         if self._value is None:
             pass
-        elif self.set == self._set_not_primed:
-            self._set_primed()
         else:
             # Nothing to prime, we already have a value. The subscription
             # request must have come through early.
             return
 
-        # Calls to set() will be held until priming is complete. The
-        # _set_primed() callback is what releases any blocked set()
-        # calls to proceed.
-
-        self.register(self._set_primed)
 
         key = self.full_key
         self.sub.register(self._prime_incoming, 'prime:' + key)
@@ -1070,25 +1057,6 @@ class Item:
             if updated == False:
                 logger = logging.getLogger(__name__)
                 logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
-
-
-    def _set_not_primed(self, *args, **kwargs):
-        """ Delay calling a set operation until a priming read has successfully
-            completed.
-        """
-
-        self._primed.wait()
-        return self.set(*args, **kwargs)
-
-
-    def _set_primed(self, *args, **kwargs):
-        """ Callback indicating that at least one broadcast event or priming
-            read has occurred. Put the "real" :func:`set` back into place,
-            avoiding any future delays.
-        """
-
-        self.set = self._set_original
-        self.unregister(self._set_primed)
 
 
     def subscribe(self, prime=True):
@@ -1628,6 +1596,11 @@ class Item:
 
         if settable == False:
             raise TypeError('an item must be settable to perform in-place operations')
+
+        # Ensure the item has a value before proceeding. This will block for
+        # priming to complete, and synchronously request a value if necessary.
+
+        self.value
 
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
