@@ -72,7 +72,6 @@ class Item:
             self._pub_queue = queue.Queue()
             self._set_queue = queue.Queue()
 
-        self._primed = threading.Event()
         self._updated = threading.Event()
         self._updated.clear()
 
@@ -635,7 +634,6 @@ class Item:
         # accordingly.
 
         self._update(message)
-        self._primed.set()
 
 
     def _pub_incoming(self, message):
