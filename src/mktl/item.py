@@ -1053,10 +1053,7 @@ class Item:
             gettable = True
 
         if gettable == True:
-            updated = self._updated.wait(0.2)
-            if updated == False:
-                logger = logging.getLogger(__name__)
-                logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
+            self._updated.wait(0.1)
 
 
     def subscribe(self, prime=True):
@@ -1618,7 +1615,7 @@ class Item:
         called = inplace_callback_event.wait(0.5)
         if called == False:
             logger = logging.getLogger(__name__)
-            logger.warning('Warning: no broadcast received within 0.5 seconds after in-place operation')
+            logger.debug('No broadcast received within 0.5 seconds after in-place operation')
 
         return self
 
