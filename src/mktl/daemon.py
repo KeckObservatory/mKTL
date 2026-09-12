@@ -807,8 +807,8 @@ class _Primer:
     def __init__(self, item):
         _Primer.active[item.key] = self
 
-        self.initial = 0.01
-        self.delay = self.initial
+        self.interval = 0.01
+        self.delay = self.interval
         self.item = item
 
         self.thread = threading.Thread(target=self.run)
@@ -821,7 +821,7 @@ class _Primer:
             if multiple priming requests come in for the same item.
         """
 
-        self.delay = self.initial
+        self.delay = self.interval
 
 
     def run(self):
@@ -829,10 +829,16 @@ class _Primer:
         next = time.time()
         key = 'prime:' + self.item.full_key
 
+        burst_time = self.interval * 50
+
         while True:
 
             next += self.delay
-            self.delay *= 2
+
+            if self.delay < burst_time:
+                self.delay += self.interval
+            else:
+                self.delay *= 2
 
             payload = self.item.to_payload()
             message = protocol.message.Broadcast('PUB', key, payload)
