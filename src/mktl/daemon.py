@@ -983,6 +983,9 @@ class RequestServer(protocol.request.Server):
         except KeyError:
             raise KeyError('this daemon does not contain ' + repr(key))
 
+        if item.description['type'] == 'bulk':
+            raise TypeError('refusing to PRIME a bulk item')
+
         try:
             primer = _Primer.active[key]
         except KeyError:
