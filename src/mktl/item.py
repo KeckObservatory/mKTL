@@ -166,6 +166,7 @@ class Item:
 
         if gettable == False:
             self.req_get = self._reject_get
+            self.subscribe = self._reject_subscribe
 
 
     def add_get_performer(self, method):
@@ -584,29 +585,55 @@ class Item:
 
 
     def _prime(self):
-        """ Initiate a get() request in a background thread; this is only
-            necessary for a call to :func:`subscribe`, where it is desirable
-            for a client application to not block when mass-instantiating
-            items, but the item will need to have a value the first time it
-            is accessed.
+        """ Issue a PRIME request to ensure the SUB call made in
+            :func:`subscribe` has been processed. An explicit GET
+            call is additionally required in order to ensure the
+            current value of the item is updated, even in the
+            absence of a broadcast.
 
-            The :py:attr:`value` property is structured to allow this
-            priming to complete before returning to the caller.
+            Handling these operations in the background allows
+            client applications to proceed while all such priming
+            operations occur in parallel, as might occur when
+            mass-instantiating items.
+
+            The :py:attr:`value` property and :func:`set` method
+            are structured to allow this priming to complete before
+            proceeding.
         """
 
         if self._value is None:
             pass
         else:
+            # Nothing to prime, we already have a value. The subscription
+            # request must have come through early.
             return
 
-        # Parallel handling wants to use a unique queue for each request
-        # rather than serialize requests into a single queue.
 
-        pending = queue.Queue()
+        key = self.full_key
+        self.sub.register(self._prime_incoming, 'prime:' + key)
 
-        task = _Task(self.get, False)
-        pending.put(task)
-        _Sequencer.pending.put(pending)
+        flags = protocol.message.NO_ACK_OR_REP
+        payload = protocol.message.Payload(value=True, time=time.time())
+        request = protocol.message.Request('PRIME', key, payload, flags=flags)
+        self.req.send(request)
+
+
+    def _prime_incoming(self, message):
+        """ This is the entry point to handle the arrival of a published
+            priming value (see :func:`_prime`).
+        """
+
+        # Having received a priming broadcast we can discontinue any further
+        # interest in that message stream. The daemon will shut off priming
+        # broadcasts automatically.
+
+        self.sub.unregister(self._prime_incoming, 'prime:' + self.full_key)
+
+        # Don't process the priming read in the background; we want to
+        # guarantee that priming is complete, and issue notification
+        # accordingly.
+
+        self._update(message)
 
 
     def _pub_incoming(self, message):
@@ -771,6 +798,14 @@ class Item:
         """
 
         raise TypeError(self.key + ' is not a settable item')
+
+
+    def _reject_subscribe(self, *args, **kwargs):
+        """ Reject a SUB request. This method is only invoked if an Item
+            is not gettable (write-only).
+        """
+
+        raise TypeError(self.key + ' is not a gettable item')
 
 
     def req_get(self, request):
@@ -1016,10 +1051,7 @@ class Item:
             gettable = True
 
         if gettable == True:
-            updated = self._updated.wait(0.2)
-            if updated == False:
-                logger = logging.getLogger(__name__)
-                logger.warning('Warning: no broadcast received within 0.2 seconds after set() operation')
+            self._updated.wait(0.1)
 
 
     def subscribe(self, prime=True):
@@ -1132,6 +1164,26 @@ class Item:
 
         quantity = self.store.catalog.to_quantity(self.key, value, units)
         return quantity
+
+
+    def unregister(self, method):
+        """ The inverse of :func:`register`, removing a callback from the
+            list of registered callbacks. No errors are raised if the callback
+            is not registered.
+
+            Refer to :func:`register` for a description of the arguments.
+        """
+
+        unregister = list()
+
+        for reference in self.callbacks:
+            callback = reference()
+
+            if callback is None or callback == method:
+                unregister.append(reference)
+
+        for reference in unregister:
+            self.callbacks.remove(reference)
 
 
     def validate(self, value):
@@ -1259,8 +1311,6 @@ class Item:
             invoked via :func:`_prime`, the rearrangement to the _primed method
             is guaranteed to occur without invoking additional callbacks.
         """
-
-        self._updated.wait(self.timeout / 100)
 
         if self._value is None:
             self.get()
@@ -1540,6 +1590,11 @@ class Item:
         if settable == False:
             raise TypeError('an item must be settable to perform in-place operations')
 
+        # Ensure the item has a value before proceeding. This will block for
+        # priming to complete, and synchronously request a value if necessary.
+
+        self.value
+
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
         # that the update contains the expected value, but it does ensure
@@ -1558,7 +1613,7 @@ class Item:
         called = inplace_callback_event.wait(0.5)
         if called == False:
             logger = logging.getLogger(__name__)
-            logger.warning('Warning: no broadcast received within 0.5 seconds after in-place operation')
+            logger.debug('No broadcast received within 0.5 seconds after in-place operation')
 
         return self
 

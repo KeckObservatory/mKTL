@@ -346,7 +346,12 @@ class Daemon:
 
         created = item_class(self.store, key, *args, **kwargs)
         created._authoritative(self.rep, self.pub)
-        created.subscribe(prime=False)
+
+        try:
+            created.subscribe(prime=False)
+        except TypeError:
+            # This item is not gettable.
+            pass
 
         for reference in preserved_callbacks:
             callback = reference()
@@ -788,6 +793,72 @@ class Daemon:
 
 
 
+class _Primer:
+    """ Background thread to issue priming broadcasts for a single item.
+        These broadcasts automatically shut off after a hard-coded interval.
+        Clients register their lack of interest by unsubscribing to the
+        priming topic; if there are no subscriptions to the priming topic
+        then no messages are published on the wire.
+    """
+
+    max_delay = 5
+    active = dict()
+
+    def __init__(self, item):
+        _Primer.active[item.key] = self
+
+        self.interval = 0.01
+        self.delay = self.interval
+        self.item = item
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+
+    def reset(self):
+        """ Reset the back-off timer; the same _Primer instance will be used
+            if multiple priming requests come in for the same item.
+        """
+
+        self.delay = self.interval
+
+
+    def run(self):
+
+        next = time.time()
+        key = 'prime:' + self.item.full_key
+
+        burst_time = self.interval * 50
+
+        while True:
+
+            next += self.delay
+
+            if self.delay < burst_time:
+                self.delay += self.interval
+            else:
+                self.delay *= 2
+
+            payload = self.item.to_payload()
+            message = protocol.message.Broadcast('PUB', key, payload)
+            self.item.pub.publish(message)
+
+            if self.delay > self.max_delay:
+                break
+            else:
+                now = time.time()
+                delay = next - now
+                time.sleep(delay)
+
+
+        del _Primer.active[self.item.key]
+
+
+# end of class _Primer
+
+
+
 class RequestServer(protocol.request.Server):
 
     def __init__(self, daemon, store, *args, **kwargs):
@@ -834,6 +905,8 @@ class RequestServer(protocol.request.Server):
             response = self.req_set(request)
         elif type == 'GET':
             response = self.req_get(request)
+        elif type == 'PRIME':
+            response = self.req_prime(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
@@ -896,6 +969,29 @@ class RequestServer(protocol.request.Server):
         hashes = meta.get_hashes(store)
         payload = protocol.message.Payload(value=hashes)
         return payload
+
+
+    def req_prime(self, request):
+
+        store, key = request.target.split('.', 1)
+
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        try:
+            item = self.daemon.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if item.description['type'] == 'bulk':
+            raise TypeError('refusing to PRIME a bulk item')
+
+        try:
+            primer = _Primer.active[key]
+        except KeyError:
+            primer = _Primer(item)
+
+        primer.reset()
 
 
     def req_set(self, request):

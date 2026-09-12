@@ -271,7 +271,7 @@ class Registry:
                 continue
 
             for store in hashes.keys():
-                key = store + '.catalog'
+                key = store + '._catalog'
                 request = mktl.protocol.message.Request('GET', key)
                 payload = mktl.protocol.request.send(address, port, request)
 

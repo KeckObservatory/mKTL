@@ -27,10 +27,9 @@ class Client:
 
         port = int(port)
         self.port = port
-        server = "tcp://%s:%d" % (address, port)
-
-        self.socket = zmq_context.socket(zmq.SUB)
-        self.socket.connect(server)
+        self.server = "tcp://%s:%d" % (address, port)
+        self.socket = None
+        self.connected = threading.Event()
 
         self.callback_all = list()
         self.callback_specific = dict()
@@ -44,15 +43,15 @@ class Client:
 
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
-        self.subscription_receive = zmq_context.socket(zmq.PAIR)
-        self.subscription_receive.bind(internal)
 
         self.subscription_signal = zmq_context.socket(zmq.PAIR)
-        self.subscription_signal.connect(internal)
+        self.subscription_signal.connect(self.subscription_address)
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
+
+        self.connected.wait()
 
 
     def propagate(self, message):
@@ -168,19 +167,32 @@ class Client:
 
     def run(self):
 
+        # The sockets are established here in order for all calls associated
+        # with the socket to be in the same thread.
+
+        subscription_receive = zmq_context.socket(zmq.PAIR)
+        subscription_receive.bind(self.subscription_address)
+        self.subscription_receive = subscription_receive
+
+        socket = zmq_context.socket(zmq.SUB)
+        socket.connect(self.server)
+        self.socket = socket
+
+        self.connected.set()
+
         poller = zmq.Poller()
-        poller.register(self.socket, zmq.POLLIN)
+        poller.register(socket, zmq.POLLIN)
         poller.register(self.subscription_receive, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active,flag in sockets:
 
-                if self.socket == active:
-                    parts = self.socket.recv_multipart()
+                if socket == active:
+                    parts = socket.recv_multipart()
                     self._pub_incoming(parts)
 
-                elif self.subscription_receive == active:
+                elif subscription_receive == active:
                     self._sub_incoming()
 
 
@@ -199,14 +211,21 @@ class Client:
 
 
     def _sub_incoming(self):
-        """ Clear one subscription notification and handle one subscription
-            request.
+        """ Clear one subscription notification and handle all available
+            subscription requests. Subsequent calls to this method may
+            be a no-op if the request gets dequeued and handled while
+            the notification is still buffered by the socket.
         """
 
         self.subscription_receive.recv(flags=zmq.NOBLOCK)
-        topic = self.subscriptions.get(block=False)
 
-        self.socket.setsockopt(zmq.SUBSCRIBE, topic)
+        while True:
+            try:
+                topic = self.subscriptions.get(block=False)
+            except queue.Empty:
+                break
+
+            self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 
 
     def subscribe(self, topic):
@@ -233,8 +252,6 @@ class Client:
 
             Refer to :func:`register` for a description of the arguments.
         """
-
-        reference = weakref.ref(callback)
 
         if topic is None:
             references = self.callback_all
@@ -281,8 +298,38 @@ class Server:
 
     def __init__(self, port=None, avoid=set()):
 
-        self.socket = zmq_context.socket(zmq.PUB)
-        self.socket_lock = threading.Lock()
+        self.port = port
+        self.avoid = avoid
+        self.socket = None
+        self.bound = threading.Event()
+        self.bind_exception = None
+
+        # Experiments with a multiprocessing.SimpleQueue and an ipc socket
+        # for notifications result in something like a 35% slowdown compared
+        # to using a queue.SimpleQueue and an inproc socket.
+
+        try:
+            # Available in Python 3.7+.
+            self.broadcasts = queue.SimpleQueue()
+        except AttributeError:
+            self.broadcasts = queue.Queue()
+
+        internal = "inproc://publish.Server.signal:%d" % (self.port)
+        self.broadcast_address = internal
+
+        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
+        self.broadcast_signal.connect(self.broadcast_address)
+
+        self.publishing_thread = threading.Thread(target=self.run)
+        self.publishing_thread.daemon = True
+        self.publishing_thread.start()
+
+        self.bound.wait()
+        if self.bind_exception:
+            raise self.bind_exception
+
+
+    def bind(self, socket, port, avoid):
 
         # If the port is set, use it; otherwise, look for the first available
         # port within the default range.
@@ -305,7 +352,7 @@ class Server:
 
             listen_address = 'tcp://*:' + str(trial)
             try:
-                self.socket.bind(listen_address)
+                socket.bind(listen_address)
             except zmq.error.ZMQError:
                 # Assume this port is in use.
                 trial += 1
@@ -320,7 +367,7 @@ class Server:
             for trial in avoided:
                 listen_address = 'tcp://*:' + str(trial)
                 try:
-                    self.socket.bind(listen_address)
+                    socket.bind(listen_address)
                 except zmq.error.ZMQError:
                     # Assume this port is in use.
                     continue
@@ -342,28 +389,6 @@ class Server:
 
         self.port = trial
 
-        # Experiments with a multiprocessing.SimpleQueue and an ipc socket
-        # for notifications result in something like a 35% slowdown compared
-        # to using a queue.SimpleQueue and an inproc socket.
-
-        try:
-            # Available in Python 3.7+.
-            self.broadcasts = queue.SimpleQueue()
-        except AttributeError:
-            self.broadcasts = queue.Queue()
-
-        internal = "inproc://publish.Server.signal:%d" % (self.port)
-        self.broadcast_address = internal
-        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
-        self.broadcast_receive.bind(internal)
-
-        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
-        self.broadcast_signal.connect(internal)
-
-        self.publishing_thread = threading.Thread(target=self.run)
-        self.publishing_thread.daemon = True
-        self.publishing_thread.start()
-
 
     def publish(self, message):
         """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
@@ -375,22 +400,30 @@ class Server:
 
 
     def _pub_outgoing(self):
-        """ Clear one broadcast notification and send one pending broadcast.
+        """ Clear one broadcast notification and handle all available
+            broadcast requests. Subsequent calls to this method may
+            be a no-op if the request gets dequeued and handled while
+            the notification is still buffered by the socket.
         """
 
         self.broadcast_receive.recv(flags=zmq.NOBLOCK)
-        message = self.broadcasts.get(block=False)
 
-        parts = tuple(message)
+        while True:
+            try:
+                message = self.broadcasts.get(block=False)
+            except queue.Empty:
+                break
 
-        # A lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed
-        # together. However, this send_multipart() call is now only called
-        # from a single thread handling all send/recv calls, so the
-        # lock is no longer in place.
+            parts = tuple(message)
 
-        self.socket.send_multipart(parts)
+            # A lock around the ZeroMQ socket is necessary in a multithreaded
+            # application; otherwise, if two different threads both invoke
+            # send_multipart(), the message parts can and will get mixed
+            # together. However, this send_multipart() call is now only called
+            # from a single thread handling all send/recv calls, so the
+            # lock is no longer in place.
+
+            self.socket.send_multipart(parts)
 
 
     def run(self):
@@ -398,6 +431,22 @@ class Server:
             problematic as the REQ/REP case, it seems like good practice to
             mirror the same structure here.
         """
+
+        socket = zmq_context.socket(zmq.PUB)
+        self.socket = socket
+
+        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
+        self.broadcast_receive.bind(self.broadcast_address)
+
+        try:
+            self.bind(socket, self.port, self.avoid)
+        except Exception as exception:
+            self.bind_exception = exception
+        finally:
+            self.bound.set()
+
+        if self.bind_exception:
+            return
 
         poller = zmq.Poller()
         poller.register(self.broadcast_receive, zmq.POLLIN)

@@ -82,7 +82,11 @@ class Store:
             # in how that should be handled depending on whether the item is
             # authoritative.
 
-            item.subscribe()
+            try:
+                item.subscribe()
+            except TypeError:
+                # This item is not gettable.
+                pass
 
         return item
 
