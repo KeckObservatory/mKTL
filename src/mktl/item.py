@@ -1317,8 +1317,6 @@ class Item:
             is guaranteed to occur without invoking additional callbacks.
         """
 
-        self._updated.wait(self.timeout / 100)
-
         if self._value is None:
             self.get()
 
