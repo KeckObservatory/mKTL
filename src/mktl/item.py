@@ -72,6 +72,8 @@ class Item:
             self._pub_queue = queue.Queue()
             self._set_queue = queue.Queue()
 
+        self._primed = threading.Event()
+        self._primed.clear()
         self._updated = threading.Event()
         self._updated.clear()
 
@@ -623,9 +625,15 @@ class Item:
             priming value (see :func:`_prime`).
         """
 
+        self._primed.set()
+
         # Having received a priming broadcast we can discontinue any further
         # interest in that message stream. The daemon will shut off priming
-        # broadcasts automatically.
+        # broadcasts automatically; in the meantime, if nobody is subscribed
+        # to the priming broadcasts, no messages will be put on the wire.
+
+        # It is safe to redundantly call unregister; it is a no-op if the
+        # specified method is not registered.
 
         self.sub.unregister(self._prime_incoming, 'prime:' + self.full_key)
 
@@ -1590,10 +1598,18 @@ class Item:
         if settable == False:
             raise TypeError('an item must be settable to perform in-place operations')
 
-        # Ensure the item has a value before proceeding. This will block for
-        # priming to complete, and synchronously request a value if necessary.
+        # Ensure the item has a value before proceeding.
 
         self.value
+
+        # Wait for the PUB/SUB channel to be fully primed. In practice, this
+        # can take an additional tenth of a second on startup; if the PUB/SUB
+        # behavior is delayed, but REQ/REP interactions (like the fallback for
+        # the self.value property) are succeeding there is no expectation that
+        # the PUB/SUB channel is far behind. Hence, there is no error checking
+        # beyond this potential delay.
+
+        self._primed.wait(1)
 
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
