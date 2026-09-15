@@ -587,20 +587,13 @@ class Item:
 
 
     def _prime(self):
-        """ Issue a PRIME request to ensure the SUB call made in
-            :func:`subscribe` has been processed. An explicit GET
-            call is additionally required in order to ensure the
-            current value of the item is updated, even in the
-            absence of a broadcast.
+        """ Issue a priming request to ensure the SUB call made in
+            :func:`subscribe` has been processed. Priming operations
+            are intended to occur in parallel, in the event that many
+            items are instantiated in a short period of time.
 
-            Handling these operations in the background allows
-            client applications to proceed while all such priming
-            operations occur in parallel, as might occur when
-            mass-instantiating items.
-
-            The :py:attr:`value` property and :func:`set` method
-            are structured to allow this priming to complete before
-            proceeding.
+            The :py:attr:`value` property and in-place operations are
+            structured to allow this priming to complete before proceeding.
         """
 
         if self._value is None:
