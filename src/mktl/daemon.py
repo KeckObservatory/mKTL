@@ -993,6 +993,9 @@ class RequestServer(protocol.request.Server):
 
         store, key = request.target.split('.', 1)
 
+        # The same validation checks are made in req_get(), but req_prime()
+        # is invoked before those checks occur.
+
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
