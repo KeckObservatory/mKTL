@@ -909,8 +909,6 @@ class RequestServer(protocol.request.Server):
             response = self.req_set(request)
         elif type == 'GET':
             response = self.req_get(request)
-        elif type == 'PRIME':
-            response = self.req_prime(request)
         else:
             raise ValueError('unhandled request type: ' + type)
 
@@ -921,6 +919,17 @@ class RequestServer(protocol.request.Server):
 
 
     def req_get(self, request):
+
+        # Spin off the handling of priming, if requested. Let the rest of
+        # the req_get() machinery occur in parallel.
+
+        try:
+            prime = request.payload.prime
+        except AttributeError:
+            prime = False
+
+        if prime:
+            self.req_prime(request)
 
         try:
             getter = self._req_get_handlers[request.target]
@@ -976,6 +985,11 @@ class RequestServer(protocol.request.Server):
 
 
     def req_prime(self, request):
+        """ Handle the priming portion of a GET+prime request. This involves
+            creating a background thread to issue periodic broadcasts to a
+            specially prefixed 'prime:' topic for this item; the broadcasts
+            cease after a fixed interval.
+        """
 
         store, key = request.target.split('.', 1)
 
@@ -988,7 +1002,7 @@ class RequestServer(protocol.request.Server):
             raise KeyError('this daemon does not contain ' + repr(key))
 
         if item.description['type'] == 'bulk':
-            raise TypeError('refusing to PRIME a bulk item')
+            raise TypeError('refusing to prime a bulk item')
 
         try:
             primer = _Primer.active[key]

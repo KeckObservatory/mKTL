@@ -607,9 +607,10 @@ class Item:
         key = self.full_key
         self.sub.register(self._prime_incoming, 'prime:' + key)
 
+        now = time.time()
         flags = protocol.message.NO_ACK_OR_REP
-        payload = protocol.message.Payload(value=True, time=time.time())
-        request = protocol.message.Request('PRIME', key, payload, flags=flags)
+        payload = protocol.message.Payload(value=True, time=now, prime=True)
+        request = protocol.message.Request('GET', key, payload, flags=flags)
         self.req.send(request)
 
 
