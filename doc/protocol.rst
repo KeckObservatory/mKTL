@@ -295,6 +295,16 @@ allowed, but a standard mKTL client will not notice or handle them.
       debugging of code, it is intended to provide enough information for the
       client to perform meaningful error handling.
 
+  * - **prime**
+    - An optional field associated with a GET request. If this field is
+      present, and it is set to True, the daemon processing the request will
+      initiate a series of priming broadcasts on its PUB/SUB interface for
+      the requested item. These broadcasts look exactly like a regular
+      :ref:`published broadcast <publish>` for an item, except the topic
+      is prefixed with `prime:` to distinguish it from the regular message
+      stream. This allows the requesting client to know, with confidence,
+      that the PUB/SUB channel is fully operational for this item.
+
   * - **refresh**
     - An optional field associated with a GET request. If this field is
       present, and it is set to True, the daemon processing the request is
