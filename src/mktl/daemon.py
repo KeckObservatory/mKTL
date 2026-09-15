@@ -346,7 +346,12 @@ class Daemon:
 
         created = item_class(self.store, key, *args, **kwargs)
         created._authoritative(self.rep, self.pub)
-        created.subscribe(prime=False)
+
+        try:
+            created.subscribe(prime=False)
+        except TypeError:
+            # This item is not gettable.
+            pass
 
         for reference in preserved_callbacks:
             callback = reference()
@@ -788,6 +793,76 @@ class Daemon:
 
 
 
+class _Primer:
+    """ Background thread to issue priming broadcasts for a single item.
+        These broadcasts automatically shut off after a hard-coded interval.
+        Clients register their lack of interest by unsubscribing to the
+        priming topic; if there are no subscriptions to the priming topic
+        then no messages are published on the wire.
+    """
+
+    active = dict()
+
+    def __init__(self, item):
+        _Primer.active[item.key] = self
+
+        self.interval = 0.01
+        self.duration = 5
+        self.item = item
+
+        self.reset()
+
+        self.thread = threading.Thread(target=self.run)
+        self.thread.daemon = True
+        self.thread.start()
+
+
+    def reset(self):
+        """ Reset the back-off timer; the same _Primer instance will be used
+            if multiple priming requests come in for the same item.
+        """
+
+        now = time.time()
+        self.expire = now + self.duration
+
+
+    def run(self):
+
+        now = time.time()
+        next = now + self.interval
+        key = 'prime:' + self.item.full_key
+
+        timestamp = -1
+
+        while now < self.expire:
+
+            # Refresh the cached payload if the item timestamp changes
+            # while this priming is taking place. This isn't an extreme
+            # CPU load at 100 Hz, but caching it feels like the right
+            # thing to do.
+
+            if timestamp < self.item.timestamp:
+                payload = self.item.to_payload()
+                message = protocol.message.Broadcast('PUB', key, payload)
+                timestamp = self.item.timestamp
+
+            self.item.pub.publish(message)
+
+            next += self.interval
+            now = time.time()
+            delay = next - now
+
+            if delay > 0:
+                time.sleep(delay)
+
+
+        del _Primer.active[self.item.key]
+
+
+# end of class _Primer
+
+
+
 class RequestServer(protocol.request.Server):
 
     def __init__(self, daemon, store, *args, **kwargs):
@@ -845,6 +920,17 @@ class RequestServer(protocol.request.Server):
 
     def req_get(self, request):
 
+        # Spin off the handling of priming, if requested. Let the rest of
+        # the req_get() machinery occur in parallel.
+
+        try:
+            prime = request.payload.prime
+        except AttributeError:
+            prime = False
+
+        if prime:
+            self.req_prime(request)
+
         try:
             getter = self._req_get_handlers[request.target]
         except KeyError:
@@ -896,6 +982,37 @@ class RequestServer(protocol.request.Server):
         hashes = meta.get_hashes(store)
         payload = protocol.message.Payload(value=hashes)
         return payload
+
+
+    def req_prime(self, request):
+        """ Handle the priming portion of a GET+prime request. This involves
+            creating a background thread to issue periodic broadcasts to a
+            specially prefixed 'prime:' topic for this item; the broadcasts
+            cease after a fixed interval.
+        """
+
+        store, key = request.target.split('.', 1)
+
+        # The same validation checks are made in req_get(), but req_prime()
+        # is invoked before those checks occur.
+
+        if store != self.daemon.store.name:
+            raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
+
+        try:
+            item = self.daemon.store[key]
+        except KeyError:
+            raise KeyError('this daemon does not contain ' + repr(key))
+
+        if item.description['type'] == 'bulk':
+            raise TypeError('refusing to prime a bulk item')
+
+        try:
+            primer = _Primer.active[key]
+        except KeyError:
+            primer = _Primer(item)
+
+        primer.reset()
 
 
     def req_set(self, request):
