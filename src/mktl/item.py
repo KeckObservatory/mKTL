@@ -1609,7 +1609,7 @@ class Item:
         # the PUB/SUB channel is far behind. Hence, there is no error checking
         # beyond this potential delay.
 
-        self._primed.wait(1)
+        self._primed.wait(timeout=1)
 
         # Use a temporary callback to guarantee that the local value has
         # updated before returning. This doesn't necessarily guarantee
