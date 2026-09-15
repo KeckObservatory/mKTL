@@ -801,15 +801,16 @@ class _Primer:
         then no messages are published on the wire.
     """
 
-    max_delay = 5
     active = dict()
 
     def __init__(self, item):
         _Primer.active[item.key] = self
 
         self.interval = 0.01
-        self.delay = self.interval
+        self.duration = 5
         self.item = item
+
+        self.reset()
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -821,34 +822,37 @@ class _Primer:
             if multiple priming requests come in for the same item.
         """
 
-        self.delay = self.interval
+        now = time.time()
+        self.expire = now + self.duration
 
 
     def run(self):
 
-        next = time.time()
+        now = time.time()
+        next = now + self.interval
         key = 'prime:' + self.item.full_key
 
-        burst_time = self.interval * 50
+        timestamp = -1
 
-        while True:
+        while now < self.expire:
 
-            next += self.delay
+            # Refresh the cached payload if the item timestamp changes
+            # while this priming is taking place. This isn't an extreme
+            # CPU load at 100 Hz, but caching it feels like the right
+            # thing to do.
 
-            if self.delay < burst_time:
-                self.delay += self.interval
-            else:
-                self.delay *= 2
+            if timestamp < self.item.timestamp:
+                payload = self.item.to_payload()
+                message = protocol.message.Broadcast('PUB', key, payload)
+                timestamp = self.item.timestamp
 
-            payload = self.item.to_payload()
-            message = protocol.message.Broadcast('PUB', key, payload)
             self.item.pub.publish(message)
 
-            if self.delay > self.max_delay:
-                break
-            else:
-                now = time.time()
-                delay = next - now
+            next += self.interval
+            now = time.time()
+            delay = next - now
+
+            if delay > 0:
                 time.sleep(delay)
 
 
