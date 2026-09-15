@@ -404,7 +404,8 @@ message. The fields are as follows:
       leading prefix to distinguish it from other message types. For example,
       broadcasting all SET requests with a leading 'set:' prefix, or
       broadcasting a bundle of related mKTL items with a leading 'bundle:'
-      prefix.
+      prefix. A priming GET request does exactly this, using a leading 'prime:'
+      prefix for its stream of broadcasts.
 
   * - **version**
     - A single ASCII character indicating the mKTL protocol version number.
