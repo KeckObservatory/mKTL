@@ -150,7 +150,7 @@ class Message:
         try:
             id.decode
         except AttributeError:
-            id = '%08x' % (id)
+            id = "%08x" % (id)
             id = id.encode()
 
         type = type.encode()
@@ -592,7 +592,7 @@ def _id_next():
 
     _id_lock.release()
 
-    id = '%08x' % (id)
+    id = "%08x" % (id)
     id = id.encode()
     return id
 
