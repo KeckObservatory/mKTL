@@ -62,6 +62,8 @@ def test_message():
     bulk = b'29764735490930841093'
     bulk_payload = mktl.protocol.message.Payload(value=55, time=now, bulk=bulk)
 
+    assert bulk_payload.bulk is not None
+
     message = mktl.protocol.message.Message('REP', 'key', bulk_payload, id=test_id)
     parts = tuple(message)
 
