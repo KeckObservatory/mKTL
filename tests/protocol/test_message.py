@@ -19,6 +19,16 @@ def test_message():
     with pytest.raises(RuntimeError):
         message._finalize()
 
+    # The message ID is supposed to be translated automatically if it is set
+    # to something like a bare integer.
+
+    message.id = 44
+    message._finalize()
+    parts = tuple(message)
+    assert parts[1] == test_id
+
+    # Reset the ID to the on-the-wire format for the rest of the checks.
+
     message.id = test_id
 
     repr(message)
