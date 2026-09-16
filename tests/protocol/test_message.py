@@ -11,7 +11,7 @@ def test_message():
     payload = mktl.protocol.message.Payload(value=5, time=time.time())
     message = mktl.protocol.message.Message('ACK', 'key', payload)
     message = mktl.protocol.message.Message('ACK', 'key', payload, id=test_id)
-    message = mktl.protocol.message.Message('REP', 'key', payload)
+    message = mktl.protocol.message.Message('REP', b'key', payload)
     message = mktl.protocol.message.Message('REP', 'key', payload, id=test_id)
 
     message.id = None
