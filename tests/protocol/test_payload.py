@@ -61,6 +61,11 @@ def test_encapsulate():
         assert 'value' in decoded
         assert decoded['value'] == test_value
 
+        # Not checking the value of the repr(), just calling it for exercise.
+        # The repr() runs it through an encapsulate+decode cycle.
+
+        repr(payload)
+
 
     # This test fails when using msgspec, but passes with the default JSON
     # module, which silently translates None to a "null" string for
