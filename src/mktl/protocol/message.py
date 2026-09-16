@@ -88,7 +88,7 @@ class Message:
         if type in self.valid_types:
             pass
         else:
-            raise ValueError('invalid request type: ' + type)
+            raise ValueError('invalid message type: ' + type)
 
         # There are some message types where the id is allowed to be None;
         # for example, publish messages do not have or need an identification
