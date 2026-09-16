@@ -14,6 +14,13 @@ def test_message():
     message = mktl.protocol.message.Message('REP', 'key', payload)
     message = mktl.protocol.message.Message('REP', 'key', payload, id=test_id)
 
+    message.id = None
+
+    with pytest.raises(RuntimeError):
+        message._finalize()
+
+    message.id = test_id
+
     repr(message)
     message.log()
 
