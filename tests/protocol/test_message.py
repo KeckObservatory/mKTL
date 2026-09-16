@@ -9,6 +9,7 @@ def test_message():
     test_id = test_id.encode()
 
     payload = mktl.protocol.message.Payload(value=5, time=time.time())
+
     message = mktl.protocol.message.Message('ACK', 'key', payload)
     message = mktl.protocol.message.Message('ACK', 'key', payload, id=test_id)
     message = mktl.protocol.message.Message('REP', b'key', payload)
@@ -39,6 +40,8 @@ def test_message():
     assert message.id == reconstructed.id
     assert message.payload.value == reconstructed.payload.value
 
+    assert len(parts) == 6
+
     with pytest.raises(ValueError):
         mktl.protocol.message.Message('BAD', 'key', payload)
 
@@ -50,6 +53,19 @@ def test_message():
 
     with pytest.raises(ValueError):
         mktl.protocol.message.Message('PUB', 'key', payload)
+
+    # Limited exercise of the bulk payload. This is not a properly described
+    # bulk data payload, but it's enough to hit conditions specific to that
+    # aspect of the multipart message format.
+
+    now = time.time()
+    bulk = b'29764735490930841093'
+    bulk_payload = mktl.protocol.message.Payload(value=55, time=now, bulk=bulk)
+
+    message = mktl.protocol.message.Message('REP', 'key', bulk_payload, id=test_id)
+    parts = tuple(message)
+
+    assert len(parts) == 7
 
 
 def test_broadcast():
