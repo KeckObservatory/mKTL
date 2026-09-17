@@ -415,10 +415,12 @@ class Item:
         # value occur asynchronously via published broadcasts.
 
         self.req.send(request)
-        response = request.wait(self.timeout)
+        responded = request.wait(self.timeout)
 
-        if response is None:
+        if responded is False:
             raise RuntimeError('GET failed: no response to request')
+
+        response = request.response
 
         try:
             error = response.payload.error
@@ -997,16 +999,18 @@ class Item:
             wait = False
 
         key = self.full_key
-        message = protocol.message.Request('SET', key, payload, flags=flags)
-        self.req.send(message)
+        request = protocol.message.Request('SET', key, payload, flags=flags)
+        self.req.send(request)
 
         if wait == False:
-            return message
+            return request
 
-        response = message.wait(self.timeout)
+        responded = request.wait(self.timeout)
 
-        if response is None:
+        if responded is False:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
+
+        response = request.response
 
         try:
             error = response.payload.error

@@ -463,13 +463,14 @@ class Request(Message):
 
 
     def wait(self, timeout=60):
-        """ Block until the request has been handled. The response to the
-            request is always returned; the response will be None if the
-            original request is still pending.
+        """ Block until the request has been handled. This is a wrapper to
+            a :class:`threading.Event` instance; if the event has occurred it
+            will return True, otherwise it returns False after the requested
+            *timeout*. If the *timeout* argument is None it will block
+            indefinitely.
         """
 
-        self.rep_event.wait(timeout)
-        return self.response
+        return self.rep_event.wait(timeout)
 
 
 # end of class Request
