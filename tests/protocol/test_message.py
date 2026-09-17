@@ -177,6 +177,9 @@ def test_request():
     assert request.wait(None) == True
     assert request.poll() == True
 
+    # repr() takes a different path when a request has a response.
+    repr(request)
+
     with pytest.raises(ValueError):
         mktl.protocol.message.Request('BAD', 'key', payload)
 
