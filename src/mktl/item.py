@@ -1046,6 +1046,11 @@ class Item:
         # There is no way to distinguish between a final broadcast+update
         # occurring after a SET operation completes, as opposed to an
         # intermediate update occuring while the SET operation is in progress.
+        # Adding broadcasts of this type could be done; one could imagine
+        # a broadcast with a leading 'set:' prefix with a payload indicating
+        # the SET operation is complete (and a similar one if the operation
+        # is beginning). As long as the PUB/SUB channel is fully primed
+        # (see __inplace()) this could be made deterministic.
 
         try:
             gettable = self.description['gettable']
