@@ -5,14 +5,16 @@ import time
 def test_basics():
 
     start = time.time()
+    Payload = mktl.protocol.message.Payload
 
     for test_value in (44, True, None, 35.5, (1,2,3), {1: 'one'}, 'string'):
-        payload = mktl.protocol.message.Payload(value=test_value, time=time.time())
+        payload = Payload(value=test_value, time=time.time())
         assert payload.value is test_value
         assert payload.time > start
 
         # The 'new' Payload only has attributes for the keyword arguments
-        # set when it is instantiated.
+        # set when it is instantiated. Confirm this behavior by checking
+        # some of the standard attributes.
 
         with pytest.raises(AttributeError):
             payload.bulk
@@ -21,6 +23,8 @@ def test_basics():
         with pytest.raises(AttributeError):
             payload.error
         with pytest.raises(AttributeError):
+            payload.prime
+        with pytest.raises(AttributeError):
             payload.refresh
         with pytest.raises(AttributeError):
             payload.shape
@@ -28,11 +32,24 @@ def test_basics():
         payload.encapsulate()
 
 
+    # Any keyword arguments are allowed. Except for 'omit'.
+
+    with pytest.raises(ValueError):
+        Payload(value=test_value, omit='something')
+
+    Payload(prime=None)
+    Payload(prime=False)
+    Payload(rhyme=True)
+    Payload(thyme='tasty')
+    Payload(parsley=True, sage=True, rosemary=False, thyme='thyme')
+
+
 def test_encapsulate():
 
     test_value = 44
     for test_value in (44, True, None, 35.5, [1,2,3], 'string'):
-        payload = mktl.protocol.message.Payload(value=test_value, time=time.time())
+        now = time.time()
+        payload = mktl.protocol.message.Payload(value=test_value, time=now)
 
         encapsulated = payload.encapsulate()
         assert isinstance(encapsulated, bytes)
@@ -43,6 +60,11 @@ def test_encapsulate():
         assert 'time' in decoded
         assert 'value' in decoded
         assert decoded['value'] == test_value
+
+        # Not checking the value of the repr(), just calling it for exercise.
+        # The repr() runs it through an encapsulate+decode cycle.
+
+        repr(payload)
 
 
     # This test fails when using msgspec, but passes with the default JSON

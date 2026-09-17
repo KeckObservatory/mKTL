@@ -415,13 +415,13 @@ class Item:
         # value occur asynchronously via published broadcasts.
 
         self.req.send(request)
-        response = request.wait(self.timeout)
+        responded = request.wait(self.timeout)
 
-        if response is None:
+        if responded is False:
             raise RuntimeError('GET failed: no response to request')
 
         try:
-            error = response.payload.error
+            error = request.response.payload.error
         except AttributeError:
             error = None
 
@@ -447,7 +447,7 @@ class Item:
             ### instead of a RuntimeError.
             raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
-        self._update(response)
+        self._update(request.response)
 
         # This explicit check for None eliminates the possibility of subsequent
         # use of properties resulting in an infinite loop, where get() is called
@@ -997,19 +997,19 @@ class Item:
             wait = False
 
         key = self.full_key
-        message = protocol.message.Request('SET', key, payload, flags=flags)
-        self.req.send(message)
+        request = protocol.message.Request('SET', key, payload, flags=flags)
+        self.req.send(request)
 
         if wait == False:
-            return message
+            return request
 
-        response = message.wait(self.timeout)
+        responded = request.wait(self.timeout)
 
-        if response is None:
+        if responded is False:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
         try:
-            error = response.payload.error
+            error = request.response.payload.error
         except AttributeError:
             error = None
 
@@ -1046,6 +1046,11 @@ class Item:
         # There is no way to distinguish between a final broadcast+update
         # occurring after a SET operation completes, as opposed to an
         # intermediate update occuring while the SET operation is in progress.
+        # Adding broadcasts of this type could be done; one could imagine
+        # a broadcast with a leading 'set:' prefix with a payload indicating
+        # the SET operation is complete (and a similar one if the operation
+        # is beginning). As long as the PUB/SUB channel is fully primed
+        # (see __inplace()) this could be made deterministic.
 
         try:
             gettable = self.description['gettable']

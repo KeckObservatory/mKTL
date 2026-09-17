@@ -88,7 +88,7 @@ class Message:
         if type in self.valid_types:
             pass
         else:
-            raise ValueError('invalid request type: ' + type)
+            raise ValueError('invalid message type: ' + type)
 
         # There are some message types where the id is allowed to be None;
         # for example, publish messages do not have or need an identification
@@ -150,7 +150,7 @@ class Message:
         try:
             id.decode
         except AttributeError:
-            id = '%08x' % (id)
+            id = "%08x" % (id)
             id = id.encode()
 
         type = type.encode()
@@ -463,13 +463,14 @@ class Request(Message):
 
 
     def wait(self, timeout=60):
-        """ Block until the request has been handled. The response to the
-            request is always returned; the response will be None if the
-            original request is still pending.
+        """ Block until the request has been handled. This is a wrapper to
+            a :class:`threading.Event` instance; if the event has occurred it
+            will return True, otherwise it returns False after the requested
+            *timeout*. If the *timeout* argument is None it will block
+            indefinitely.
         """
 
-        self.rep_event.wait(timeout)
-        return self.response
+        return self.rep_event.wait(timeout)
 
 
 # end of class Request
@@ -592,7 +593,7 @@ def _id_next():
 
     _id_lock.release()
 
-    id = '%08x' % (id)
+    id = "%08x" % (id)
     id = id.encode()
     return id
 
