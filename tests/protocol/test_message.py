@@ -70,7 +70,6 @@ def test_message():
 
     assert len(parts) == 7
 
-
     with pytest.raises(ValueError):
         mktl.protocol.message.Message('BAD', 'key', payload)
 
@@ -128,6 +127,14 @@ def test_broadcast():
     reconstructed = mktl.protocol.message.Broadcast.reconstruct(parts)
     assert reconstructed.payload.bulk == bulk
 
+    bad_version = (parts[0],) + (b'invalid version',) + parts[2:]
+    with pytest.raises(ValueError):
+        mktl.protocol.message.Broadcast.reconstruct(bad_version)
+
+    too_many_parts = parts * 2
+    with pytest.raises(ValueError):
+        mktl.protocol.message.Broadcast.reconstruct(too_many_parts)
+
     with pytest.raises(ValueError):
         mktl.protocol.message.Broadcast('BAD', 'key', payload)
 
@@ -160,6 +167,15 @@ def test_request():
     assert request.id is not None
     assert request.id == reconstructed.id
     assert request.payload.value == reconstructed.payload.value
+
+    assert request.poll() == False
+    assert request.wait(0.00001) == None
+    assert request.wait_ack(0.00001) == False
+    request._complete_ack()
+    assert request.wait_ack(None) == True
+    request._complete('535')
+    assert request.wait(None) == '535'
+    assert request.poll() == True
 
     with pytest.raises(ValueError):
         mktl.protocol.message.Request('BAD', 'key', payload)
