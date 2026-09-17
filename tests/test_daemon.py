@@ -23,6 +23,13 @@ def test_empty(run_mkregistryd):
     mem = mktl.get('unittest_daemon_empty', '_unittestmem')
     mem.get(refresh=True)
 
+    # Exercise the daemon-centric handling of properties.
+
+    mem.value
+    mem.formatted
+    mem.quantity
+    mem.timestamp
+
 
 def test_subclass(run_mkregistryd):
 
