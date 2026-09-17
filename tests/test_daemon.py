@@ -24,7 +24,6 @@ def test_empty(run_mkregistryd):
     mem.get(refresh=True)
 
 
-
 def test_subclass(run_mkregistryd):
 
     class Daemon(mktl.Daemon):
