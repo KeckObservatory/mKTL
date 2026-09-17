@@ -169,12 +169,12 @@ def test_request():
     assert request.payload.value == reconstructed.payload.value
 
     assert request.poll() == False
-    assert request.wait(0.00001) == None
+    assert request.wait(0.00001) == False
     assert request.wait_ack(0.00001) == False
     request._complete_ack()
     assert request.wait_ack(None) == True
-    request._complete('535')
-    assert request.wait(None) == '535'
+    request._complete('some response')
+    assert request.wait(None) == True
     assert request.poll() == True
 
     with pytest.raises(ValueError):
