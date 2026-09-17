@@ -420,10 +420,8 @@ class Item:
         if responded is False:
             raise RuntimeError('GET failed: no response to request')
 
-        response = request.response
-
         try:
-            error = response.payload.error
+            error = request.response.payload.error
         except AttributeError:
             error = None
 
@@ -449,7 +447,7 @@ class Item:
             ### instead of a RuntimeError.
             raise RuntimeError("GET failed: %s: %s" % (e_type, e_text))
 
-        self._update(response)
+        self._update(request.response)
 
         # This explicit check for None eliminates the possibility of subsequent
         # use of properties resulting in an infinite loop, where get() is called
@@ -1010,10 +1008,8 @@ class Item:
         if responded is False:
             raise RuntimeError("SET of %s failed: no response to request" % (self.key))
 
-        response = request.response
-
         try:
-            error = response.payload.error
+            error = request.response.payload.error
         except AttributeError:
             error = None
 
