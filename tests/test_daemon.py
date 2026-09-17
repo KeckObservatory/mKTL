@@ -7,7 +7,22 @@ import unitdaemon
 
 
 def test_empty(run_mkregistryd):
-    mktl.Daemon('unittest_daemon_empty', 'unittest', override=True)
+    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest', override=True)
+
+    # Exercise the custom built-in items.
+
+    cat = mktl.get('unittest_daemon_empty', '_unittestcat')
+    cat.get(refresh=True)
+
+    clk = mktl.get('unittest_daemon_empty', '_unittestclk')
+    clk.get(refresh=True)
+
+    cpu = mktl.get('unittest_daemon_empty', '_unittestcpu')
+    cpu.get(refresh=True)
+
+    mem = mktl.get('unittest_daemon_empty', '_unittestmem')
+    mem.get(refresh=True)
+
 
 
 def test_subclass(run_mkregistryd):
