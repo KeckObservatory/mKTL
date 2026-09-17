@@ -496,6 +496,12 @@ def test_callback(run_mkregistryd, run_mkd):
 
     string = mktl.get('unittest.string')
 
+    # Redundant invocations of subscribe() should be no-ops.
+
+    string.subscribe()
+    string.subscribe()
+    string.subscribe()
+
     test_callback.called = False
     test_callback.item = None
     test_callback.value = None
