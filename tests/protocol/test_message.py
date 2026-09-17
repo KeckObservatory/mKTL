@@ -35,12 +35,41 @@ def test_message():
     repr(message)
     message.log()
 
+    # Exercise the custom logging behavior triggered by the presence of the
+    # lengthy origin metadata.
+
+    payload.add_origin()
+    message = mktl.protocol.message.Message('REP', 'key', payload, id=test_id)
+    message.log()
+
     parts = tuple(message)
+    assert len(parts) == 6
     reconstructed = mktl.protocol.message.Message.reconstruct(parts)
     assert message.id == reconstructed.id
     assert message.payload.value == reconstructed.payload.value
 
-    assert len(parts) == 6
+    too_many_parts = parts * 2
+    with pytest.raises(ValueError):
+        mktl.protocol.message.Message.reconstruct(too_many_parts)
+
+    message = mktl.protocol.message.Message('REP', 'key', id=test_id)
+    parts = tuple(message)
+    reconstructed = mktl.protocol.message.Message.reconstruct(parts)
+
+    assert reconstructed.payload is None
+
+    bad_version = (b'invalid version',) + parts[1:]
+    with pytest.raises(ValueError):
+        mktl.protocol.message.Message.reconstruct(bad_version)
+
+
+    message = mktl.protocol.message.Message('REP', 'key', payload, id=test_id)
+    prefix = (b'a prefix',)
+    message.prefix = prefix
+    parts = tuple(message)
+
+    assert len(parts) == 7
+
 
     with pytest.raises(ValueError):
         mktl.protocol.message.Message('BAD', 'key', payload)
@@ -73,7 +102,9 @@ def test_message():
 def test_broadcast():
 
     payload = mktl.protocol.message.Payload(value=5, time=time.time())
+
     broadcast = mktl.protocol.message.Broadcast('PUB', 'key')
+    broadcast = mktl.protocol.message.Broadcast('PUB', b'key.')
     broadcast = mktl.protocol.message.Broadcast('PUB', 'key', payload)
 
     repr(broadcast)
@@ -83,6 +114,19 @@ def test_broadcast():
     reconstructed = mktl.protocol.message.Broadcast.reconstruct(parts)
     assert broadcast.payload.value == reconstructed.payload.value
 
+    broadcast = mktl.protocol.message.Broadcast('PUB', b'key.')
+    parts = tuple(broadcast)
+    reconstructed = mktl.protocol.message.Broadcast.reconstruct(parts)
+    assert reconstructed.payload is None
+
+    now = time.time()
+    bulk = b'29764735490930841093'
+    bulk_payload = mktl.protocol.message.Payload(value=55, time=now, bulk=bulk)
+
+    broadcast = mktl.protocol.message.Broadcast('PUB', 'key', bulk_payload)
+    parts = tuple(broadcast)
+    reconstructed = mktl.protocol.message.Broadcast.reconstruct(parts)
+    assert reconstructed.payload.bulk == bulk
 
     with pytest.raises(ValueError):
         mktl.protocol.message.Broadcast('BAD', 'key', payload)
@@ -129,7 +173,6 @@ def test_request():
     with pytest.raises(ValueError):
         mktl.protocol.message.Request('PUB', 'key', payload)
 
-
     NO_ACK = mktl.protocol.message.NO_ACK
     NO_REP = mktl.protocol.message.NO_REP
     NO_ACK_OR_REP = mktl.protocol.message.NO_ACK_OR_REP
@@ -137,6 +180,12 @@ def test_request():
     assert NO_ACK_OR_REP & NO_ACK == NO_ACK
     assert NO_ACK_OR_REP & NO_REP == NO_REP
     assert NO_ACK_OR_REP == NO_ACK | NO_REP
+
+    flags = 0
+    request = mktl.protocol.message.Request('SET', 'key', payload, flags=flags)
+
+    assert request.ack == True
+    assert request.reply == True
 
     flags = NO_ACK
     request = mktl.protocol.message.Request('SET', 'key', payload, flags=flags)
@@ -156,11 +205,9 @@ def test_request():
     assert request.ack == False
     assert request.reply == False
 
-    flags = 0
-    request = mktl.protocol.message.Request('SET', 'key', payload, flags=flags)
-
-    assert request.ack == True
-    assert request.reply == True
+    parts = tuple(request)
+    reconstructed = mktl.protocol.message.Request.reconstruct(parts)
+    assert request.flags == reconstructed.flags
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
