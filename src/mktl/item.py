@@ -409,7 +409,7 @@ class Item:
 
 
         # No provision is made here for executing this request in the
-        # background; only the priming call to get() is backgrounded, whereas
+        # background; only PUB/SUB behavior occurs in the background, whereas
         # an interactive call to get() should only take place when a client
         # requires an out-of-band update-- otherwise, local updates to the
         # value occur asynchronously via published broadcasts.
