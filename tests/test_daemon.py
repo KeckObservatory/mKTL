@@ -187,6 +187,10 @@ def test_subclass_item_interactions(run_mkregistryd):
         def describe_items(self):
             items = dict()
 
+            items['parallel'] = dict()
+            items['parallel']['description'] = 'A parallelized test item'
+            items['parallel']['concurrency'] = 'parallel'
+
             items['payloader'] = dict()
             items['payloader']['description'] = 'A test item'
             items['payloader']['type'] = 'string'
@@ -229,6 +233,25 @@ def test_subclass_item_interactions(run_mkregistryd):
     payloader.value = 'testing elsewise'
     assert payloader.value == 'testing elsewise'
     assert payloader.get() == 'testing elsewise'
+
+    parallel = mktl.get('unittest_daemon_subclass_item_interact', 'parallel')
+
+    # The race condition triggered here is not reliable enough to test in a
+    # deterministic way, but the expectation is that at least one of these
+    # requests-- especially if the SET request was handled slowly-- would
+    # result in out-of-order processing, as they are all attempting to execute
+    # simultaneously.
+
+    parallel.set(30, reply=False)
+    parallel.set(31, reply=False)
+    parallel.set(32, reply=False)
+    parallel.set(33, reply=False)
+    parallel.set(34, reply=False)
+    parallel.set(35, reply=False)
+    parallel.set(36, reply=False)
+    parallel.set(37, reply=False)
+    parallel.set(38, reply=False)
+    parallel.set(39, reply=False)
 
 
 
