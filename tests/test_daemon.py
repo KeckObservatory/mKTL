@@ -237,6 +237,19 @@ def test_subclass_item_interactions(run_mkregistryd):
     assert something.value == 66
     assert something.get() == 66
 
+    # It's challenging to trigger a GET request that doesn't involve a
+    # refresh, since nearly all requests of that type will return a
+    # locally cached value instead of issuing a GET request. So, issue
+    # the GET request manually; this triggers a unique branch in the
+    # default req_get() handler.
+
+    # This portion of the test mimics a section of the code in Item.get().
+
+    request = mktl.protocol.message.Request('GET', something.full_key)
+    something.req.send(request)
+    responded = request.wait(something.timeout)
+
+
     payloader = mktl.get('unittest_daemon_subclass_item_interact', 'payloader')
 
     assert payloader.value == 'testing'
