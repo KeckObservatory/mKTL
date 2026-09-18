@@ -13,11 +13,18 @@ class Daemon(mktl.Daemon):
         items = dict()
 
         items['angle'] = dict()
-        items['angle']['description'] = 'An angular numeric item.'
+        items['angle']['description'] = 'An angular numeric item, in d:m:s.'
         items['angle']['type'] = 'numeric'
         items['angle']['format'] = '%2d:%2.2d:%04.1f'
         items['angle']['units'] = {'': 'radians', 'formatted': 'degrees'}
         items['angle']['initial'] = 0.018049613347708025
+
+        items['basicangle'] = dict()
+        items['basicangle']['description'] = 'A basic angular numeric item.'
+        items['basicangle']['type'] = 'numeric'
+        items['basicangle']['format'] = '%3f'
+        items['basicangle']['units'] = {'': 'radians', 'formatted': 'degrees'}
+        items['basicangle']['initial'] = 0.11
 
         items['boolean'] = dict()
         items['boolean']['description'] = 'A boolean item without enumerators.'
