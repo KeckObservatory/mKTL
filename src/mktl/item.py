@@ -77,12 +77,12 @@ class Item:
         self._updated = threading.Event()
         self._updated.clear()
 
-        # An Item is a singleton in practice; enforce that constraint.
+        # An Item is a singleton in practice; enforce that constraint. The
+        # Store class initializes all its potential Item instances to None;
+        # thus, there is no KeyError try/except here, and no expectation
+        # that the cached value is anything but None.
 
-        try:
-            old = self.store._items[key]
-        except KeyError:
-            old = None
+        old = self.store._items[key]
 
         if old is not None:
             raise RuntimeError('duplicate item not allowed: ' + self.full_key)
