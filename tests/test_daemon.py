@@ -1,5 +1,6 @@
 import mktl
 import pytest
+import time
 import unitdaemon
 
 try:
@@ -182,11 +183,22 @@ def test_subclass_item_interactions(run_mkregistryd):
         def perform_get(self):
             return self.value + 1
 
+        def perform_set(self, *args, **kwargs):
+            return 'no-op'
+
     class Payloader(mktl.Item):
 
         def perform_get(self):
-            payload = self.to_payload()
-            return payload
+            kwargs = dict()
+            kwargs['value'] = self.value
+            kwargs['time'] = self.timestamp
+            return mktl.protocol.message.Payload(**kwargs)
+
+        def perform_set(self, new_value):
+            kwargs = dict()
+            kwargs['value'] = 'no-op'
+            kwargs['time'] = time.time()
+            return mktl.protocol.message.Payload(**kwargs)
 
     class Daemon(mktl.Daemon):
 
@@ -258,6 +270,8 @@ def test_subclass_item_interactions(run_mkregistryd):
     assert payloader.get() == 'testing elsewise'
     assert payloader.get(refresh=True) == 'testing elsewise'
 
+    payloader.set('further testing')
+    assert payloader.value == 'further testing'
 
     if numpy is not None:
 
