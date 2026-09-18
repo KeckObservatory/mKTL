@@ -185,7 +185,7 @@ def test_subclass_item_interactions(run_mkregistryd):
     class Payloader(mktl.Item):
 
         def perform_get(self):
-            payload = mktl.protocol.message.Payload(value=self.value)
+            payload = self.to_payload()
             return payload
 
     class Daemon(mktl.Daemon):
@@ -243,6 +243,7 @@ def test_subclass_item_interactions(run_mkregistryd):
     payloader.value = 'testing elsewise'
     assert payloader.value == 'testing elsewise'
     assert payloader.get() == 'testing elsewise'
+    assert payloader.get(refresh=True) == 'testing elsewise'
 
 
     if numpy is not None:
