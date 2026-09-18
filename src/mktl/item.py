@@ -330,7 +330,7 @@ class Item:
             dtype = getattr(numpy, dtype)
 
             serialized = numpy.frombuffer(bulk, dtype=dtype)
-            new_value = numpy.reshape(serialized, newshape=shape)
+            new_value = numpy.reshape(serialized, shape)
 
         else:
             new_value = payload.value
