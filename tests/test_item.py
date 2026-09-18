@@ -361,6 +361,22 @@ def test_quantity(run_mkregistryd, run_mkd):
     assert angle.value >= original_scaled - 0.0000001
     assert angle.value <= original_scaled + 0.0000001
 
+    basicangle = mktl.get('unittest', 'basicangle')
+
+    degrees = basicangle.get(formatted=True, quantity=True)
+    radians = basicangle.get(formatted=False, quantity=True)
+
+    assert degrees == radians
+
+    # Can't get the formatted value of this item without pint support,
+    # it has to be translated between radians and degrees.
+
+    degrees = basicangle.get(formatted=True)
+    radians = basicangle.get(formatted=False)
+
+    with pytest.raises(ValueError):
+        basicangle.get(formatted='not a boolean')
+
 
 def test_sexagesimal(run_mkregistryd, run_mkd):
 
