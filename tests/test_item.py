@@ -20,6 +20,14 @@ def test_get(run_mkregistryd, run_mkd):
     with pytest.raises(TypeError):
         number.get(refresh=None)
 
+    writeonly = mktl.get('unittest.writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
+    with pytest.raises(TypeError):
+        writeonly.subscribe()
+
 
 def test_set(run_mkregistryd, run_mkd):
 
@@ -50,9 +58,6 @@ def test_set(run_mkregistryd, run_mkd):
         readonly += 13
 
     writeonly = mktl.get('unittest.writeonly')
-
-    with pytest.raises(RuntimeError):
-        writeonly.get()
 
     with pytest.raises(TypeError):
         writeonly += 33
