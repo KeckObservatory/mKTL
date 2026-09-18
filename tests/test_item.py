@@ -4,6 +4,11 @@ import pytest
 import time
 
 try:
+    import numpy
+except ImportError:
+    numpy = None
+
+try:
     import pint
 except ImportError:
     pint = None
@@ -116,6 +121,21 @@ def test_boolean(run_mkregistryd, run_mkd):
     noyes.formatted = 'Yes'
     assert noyes == 1
     assert noyes == True
+
+
+def test_bulk(run_mkregistryd, run_mkd):
+
+    if numpy is None:
+        return
+
+    bulk = mktl.get('unittest.bulk')
+
+    test_data = numpy.zeros(128)
+    bulk.value = test_data
+
+    with pytest.raises(RuntimeError):
+        bulk.value = False
+
 
 
 def test_enumerated(run_mkregistryd, run_mkd):

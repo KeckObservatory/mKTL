@@ -23,6 +23,10 @@ class Daemon(mktl.Daemon):
         items['boolean']['description'] = 'A boolean item without enumerators.'
         items['boolean']['type'] = 'boolean'
 
+        items['bulk'] = dict()
+        items['bulk']['description'] = 'A bulk data item.'
+        items['bulk']['type'] = 'bulk'
+
         items['enumerated'] = dict()
         items['enumerated']['description'] = 'An enumerated item.'
         items['enumerated']['type'] = 'enumerated'
