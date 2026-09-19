@@ -218,12 +218,27 @@ def test_subclass_item_interactions(run_mkregistryd):
             items['payloader']['type'] = 'string'
             items['payloader']['initial'] = 'testing'
 
+            items['readonly'] = dict()
+            items['readonly']['description'] = 'A read-only numeric item.'
+            items['readonly']['type'] = 'numeric'
+            items['readonly']['units'] = 'meaningless units'
+            items['readonly']['initial'] = 13
+            items['readonly']['settable'] = False
+
             items['something'] = dict()
             items['something']['description'] = 'A test item'
             items['something']['type'] = 'numeric'
             items['something']['initial'] = 0
 
+            items['writeonly'] = dict()
+            items['writeonly']['description'] = 'A write-only numeric item.'
+            items['writeonly']['type'] = 'numeric'
+            items['writeonly']['units'] = 'meaningless units'
+            items['writeonly']['initial'] = 13
+            items['writeonly']['gettable'] = False
+
             return items
+
 
         def setup(self):
             self.add_item(Something, 'something')
@@ -302,6 +317,18 @@ def test_subclass_item_interactions(run_mkregistryd):
     parallel.set(37, reply=False)
     parallel.set(38, reply=False)
     parallel.set(39, reply=False)
+
+
+    readonly = mktl.get('unittest_daemon_subclass_item_interact', 'readonly')
+
+    with pytest.raises(RuntimeError):
+        readonly.set(44)
+
+    writeonly = mktl.get('unittest_daemon_subclass_item_interact', 'writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
 
 
 
