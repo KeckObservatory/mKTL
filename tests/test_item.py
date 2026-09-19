@@ -569,5 +569,16 @@ def test_callback(run_mkregistryd, run_mkd):
     with pytest.raises(TypeError):
         string.register('not callable')
 
+    def another_callback(item, value, timestamp):
+        another_callback.called = True
+
+    another_callback.called = False
+    another_callback.item = None
+    another_callback.value = None
+
+    assert another_callback.called == False
+    string.register(another_callback, prime=True)
+    assert another_callback.called == True
+
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
