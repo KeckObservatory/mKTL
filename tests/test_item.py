@@ -363,6 +363,8 @@ def test_quantity(run_mkregistryd, run_mkd):
 
     basicangle = mktl.get('unittest', 'basicangle')
 
+    basicangle.value
+
     degrees = basicangle.get(formatted=True, quantity=True)
     radians = basicangle.get(formatted=False, quantity=True)
 
@@ -563,6 +565,9 @@ def test_callback(run_mkregistryd, run_mkd):
     assert test_callback.value == 'callback testing'
     assert test_callback.timestamp != None
     assert test_callback.timestamp > before
+
+    with pytest.raises(TypeError):
+        string.register('not callable')
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
