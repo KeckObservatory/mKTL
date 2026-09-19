@@ -4,6 +4,11 @@ import pytest
 import time
 
 try:
+    import numpy
+except ImportError:
+    numpy = None
+
+try:
     import pint
 except ImportError:
     pint = None
@@ -19,6 +24,14 @@ def test_get(run_mkregistryd, run_mkd):
 
     with pytest.raises(TypeError):
         number.get(refresh=None)
+
+    writeonly = mktl.get('unittest.writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
+    with pytest.raises(TypeError):
+        writeonly.subscribe()
 
 
 def test_set(run_mkregistryd, run_mkd):
@@ -50,9 +63,6 @@ def test_set(run_mkregistryd, run_mkd):
         readonly += 13
 
     writeonly = mktl.get('unittest.writeonly')
-
-    with pytest.raises(RuntimeError):
-        writeonly.get()
 
     with pytest.raises(TypeError):
         writeonly += 33
@@ -111,6 +121,21 @@ def test_boolean(run_mkregistryd, run_mkd):
     noyes.formatted = 'Yes'
     assert noyes == 1
     assert noyes == True
+
+
+def test_bulk(run_mkregistryd, run_mkd):
+
+    if numpy is None:
+        return
+
+    bulk = mktl.get('unittest.bulk')
+
+    test_data = numpy.zeros(128)
+    bulk.value = test_data
+
+    with pytest.raises(RuntimeError):
+        bulk.value = False
+
 
 
 def test_enumerated(run_mkregistryd, run_mkd):
@@ -336,6 +361,24 @@ def test_quantity(run_mkregistryd, run_mkd):
     assert angle.value >= original_scaled - 0.0000001
     assert angle.value <= original_scaled + 0.0000001
 
+    basicangle = mktl.get('unittest', 'basicangle')
+
+    basicangle.value
+
+    degrees = basicangle.get(formatted=True, quantity=True)
+    radians = basicangle.get(formatted=False, quantity=True)
+
+    assert degrees == radians
+
+    # Can't get the formatted value of this item without pint support,
+    # it has to be translated between radians and degrees.
+
+    degrees = basicangle.get(formatted=True)
+    radians = basicangle.get(formatted=False)
+
+    with pytest.raises(ValueError):
+        basicangle.get(formatted='not a boolean')
+
 
 def test_sexagesimal(run_mkregistryd, run_mkd):
 
@@ -496,6 +539,12 @@ def test_callback(run_mkregistryd, run_mkd):
 
     string = mktl.get('unittest.string')
 
+    # Redundant invocations of subscribe() should be no-ops.
+
+    string.subscribe()
+    string.subscribe()
+    string.subscribe()
+
     test_callback.called = False
     test_callback.item = None
     test_callback.value = None
@@ -516,6 +565,26 @@ def test_callback(run_mkregistryd, run_mkd):
     assert test_callback.value == 'callback testing'
     assert test_callback.timestamp != None
     assert test_callback.timestamp > before
+
+    with pytest.raises(TypeError):
+        string.register('not callable')
+
+    def another_callback(item, value, timestamp):
+        another_callback.called = True
+
+    another_callback.called = False
+    another_callback.item = None
+    another_callback.value = None
+
+    assert another_callback.called == False
+    string.register(another_callback, prime=True)
+    assert another_callback.called == True
+
+    string.unregister(another_callback)
+    another_callback.called = False
+
+    string.value = 'more callback testing'
+    assert another_callback.called == False
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

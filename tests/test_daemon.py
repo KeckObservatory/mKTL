@@ -1,13 +1,41 @@
 import mktl
 import pytest
+import time
 import unitdaemon
+
+try:
+    import numpy
+except ImportError:
+    numpy = None
+
 
 # Daemons invoked throughout this file use different store names in
 # order to avoid overlap with other unit test fixtures.
 
 
 def test_empty(run_mkregistryd):
-    mktl.Daemon('unittest_daemon_empty', 'unittest', override=True)
+    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest', override=True)
+
+    # Exercise the custom built-in items.
+
+    cat = mktl.get('unittest_daemon_empty', '_unittestcat')
+    cat.get(refresh=True)
+
+    clk = mktl.get('unittest_daemon_empty', '_unittestclk')
+    clk.get(refresh=True)
+
+    cpu = mktl.get('unittest_daemon_empty', '_unittestcpu')
+    cpu.get(refresh=True)
+
+    mem = mktl.get('unittest_daemon_empty', '_unittestmem')
+    mem.get(refresh=True)
+
+    # Exercise the daemon-centric handling of properties.
+
+    assert mem.value == mem.get()
+    assert mem.formatted == mem.get(formatted=True)
+    assert mem.quantity == mem.get(quantity=True)
+    mem.timestamp
 
 
 def test_subclass(run_mkregistryd):
@@ -155,34 +183,75 @@ def test_subclass_item_interactions(run_mkregistryd):
         def perform_get(self):
             return self.value + 1
 
+        def perform_set(self, *args, **kwargs):
+            return 'no-op'
+
     class Payloader(mktl.Item):
 
         def perform_get(self):
-            payload = mktl.protocol.message.Payload(value=self.value)
-            return payload
+            kwargs = dict()
+            kwargs['value'] = self.value
+            kwargs['time'] = self.timestamp
+            return mktl.protocol.message.Payload(**kwargs)
+
+        def perform_set(self, new_value):
+            kwargs = dict()
+            kwargs['value'] = 'no-op'
+            kwargs['time'] = time.time()
+            return mktl.protocol.message.Payload(**kwargs)
 
     class Daemon(mktl.Daemon):
 
         def describe_items(self):
             items = dict()
 
+            items['bulk'] = dict()
+            items['bulk']['description'] = 'A bulk data item.'
+            items['bulk']['type'] = 'bulk'
+
+            items['empty'] = dict()
+            items['empty']['description'] = 'An item with an empty string type'
+            items['empty']['type'] = ''
+
+            items['parallel'] = dict()
+            items['parallel']['description'] = 'A parallelized test item'
+            items['parallel']['concurrency'] = 'parallel'
+
             items['payloader'] = dict()
             items['payloader']['description'] = 'A test item'
             items['payloader']['type'] = 'string'
             items['payloader']['initial'] = 'testing'
+
+            items['readonly'] = dict()
+            items['readonly']['description'] = 'A read-only numeric item.'
+            items['readonly']['type'] = 'numeric'
+            items['readonly']['units'] = 'meaningless units'
+            items['readonly']['initial'] = 13
+            items['readonly']['settable'] = False
 
             items['something'] = dict()
             items['something']['description'] = 'A test item'
             items['something']['type'] = 'numeric'
             items['something']['initial'] = 0
 
+            items['writeonly'] = dict()
+            items['writeonly']['description'] = 'A write-only numeric item.'
+            items['writeonly']['type'] = 'numeric'
+            items['writeonly']['units'] = 'meaningless units'
+            items['writeonly']['initial'] = 13
+            items['writeonly']['gettable'] = False
+
             return items
+
 
         def setup(self):
             self.add_item(Something, 'something')
             self.add_item(Payloader, 'payloader')
 
     Daemon('unittest_daemon_subclass_item_interact', 'unittest', override=True)
+
+    empty = mktl.get('unittest_daemon_subclass_item_interact', 'empty')
+    empty.set('not empty')
 
     something = mktl.get('unittest_daemon_subclass_item_interact', 'something')
 
@@ -202,12 +271,71 @@ def test_subclass_item_interactions(run_mkregistryd):
     assert something.value == 66
     assert something.get() == 66
 
+    # It's challenging to trigger a GET request that doesn't involve a
+    # refresh, since nearly all requests of that type will return a
+    # locally cached value instead of issuing a GET request. So, issue
+    # the GET request manually; this triggers a unique branch in the
+    # default req_get() handler.
+
+    # This portion of the test mimics a section of the code in Item.get().
+
+    request = mktl.protocol.message.Request('GET', something.full_key)
+    something.req.send(request)
+    responded = request.wait(something.timeout)
+
+
     payloader = mktl.get('unittest_daemon_subclass_item_interact', 'payloader')
 
     assert payloader.value == 'testing'
     payloader.value = 'testing elsewise'
     assert payloader.value == 'testing elsewise'
     assert payloader.get() == 'testing elsewise'
+    assert payloader.get(refresh=True) == 'testing elsewise'
+
+    payloader.set('further testing')
+    assert payloader.value == 'further testing'
+
+    if numpy is not None:
+
+        bulk = mktl.get('unittest_daemon_subclass_item_interact', 'bulk')
+
+        test_data = numpy.zeros(128)
+        bulk.value = test_data
+
+        with pytest.raises(ValueError):
+            bulk.value = False
+
+
+    # The race condition triggered here is not reliable enough to test in a
+    # deterministic way, but the expectation is that at least one of these
+    # requests-- especially if the SET request was handled slowly-- would
+    # result in out-of-order processing, as they are all attempting to execute
+    # simultaneously.
+
+    parallel = mktl.get('unittest_daemon_subclass_item_interact', 'parallel')
+
+    parallel.set(30, reply=False)
+    parallel.set(31, reply=False)
+    parallel.set(32, reply=False)
+    parallel.set(33, reply=False)
+    parallel.set(34, reply=False)
+    parallel.set(35, reply=False)
+    parallel.set(36, reply=False)
+    parallel.set(37, reply=False)
+    parallel.set(38, reply=False)
+    parallel.set(39, reply=False)
+
+
+    readonly = mktl.get('unittest_daemon_subclass_item_interact', 'readonly')
+
+    with pytest.raises(RuntimeError):
+        readonly.set(44)
+
+    writeonly = mktl.get('unittest_daemon_subclass_item_interact', 'writeonly')
+
+    with pytest.raises(RuntimeError):
+        writeonly.get()
+
 
 
 
