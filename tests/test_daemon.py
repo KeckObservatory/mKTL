@@ -32,9 +32,9 @@ def test_empty(run_mkregistryd):
 
     # Exercise the daemon-centric handling of properties.
 
-    mem.value
-    mem.formatted
-    mem.quantity
+    assert mem.value == mem.get()
+    assert mem.formatted == mem.get(formatted=True)
+    assert mem.quantity == mem.get(quantity=True)
     mem.timestamp
 
 
