@@ -209,6 +209,10 @@ def test_subclass_item_interactions(run_mkregistryd):
             items['bulk']['description'] = 'A bulk data item.'
             items['bulk']['type'] = 'bulk'
 
+            items['empty'] = dict()
+            items['empty']['description'] = 'An item with an empty string type'
+            items['empty']['type'] = ''
+
             items['parallel'] = dict()
             items['parallel']['description'] = 'A parallelized test item'
             items['parallel']['concurrency'] = 'parallel'
@@ -245,6 +249,9 @@ def test_subclass_item_interactions(run_mkregistryd):
             self.add_item(Payloader, 'payloader')
 
     Daemon('unittest_daemon_subclass_item_interact', 'unittest', override=True)
+
+    empty = mktl.get('unittest_daemon_subclass_item_interact', 'empty')
+    empty.set('not empty')
 
     something = mktl.get('unittest_daemon_subclass_item_interact', 'something')
 

@@ -580,5 +580,11 @@ def test_callback(run_mkregistryd, run_mkd):
     string.register(another_callback, prime=True)
     assert another_callback.called == True
 
+    string.unregister(another_callback)
+    another_callback.called = False
+
+    string.value = 'more callback testing'
+    assert another_callback.called == False
+
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
