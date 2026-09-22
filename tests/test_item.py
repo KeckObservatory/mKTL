@@ -207,6 +207,24 @@ def test_logic(run_mkregistryd, run_mkd):
     assert 2 ^ number == 0
     assert 1 ^ number == 3
 
+    number &= 2
+    assert number == 2
+
+    number &= 1
+    assert number == 0
+
+    number |= 5
+    assert number == 5
+
+    number |= 1
+    assert number == 5
+
+    number ^= 2
+    assert number == 7
+
+    number ^= 6
+    assert number == 1
+
 
     number.value = 13.31
 
