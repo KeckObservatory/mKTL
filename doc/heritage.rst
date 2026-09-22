@@ -142,3 +142,75 @@ Support for ZeroMQ spans virtually every programming language in use today, well
 
 Similarly, JSON enjoys ubiquitous support for all modern programming languages, surpassed possibly only by XML; XML's gains in language support are offset by its bulky structure and inefficiency of parsing. JSON parsing is likewise inefficient and represents a significant source of processing overhead for mKTL messages; this inefficiency is accepted as it is not onerous enough to cause mKTL to miss its performance goals. Being able to natively represent numeric, string, boolean, and sequence data in JSON relieves mKTL of the need to invent its own parsing or complex message payload scheme; being able to represent the description of a store's items in JSON also eliminates ambiguity about the proper formatting of mKTL metadata.
 
+
+Requirements
+------------
+
+The mKTL project did not start with a formal requirements phase; while the requirements represented here did see some discussion, they were not iterated upon to nearly the degree that one would desire prior to their adoption. In a sense, they are a distillation of design goals, as opposed to hard requirements.
+
+Overall
+^^^^^^^
+
+  #. mKTL shall adhere to commonly understood terms and nomenclature whenever possible.
+  #. mKTL shall be maintained as an independent open source project without explicit dependencies on other WMKO infrastructure.
+  #. mKTL shall be maintained indefinitely by WMKO, with external participation as available.
+  #. mKTL shall be served to the community through a WMKO managed source code repository.
+
+Implementation
+^^^^^^^^^^^^^^
+
+  #. The initial mKTL implementation shall be written in Python.
+  #. The initial mKTL implementation shall be installable as a standalone package.
+  #. The initial mKTL implementation shall be installable as a standard kroot component.
+  #. mKTL implementations shall avoid the use of non-standard packages.
+
+Request/response
+^^^^^^^^^^^^^^^^
+
+  #. mKTL shall implement a request/response pattern.
+  #. mKTL shall provide a standard interface for issuing and receiving both requests and responses.
+  #. mKTL shall enable both blocking and non-blocking request/response patterns.
+  #. mKTL shall allow requests that have no response.
+  #. mKTL shall provide a rapid (0.1 second or better) error in the event that the daemon handling a request is not responding.
+  #. mKTL synchronous request/response performance shall be capable of 10,000 operations per second for a single item.
+
+Publish/subscribe
+^^^^^^^^^^^^^^^^^
+
+  #. mKTL shall implement a publish/subscribe pattern.
+  #. mKTL shall provide a standard interface for both publishing and receiving broadcasts.
+  #. mKTL clients shall only receive published messages for items they are directly subscribed to.
+  #. mKTL clients shall not be impacted by slow publish/subscribe handling of other mKTL clients.
+  #. mKTL publishing rates shall be capable of 15,000 operations per second for a single item.
+  #. mKTL subscriptions shall connect automatically when a client instantiates an item.
+  #. mKTL subscriptions shall reconnect automatically if a daemon restarts.
+  #. mKTL clients shall not exit automatically if a subscription is not connected.
+  #. mKTL shall provide a capability for clients to register callbacks on a per-item basis.
+  #. mKTL shall not issue duplicate broadcasts by default.
+  #. mKTL client callbacks shall be executed concurrently.
+
+Configuration discovery
+^^^^^^^^^^^^^^^^^^^^^^^
+
+  #. mKTL shall provide a means to automatically discover daemons on the local network.
+  #. mKTL shall provide a means to explicitly discover daemons on any reachable network.
+  #. mKTL shall cache all discovered metadata for future re-use by other mKTL client processes.
+  #. mKTL shall not require the assertion of any external metadata for routine operations.
+
+Protocol and transport
+^^^^^^^^^^^^^^^^^^^^^^
+
+  #. mKTL shall use a single transport for all request/response and publish/subscribe messaging.
+  #. mKTL shall use a uniform message structure for all request/response and publish/subscribe messaging.
+  #. mKTL messages shall explicitly declare a protocol revision as a unique field.
+  #. mKTL messages shall support payloads containing integers, floating point numbers, strings, sequences, or bulk data.
+
+Command line
+^^^^^^^^^^^^
+
+  #. mKTL shall provide a command line tool that enables retrieving values.
+  #. mKTL shall provide a command line tool that enables subscribing to published values.
+  #. mKTL shall provide a command line tool that enables setting values.
+  #. mKTL shall provide a command line tool that handles both formatted and unformatted values.
+  #. mKTL shall provide a command line tool that enables discovery of configuration data.
+  #. mKTL shall provide a command line tool that can complete operations in 0.1 second or less.
