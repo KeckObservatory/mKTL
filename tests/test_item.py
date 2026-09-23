@@ -336,6 +336,14 @@ def test_math(run_mkregistryd, run_mkd):
         number *= 2
         assert number == test_value
 
+        number **= 2
+        assert number == test_value ** 2
+        number.value = test_value
+
+        number %= 25
+        assert number == test_value % 25
+        number.value = test_value
+
         assert abs(number) == abs(test_value)
         assert round(number) == round(test_value)
 
