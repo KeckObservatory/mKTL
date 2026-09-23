@@ -387,8 +387,10 @@ def test_quantity(run_mkregistryd, run_mkd):
     assert angle.value >= original_scaled - 0.0000001
     assert angle.value <= original_scaled + 0.0000001
 
-    basicangle = mktl.get('unittest', 'basicangle')
+    microradians /= 5
+    angle.set(microradians, quantity=True)
 
+    basicangle = mktl.get('unittest', 'basicangle')
     basicangle.value
 
     degrees = basicangle.get(formatted=True, quantity=True)
@@ -402,8 +404,14 @@ def test_quantity(run_mkregistryd, run_mkd):
     degrees = basicangle.get(formatted=True)
     radians = basicangle.get(formatted=False)
 
+    degrees = float(degrees) * 2
+    basicangle.set(degrees, formatted=True)
+
     with pytest.raises(ValueError):
         basicangle.get(formatted='not a boolean')
+
+    with pytest.raises(ValueError):
+        basicangle.set(degrees + 1, formatted='not a boolean')
 
 
 def test_sexagesimal(run_mkregistryd, run_mkd):
