@@ -205,12 +205,17 @@ def test_subclass_item_interactions(run_mkregistryd):
         def describe_items(self):
             items = dict()
 
+            items['boolean'] = dict()
+            items['boolean']['description'] = 'A boolean data item.'
+            items['boolean']['type'] = 'boolean'
+            items['boolean']['initial'] = False
+
             items['bulk'] = dict()
             items['bulk']['description'] = 'A bulk data item.'
             items['bulk']['type'] = 'bulk'
 
             items['empty'] = dict()
-            items['empty']['description'] = 'An item with an empty string type'
+            items['empty']['description'] = 'An item with an empty-string type'
             items['empty']['type'] = ''
 
             items['parallel'] = dict()
@@ -252,6 +257,10 @@ def test_subclass_item_interactions(run_mkregistryd):
 
     empty = mktl.get('unittest_daemon_subclass_item_interact', 'empty')
     empty.set('not empty')
+
+    boolean = mktl.get('unittest_daemon_subclass_item_interact', 'boolean')
+    boolean.set(True)
+    boolean.set(False)
 
     something = mktl.get('unittest_daemon_subclass_item_interact', 'something')
 
