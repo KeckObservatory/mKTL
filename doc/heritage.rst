@@ -159,6 +159,7 @@ Overall
 Implementation
 ^^^^^^^^^^^^^^
 
+  #. The fundamental data model of mKTL shall be a key/value store.
   #. The initial mKTL implementation shall be written in Python.
   #. The initial mKTL implementation shall be installable as a standalone package.
   #. The initial mKTL implementation shall be installable as a standard kroot component.
@@ -172,7 +173,7 @@ Request/response
   #. mKTL shall enable both blocking and non-blocking request/response patterns.
   #. mKTL shall allow requests that have no response.
   #. mKTL shall provide a rapid (0.1 second or better) error in the event that the daemon handling a request is not responding.
-  #. mKTL synchronous request/response performance shall be capable of 10,000 operations per second for a single item.
+  #. mKTL synchronous request/response performance shall be capable of 1,000 operations per second for a single item.
 
 Publish/subscribe
 ^^^^^^^^^^^^^^^^^
@@ -181,7 +182,7 @@ Publish/subscribe
   #. mKTL shall provide a standard interface for both publishing and receiving broadcasts.
   #. mKTL clients shall only receive published messages for items they are directly subscribed to.
   #. mKTL clients shall not be impacted by slow publish/subscribe handling of other mKTL clients.
-  #. mKTL publishing rates shall be capable of 15,000 operations per second for a single item.
+  #. mKTL publishing rates shall be capable of 10,000 operations per second for a single item.
   #. mKTL subscriptions shall connect automatically when a client instantiates an item.
   #. mKTL subscriptions shall reconnect automatically if a daemon restarts.
   #. mKTL clients shall not exit automatically if a subscription is not connected.
@@ -203,7 +204,7 @@ Protocol and transport
   #. mKTL shall use a single transport for all request/response and publish/subscribe messaging.
   #. mKTL shall use a uniform message structure for all request/response and publish/subscribe messaging.
   #. mKTL messages shall explicitly declare a protocol revision as a unique field.
-  #. mKTL messages shall support payloads containing integers, floating point numbers, strings, sequences, or bulk data.
+  #. mKTL messages shall support payloads containing integers, floating point numbers, strings, sequences, bulk data, or no data at all.
 
 Command line
 ^^^^^^^^^^^^
