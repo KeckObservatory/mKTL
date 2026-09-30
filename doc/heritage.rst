@@ -230,7 +230,7 @@ Pre-development
      or any awareness of nuances that may occur between implementations.
 
   #. **mKTL shall use a single message format for request/response interactions,
-     and a single message format for publish/subscribe interactions.
+     and a single message format for publish/subscribe interactions.**
 
      Similar to the above, this is part of the promise mKTL is making to
      future users of the system: there will be no gap or incompatibility
