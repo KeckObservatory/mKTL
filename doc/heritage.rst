@@ -199,7 +199,9 @@ Pre-development
      a basic implementation of this pattern, combined with the key/value
      representation of commands and telemetry, enables persistent downstream
      applications, such as graphical user interfaces and higher-level logic
-     layered on top of other mKTL interfaces.
+     layered on top of other mKTL interfaces. The pattern implemented here
+     must allow subscriptions at the individual item level; a client should
+     not receive messages for items it is not using.
 
   #. **mKTL publishing rates shall be capable of 10,000 operations per second
      for a single item.**
