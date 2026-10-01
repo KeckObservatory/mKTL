@@ -314,12 +314,6 @@ class Server:
         except AttributeError:
             self.broadcasts = queue.Queue()
 
-        internal = "inproc://publish.Server.signal:%d" % (self.port)
-        self.broadcast_address = internal
-
-        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
-        self.broadcast_signal.connect(self.broadcast_address)
-
         self.publishing_thread = threading.Thread(target=self.run)
         self.publishing_thread.daemon = True
         self.publishing_thread.start()
@@ -389,6 +383,15 @@ class Server:
 
         self.port = trial
 
+        internal = "inproc://publish.Server.signal:%d" % (self.port)
+        self.broadcast_address = internal
+
+        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
+        self.broadcast_signal.connect(self.broadcast_address)
+
+        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
+        self.broadcast_receive.bind(self.broadcast_address)
+
 
     def publish(self, message):
         """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
@@ -434,9 +437,6 @@ class Server:
 
         socket = zmq_context.socket(zmq.PUB)
         self.socket = socket
-
-        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
-        self.broadcast_receive.bind(self.broadcast_address)
 
         try:
             self.bind(socket, self.port, self.avoid)
