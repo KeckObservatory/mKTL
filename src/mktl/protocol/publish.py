@@ -30,6 +30,7 @@ class Client:
         self.server = "tcp://%s:%d" % (address, port)
         self.socket = None
         self.connected = threading.Event()
+        self.connected_exception = None
 
         self.callbacks = dict()
         self.shutdown = False
@@ -51,6 +52,8 @@ class Client:
         self.thread.start()
 
         self.connected.wait()
+        if self.connected_exception:
+            raise self.connected_exception
 
 
     def propagate(self, message):
@@ -134,8 +137,18 @@ class Client:
         # with the socket to be in the same thread.
 
         subscription_receive = zmq_context.socket(zmq.PAIR)
-        subscription_receive.bind(self.subscription_address)
         self.subscription_receive = subscription_receive
+
+        try:
+            subscription_receive.bind(self.subscription_address)
+        except zmq.error.ZMQError:
+            # Multiple Client instances were invoked for the same inproc
+            # address. That shouldn't happen in normal circumstances,
+            # because other code uses the client() factory method to get
+            # a Client instance.
+            self.connected_exception = RuntimeError('duplicate Client instances not allowed')
+            self.connected.set()
+            return
 
         socket = zmq_context.socket(zmq.SUB)
         socket.connect(self.server)
