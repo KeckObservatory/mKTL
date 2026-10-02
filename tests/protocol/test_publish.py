@@ -117,7 +117,7 @@ def test_client_factory():
 
     assert client1 is client2
 
-    with pytest.raises(RuntimeError):
+    with pytest.raises(ConnectionError):
         mktl.protocol.publish.Client('localhost', server.port)
 
     mktl.protocol.publish.shutdown()
