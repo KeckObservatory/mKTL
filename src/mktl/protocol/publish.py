@@ -146,7 +146,7 @@ class Client:
             # address. That shouldn't happen in normal circumstances,
             # because other code uses the client() factory method to get
             # a Client instance.
-            self.connected_exception = RuntimeError('duplicate Client instances not allowed')
+            self.connected_exception = ConnectionError('duplicate Client instances not allowed')
             self.connected.set()
             return
 

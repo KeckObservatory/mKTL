@@ -62,7 +62,7 @@ class Client:
         try:
             self.request_receive.bind(internal)
         except zmq.error.ZMQError:
-            raise RuntimeError('duplicate Client instances not allowed')
+            raise ConnectionError('duplicate Client instances not allowed')
 
         self.request_signal = zmq_context.socket(zmq.PAIR)
         self.request_signal.connect(internal)
@@ -298,7 +298,7 @@ class Server:
         try:
             self.response_receive.bind(internal)
         except zmq.error.ZMQError:
-            raise RuntimeError('duplicate Server instances not allowed')
+            raise ConnectionError('duplicate Server instances not allowed')
 
         self.response_signal = zmq_context.socket(zmq.PAIR)
         self.response_signal.connect(internal)
