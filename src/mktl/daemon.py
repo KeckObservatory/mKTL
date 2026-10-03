@@ -776,7 +776,14 @@ class Daemon:
             # Not running; perfect.
             return
 
-        blocks = payload.value
+        try:
+            blocks = payload.value
+        except AttributeError:
+            # Someone answered, but there is no payload. This shouldn't
+            # happen in normal circumstances, but it does happen during
+            # unit testing, where 'empty' request servers are run up and
+            # provide empty reponses to requests.
+            blocks = dict()
 
         for uuid,block in blocks.items():
             alias = block['alias']

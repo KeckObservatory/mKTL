@@ -30,9 +30,9 @@ class Client:
         self.server = "tcp://%s:%d" % (address, port)
         self.socket = None
         self.connected = threading.Event()
+        self.connected_exception = None
 
-        self.callback_all = list()
-        self.callback_specific = dict()
+        self.callbacks = dict()
         self.shutdown = False
 
         try:
@@ -52,6 +52,8 @@ class Client:
         self.thread.start()
 
         self.connected.wait()
+        if self.connected_exception:
+            raise self.connected_exception
 
 
     def propagate(self, message):
@@ -59,41 +61,10 @@ class Client:
             a newly arrived message.
         """
 
-        # Do nothing if nobody is listening.
-
-        if self.callback_all or self.callback_specific:
-            pass
-        else:
-            return
-
-
-        # Handle the case where a callback is registered for any/all messages.
-
-        invalid = list()
-        references = self.callback_all
-
-        for reference in references:
-            callback = reference()
-
-            if callback is None:
-                invalid.append(reference)
-                continue
-
-            try:
-                callback(message)
-            except:
-                print(traceback.format_exc())
-                continue
-
-        for reference in invalid:
-            references.remove(reference)
-
-
-        # Handle the case where a callback is registered for a specific topic.
         # If there are no topic-specific callbacks, no further processing is
         # required.
 
-        if self.callback_specific:
+        if self.callbacks:
             pass
         else:
             return
@@ -101,7 +72,7 @@ class Client:
         topic = message.target
 
         try:
-            references = self.callback_specific[topic]
+            references = self.callbacks[topic]
         except KeyError:
             return
 
@@ -124,16 +95,15 @@ class Client:
             references.remove(reference)
 
         if len(references) == 0:
-            del self.callback_specific[topic]
+            del self.callbacks[topic]
 
 
-    def register(self, callback, topic=None):
+    def register(self, callback, topic):
         """ Register a callback that will be invoked every time a new broadcast
-            message arrives. If no topic is specified the callback will be
-            invoked for all broadcast messages. The topic is case-sensitive and
-            must be an exact match. Any callbacks registered in this fashion
-            should be as lightweight as possible, as there is a single thread
-            processing all arriving broadcast messages.
+            message arrives. The topic is case-sensitive and must be an exact
+            match. Any callbacks registered in this fashion should be as
+            lightweight as possible, as there is a single thread processing all
+            arriving broadcast messages.
 
             :func:`subscribe` will be invoked for any/all topics registered
             with a callback, it does not need to be called separately.
@@ -146,23 +116,19 @@ class Client:
 
         reference = weakref.ref(callback)
 
-        if topic is None:
-            self.callback_all.append(reference)
-            self.subscribe('')
-        else:
-            topic = str(topic)
-            topic = topic.strip()
-            topic = topic + '.'
-            topic = topic.encode()
+        topic = str(topic)
+        topic = topic.strip()
+        topic = topic + '.'
+        topic = topic.encode()
 
-            try:
-                callbacks = self.callback_specific[topic]
-            except:
-                callbacks = list()
-                self.callback_specific[topic] = callbacks
+        try:
+            callbacks = self.callbacks[topic]
+        except:
+            callbacks = list()
+            self.callbacks[topic] = callbacks
 
-            callbacks.append(reference)
-            self.subscribe(topic)
+        callbacks.append(reference)
+        self.subscribe(topic)
 
 
     def run(self):
@@ -171,8 +137,18 @@ class Client:
         # with the socket to be in the same thread.
 
         subscription_receive = zmq_context.socket(zmq.PAIR)
-        subscription_receive.bind(self.subscription_address)
         self.subscription_receive = subscription_receive
+
+        try:
+            subscription_receive.bind(self.subscription_address)
+        except zmq.error.ZMQError:
+            # Multiple Client instances were invoked for the same inproc
+            # address. That shouldn't happen in normal circumstances,
+            # because other code uses the client() factory method to get
+            # a Client instance.
+            self.connected_exception = ConnectionError('duplicate Client instances not allowed')
+            self.connected.set()
+            return
 
         socket = zmq_context.socket(zmq.SUB)
         socket.connect(self.server)
@@ -245,7 +221,7 @@ class Client:
         self.subscription_signal.send(b'')
 
 
-    def unregister(self, callback, topic=None):
+    def unregister(self, callback, topic):
         """ The inverse of :func:`register`, removing a callback from the
             list of registered callbacks. No errors are raised if the callback
             is not registered.
@@ -253,20 +229,16 @@ class Client:
             Refer to :func:`register` for a description of the arguments.
         """
 
-        if topic is None:
-            references = self.callback_all
+        topic = str(topic)
+        topic = topic.strip()
+        topic = topic + '.'
+        topic = topic.encode()
 
-        if topic is not None:
-            topic = str(topic)
-            topic = topic.strip()
-            topic = topic + '.'
-            topic = topic.encode()
-
-            try:
-                references = self.callback_specific[topic]
-            except:
-                # No callbacks registered for that item.
-                return
+        try:
+            references = self.callbacks[topic]
+        except:
+            # No callbacks registered for that item.
+            return
 
         unregister = list()
         for reference in references:
@@ -313,12 +285,6 @@ class Server:
             self.broadcasts = queue.SimpleQueue()
         except AttributeError:
             self.broadcasts = queue.Queue()
-
-        internal = "inproc://publish.Server.signal:%d" % (self.port)
-        self.broadcast_address = internal
-
-        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
-        self.broadcast_signal.connect(self.broadcast_address)
 
         self.publishing_thread = threading.Thread(target=self.run)
         self.publishing_thread.daemon = True
@@ -389,6 +355,15 @@ class Server:
 
         self.port = trial
 
+        internal = "inproc://publish.Server.signal:%d" % (self.port)
+        self.broadcast_address = internal
+
+        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
+        self.broadcast_signal.connect(self.broadcast_address)
+
+        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
+        self.broadcast_receive.bind(self.broadcast_address)
+
 
     def publish(self, message):
         """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
@@ -434,9 +409,6 @@ class Server:
 
         socket = zmq_context.socket(zmq.PUB)
         self.socket = socket
-
-        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
-        self.broadcast_receive.bind(self.broadcast_address)
 
         try:
             self.bind(socket, self.port, self.avoid)
