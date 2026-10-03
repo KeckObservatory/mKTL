@@ -59,7 +59,10 @@ class Client:
         internal = "inproc://request.Client:signal:%s:%d" % (address, port)
         self.request_address = internal
         self.request_receive = zmq_context.socket(zmq.PAIR)
-        self.request_receive.bind(internal)
+        try:
+            self.request_receive.bind(internal)
+        except zmq.error.ZMQError:
+            raise ConnectionError('duplicate Client instances not allowed')
 
         self.request_signal = zmq_context.socket(zmq.PAIR)
         self.request_signal.connect(internal)
@@ -291,7 +294,11 @@ class Server:
         internal = "inproc://request.Server:signal:%s:%d" % (hostname, self.port)
         self.response_address = internal
         self.response_receive = zmq_context.socket(zmq.PAIR)
-        self.response_receive.bind(internal)
+
+        try:
+            self.response_receive.bind(internal)
+        except zmq.error.ZMQError:
+            raise ConnectionError('duplicate Server instances not allowed')
 
         self.response_signal = zmq_context.socket(zmq.PAIR)
         self.response_signal.connect(internal)
