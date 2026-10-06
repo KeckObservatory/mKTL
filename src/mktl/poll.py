@@ -4,6 +4,10 @@ import time
 
 from . import weakref
 
+# Referenaces to active _Poller instances are indexed by hash; previously
+# they were indexed by id, but the id of an unbound method is the id of the
+# class method, not an instance-specific id. The hash, however, is unique.
+
 active = dict()
 
 
@@ -24,10 +28,10 @@ def period(method):
         Returns None if no polling is presently active for that method.
     """
 
-    method_id = id(method)
+    method_hash = hash(method)
 
     try:
-        poller = active[method_id]
+        poller = active[method_hash]
     except KeyError:
         return None
 
@@ -65,13 +69,13 @@ def start(method, period):
         stop(method)
         return
 
-    method_id = id(method)
+    method_hash = hash(method)
 
     try:
-        poller = active[method_id]
+        poller = active[method_hash]
     except KeyError:
         poller = _Poller(method)
-        active[method_id] = poller
+        active[method_hash] = poller
 
     poller.period(period)
 
@@ -81,10 +85,10 @@ def stop(method):
     """ Discontinue calling the provided *method*.
     """
 
-    method_id = id(method)
+    method_hash = hash(method)
 
     try:
-        poller = active[method_id]
+        poller = active[method_hash]
     except KeyError:
         return
 
@@ -101,8 +105,8 @@ class _Poller:
 
     def __init__(self, method):
 
-        self.method_id = id(method)
-        active[self.method_id] = self
+        self.method_hash = hash(method)
+        active[self.method_hash] = self
 
         self.interval = None
         self.reference = weakref.ref(method)
@@ -176,7 +180,7 @@ class _Poller:
 
 
         # Infinite loop exited.
-        del active[self.method_id]
+        del active[self.method_hash]
 
 
     def stop(self):
