@@ -278,8 +278,8 @@ def execute_describe_requests(requests):
         ### condition guarding the fnmatch, or just do the replace/fnmatch,
         ### whichever is faster.
 
-        ### This should also treat a bare store name as equivalent to
-        ### asking for '*'.
+        ### The same expansion then needs to be applied to the execution of
+        ### watch requests.
 
         try:
             item = mktl.get(key)
