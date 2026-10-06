@@ -164,6 +164,9 @@ item.
 **interval**	Specify the polling interval used for this item by its
 		authoritative daemon. The interval is specified in seconds;
 		fractional seconds (as a floating point number) are allowed.
+		The special value 'once' may also be specified, which prompts
+		the daemon to perform exactly one polling cycle after all other
+		initialization is complete.
 
 **enumerators**	A dictionary mapping a human-readable string
 		representation to numeric values. This is only
