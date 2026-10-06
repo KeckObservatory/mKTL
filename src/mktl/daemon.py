@@ -604,6 +604,7 @@ class Daemon:
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
         items[key]['settable'] = False
+        items[key]['interval'] = 'once'
 
         key = '_' + self.alias + 'clk'
         items[key] = dict()
@@ -750,6 +751,16 @@ class Daemon:
                 continue
 
             item = self.store[key]
+
+            try:
+                interval = interval.lower()
+            except AttributeError:
+                pass
+            else:
+                if interval == 'once':
+                    item.perform_poll()
+                    continue
+
             item.poll(interval)
 
 
