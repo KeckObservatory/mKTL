@@ -1700,7 +1700,21 @@ class _Sequencer:
         # works for low volume cases, as worker threads are only created
         # when an existing, idle worker is not available.
 
-        count = 1024
+        # At least, that's the case for Python 3.9 and later. Previous
+        # versions create threads until the max_workers value is reached;
+        # for older releases we need to be more conservative. See the
+        # following for more information:
+        #
+        # https://github.com/python/cpython/issues/69070
+
+        major = sys.version_info.major
+        minor = sys.version_info.minor
+
+        if major == 3 and minor < 9:
+            count = 32
+        else:
+            count = 1024
+
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
         self.thread = threading.Thread(target=self.run)
