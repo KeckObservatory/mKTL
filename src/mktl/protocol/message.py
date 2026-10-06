@@ -165,7 +165,8 @@ class Message:
                 pass
 
         if flags:
-            flags = flags.to_bytes(byteorder='big')
+            length = (flags.bit_length() + 7) // 8
+            flags = flags.to_bytes(length, byteorder='big')
         else:
             flags = b''
 
