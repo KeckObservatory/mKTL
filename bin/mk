@@ -663,7 +663,9 @@ def print_item(item, value, timestamp):
                 line = line + str(value)
 
         elif print_item.formatted:
-            if print_item.units:
+            if value is None:
+                value = '<<no value>>'
+            elif print_item.units:
                 if print_item.terse == False:
                     formatted_units = print_item.units
                 quantity = item.quantity.to(print_item.units_pint)
