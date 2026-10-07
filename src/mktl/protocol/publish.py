@@ -275,6 +275,8 @@ class Server:
         self.bound = threading.Event()
         self.bind_exception = None
 
+        self.broadcast_signals = dict()
+
         # Experiments with a multiprocessing.SimpleQueue and an ipc socket
         # for notifications result in something like a 35% slowdown compared
         # to using a queue.SimpleQueue and an inproc socket.
@@ -357,10 +359,7 @@ class Server:
         internal = "inproc://publish.Server.signal:%d" % (self.port)
         self.broadcast_address = internal
 
-        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
-        self.broadcast_signal.connect(self.broadcast_address)
-
-        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
+        self.broadcast_receive = zmq_context.socket(zmq.PULL)
         self.broadcast_receive.bind(self.broadcast_address)
 
 
@@ -370,7 +369,22 @@ class Server:
         """
 
         self.broadcasts.put(message)
-        self.broadcast_signal.send(b'')
+
+        # Broadcasts can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to publish(). A similar pattern exists in subscribe(), but
+        # that operation is not expected to occur with the same high frequency.
+
+        current_thread = threading.current_thread()
+
+        try:
+            broadcast_signal = self.broadcast_signals[current_thread]
+        except KeyError:
+            broadcast_signal = zmq_context.socket(zmq.PUSH)
+            broadcast_signal.connect(self.broadcast_address)
+            self.broadcast_signals[current_thread] = broadcast_signal
+
+        broadcast_signal.send(b'')
 
 
     def _pub_outgoing(self):
