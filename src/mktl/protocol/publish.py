@@ -44,9 +44,6 @@ class Client:
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
 
-        self.subscription_signal = zmq_context.socket(zmq.PAIR)
-        self.subscription_signal.connect(self.subscription_address)
-
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
@@ -136,7 +133,7 @@ class Client:
         # The sockets are established here in order for all calls associated
         # with the socket to be in the same thread.
 
-        subscription_receive = zmq_context.socket(zmq.PAIR)
+        subscription_receive = zmq_context.socket(zmq.PULL)
         self.subscription_receive = subscription_receive
 
         try:
@@ -218,7 +215,9 @@ class Client:
             topic = topic.encode()
 
         self.subscriptions.put(topic)
-        self.subscription_signal.send(b'')
+        subscription_signal = zmq_context.socket(zmq.PUSH)
+        subscription_signal.connect(self.subscription_address)
+        subscription_signal.send(b'')
 
 
     def unregister(self, callback, topic):
