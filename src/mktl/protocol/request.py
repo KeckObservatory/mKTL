@@ -316,8 +316,7 @@ class Server:
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Server instances not allowed')
 
-        self.response_signal = zmq_context.socket(zmq.PAIR)
-        self.response_signal.connect(internal)
+        self.response_signals = dict()
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
@@ -464,7 +463,23 @@ class Server:
         """
 
         self.responses.put(response)
-        self.response_signal.send(b'')
+
+        # Responses can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to send(). Similar patterns are implemented in publish.py.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+
+        try:
+            response_signal = self.response_signals[current_thread]
+        except KeyError:
+            response_signal = zmq_context.socket(zmq.PUSH)
+            response_signal.connect(self.response_address)
+            self.response_signals[current_thread] = response_signal
+
+        response_signal.send(b'')
 
 
 # end of class Server
