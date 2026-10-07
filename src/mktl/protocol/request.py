@@ -58,14 +58,14 @@ class Client:
 
         internal = "inproc://request.Client:signal:%s:%d" % (address, port)
         self.request_address = internal
-        self.request_receive = zmq_context.socket(zmq.PAIR)
+        self.request_receive = zmq_context.socket(zmq.PULL)
+
         try:
             self.request_receive.bind(internal)
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Client instances not allowed')
 
-        self.request_signal = zmq_context.socket(zmq.PAIR)
-        self.request_signal.connect(internal)
+        self.request_signals = dict()
 
         self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
@@ -179,7 +179,23 @@ class Client:
         """
 
         self.requests.put(message)
-        self.request_signal.send(b'')
+
+        # Requests can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to send(). Similar patterns are implemented in publish.py.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+
+        try:
+            request_signal = self.request_signals[current_thread]
+        except KeyError:
+            request_signal = zmq_context.socket(zmq.PUSH)
+            request_signal.connect(self.request_address)
+            self.request_signals[current_thread] = request_signal
+
+        request_signal.send(b'')
 
         if message.ack:
             pass
