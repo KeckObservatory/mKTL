@@ -375,6 +375,8 @@ class Server:
         # each call to publish(). A similar pattern exists in subscribe(), but
         # that operation is not expected to occur with the same high frequency.
 
+        # There is no need for this caching mechanism to to be thread-safe.
+
         current_thread = threading.current_thread()
 
         try:
