@@ -142,7 +142,7 @@ class Client:
             operations) call send() while a background thread (like this
             thread) is running poll() and recv(). Thus, all incoming local
             requests are filtered through a queue, with notification happening
-            on a PAIR socket to allow a single poll() call to wake up the
+            on a PULL socket to allow a single poll() call to wake up the
             thread for either type of event.
 
             Example reference:
