@@ -44,9 +44,6 @@ class Client:
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
 
-        self.subscription_signal = zmq_context.socket(zmq.PAIR)
-        self.subscription_signal.connect(self.subscription_address)
-
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
         self.thread.start()
@@ -136,11 +133,11 @@ class Client:
         # The sockets are established here in order for all calls associated
         # with the socket to be in the same thread.
 
-        subscription_receive = zmq_context.socket(zmq.PAIR)
-        self.subscription_receive = subscription_receive
+        subscription_pull = zmq_context.socket(zmq.PULL)
+        self.subscription_pull = subscription_pull
 
         try:
-            subscription_receive.bind(self.subscription_address)
+            subscription_pull.bind(self.subscription_address)
         except zmq.error.ZMQError:
             # Multiple Client instances were invoked for the same inproc
             # address. That shouldn't happen in normal circumstances,
@@ -158,7 +155,7 @@ class Client:
 
         poller = zmq.Poller()
         poller.register(socket, zmq.POLLIN)
-        poller.register(self.subscription_receive, zmq.POLLIN)
+        poller.register(self.subscription_pull, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
@@ -168,7 +165,7 @@ class Client:
                     parts = socket.recv_multipart()
                     self._pub_incoming(parts)
 
-                elif subscription_receive == active:
+                elif subscription_pull == active:
                     self._sub_incoming()
 
 
@@ -193,7 +190,7 @@ class Client:
             the notification is still buffered by the socket.
         """
 
-        self.subscription_receive.recv(flags=zmq.NOBLOCK)
+        self.subscription_pull.recv(flags=zmq.NOBLOCK)
 
         while True:
             try:
@@ -218,7 +215,9 @@ class Client:
             topic = topic.encode()
 
         self.subscriptions.put(topic)
-        self.subscription_signal.send(b'')
+        subscription_push = zmq_context.socket(zmq.PUSH)
+        subscription_push.connect(self.subscription_address)
+        subscription_push.send(b'')
 
 
     def unregister(self, callback, topic):
@@ -275,6 +274,8 @@ class Server:
         self.socket = None
         self.bound = threading.Event()
         self.bind_exception = None
+
+        self.broadcast_pushers = dict()
 
         # Experiments with a multiprocessing.SimpleQueue and an ipc socket
         # for notifications result in something like a 35% slowdown compared
@@ -358,11 +359,8 @@ class Server:
         internal = "inproc://publish.Server.signal:%d" % (self.port)
         self.broadcast_address = internal
 
-        self.broadcast_signal = zmq_context.socket(zmq.PAIR)
-        self.broadcast_signal.connect(self.broadcast_address)
-
-        self.broadcast_receive = zmq_context.socket(zmq.PAIR)
-        self.broadcast_receive.bind(self.broadcast_address)
+        self.broadcast_pull = zmq_context.socket(zmq.PULL)
+        self.broadcast_pull.bind(self.broadcast_address)
 
 
     def publish(self, message):
@@ -371,7 +369,24 @@ class Server:
         """
 
         self.broadcasts.put(message)
-        self.broadcast_signal.send(b'')
+
+        # Broadcasts can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to publish(). A similar pattern exists in subscribe(), but
+        # that operation is not expected to occur with the same high frequency.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+
+        try:
+            broadcast_push = self.broadcast_pushers[current_thread]
+        except KeyError:
+            broadcast_push = zmq_context.socket(zmq.PUSH)
+            broadcast_push.connect(self.broadcast_address)
+            self.broadcast_pushers[current_thread] = broadcast_push
+
+        broadcast_push.send(b'')
 
 
     def _pub_outgoing(self):
@@ -381,7 +396,7 @@ class Server:
             the notification is still buffered by the socket.
         """
 
-        self.broadcast_receive.recv(flags=zmq.NOBLOCK)
+        self.broadcast_pull.recv(flags=zmq.NOBLOCK)
 
         while True:
             try:
@@ -421,7 +436,7 @@ class Server:
             return
 
         poller = zmq.Poller()
-        poller.register(self.broadcast_receive, zmq.POLLIN)
+        poller.register(self.broadcast_pull, zmq.POLLIN)
 
         while True:
             sockets = poller.poll(10000) # milliseconds

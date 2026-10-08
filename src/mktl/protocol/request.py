@@ -58,14 +58,14 @@ class Client:
 
         internal = "inproc://request.Client:signal:%s:%d" % (address, port)
         self.request_address = internal
-        self.request_receive = zmq_context.socket(zmq.PAIR)
+        self.request_pull = zmq_context.socket(zmq.PULL)
+
         try:
-            self.request_receive.bind(internal)
+            self.request_pull.bind(internal)
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Client instances not allowed')
 
-        self.request_signal = zmq_context.socket(zmq.PAIR)
-        self.request_signal.connect(internal)
+        self.request_pushers = dict()
 
         self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
@@ -115,23 +115,31 @@ class Client:
 
 
     def _req_outgoing(self):
-        """ Clear one request notification and send one pending request.
+        """ Clear one request notification and handle all available
+            requests. Subsequent calls to this method may be a no-op
+            if the request gets dequeued and handled while the
+            notification is still buffered by the socket.
         """
 
-        self.request_receive.recv(flags=zmq.NOBLOCK)
-        message = self.requests.get(block=False)
+        self.request_pull.recv(flags=zmq.NOBLOCK)
 
-        parts = tuple(message)
-        self.pending[message.id] = message
+        while True:
+            try:
+                message = self.requests.get(block=False)
+            except queue.Empty:
+                break
 
-        # A lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed
-        # together. However, this send_multipart() call is now only called
-        # from a single thread handling all send/recv calls, so the
-        # lock is no longer in place.
+            parts = tuple(message)
+            self.pending[message.id] = message
 
-        self.socket.send_multipart(parts)
+            # A lock around the ZeroMQ socket is necessary in a multithreaded
+            # application; otherwise, if two different threads both invoke
+            # send_multipart(), the message parts can and will get mixed
+            # together. However, this send_multipart() call is now only called
+            # from a single thread handling all send/recv calls, so the
+            # lock is no longer in place.
+
+            self.socket.send_multipart(parts)
 
 
     def run(self):
@@ -142,7 +150,7 @@ class Client:
             operations) call send() while a background thread (like this
             thread) is running poll() and recv(). Thus, all incoming local
             requests are filtered through a queue, with notification happening
-            on a PAIR socket to allow a single poll() call to wake up the
+            on a PULL socket to allow a single poll() call to wake up the
             thread for either type of event.
 
             Example reference:
@@ -152,13 +160,13 @@ class Client:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.request_receive, zmq.POLLIN)
+        poller.register(self.request_pull, zmq.POLLIN)
 
         while True:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
 
-                if self.request_receive == active:
+                if self.request_pull == active:
                     self._req_outgoing()
 
                 elif self.socket == active:
@@ -179,7 +187,23 @@ class Client:
         """
 
         self.requests.put(message)
-        self.request_signal.send(b'')
+
+        # Requests can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to send(). Similar patterns are implemented in publish.py.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+
+        try:
+            request_push = self.request_pushers[current_thread]
+        except KeyError:
+            request_push = zmq_context.socket(zmq.PUSH)
+            request_push.connect(self.request_address)
+            self.request_pushers[current_thread] = request_push
+
+        request_push.send(b'')
 
         if message.ack:
             pass
@@ -293,15 +317,14 @@ class Server:
 
         internal = "inproc://request.Server:signal:%s:%d" % (hostname, self.port)
         self.response_address = internal
-        self.response_receive = zmq_context.socket(zmq.PAIR)
+        self.response_pull = zmq_context.socket(zmq.PULL)
 
         try:
-            self.response_receive.bind(internal)
+            self.response_pull.bind(internal)
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Server instances not allowed')
 
-        self.response_signal = zmq_context.socket(zmq.PAIR)
-        self.response_signal.connect(internal)
+        self.response_pushers = dict()
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
@@ -418,13 +441,13 @@ class Server:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.response_receive, zmq.POLLIN)
+        poller.register(self.response_pull, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
 
-                if self.response_receive == active:
+                if self.response_pull == active:
                     self._rep_outgoing()
 
                 elif self.socket == active:
@@ -436,7 +459,7 @@ class Server:
         """ Clear one request notification and send one pending response.
         """
 
-        self.response_receive.recv(flags=zmq.NOBLOCK)
+        self.response_pull.recv(flags=zmq.NOBLOCK)
         response = self.responses.get(block=False)
 
         parts = tuple(response)
@@ -448,7 +471,23 @@ class Server:
         """
 
         self.responses.put(response)
-        self.response_signal.send(b'')
+
+        # Responses can happen at high frequency. Each PUSH socket is cached
+        # for re-use by a specific thread, rather than create a new socket for
+        # each call to send(). Similar patterns are implemented in publish.py.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+
+        try:
+            response_push = self.response_pushers[current_thread]
+        except KeyError:
+            response_push = zmq_context.socket(zmq.PUSH)
+            response_push.connect(self.response_address)
+            self.response_pushers[current_thread] = response_push
+
+        response_push.send(b'')
 
 
 # end of class Server
