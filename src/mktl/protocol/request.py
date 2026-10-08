@@ -309,7 +309,7 @@ class Server:
 
         internal = "inproc://request.Server:signal:%s:%d" % (hostname, self.port)
         self.response_address = internal
-        self.response_receive = zmq_context.socket(zmq.PAIR)
+        self.response_receive = zmq_context.socket(zmq.PULL)
 
         try:
             self.response_receive.bind(internal)
