@@ -58,14 +58,14 @@ class Client:
 
         internal = "inproc://request.Client:signal:%s:%d" % (address, port)
         self.request_address = internal
-        self.request_receive = zmq_context.socket(zmq.PULL)
+        self.request_pull = zmq_context.socket(zmq.PULL)
 
         try:
-            self.request_receive.bind(internal)
+            self.request_pull.bind(internal)
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Client instances not allowed')
 
-        self.request_signals = dict()
+        self.request_pushers = dict()
 
         self.pending = dict()
         self.pending_thread = threading.Thread(target=self.run)
@@ -118,7 +118,7 @@ class Client:
         """ Clear one request notification and send one pending request.
         """
 
-        self.request_receive.recv(flags=zmq.NOBLOCK)
+        self.request_pull.recv(flags=zmq.NOBLOCK)
         message = self.requests.get(block=False)
 
         parts = tuple(message)
@@ -152,13 +152,13 @@ class Client:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.request_receive, zmq.POLLIN)
+        poller.register(self.request_pull, zmq.POLLIN)
 
         while True:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
 
-                if self.request_receive == active:
+                if self.request_pull == active:
                     self._req_outgoing()
 
                 elif self.socket == active:
@@ -189,13 +189,13 @@ class Client:
         current_thread = threading.current_thread()
 
         try:
-            request_signal = self.request_signals[current_thread]
+            request_push = self.request_pushers[current_thread]
         except KeyError:
-            request_signal = zmq_context.socket(zmq.PUSH)
-            request_signal.connect(self.request_address)
-            self.request_signals[current_thread] = request_signal
+            request_push = zmq_context.socket(zmq.PUSH)
+            request_push.connect(self.request_address)
+            self.request_pushers[current_thread] = request_push
 
-        request_signal.send(b'')
+        request_push.send(b'')
 
         if message.ack:
             pass
@@ -309,14 +309,14 @@ class Server:
 
         internal = "inproc://request.Server:signal:%s:%d" % (hostname, self.port)
         self.response_address = internal
-        self.response_receive = zmq_context.socket(zmq.PULL)
+        self.response_pull = zmq_context.socket(zmq.PULL)
 
         try:
-            self.response_receive.bind(internal)
+            self.response_pull.bind(internal)
         except zmq.error.ZMQError:
             raise ConnectionError('duplicate Server instances not allowed')
 
-        self.response_signals = dict()
+        self.response_pushers = dict()
 
         self.shutdown = False
         self.thread = threading.Thread(target=self.run)
@@ -433,13 +433,13 @@ class Server:
 
         poller = zmq.Poller()
         poller.register(self.socket, zmq.POLLIN)
-        poller.register(self.response_receive, zmq.POLLIN)
+        poller.register(self.response_pull, zmq.POLLIN)
 
         while self.shutdown == False:
             sockets = poller.poll(10000) # milliseconds
             for active, flag in sockets:
 
-                if self.response_receive == active:
+                if self.response_pull == active:
                     self._rep_outgoing()
 
                 elif self.socket == active:
@@ -451,7 +451,7 @@ class Server:
         """ Clear one request notification and send one pending response.
         """
 
-        self.response_receive.recv(flags=zmq.NOBLOCK)
+        self.response_pull.recv(flags=zmq.NOBLOCK)
         response = self.responses.get(block=False)
 
         parts = tuple(response)
@@ -473,13 +473,13 @@ class Server:
         current_thread = threading.current_thread()
 
         try:
-            response_signal = self.response_signals[current_thread]
+            response_push = self.response_pushers[current_thread]
         except KeyError:
-            response_signal = zmq_context.socket(zmq.PUSH)
-            response_signal.connect(self.response_address)
-            self.response_signals[current_thread] = response_signal
+            response_push = zmq_context.socket(zmq.PUSH)
+            response_push.connect(self.response_address)
+            self.response_pushers[current_thread] = response_push
 
-        response_signal.send(b'')
+        response_push.send(b'')
 
 
 # end of class Server
