@@ -115,23 +115,31 @@ class Client:
 
 
     def _req_outgoing(self):
-        """ Clear one request notification and send one pending request.
+        """ Clear one request notification and handle all available
+            requests. Subsequent calls to this method may be a no-op
+            if the request gets dequeued and handled while the
+            notification is still buffered by the socket.
         """
 
         self.request_pull.recv(flags=zmq.NOBLOCK)
-        message = self.requests.get(block=False)
 
-        parts = tuple(message)
-        self.pending[message.id] = message
+        while True:
+            try:
+                message = self.requests.get(block=False)
+            except queue.Empty:
+                break
 
-        # A lock around the ZeroMQ socket is necessary in a multithreaded
-        # application; otherwise, if two different threads both invoke
-        # send_multipart(), the message parts can and will get mixed
-        # together. However, this send_multipart() call is now only called
-        # from a single thread handling all send/recv calls, so the
-        # lock is no longer in place.
+            parts = tuple(message)
+            self.pending[message.id] = message
 
-        self.socket.send_multipart(parts)
+            # A lock around the ZeroMQ socket is necessary in a multithreaded
+            # application; otherwise, if two different threads both invoke
+            # send_multipart(), the message parts can and will get mixed
+            # together. However, this send_multipart() call is now only called
+            # from a single thread handling all send/recv calls, so the
+            # lock is no longer in place.
+
+            self.socket.send_multipart(parts)
 
 
     def run(self):
