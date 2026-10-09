@@ -44,7 +44,7 @@ class Daemon:
         containing information about a hardware controller.
     """
 
-    def __init__(self, store, alias, override=False, options=None):
+    def __init__(self, store, alias, options=None):
 
         self.logger = logging.getLogger(__name__)
         self.logger.info("daemon starting for store %s, alias %s", store, alias)
@@ -200,7 +200,7 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        meta.announce(self.catalog, self.uuid, override)
+        meta.announce(self.catalog, self.uuid)
         self.logger.debug('daemon initialization complete')
 
 

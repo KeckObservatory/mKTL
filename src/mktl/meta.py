@@ -1299,21 +1299,14 @@ def add_provenance(block, hostname, rep, pub=None):
 
 
 
-def announce(catalog, uuid, override=False):
+def announce(catalog, uuid):
     """ Announce an authoritative catalog block to the local network. This
         announcement is received and processed by a registry, if one is
         running. Raise an exception if the SET operation is rejected.
-        Setting *override* to True will request any/all available recipients
-        update their local cache to clear any conflicting data, though the
-        recipient may still reject the request if the conflicting daemon is
-        still online.
     """
 
     block = catalog[uuid]
     block = dict(block)
-
-    if override == True:
-        block['override'] = True
 
     payload = protocol.message.Payload(value=block)
     payload.add_origin()
