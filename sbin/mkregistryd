@@ -40,7 +40,7 @@ def main():
     catalog = generate_catalog()
     mktl.meta.authoritative(store, store, catalog)
 
-    daemon = Daemon(store, alias=store, override=True)
+    daemon = Daemon(store, alias=store)
 
     # Run discovery once upon startup, rely on daemon announcements to
     # learn of any additions to the local network.
@@ -104,7 +104,7 @@ class Registry:
         self.beacon = mktl.protocol.discover.Server(self.daemon.rep.port)
 
 
-    def check_duplicates(self, new, override):
+    def check_duplicates(self, new):
         """ Confirm that any keys in a catalog block are not present
             in any already known blocks.
         """
@@ -138,25 +138,18 @@ class Registry:
             old_items = old['items']
             for key in old_items:
                 if key in items:
-                    if override == True:
-                        if running is None:
-                            running = self.check_running(old)
+                    if running is None:
+                        running = self.check_running(old)
 
-                        if running == True:
-                            alias = old['alias']
-                            raise RuntimeError("%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port))
-                        else:
-                            # Override requested, and the old daemon is not
-                            # running. Can't remove the UUID right now because
-                            # we're busy iterating on it.
-                            to_remove.add(uuid)
-
-                    else:
-                        alias = new['alias']
+                    if running == True:
+                        alias = old['alias']
                         logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-                        raise KeyError("key in new catalog block conflicts with an existing key: %s, from block %s" % (key, old_uuid))
+                        message = "%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port)
+                        raise RuntimeError(message)
+                    else:
+                        # No longer running. Let the newcomer have control.
+                        to_remove.add(uuid)
 
-        # This set will be empty unless overrides were requested.
 
         for uuid in to_remove:
             try:
@@ -294,7 +287,6 @@ class Registry:
 
                 if blocks:
                     for uuid,block in blocks.items():
-                        block['override'] = True
                         try:
                             self.process_block(block)
                         except ProvenanceLoopError:
@@ -325,24 +317,12 @@ class Registry:
         self.check_provenance(new)
 
         # If the only provenance entry is stratum zero this new block
-        # is authoritative. If the daemon responsible for the block
-        # is requesting an override we have to apply some additional
-        # conditions to the checks embedded here.
+        # is authoritative.
 
         if len(new['provenance']) == 1:
             authoritative = True
         else:
             authoritative = False
-
-        try:
-            override = new['override']
-        except KeyError:
-            override = False
-        else:
-            # Won't be needing this flag going forward. The presence of an
-            # override flag is only relevant right now, as part of these
-            # checks being performed right here for an 'announce' operation.
-            del new['override']
 
         uuid = new['uuid']
         alias = new['alias']
@@ -363,29 +343,23 @@ class Registry:
                 pass
 
             if old and old['uuid'] != uuid and authoritative == True:
-                if override == True:
-                    running = self.check_running(old)
-                    if running == True:
-                        old_port = old['provenance'][0]['rep']
-                        old_host = old['provenance'][0]['hostname']
-                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-                        raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
+                running = self.check_running(old)
+                if running == True:
+                    old_port = old['provenance'][0]['rep']
+                    old_host = old['provenance'][0]['hostname']
+                    logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                    raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
         if old and authoritative == True:
             old_port = old['provenance'][0]['rep']
             old_host = old['provenance'][0]['hostname']
 
-            # Does the provenance match? If not, we need an override to
-            # proceed, but even then we should only proceed if the previous
+            # Does the provenance match? If not, only proceed if the previous
             # daemon is offline.
 
             match = mktl.meta.match_provenance(old['provenance'], new['provenance'])
-            if match == False and override == False:
-                logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-                raise ValueError("%s expected to be running at %s:%s, you are %s:%s" % (alias, old_host, old_port, new_host, new_port))
-
-            if match == False and override == True:
+            if match == False:
                 running = self.check_running(old)
 
                 if running == True:
@@ -411,7 +385,7 @@ class Registry:
         # value from check_duplicates(), exceptions are raised when
         # there are problems.
 
-        self.check_duplicates(new, override)
+        self.check_duplicates(new)
 
         # Now that all the checks have passed it's time to update the local
         # cache of catalog data.
