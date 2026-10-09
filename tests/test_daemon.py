@@ -14,7 +14,7 @@ except ImportError:
 
 
 def test_empty(run_mkregistryd):
-    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest', override=True)
+    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest')
 
     # Exercise the custom built-in items.
 
@@ -48,7 +48,7 @@ def test_subclass(run_mkregistryd):
             items['something']['description'] = 'A test item'
             return items
 
-    Daemon('unittest_daemon_subclass', 'unittest', override=True)
+    Daemon('unittest_daemon_subclass', 'unittest')
 
 
 def test_subclass_performers(run_mkregistryd):
@@ -102,7 +102,7 @@ def test_subclass_performers(run_mkregistryd):
 
 
 
-    Daemon('unittest_daemon_subclass_performers', 'unittest', override=True)
+    Daemon('unittest_daemon_subclass_performers', 'unittest')
 
 
     a_number = mktl.get('unittest_daemon_subclass_performers', 'a_number')
@@ -173,7 +173,7 @@ def test_subclass_item(run_mkregistryd):
                 self.add_item(mktl.Item, 'invalid_item_name')
 
 
-    Daemon('unittest_daemon_subclass_item', 'unittest', override=True)
+    Daemon('unittest_daemon_subclass_item', 'unittest')
 
 
 def test_subclass_item_interactions(run_mkregistryd):
@@ -253,7 +253,7 @@ def test_subclass_item_interactions(run_mkregistryd):
             self.add_item(Something, 'something')
             self.add_item(Payloader, 'payloader')
 
-    Daemon('unittest_daemon_subclass_item_interact', 'unittest', override=True)
+    Daemon('unittest_daemon_subclass_item_interact', 'unittest')
 
     empty = mktl.get('unittest_daemon_subclass_item_interact', 'empty')
     empty.set('not empty')

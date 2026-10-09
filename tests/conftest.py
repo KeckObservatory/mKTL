@@ -28,7 +28,6 @@ def run_mkd():
     arguments = list()
     arguments.append(sys.executable)
     arguments.append('../sbin/mkd')
-    arguments.append('-o')
     arguments.append('-m')
     arguments.append('unitdaemon')
     arguments.append('unittest')
