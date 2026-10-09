@@ -154,7 +154,7 @@ class Registry:
                     else:
                         alias = new['alias']
                         logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
-                        raise KeyError('key in new catalog block conflicts with an existing key: ' + key)
+                        raise KeyError("key in new catalog block conflicts with an existing key: %s, from block %s" % (key, old_uuid))
 
         # This set will be empty unless overrides were requested.
 
