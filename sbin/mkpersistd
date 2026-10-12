@@ -29,8 +29,12 @@ def main():
     matches = 0
     watched = 0
 
-    for item in store:
-        key = item.key
+    # If this did the simple thing and iterated over each item in the store
+    # it would instantiate each one, and subscribe to broadcasts for each
+    # one, which is resource intensive considering we only care about
+    # broadcasts for items with configured persistence.
+
+    for key in store.catalog.keys():
         description = store.catalog[key]
         item_uuid = description['uuid']
 
@@ -45,6 +49,7 @@ def main():
             continue
 
         if persist == True:
+            item = store[key]
             item.register(mktl.daemon._save_persistent)
             watched += 1
 
