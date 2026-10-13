@@ -81,6 +81,8 @@ Prerequisite knowledge
 
 Having the correct KTL client library installed locally is generally insufficient to access the KTL service; some amount of additional information must be provided, such as environment variables defining a target host name, or configuration files describing how the client library should connect to the waiting KTL dispatcher. These configuration management quirks are a barrier to usage, and depending on their nature, delicate and prone to configuration mismatches.
 
+.. _dependencies:
+
 Exotic dependencies
 ^^^^^^^^^^^^^^^^^^^
 
@@ -146,71 +148,238 @@ Similarly, JSON enjoys ubiquitous support for all modern programming languages, 
 Requirements
 ------------
 
-The mKTL project did not start with a formal requirements phase; while the requirements represented here did see some discussion, they were not iterated upon to nearly the degree that one would desire prior to their adoption. In a sense, they are a distillation of design goals, as opposed to hard requirements.
+The mKTL project did not start with a formal requirements phase; the
+requirements captured here are derived from different phases of the mKTL
+prototyping, starting with initial concepts, and following with a combination
+of emergent requirements and implementation guidelines.
 
-Overall
-^^^^^^^
+Each of the requirements listed here includes a short description of the
+intent of the requirement, along with how it ties into the heritage described
+in this document.
 
-  #. mKTL shall adhere to commonly understood terms and nomenclature whenever possible.
-  #. mKTL shall be maintained as an independent open source project without explicit dependencies on other WMKO infrastructure.
-  #. mKTL shall be maintained indefinitely by WMKO, with external participation as available.
-  #. mKTL shall be served to the community through a WMKO managed source code repository.
 
-Implementation
-^^^^^^^^^^^^^^
+Pre-development
+^^^^^^^^^^^^^^^
 
-  #. The initial mKTL implementation shall be written in Python.
-  #. The initial mKTL implementation shall be installable as a standalone package.
-  #. The initial mKTL implementation shall be installable as a standard kroot component.
-  #. mKTL implementations shall avoid the use of non-standard packages.
+  #. **The fundamental data model of mKTL shall be a key/value store.**
 
-Request/response
-^^^^^^^^^^^^^^^^
+     The key/value design pattern has been tremendously successful for KTL,
+     and shows no sign of decreasing in relevance for our environment. Leaning
+     into that strength has to be at the core of mKTL.
 
-  #. mKTL shall implement a request/response pattern.
-  #. mKTL shall provide a standard interface for issuing and receiving both requests and responses.
-  #. mKTL shall enable both blocking and non-blocking request/response patterns.
-  #. mKTL shall allow requests that have no response.
-  #. mKTL shall provide a rapid (0.1 second or better) error in the event that the daemon handling a request is not responding.
-  #. mKTL synchronous request/response performance shall be capable of 10,000 operations per second for a single item.
+  #. **mKTL shall implement a request/response pattern.**
 
-Publish/subscribe
-^^^^^^^^^^^^^^^^^
+     A request/response pattern is a fundamental component of all interactive
+     behavior in an event-driven system; this is the means by which a client
+     requests change in a system, and receives guaranteed updates for a value.
 
-  #. mKTL shall implement a publish/subscribe pattern.
-  #. mKTL shall provide a standard interface for both publishing and receiving broadcasts.
-  #. mKTL clients shall only receive published messages for items they are directly subscribed to.
-  #. mKTL clients shall not be impacted by slow publish/subscribe handling of other mKTL clients.
-  #. mKTL publishing rates shall be capable of 15,000 operations per second for a single item.
-  #. mKTL subscriptions shall connect automatically when a client instantiates an item.
-  #. mKTL subscriptions shall reconnect automatically if a daemon restarts.
-  #. mKTL clients shall not exit automatically if a subscription is not connected.
-  #. mKTL shall provide a capability for clients to register callbacks on a per-item basis.
-  #. mKTL shall not issue duplicate broadcasts by default.
-  #. mKTL client callbacks shall be executed concurrently.
+  #. **mKTL shall enable both blocking and non-blocking request/response
+     patterns.**
 
-Configuration discovery
-^^^^^^^^^^^^^^^^^^^^^^^
+     One of KTL's unique strengths for its request/response pattern is the
+     concept of a first-stage notification, effectively an acknowledgement
+     that a request has been received, followed later by a second-stage
+     response indicating that a request is complete. A client is not required
+     to block until a request is complete, but they have the option to; this
+     flexibility directly enables different types of interactive behavior
+     without the need for additional special handling of the commands.
 
-  #. mKTL shall provide a means to automatically discover daemons on the local network.
-  #. mKTL shall provide a means to explicitly discover daemons on any reachable network.
-  #. mKTL shall cache all discovered metadata for future re-use by other mKTL client processes.
-  #. mKTL shall not require the assertion of any external metadata for routine operations.
+  #. **mKTL synchronous request/response performance shall be capable of
+     1,000 operations per second for a single item.**
 
-Protocol and transport
-^^^^^^^^^^^^^^^^^^^^^^
+     The vast majority of use cases for mKTL do not require command throughput
+     at the kilohertz level; most requests are intermittent, ocurring far less
+     frequently than 1 hertz. This requirement has two goals: one, overall
+     efficiency, in that supporting high performance cases should help
+     minimize the cost of processing a lesser stream of requests, and two,
+     enabling the use of mKTL in environments where we might otherwise rely
+     on a custom method for interprocess communications, or some other
+     less-familiar means of request handling.
 
-  #. mKTL shall use a single transport for all request/response and publish/subscribe messaging.
-  #. mKTL shall use a uniform message structure for all request/response and publish/subscribe messaging.
-  #. mKTL messages shall explicitly declare a protocol revision as a unique field.
-  #. mKTL messages shall support payloads containing integers, floating point numbers, strings, sequences, or bulk data.
+  #. **mKTL shall implement a publish/subscribe pattern.**
 
-Command line
-^^^^^^^^^^^^
+     A publish/subscribe pattern enables asynchronous, event-driven behavior;
+     a basic implementation of this pattern, combined with the key/value
+     representation of commands and telemetry, enables persistent downstream
+     applications, such as graphical user interfaces and higher-level logic
+     layered on top of other mKTL interfaces. The pattern implemented here
+     must allow subscriptions at the individual item level; a client should
+     not receive messages for items it is not using.
 
-  #. mKTL shall provide a command line tool that enables retrieving values.
-  #. mKTL shall provide a command line tool that enables subscribing to published values.
-  #. mKTL shall provide a command line tool that enables setting values.
-  #. mKTL shall provide a command line tool that handles both formatted and unformatted values.
-  #. mKTL shall provide a command line tool that enables discovery of configuration data.
-  #. mKTL shall provide a command line tool that can complete operations in 0.1 second or less.
+  #. **mKTL publishing rates shall be capable of 10,000 operations per second
+     for a single item.**
+
+     The logic for this requirement is similar to the performance requirement
+     for request/response operations, but because publish operations occur
+     far more often than request/response interactions there is a stronger
+     need for both efficiency and throughput.
+
+  #. **mKTL shall provide a means to automatically discover daemons on the
+     local network.**
+
+     Properly bootstrapping a KTL environment to have access to a given KTL
+     service is a barrier to use; in order to reduce both startup costs and
+     the risk of configuration error mKTL will provide some form of discovery
+     mechanism that enables a new client, with no other metadata, to identify
+     authoritative sources of information and proceed with normal
+     request/response and publish/subscribe operations.
+
+  #. **mKTL clients shall not be limited to contacting a single mKTL daemon.**
+
+     Some KTL-based systems fell into a trap where connection support was
+     restricted to a single KTL service for any one application; mKTL shall
+     not be limited in this fashion. mKTL clients, which includes mKTL daemons,
+     shall be able to connect to any number of mKTL daemons, limited only by
+     system resources. mKTL is intended for use with highly distributed
+     systems, with each authoritative component working in isolation from
+     any others, with the explicit goal of enabling clients and other
+     applications that wish to communicate with as many or as few authoritative
+     sources of information as needed for that specific application.
+
+  #. **mKTL shall use a single transport for all request/response and
+     publish/subscribe messaging.**
+
+     This directly addresses the weakness of KTL related to multiple
+     communication styles; the use of a single transport, and clearly
+     defining the transport and protocol, allows the on-the-wire
+     messaging to be the entire boundary between different mKTL
+     implementations, without the need to carry around prerequisites
+     or any awareness of nuances that may occur between implementations.
+
+  #. **mKTL shall use a single message format for request/response interactions,
+     and a single message format for publish/subscribe interactions.**
+
+     Similar to the above, this is part of the promise mKTL is making to
+     future users of the system: there will be no gap or incompatibility
+     as a result of a change to the on-the-wire message format.
+
+  #. **mKTL shall use JSON as its payload encoding scheme.**
+
+     There are other, more optimal encoding schemes, but none have the universal
+     support offered by JSON, combined with a reasonable degree of human
+     readability. The use of JSON allows native encoding of every value type
+     presently in use with KTL: integers, floating point numbers, strings,
+     booleans, and so on. It also provides native support for sequences, and
+     for the absence of data (a null value).
+
+  #. **mKTL shall allow the transmission of arbitrary binary data.**
+
+     This directly addresses the weakness of KTL related to the
+     transmission of bulk data. By providing an option to transmit arbitrary
+     binary data mKTL will be capable of transmitting binary blobs such as
+     image buffers; one could imagine a set of mKTL items representing an
+     entire FITS file, with the headers and image HDU(s) transmitted as
+     different items, and the possible future combination of these items
+     into a single aggregate item for atomic handling.
+
+
+Development
+^^^^^^^^^^^
+
+This next set of requirements came about during the initial prototyping and
+development. These requirements represent an extended standard, beyond the
+pre-development requirements, that supported mKTL implementations adhere to.
+
+  #. **mKTL shall adhere to commonly understood terms and nomenclature whenever
+     possible.**
+
+     The use of KTL-specific language is a barrier to adoption. Where
+     well-understood terms are already in common use they should apply
+     directly to the same concepts in mKTL; for example, the use of key/value
+     pairs, and those terms being used consistently throughout mKTL when
+     referring to their respective concepts.
+
+  #. **mKTL shall be maintained as an independent open source project without
+     explicit dependencies on other WMKO infrastructure.**
+
+     The use of a WMKO-specific build environment is a barrier to adoption,
+     as are any WMKO-specific dependencies. mKTL should be fully functional
+     in an environment with no other WMKO-specific heritage or expertise.
+     mKTL shall be installable as a standalone package, but it is also
+     expected to be installable via traditional WMKO software deployment
+     practices.
+
+  #. **mKTL shall be maintained indefinitely by WMKO.**
+
+     WMKO is making a commitment as a long-term user and maintainer of mKTL.
+     Other institutions are welcome to use mKTL and contribute to its ongoing
+     maintenance, though no warranty is expressed or implied: WMKO does not
+     have the resources to provide end-user support outside its core mission.
+     The commitment here is that mKTL will not be abandoned by WMKO, and there
+     will always be a core group of maintainers for the project.
+
+  #. **mKTL shall be served to the community through a WMKO-managed source code
+     repository.**
+
+     This is perhaps a corollary of the indefinite maintenance, but the source
+     code for mKTL shall always be in a location that is managed by WMKO,
+     whether it is locally or externally hosted.
+
+  #. **The initial mKTL implementation shall be written in Python.**
+
+     Python is the language most relevant to the pool of potential mKTL
+     developers. This will change with time, so while Python is the language
+     of choice today, future mKTL development may focus on a different
+     language, so any Python-specific details need to be irrelevant for
+     the core aspects of mKTL message handling.
+
+  #. **mKTL implementations shall avoid the use of non-standard packages.**
+
+     Exotic dependencies introduce unwanted fragility with respect to
+     long-term support. See the section on :ref:`exotic
+     dependencies<dependencies>` for a more complete motivation.
+
+  #. **mKTL shall provide a rapid (0.1 second or better) error in the event
+     that the daemon handling a request is not responding.**
+
+     It should not be necessary to wait for an extended timeout to occur
+     before a client can confidently assert that no entity is available to
+     handle a request. The two-stage notification process described above,
+     and the absence of the first-stage acknowledgement, is a systematic
+     way to quickly assert that no proper response is forthcoming.
+
+  #. **mKTL subscriptions shall connect automatically when a client
+     instantiates an item.**
+
+     Common usage of object-oriented KTL interfaces follows a pattern where
+     an object is instantiated and then immediately subscribes to future
+     broadcast events. By default, mKTL should eliminate this boilerplate,
+     and always subscribe to future broadcasts, but do so in a way that
+     does not block execution of the application.
+
+  #. **mKTL subscriptions shall reconnect automatically.**
+
+     In no circumstances should a client be required to implement logic to
+     reconnect to an authoritative daemon in order to continue receiving
+     updates; all reconnect logic, if not handled entirely in the transport
+     layer, must be completely transparent to both the client and daemon.
+
+  #. **mKTL clients shall not exit automatically if a subscription fails.**
+
+     Likewise, when a subscription occurs but the receiving daemon is not
+     online, this should never be a fatal error; the client should reconnect
+     automatically once the daemon is online and normal operations resume.
+
+  #. **mKTL shall provide a capability for clients to register callbacks
+     on a per-item basis.**
+
+     Callback methods represent a common usage pattern for event-driven
+     systems, where the callback method is invoked every time the locally
+     known value updates. Efficient handling of callbacks, including the
+     option of registering transient callbacks that get garbage collected,
+     is a key enabler for different event-driven approaches. It is a practical
+     necessity that callbacks be executed in the background, so that events
+     arriving via a network buffer can be efficiently queued without waiting
+     for a potentially expensive callback method to complete execution.
+
+  #. **mKTL shall provide a command line tool to perform simple operations.**
+
+     The command-line tools offered for KTL are not just debugging tools,
+     they are commonly used for inspection of systems and for basic shell
+     scripting. mKTL must provide a similar command line interface, minimally
+     supporting get and set operations, as well as monitoring a broadcast
+     stream of published events. Where mKTL supports different representations
+     for an item's value the command-line tool must provide similar support.
+     Because this tool will be used for scripting it must likewise be efficient,
+     and not represent a major source of overhead for the application at large.
+
