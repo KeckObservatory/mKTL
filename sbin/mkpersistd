@@ -29,10 +29,12 @@ def main():
     matches = 0
     watched = 0
 
-    # If this did the simple thing and iterated over each item in the store
-    # it would instantiate each one, and subscribe to broadcasts for each
-    # one, which is resource intensive considering we only care about
-    # broadcasts for items with configured persistence.
+    # Doing the simple thing and iterating over the store would instantiate
+    # all items, which would trigger subscriptions for every item, which is
+    # resource intensive considering we only care about broadcasts for items
+    # that are explicitly configured to have persistence.
+
+    # Iterate over the catalog instead.
 
     for key in store.catalog.keys():
         description = store.catalog[key]
