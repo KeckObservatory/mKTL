@@ -819,8 +819,6 @@ class _Primer:
         then no messages are published on the wire.
     """
 
-    running = None
-
     def __init__(self):
         self.interval = 0.01
         self.duration = 5
@@ -834,16 +832,7 @@ class _Primer:
         self.thread.start()
 
 
-    @classmethod
-    def initiate(cls, item):
-        """ Wrapper to invoke :func:`_Primer.prime()` without tracking down
-            a reference to the running _Primer instance.
-        """
-
-        cls.running.prime(item)
-
-
-    def prime(self, item):
+    def initiate(self, item):
         """ Begin priming broadcasts for the requested item. Broadcasts
             will cease after self.duration seconds.
         """
@@ -909,7 +898,7 @@ class _Primer:
 
 # end of class _Primer
 
-_Primer.running = _Primer()
+_primer = _Primer()
 
 
 
@@ -1057,7 +1046,7 @@ class RequestServer(protocol.request.Server):
         if item.description['type'] == 'bulk':
             raise TypeError('refusing to prime a bulk item')
 
-        _Primer.initiate(item)
+        _primer.initiate(item)
 
 
     def req_set(self, request):
