@@ -1713,7 +1713,13 @@ class _Sequencer:
         if major == 3 and minor < 9:
             count = 32
         else:
-            count = 1024
+            # A typical user is allowed 1024 open file descriptors; higher
+            # thread counts are often permitted, but we want to be mindful
+            # of typical limits, while still allowing flexibility. A typical
+            # client, even an aggressive one, will not push this limit; the
+            # background handling of req_get(), req_set(), and pub_incoming()
+            # operations generally does not require high parallelism.
+            count = 256
 
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
