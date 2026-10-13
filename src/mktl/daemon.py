@@ -819,54 +819,89 @@ class _Primer:
         then no messages are published on the wire.
     """
 
-    active = dict()
+    active = None
 
-    def __init__(self, item):
-        _Primer.active[item.key] = self
-
+    def __init__(self):
         self.interval = 0.01
         self.duration = 5
         self.item = item
 
-        self.reset()
+        self.active = dict()
 
+        self.notify = threading.Event()
         self.thread = threading.Thread(name='Primer', target=self.run)
         self.thread.daemon = True
         self.thread.start()
 
 
-    def reset(self):
-        """ Reset the back-off timer; the same _Primer instance will be used
-            if multiple priming requests come in for the same item.
+    @classmethod
+    def initiate(cls, item):
+        """ Wrapper to invoke :func:`_Primer.prime()` without tracking down
+            a reference to the running _Primer instance.
+        """
+
+        print('initiate() for ' + item.key)
+        cls.active.prime(item)
+
+
+    def prime(self, item):
+        """ Begin priming broadcasts for the requested item. Broadcasts
+            will cease after self.duration seconds.
         """
 
         now = time.time()
-        self.expire = now + self.duration
+        self.active[item] = now + self.duration
+        self.notify.set()
 
 
     def run(self):
 
-        now = time.time()
-        next = now + self.interval
-        key = 'prime:' + self.item.full_key
+        cached = dict()
 
-        timestamp = -1
+        while True:
+            self.notify.clear()
 
-        while now < self.expire:
+            if len(self.active) == 0:
+                self.notify.wait(timeout=30)
+                continue
 
-            # Refresh the cached payload if the item timestamp changes
-            # while this priming is taking place. This isn't an extreme
-            # CPU load at 100 Hz, but caching it feels like the right
-            # thing to do.
+            now = time.time()
+            next = now + self.interval
+            items = list(self.active.keys())
 
-            if timestamp < self.item.timestamp:
-                payload = self.item.to_payload()
-                message = protocol.message.Broadcast('PUB', key, payload)
-                timestamp = self.item.timestamp
+            for item in items:
+                expiration = self.active[item]
 
-            self.item.pub.publish(message)
+                if now >= expiration:
+                    print('stop priming ' + item.key)
+                    del self.active[item]
+                    try:
+                        del cached[item]
+                    except KeyError:
+                        pass
+                    continue
 
-            next += self.interval
+                # Refresh the cached message if the item timestamp changes
+                # while this priming is taking place. This isn't an extreme
+                # CPU load at 100 Hz, but caching it feels like the right
+                # thing to do.
+
+                try:
+                    cached_message, cached_timestamp = cached[item]
+                except KeyError:
+                    cached_message = None
+                    cached_timestamp = -1
+
+                if cached_timestamp < item.timestamp:
+                    payload = item.to_payload()
+                    key = 'prime:' + item.full_key
+                    message = protocol.message.Broadcast('PUB', key, payload)
+                    cached[item] = (message, item.timestamp)
+                else:
+                    message = cached_message
+
+                item.pub.publish(message)
+
             now = time.time()
             delay = next - now
 
@@ -874,10 +909,9 @@ class _Primer:
                 time.sleep(delay)
 
 
-        del _Primer.active[self.item.key]
-
-
 # end of class _Primer
+
+_Primer.active = _Primer()
 
 
 
@@ -1025,12 +1059,8 @@ class RequestServer(protocol.request.Server):
         if item.description['type'] == 'bulk':
             raise TypeError('refusing to prime a bulk item')
 
-        try:
-            primer = _Primer.active[key]
-        except KeyError:
-            primer = _Primer(item)
-
-        primer.reset()
+        print('calling _Primer.initiate()')
+        _Primer.initiate(item)
 
 
     def req_set(self, request):
