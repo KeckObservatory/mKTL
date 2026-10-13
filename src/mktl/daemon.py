@@ -840,7 +840,6 @@ class _Primer:
             a reference to the running _Primer instance.
         """
 
-        print('initiate() for ' + item.key)
         cls.active.prime(item)
 
 
@@ -873,7 +872,6 @@ class _Primer:
                 expiration = self.active[item]
 
                 if now >= expiration:
-                    print('stop priming ' + item.key)
                     del self.active[item]
                     try:
                         del cached[item]
@@ -1059,7 +1057,6 @@ class RequestServer(protocol.request.Server):
         if item.description['type'] == 'bulk':
             raise TypeError('refusing to prime a bulk item')
 
-        print('calling _Primer.initiate()')
         _Primer.initiate(item)
 
 
