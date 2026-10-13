@@ -830,7 +830,7 @@ class _Primer:
 
         self.reset()
 
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(name='Primer', target=self.run)
         self.thread.daemon = True
         self.thread.start()
 

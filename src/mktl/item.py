@@ -1717,7 +1717,7 @@ class _Sequencer:
 
         self.workers = concurrent.futures.ThreadPoolExecutor(max_workers=count)
 
-        self.thread = threading.Thread(target=self.run)
+        self.thread = threading.Thread(name='Sequencer', target=self.run)
         self.thread.daemon = True
         self.thread.start()
 
