@@ -22,6 +22,9 @@ mktl.Daemon, one might invoke:
 
 import argparse
 import importlib
+import logging
+
+logging.basicConfig(format='%(created)f %(message)s', level=logging.INFO)
 
 
 def main():
