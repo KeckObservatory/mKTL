@@ -1305,7 +1305,6 @@ class PendingPersistence:
 
     def __init__(self, uuid):
 
-        self.uuid = uuid
         persist_queues[uuid] = self
 
         base_directory = meta.directory()
