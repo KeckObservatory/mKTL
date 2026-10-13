@@ -276,6 +276,7 @@ class Server:
         self.bind_exception = None
 
         self.broadcast_pushers = dict()
+        self.cached_threads = tuple()
 
         # Experiments with a multiprocessing.SimpleQueue and an ipc socket
         # for notifications result in something like a 35% slowdown compared
@@ -378,13 +379,14 @@ class Server:
         # There is no need for this caching mechanism to to be thread-safe.
 
         current_thread = threading.current_thread()
+        thread_hash = hash(current_thread)
 
         try:
-            broadcast_push = self.broadcast_pushers[current_thread]
+            broadcast_push = self.broadcast_pushers[thread_hash]
         except KeyError:
             broadcast_push = zmq_context.socket(zmq.PUSH)
             broadcast_push.connect(self.broadcast_address)
-            self.broadcast_pushers[current_thread] = broadcast_push
+            self.broadcast_pushers[thread_hash] = broadcast_push
 
         broadcast_push.send(b'')
 
@@ -414,6 +416,34 @@ class Server:
             # lock is no longer in place.
 
             self.socket.send_multipart(parts)
+
+
+        # Inspect the list of currently active threads to see if we need
+        # to shut down any PUSH sockets; we can wind up with strays from
+        # threads that no longer exist, like daemon._Poller threads. This
+        # is a good time to handle this cleanup since there are no pending
+        # broadcasts.
+
+        valid_hashes = set()
+        for thread in threading.enumerate():
+            thread_hash = hash(thread)
+            valid_hashes.add(thread_hash)
+
+
+        invalid_hashes = list()
+        if valid_hashes != self.cached_threads:
+            self.cached_threads = valid_hashes
+            for thread_hash in self.broadcast_pushers.keys():
+                if thread_hash in valid_hashes:
+                    pass
+                else:
+                    invalid_hashes.append(thread_hash)
+
+
+        for thread_hash in invalid_hashes:
+            pusher = self.broadcast_pushers[thread_hash]
+            del(self.broadcast_pushers[thread_hash])
+            pusher.close()
 
 
     def run(self):
