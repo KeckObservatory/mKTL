@@ -819,7 +819,7 @@ class _Primer:
         then no messages are published on the wire.
     """
 
-    active = None
+    running = None
 
     def __init__(self):
         self.interval = 0.01
@@ -840,7 +840,7 @@ class _Primer:
             a reference to the running _Primer instance.
         """
 
-        cls.active.prime(item)
+        cls.running.prime(item)
 
 
     def prime(self, item):
@@ -909,7 +909,7 @@ class _Primer:
 
 # end of class _Primer
 
-_Primer.active = _Primer()
+_Primer.running = _Primer()
 
 
 
