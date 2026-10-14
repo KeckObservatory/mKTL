@@ -90,6 +90,7 @@ class Daemon:
             raise RuntimeError('mktl.meta did not set my UUID!')
 
         self.logger.info("block UUID is %s", self.block_uuid)
+        self.logger.info("runtime UUID is %s", self.runtime_uuid)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
@@ -925,6 +926,8 @@ class RequestServer(protocol.request.Server):
         self._req_get_handlers[store + '._hash'] = self.req_get_hash
         self._req_get_handlers['._hash'] = self.req_get_hash
         self._req_get_handlers['_hash'] = self.req_get_hash
+        self._req_get_handlers['._uuid'] = self.req_get_uuid
+        self._req_get_handlers['_uuid'] = self.req_get_uuid
 
 
     def clear_handlers(self, key):
@@ -1029,6 +1032,13 @@ class RequestServer(protocol.request.Server):
 
         hashes = meta.get_hashes(store)
         payload = protocol.message.Payload(value=hashes)
+        return payload
+
+
+    def req_get_uuid(self, request):
+
+        uuid = self.daemon.runtime_uuid
+        payload = protocol.message.Payload(value=uuid)
         return payload
 
 
