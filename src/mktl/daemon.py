@@ -202,7 +202,7 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        meta.announce(self.catalog, self.block_uuid)
+        meta.announce(self.catalog[self.block_uuid])
         self.logger.debug('daemon initialization complete')
 
 
