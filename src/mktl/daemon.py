@@ -350,17 +350,14 @@ class Daemon:
         created = item_class(self.store, key, *args, **kwargs)
         created._authoritative(self.rep, self.pub)
 
-        try:
+        if preserved_callbacks:
             created.subscribe(prime=False)
-        except TypeError:
-            # This item is not gettable.
-            pass
 
-        for reference in preserved_callbacks:
-            callback = reference()
+            for reference in preserved_callbacks:
+                callback = reference()
 
-            if callback:
-                created.register(callback)
+                if callback:
+                    created.register(callback)
 
 
     def add_performer(self, key, request, method):
