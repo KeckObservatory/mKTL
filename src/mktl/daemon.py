@@ -53,7 +53,8 @@ class Daemon:
         self.options = options
         self.catalog = None
         self.store = None
-        self.uuid = None
+        self.block_uuid = None
+        self.runtime_uuid = None
 
         # Use a wrapper method to ensure the actual cleanup() only gets
         # invoked once.
@@ -81,19 +82,21 @@ class Daemon:
 
 
         self.catalog = meta.catalog(store, alias)
-        self.uuid = self.catalog.authoritative_uuid
+        self.block_uuid = self.catalog.authoritative_uuid
+        self.runtime_uuid = self.catalog.runtime_uuid
 
-        if self.uuid is None:
+        if self.block_uuid is None:
             # This isn't supposed to happen. Catching it here just in case.
             raise RuntimeError('mktl.meta did not set my UUID!')
 
-        self.logger.info("local UUID is %s", self.uuid)
+        self.logger.info("block UUID is %s", self.block_uuid)
+        self.logger.info("runtime UUID is %s", self.runtime_uuid)
 
         # Use cached port numbers when possible. The ZMQError is thrown
         # when the requested port is not available; let a new one be
         # auto-assigned when that happens.
 
-        rep, pub = _load_port(store, self.uuid)
+        rep, pub = _load_port(store, self.block_uuid)
         avoid = _used_ports()
 
         # Before we proceed let's take a moment to verify whether another
@@ -117,7 +120,7 @@ class Daemon:
         except ConnectionError:
             self.rep = RequestServer(self, store, port=None, avoid=avoid)
 
-        _save_port(store, self.uuid, self.rep.port, self.pub.port)
+        _save_port(store, self.block_uuid, self.rep.port, self.pub.port)
 
         self.logger.info("REP server listening on port %d", self.rep.port)
         self.logger.info("PUB server listening on port %d", self.pub.port)
@@ -200,7 +203,7 @@ class Daemon:
         # Ready to go on the air.
 
         self._discovery = protocol.discover.DirectServer(self.rep.port)
-        meta.announce(self.catalog, self.uuid)
+        meta.announce(self.catalog[self.block_uuid])
         self.logger.debug('daemon initialization complete')
 
 
@@ -215,7 +218,7 @@ class Daemon:
         try:
             item = self.store[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         self.rep._req_get_handlers[item.full_key] = method
 
@@ -232,7 +235,7 @@ class Daemon:
         try:
             existing = self.store._items[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         if existing is None or existing.authoritative == False:
             self.add_item(item.Item, key)
@@ -255,7 +258,7 @@ class Daemon:
         try:
             item = self.store[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         request = request.lower()
         request = request.strip()
@@ -379,7 +382,7 @@ class Daemon:
         try:
             existing = self.store._items[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         if existing is None or existing.authoritative == False:
             self.add_item(item.Item, key)
@@ -420,7 +423,7 @@ class Daemon:
         try:
             item = self.store[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         self.rep._req_set_handlers[item.full_key] = method
 
@@ -437,7 +440,7 @@ class Daemon:
         try:
             existing = self.store._items[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         if existing is None or existing.authoritative == False:
             self.add_item(item.Item, key)
@@ -459,7 +462,7 @@ class Daemon:
         arguments.append(sys.executable)
         arguments.append(mkpersistd)
         arguments.append(self.store.name)
-        arguments.append(self.uuid)
+        arguments.append(self.block_uuid)
 
         self.persistence = subprocess.Popen(arguments)
 
@@ -469,7 +472,7 @@ class Daemon:
             through to affected Items for handling.
         """
 
-        loaded = _load_persistent(self.store.name, self.uuid)
+        loaded = _load_persistent(self.store.name, self.block_uuid)
 
         for key in loaded.keys():
             faux_message = loaded[key]
@@ -600,6 +603,13 @@ class Daemon:
         block = self.catalog.authoritative_block
         items = block['items']
 
+        key = '_' + self.alias + 'blk'
+        items[key] = dict()
+        items[key]['description'] = 'Universally unique identifier (UUID) for the catalog block offered by this daemon.'
+        items[key]['type'] = 'string'
+        items[key]['initial'] = self.block_uuid
+        items[key]['settable'] = False
+
         key = '_' + self.alias + 'cat'
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
@@ -655,9 +665,9 @@ class Daemon:
 
         key = '_' + self.alias + 'uuid'
         items[key] = dict()
-        items[key]['description'] = 'Universally unique identifier (UUID) for this daemon.'
+        items[key]['description'] = 'Universally unique identifier (UUID) for this instance of this daemon.'
         items[key]['type'] = 'string'
-        items[key]['initial'] = self.uuid
+        items[key]['initial'] = self.runtime_uuid
         items[key]['settable'] = False
 
         self.catalog.update(block, save=False)
@@ -707,7 +717,7 @@ class Daemon:
             it will override the default initial value.
         """
 
-        items = self.catalog[self.uuid]['items']
+        items = self.catalog[self.block_uuid]['items']
 
         for key in items.keys():
 
@@ -740,7 +750,7 @@ class Daemon:
             in their per-item description.
         """
 
-        items = self.catalog[self.uuid]['items']
+        items = self.catalog[self.block_uuid]['items']
 
         for key in items.keys():
 
@@ -916,6 +926,8 @@ class RequestServer(protocol.request.Server):
         self._req_get_handlers[store + '._hash'] = self.req_get_hash
         self._req_get_handlers['._hash'] = self.req_get_hash
         self._req_get_handlers['_hash'] = self.req_get_hash
+        self._req_get_handlers['._uuid'] = self.req_get_uuid
+        self._req_get_handlers['_uuid'] = self.req_get_uuid
 
 
     def clear_handlers(self, key):
@@ -985,12 +997,12 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        block = self.daemon.catalog[self.daemon.uuid]
+        block = self.daemon.catalog[self.daemon.block_uuid]
         items = block['items']
         if key in items:
             pass
         else:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         getter = self.daemon.store[key].req_get
         self._req_get_handlers[request.target] = getter
@@ -1023,6 +1035,13 @@ class RequestServer(protocol.request.Server):
         return payload
 
 
+    def req_get_uuid(self, request):
+
+        uuid = self.daemon.runtime_uuid
+        payload = protocol.message.Payload(value=uuid)
+        return payload
+
+
     def req_prime(self, request):
         """ Handle the priming portion of a GET+prime request. This involves
             creating a background thread to issue periodic broadcasts to a
@@ -1041,7 +1060,7 @@ class RequestServer(protocol.request.Server):
         try:
             item = self.daemon.store[key]
         except KeyError:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         if item.description['type'] == 'bulk':
             raise TypeError('refusing to prime a bulk item')
@@ -1072,12 +1091,12 @@ class RequestServer(protocol.request.Server):
         if store != self.daemon.store.name:
             raise ValueError("this request is for %s, but this daemon is in %s" % (repr(store), repr(self.daemon.store.name)))
 
-        block = self.daemon.catalog[self.daemon.uuid]
+        block = self.daemon.catalog[self.daemon.block_uuid]
         items = block['items']
         if key in items:
             pass
         else:
-            raise KeyError('this daemon does not contain ' + repr(key))
+            raise KeyError('this daemon is not authoritative for ' + repr(key))
 
         setter = self.daemon.store[key].req_set
         self._req_set_handlers[request.target] = setter
@@ -1259,7 +1278,7 @@ def _save_persistent(item, *args, **kwargs):
         callback for a :class:`mktl.Item` instance.
     """
 
-    uuid = item.description['uuid']
+    uuid = item.description['blkid']
 
     try:
         pending = persist_queues[uuid]
@@ -1305,7 +1324,6 @@ class PendingPersistence:
 
     def __init__(self, uuid):
 
-        self.uuid = uuid
         persist_queues[uuid] = self
 
         base_directory = meta.directory()
@@ -1379,7 +1397,7 @@ class DaemonCatalog(item.Item):
 
     def perform_get(self):
 
-        uuid = self.store._daemon.uuid
+        uuid = self.store._daemon.block_uuid
         catalog = meta.catalog(self.store.name)
         catalog = catalog[uuid]
 

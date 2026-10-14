@@ -38,9 +38,9 @@ def main():
 
     for key in store.catalog.keys():
         description = store.catalog[key]
-        item_uuid = description['uuid']
+        block_uuid = description['blkid']
 
-        if item_uuid != uuid:
+        if block_uuid != uuid:
             continue
 
         matches += 1
@@ -100,7 +100,7 @@ def parse_command_line():
     parser = argparse.ArgumentParser(**arguments)
 
     parser.add_argument('store', help='Name of the mKTL store')
-    parser.add_argument('uuid', help='Unique identifier for the mKTL daemon')
+    parser.add_argument('uuid', help='Block UUID for this mKTL daemon')
 
     parsed = parser.parse_args()
     return parsed

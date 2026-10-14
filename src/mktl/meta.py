@@ -51,6 +51,7 @@ class Catalog:
         self.authoritative_uuid = None
         self.authoritative_block = None
         self.authoritative_items = None
+        self.runtime_uuid = str(uuid.uuid4()).lower()
         self._by_uuid = dict()
         self._by_alias = dict()
         self._by_key = dict()
@@ -517,6 +518,10 @@ class Catalog:
             except ValueError:
                 # update() removed the unwanted file.
                 continue
+            except KeyError:
+                # The loaded file is not valid.
+                os.remove(filename)
+                continue
 
 
     def _load_client(self, filename):
@@ -556,7 +561,7 @@ class Catalog:
             block = dict()
 
             block['store'] = self.store
-            block['uuid'] = target_uuid
+            block['blkid'] = target_uuid
             block['items'] = json.loads(raw_json)
 
         return block,target_uuid
@@ -663,9 +668,9 @@ class Catalog:
         store = self.store
 
         try:
-            block_uuid = block['uuid']
+            block_uuid = block['blkid']
         except KeyError:
-            raise KeyError("the 'uuid' field must be present")
+            raise KeyError("the 'blkid' field must be present")
 
         base_directory = directory()
         base_filename = block_uuid
@@ -1011,21 +1016,22 @@ class Catalog:
         """ Update the locally cached catalog to include any/all contents
             in the provided *block*. A catalog block is a Python
             dictionary in the on-disk client format, minimally including the
-            keys 'store', 'alias', 'uuid', and 'items'.
+            keys 'store', 'alias', 'blkid', 'uuid', and 'items'.
         """
 
         store = block['store']
         alias = block['alias']
         items = block['items']
+        blkid = block['blkid']
         uuid = block['uuid']
 
         if self.alias:
             if alias != self.alias:
                 raise ValueError('not ready to handle two aliases in a single daemon')
-            if self.authoritative_uuid and self.authoritative_uuid != uuid:
+            if self.authoritative_uuid and self.authoritative_uuid != blkid:
                 raise ValueError('UUID in our authoritative block changed')
 
-            self.authoritative_uuid = uuid
+            self.authoritative_uuid = blkid
             self.authoritative_block = block
             self.authoritative_items = block['items']
 
@@ -1048,7 +1054,7 @@ class Catalog:
         # Normalize the formatting of enumerators for any relevant items.
         # This check is only necessary for authoritative blocks.
 
-        if uuid == self.authoritative_uuid:
+        if blkid == self.authoritative_uuid:
             for key in items.keys():
                 description = items[key]
 
@@ -1104,7 +1110,7 @@ class Catalog:
         # It's possible the contents of the local authoritative block changed.
         # Update the hash and block timestamp if that is the case.
 
-        if uuid == self.authoritative_uuid:
+        if blkid == self.authoritative_uuid:
             new_hash = generate_hash(items)
 
             try:
@@ -1132,7 +1138,7 @@ class Catalog:
 
         hash = block['hash']
         for known_uuid in self.uuids():
-            if uuid == known_uuid:
+            if blkid == known_uuid:
                 # Replacing the catalog block for the same UUID is fine.
                 break
 
@@ -1179,7 +1185,7 @@ class Catalog:
                     self.remove(known_uuid)
                 else:
                     # Get rid of this block, and discontinue processing.
-                    self.remove(uuid)
+                    self.remove(blkid)
                     raise ValueError(collision + " in store %s, and this block is older" % (store))
 
 
@@ -1187,9 +1193,9 @@ class Catalog:
         # reference.
 
         try:
-            self._by_uuid[uuid].update(block)
+            self._by_uuid[blkid].update(block)
         except KeyError:
-            self._by_uuid[uuid] = block
+            self._by_uuid[blkid] = block
 
         try:
             self._by_alias[alias].update(block)
@@ -1209,7 +1215,7 @@ class Catalog:
             # within the Item class.
 
             copied = dict(item)
-            copied['uuid'] = uuid
+            copied['blkid'] = blkid
 
             try:
                 ### Should this also be a copy?
@@ -1244,7 +1250,7 @@ class Catalog:
 
 
 
-def to_block(store, alias, uuid, items):
+def to_block(store, alias, blkid, uuid, items):
     """ Generate a block dictionary appropriate for the store, alias, uuid,
         and items provided. This is only relevant for a daemon, a client will
         always receive full blocks.
@@ -1253,6 +1259,7 @@ def to_block(store, alias, uuid, items):
     block = dict()
     block['store'] = store
     block['alias'] = alias
+    block['blkid'] = blkid
     block['uuid'] = uuid
     block['time'] = time.time()
     block['hash'] = generate_hash(items)
@@ -1299,13 +1306,12 @@ def add_provenance(block, hostname, rep, pub=None):
 
 
 
-def announce(catalog, uuid):
+def announce(block):
     """ Announce an authoritative catalog block to the local network. This
         announcement is received and processed by a registry, if one is
         running. Raise an exception if the SET operation is rejected.
     """
 
-    block = catalog[uuid]
     block = dict(block)
 
     payload = protocol.message.Payload(value=block)
@@ -1354,7 +1360,7 @@ def authoritative(store, alias, items):
     """
 
     cached = catalog(store, alias)
-    block = to_block(store, alias, cached.authoritative_uuid, items)
+    block = to_block(store, alias, cached.authoritative_uuid, cached.runtime_uuid, items)
     cached.update(block)
 
 

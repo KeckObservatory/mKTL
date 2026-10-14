@@ -40,7 +40,7 @@ Each catalog block will contain the following fields:
 		block, but the extra assertion is inexpensive and
 		convenient.
 
-**uuid**	The unique identifier associated with this block.
+**blkid**	The unique identifier associated with this block.
 		The UUID is generated internally and does not need
 		to be manipulated directly; it is used to uniquely
 		associate a specific daemon with its catalog
@@ -70,6 +70,11 @@ Each catalog block will contain the following fields:
 **time**	Daemon-provided timestamp for the contents of this
 		block. The timestamp may change even if the contents
 		(and hash) do not.
+
+**uuid**	The unique identifier associated with the running
+		instance of the authoriative daemon. This UUID will
+		change every time the daemon starts; it is used to
+		uniquely identify a daemon on the local network.
 
 **hash**	A hash value for the 'items' component of this block.
 		The hash is arbitrary and clients should not concern
