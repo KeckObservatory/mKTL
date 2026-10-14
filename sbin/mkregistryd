@@ -217,6 +217,11 @@ class Registry:
             except TimeoutError:
                 continue
 
+            try:
+                payload.value
+            except AttributeError:
+                continue
+
             if payload.value != runtime_uuid:
                 return True
 
