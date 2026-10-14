@@ -118,19 +118,19 @@ class Registry:
             return
 
         items = new['items']
-        uuid = new['blkid']
+        blkid = new['blkid']
         new_port = new['provenance'][0]['rep']
         new_host = new['provenance'][0]['hostname']
         to_remove = set()
 
-        for old_uuid in catalog.uuids():
+        for old_blkid in catalog.uuids():
 
-            if uuid == old_uuid:
+            if blkid == old_blkid:
                 # Doesn't make sense to check a block for duplicates against
                 # any version of itself. Skip this one.
                 continue
 
-            old = catalog[old_uuid]
+            old = catalog[old_blkid]
             old_port = old['provenance'][0]['rep']
             old_host = old['provenance'][0]['hostname']
             running = None
@@ -143,17 +143,17 @@ class Registry:
 
                     if running == True:
                         alias = old['alias']
-                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                        logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, blkid))
                         message = "%s contains %s, and is running at %s:%s" % (alias, key, old_host, old_port)
                         raise RuntimeError(message)
                     else:
                         # No longer running. Let the newcomer have control.
-                        to_remove.add(uuid)
+                        to_remove.add(blkid)
 
 
-        for uuid in to_remove:
+        for blkid in to_remove:
             try:
-                block = catalog[uuid]
+                block = catalog[blkid]
             except KeyError:
                 # Already gone. Not entirely sure how that might have happened,
                 # but it does, and there's no sense trying to remove it twice.
@@ -163,8 +163,8 @@ class Registry:
             port = block['provenance'][0]['rep']
             host = block['provenance'][0]['hostname']
 
-            logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, uuid))
-            catalog.remove(uuid)
+            logger.info("forget: %s from %s:%s (%s)" % (alias, host, port, blkid))
+            catalog.remove(blkid)
 
 
     def check_provenance(self, block):
@@ -285,7 +285,7 @@ class Registry:
                     logger.warning("GET %s request failed: %s: %s" % (key, e_type, e_text))
 
                 if blocks:
-                    for uuid,block in blocks.items():
+                    for blkid,block in blocks.items():
                         try:
                             self.process_block(block)
                         except ProvenanceLoopError:
@@ -323,13 +323,13 @@ class Registry:
         else:
             authoritative = False
 
-        uuid = new['blkid']
+        blkid = new['blkid']
         alias = new['alias']
         new_port = new['provenance'][0]['rep']
         new_host = new['provenance'][0]['hostname']
 
         try:
-            old = catalog[uuid]
+            old = catalog[blkid]
         except KeyError:
             old = None
 
@@ -341,12 +341,12 @@ class Registry:
             except KeyError:
                 pass
 
-            if old and old['blkid'] != uuid and authoritative == True:
+            if old and old['blkid'] != blkid and authoritative == True:
                 running = self.check_running(old)
                 if running == True:
                     old_port = old['provenance'][0]['rep']
                     old_host = old['provenance'][0]['hostname']
-                    logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+                    logger.error("reject: %s from %s:%s (%s)" % (alias, new_host, new_port, blkid))
                     raise RuntimeError("%s is running at %s:%s" % (alias, old_host, old_port))
 
 
@@ -368,8 +368,8 @@ class Registry:
                 # this new catalog block. Remove the old one to streamline
                 # further checks.
 
-                logger.info("forget: %s from %s:%s (%s)" % (alias, old_host, old_port, uuid))
-                catalog.remove(uuid)
+                logger.info("forget: %s from %s:%s (%s)" % (alias, old_host, old_port, blkid))
+                catalog.remove(blkid)
 
             # We've already seen a block for this UUID. Accept the new block
             # for processing if and only if it is different, or has a newer
@@ -391,7 +391,7 @@ class Registry:
 
         mktl.meta.add_provenance(new, main.hostname, self.daemon.rep.port)
 
-        logger.info("remember: %s from %s:%s (%s)" % (alias, new_host, new_port, uuid))
+        logger.info("remember: %s from %s:%s (%s)" % (alias, new_host, new_port, blkid))
         catalog.update(new)
 
 
