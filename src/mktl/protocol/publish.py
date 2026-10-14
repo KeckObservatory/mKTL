@@ -218,6 +218,7 @@ class Client:
         subscription_push = zmq_context.socket(zmq.PUSH)
         subscription_push.connect(self.subscription_address)
         subscription_push.send(b'')
+        subscription_push.close()
 
 
     def unregister(self, callback, topic):
