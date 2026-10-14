@@ -9,7 +9,6 @@ import subprocess
 import sys
 import threading
 import time
-import uuid
 
 from . import begin
 from . import item
@@ -55,7 +54,7 @@ class Daemon:
         self.catalog = None
         self.store = None
         self.block_uuid = None
-        self.runtime_uuid = str(uuid.uuid4()).lower()
+        self.runtime_uuid = None
 
         # Use a wrapper method to ensure the actual cleanup() only gets
         # invoked once.
@@ -84,6 +83,7 @@ class Daemon:
 
         self.catalog = meta.catalog(store, alias)
         self.block_uuid = self.catalog.authoritative_uuid
+        self.runtime_uuid = self.catalog.runtime_uuid
 
         if self.block_uuid is None:
             # This isn't supposed to happen. Catching it here just in case.
@@ -1278,7 +1278,7 @@ def _save_persistent(item, *args, **kwargs):
         callback for a :class:`mktl.Item` instance.
     """
 
-    uuid = item.description['uuid']
+    uuid = item.description['blkid']
 
     try:
         pending = persist_queues[uuid]
