@@ -43,6 +43,8 @@ class Client:
 
         internal = "inproc://publish.Client:signal:%s:%d" % (address, port)
         self.subscription_address = internal
+        self.subscription_pushers = dict()
+        self.cached_threads = tuple()
 
         self.thread = threading.Thread(target=self.run)
         self.thread.daemon = True
@@ -200,6 +202,32 @@ class Client:
 
             self.socket.setsockopt(zmq.SUBSCRIBE, topic)
 
+        # Inspect the list of currently active threads to see if we need
+        # to shut down any PUSH sockets; we can wind up with strays from
+        # threads that no longer exist. This is a good time to handle this
+        # cleanup since there are no pending subscriptions.
+
+        valid_hashes = set()
+        for thread in threading.enumerate():
+            thread_hash = hash(thread)
+            valid_hashes.add(thread_hash)
+
+
+        invalid_hashes = list()
+        if valid_hashes != self.cached_threads:
+            self.cached_threads = valid_hashes
+            for thread_hash in self.subscription_pushers.keys():
+                if thread_hash in valid_hashes:
+                    pass
+                else:
+                    invalid_hashes.append(thread_hash)
+
+
+        for thread_hash in invalid_hashes:
+            pusher = self.subscription_pushers[thread_hash]
+            del(self.subscription_pushers[thread_hash])
+            pusher.close()
+
 
     def subscribe(self, topic):
         """ ZeroMQ subscriptions are based on a topic. Filtering of messages
@@ -215,10 +243,25 @@ class Client:
             topic = topic.encode()
 
         self.subscriptions.put(topic)
-        subscription_push = zmq_context.socket(zmq.PUSH)
-        subscription_push.connect(self.subscription_address)
+
+        # Subscriptions can happen at high frequency, especially at startup for
+        # clients using a lot of items. Each PUSH socket is cached for re-use
+        # by a specific thread, rather than create a new socket for each call
+        # to publish(). Similar patterns are implemented in request.py.
+
+        # There is no need for this caching mechanism to to be thread-safe.
+
+        current_thread = threading.current_thread()
+        thread_hash = hash(current_thread)
+
+        try:
+            subscription_push = self.subscription_pushers[thread_hash]
+        except KeyError:
+            subscription_push = zmq_context.socket(zmq.PUSH)
+            subscription_push.connect(self.subscription_address)
+            self.subscription_pushers[thread_hash] = subscription_push
+
         subscription_push.send(b'')
-        subscription_push.close()
 
 
     def unregister(self, callback, topic):
@@ -374,8 +417,8 @@ class Server:
 
         # Broadcasts can happen at high frequency. Each PUSH socket is cached
         # for re-use by a specific thread, rather than create a new socket for
-        # each call to publish(). A similar pattern exists in subscribe(), but
-        # that operation is not expected to occur with the same high frequency.
+        # each call to publish(). Similar patterns are implemented in
+        # request.py.
 
         # There is no need for this caching mechanism to to be thread-safe.
 
