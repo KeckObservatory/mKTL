@@ -118,7 +118,7 @@ class Registry:
             return
 
         items = new['items']
-        uuid = new['uuid']
+        uuid = new['blkid']
         new_port = new['provenance'][0]['rep']
         new_host = new['provenance'][0]['hostname']
         to_remove = set()
@@ -324,7 +324,7 @@ class Registry:
         else:
             authoritative = False
 
-        uuid = new['uuid']
+        uuid = new['blkid']
         alias = new['alias']
         new_port = new['provenance'][0]['rep']
         new_host = new['provenance'][0]['hostname']
@@ -342,7 +342,7 @@ class Registry:
             except KeyError:
                 pass
 
-            if old and old['uuid'] != uuid and authoritative == True:
+            if old and old['blkid'] != uuid and authoritative == True:
                 running = self.check_running(old)
                 if running == True:
                     old_port = old['provenance'][0]['rep']
