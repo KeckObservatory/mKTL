@@ -9,6 +9,7 @@ import subprocess
 import sys
 import threading
 import time
+import uuid
 
 from . import begin
 from . import item
@@ -54,6 +55,7 @@ class Daemon:
         self.catalog = None
         self.store = None
         self.block_uuid = None
+        self.runtime_uuid = str(uuid.uuid4()).lower()
 
         # Use a wrapper method to ensure the actual cleanup() only gets
         # invoked once.
@@ -600,6 +602,13 @@ class Daemon:
         block = self.catalog.authoritative_block
         items = block['items']
 
+        key = '_' + self.alias + 'blk'
+        items[key] = dict()
+        items[key]['description'] = 'Universally unique identifier (UUID) for the catalog block offered by this daemon.'
+        items[key]['type'] = 'string'
+        items[key]['initial'] = self.block_uuid
+        items[key]['settable'] = False
+
         key = '_' + self.alias + 'cat'
         items[key] = dict()
         items[key]['description'] = 'JSON description of all items for this daemon.'
@@ -655,9 +664,9 @@ class Daemon:
 
         key = '_' + self.alias + 'uuid'
         items[key] = dict()
-        items[key]['description'] = 'Universally unique identifier (UUID) for the catalog block offered by this daemon.'
+        items[key]['description'] = 'Universally unique identifier (UUID) for this instance of this daemon.'
         items[key]['type'] = 'string'
-        items[key]['initial'] = self.block_uuid
+        items[key]['initial'] = self.runtime_uuid
         items[key]['settable'] = False
 
         self.catalog.update(block, save=False)
