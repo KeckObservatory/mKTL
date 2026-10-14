@@ -17,6 +17,10 @@ Protocol only
 
 The ``_hash`` and ``_catalog`` items are replacements for the HASH and CONFIG
 request types that were defined in the initial prototype of the mKTL protocol.
+Each of these implicit item definitions plays a role in the exchange of metadata
+used in different aspects of handshaking between a daemon and other mKTL-aware
+processes on the local network.
+
 
 .. list-table::
 
@@ -88,9 +92,15 @@ request types that were defined in the initial prototype of the mKTL protocol.
       of the announcement.
 
 
-These two item definitions are critical for the exchange of their respective
-data; both are integral to the initial handshake between a client and a daemon,
-and between any intermediaries aiding in the discovery process.
+  * - **_uuid**
+    - .. _builtin_uuid:
+
+      The unique identifier associated with the daemon answering this
+      request. This identifier is regenerated every time the daemon
+      restarts, and can be used to distinguish between different running
+      instances of a daemon. This functionality is used when a daemon
+      announces its authoritative block, allowing any local registries
+      to establish the uniqueness of that daemon on the network.
 
 
 Regular items
@@ -113,8 +123,13 @@ there are some exceptions.
   * - *Key suffix*
     - *Description*
 
+  * - **blk**
+    - The universally unique identifier (UUID) for the catalog block this
+      daemon is authoritative for; this identifier will persist across restarts.
+
   * - **cat**
-    - See :ref:`the description <builtin_catalog>` of the ``_catalog`` item above.
+    - This is the same value as the ``_catalog`` :ref:`item described above
+      <builtin_catalog>`.
 
   * - **clk**
     - The current uptime for this daemon, measured in seconds. The value will
@@ -141,6 +156,6 @@ there are some exceptions.
     - The proces identifier for this daemon.
 
   * - **uuid**
-    - The universally unique identifier (UUID) for this daemon; this identifier
-      will persist across restats.
+    - This is the same value as the ``_uuid`` :ref:`item described above
+      <builtin_uuid>`.
 
