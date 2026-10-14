@@ -185,14 +185,9 @@ class Registry:
             catalog block is still running.
         """
 
-        # Take advantage of a built-in keyword to probe whether the
-        # remote daemon is online and answering questions.
+        runtime_uuid = block['uuid']
 
-        store = block['store']
-        alias = block['alias']
-        clock = '_' + alias + 'clk'
-        key = store + '.' + clock
-
+        key = '_uuid'
         payload = mktl.protocol.message.Payload(refresh=True)
         request = mktl.protocol.message.Request('GET', key, payload)
 
@@ -203,7 +198,11 @@ class Registry:
         provenance.reverse()
 
         for stratum in provenance:
-            # Only an authoritative stratum will have a 'pub' entry.
+            # Only an authoritative stratum will have a 'pub' entry. The
+            # request/response channel will still be a direct conduit to the
+            # announcing daemon, so we can ask for the implicit '_uuid' item
+            # and not get a different answer from an intermediate proxy.
+
             try:
                 stratum['pub']
             except KeyError:
@@ -218,7 +217,7 @@ class Registry:
             except TimeoutError:
                 continue
 
-            if payload.value is not None:
+            if payload.value != runtime_uuid:
                 return True
 
         return False
