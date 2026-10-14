@@ -1299,13 +1299,12 @@ def add_provenance(block, hostname, rep, pub=None):
 
 
 
-def announce(catalog, uuid):
+def announce(block):
     """ Announce an authoritative catalog block to the local network. This
         announcement is received and processed by a registry, if one is
         running. Raise an exception if the SET operation is rejected.
     """
 
-    block = catalog[uuid]
     block = dict(block)
 
     payload = protocol.message.Payload(value=block)
