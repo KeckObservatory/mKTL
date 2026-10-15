@@ -674,7 +674,7 @@ def print_item(item, value, timestamp):
                 try:
                     value = item.to_format(value)
                 except ImportError:
-                    sys.stderr.write("%s formatting failed: pint module not available" % (key))
+                    sys.stderr.write("%s formatting failed: pint module not available\n" % (item.key))
                     sys.exit(1)
 
             if formatted_units:
