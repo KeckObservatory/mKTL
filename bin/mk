@@ -671,7 +671,11 @@ def print_item(item, value, timestamp):
                 quantity = item.quantity.to(print_item.units_pint)
                 value = quantity.magnitude
             else:
-                value = item.to_format(value)
+                try:
+                    value = item.to_format(value)
+                except ImportError:
+                    sys.stderr.write("%s formatting failed: pint module not available\n" % (item.key))
+                    sys.exit(1)
 
             if formatted_units:
                 line = line + "%s %s" % (value, formatted_units)

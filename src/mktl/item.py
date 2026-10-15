@@ -1341,7 +1341,32 @@ class Item:
 
 
     def _value_setter(self, new_value):
+        # Use a temporary callback to guarantee that the local value has
+        # updated before returning. This doesn't necessarily guarantee
+        # that the update contains the expected value, but it does ensure
+        # the operation is complete.
+
+        callback_event = threading.Event()
+
+        try:
+            gettable = self.description['gettable']
+        except KeyError:
+            gettable = True
+
+        if gettable == True:
+            def temporary_callback(self, *args, **kwargs):
+                callback_event.set()
+
+            self.register(temporary_callback)
+        else:
+            callback_event.set()
+
         self.set(new_value)
+
+        called = callback_event.wait(0.5)
+        if called == False:
+            logger = logging.getLogger(__name__)
+            logger.debug('No broadcast received within 0.5 seconds after set operation')
 
 
     def _value_setter_authoritative(self, new_value):
@@ -1609,25 +1634,8 @@ class Item:
 
         self._primed.wait(timeout=1)
 
-        # Use a temporary callback to guarantee that the local value has
-        # updated before returning. This doesn't necessarily guarantee
-        # that the update contains the expected value, but it does ensure
-        # the operation is complete.
-
-        inplace_callback_event = threading.Event()
-
-        def inplace_callback(self, *args, **kwargs):
-            inplace_callback_event.set()
-
-        self.register(inplace_callback)
-
         modified = method(value)
         self.value = modified
-
-        called = inplace_callback_event.wait(0.5)
-        if called == False:
-            logger = logging.getLogger(__name__)
-            logger.debug('No broadcast received within 0.5 seconds after in-place operation')
 
         return self
 

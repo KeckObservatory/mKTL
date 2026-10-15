@@ -168,7 +168,7 @@ class Client:
                     self._pub_incoming(parts)
 
                 elif subscription_pull == active:
-                    self._sub_incoming()
+                    self._sub_outgoing()
 
 
     def _pub_incoming(self, parts):
@@ -185,7 +185,7 @@ class Client:
         self.propagate(broadcast)
 
 
-    def _sub_incoming(self):
+    def _sub_outgoing(self):
         """ Clear one subscription notification and handle all available
             subscription requests. Subsequent calls to this method may
             be a no-op if the request gets dequeued and handled while
