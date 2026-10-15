@@ -125,12 +125,12 @@ class Client:
 
         while True:
             try:
-                message = self.requests.get(block=False)
+                request = self.requests.get(block=False)
             except queue.Empty:
                 break
 
-            parts = tuple(message)
-            self.pending[message.id] = message
+            parts = tuple(request)
+            self.pending[request.id] = request
 
             # A lock around the ZeroMQ socket is necessary in a multithreaded
             # application; otherwise, if two different threads both invoke
@@ -140,7 +140,7 @@ class Client:
             # lock is no longer in place.
 
             self.socket.send_multipart(parts)
-            message._complete_sent()
+            request._complete_sent()
 
 
     def run(self):
@@ -175,11 +175,11 @@ class Client:
                     self._rep_incoming(parts)
 
 
-    def send(self, message):
-        """ A *message* is a fully populated
+    def send(self, request):
+        """ A *request* is a fully populated
             :class:`mktl.protocol.message.Request` instance,
             which normalizes the arguments that will be sent via this method
-            as a multi-part message. The message instance will also be used for
+            as a multi-part message. The request instance will also be used for
             notification of any/all responses from the remote end; this method
             will block while waiting for the ACK request, but will never block
             waiting for the full response; the caller is free to decide whether
@@ -187,7 +187,7 @@ class Client:
             :class:`mktl.protocol.message.Request` instance.
         """
 
-        self.requests.put(message)
+        self.requests.put(request)
 
         # Requests can happen at high frequency. Each PUSH socket is cached
         # for re-use by a specific thread, rather than create a new socket for
@@ -206,24 +206,24 @@ class Client:
 
         request_push.send(b'')
 
-        if message.ack:
+        if request.ack:
             pass
         else:
             return
 
-        sent = message.wait_sent(self.timeout * 10)
+        sent = request.wait_sent(self.timeout * 10)
 
         if sent == False:
-            error = '%s @ %s:%d: unable to send message in %.2f sec'
-            args = (message.type, self.address, self.port, self.timeout * 10)
+            error = '%s @ %s:%d: unable to send request in %.2f sec'
+            args = (request.type, self.address, self.port, self.timeout * 10)
             error = error % args
             raise TimeoutError(error)
 
-        ack = message.wait_ack(self.timeout)
+        ack = request.wait_ack(self.timeout)
 
         if ack == False:
             error = '%s @ %s:%d: no response received in %.2f sec'
-            args = (message.type, self.address, self.port, self.timeout)
+            args = (request.type, self.address, self.port, self.timeout)
             error = error % args
             raise TimeoutError(error)
 
