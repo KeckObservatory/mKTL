@@ -76,6 +76,8 @@ class Message:
         so that the arguments for all :class:`Message` instances can have
         a similar structure.
 
+        The *type* of a base Message instance can only be 'ACK' or 'REP'.
+
         :ivar payload: The :class:`Payload`, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
@@ -293,6 +295,8 @@ class Broadcast(Message):
     """ A :class:`Broadcast` is a minor variant of a :class:`Message`,
         with a change to format the multipart tuple in a PUB/SUB specific
         fashion.
+
+        The *type* of a Broadcast instance can only be 'PUB'.
     """
 
     valid_types = set(('PUB',))
@@ -389,6 +393,8 @@ class Request(Message):
         a requested value, or signaling that a set operation is complete.
 
         :ivar response: The response (as a :class:`Message`) to this request
+
+        The *type* of a Request instance can only be 'GET' or 'SET'.
     """
 
     valid_types = set(('GET', 'SET'))
@@ -412,6 +418,7 @@ class Request(Message):
 
         self.response = None
 
+        self.sent_event = threading.Event()
         self.ack_event = threading.Event()
         self.rep_event = threading.Event()
 
@@ -433,6 +440,13 @@ class Request(Message):
         """
 
         self.ack_event.set()
+
+
+    def _complete_sent(self):
+        """ The request, if any, has been sent; signal any callers blocking via :func:`wait_sent` to proceed.
+        """
+
+        self.sent_event.set()
 
 
     def _complete(self, response):
@@ -461,6 +475,17 @@ class Request(Message):
         """
 
         return self.ack_event.wait(timeout)
+
+
+    def wait_sent(self, timeout):
+        """ Block until the request has been sent. This is a wrapper to
+            a :class:`threading.Event` instance; if the event has occurred it
+            will return True, otherwise it returns False after the requested
+            *timeout*. If the *timeout* argument is None it will block
+            indefinitely.
+        """
+
+        return self.sent_event.wait(timeout)
 
 
     def wait(self, timeout=60):

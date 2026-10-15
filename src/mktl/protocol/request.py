@@ -140,6 +140,7 @@ class Client:
             # lock is no longer in place.
 
             self.socket.send_multipart(parts)
+            message._complete_sent()
 
 
     def run(self):
@@ -209,6 +210,14 @@ class Client:
             pass
         else:
             return
+
+        sent = message.wait_sent(self.timeout * 10)
+
+        if sent == False:
+            error = '%s @ %s:%d: unable to send message in %.2f sec'
+            args = (message.type, self.address, self.port, self.timeout * 10)
+            error = error % args
+            raise TimeoutError(error)
 
         ack = message.wait_ack(self.timeout)
 
