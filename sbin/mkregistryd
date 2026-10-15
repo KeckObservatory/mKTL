@@ -222,7 +222,7 @@ class Registry:
             except AttributeError:
                 continue
 
-            if payload.value != runtime_uuid:
+            if payload.value == runtime_uuid:
                 return True
 
         return False
