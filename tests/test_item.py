@@ -265,8 +265,8 @@ def test_mask(run_mkregistryd, run_mkd):
     with pytest.raises(KeyError):
         mask.formatted = 'invalid'
 
-    with pytest.raises(RuntimeError):
-        mask.value = 234
+    # There are no guardrails on what you set the unformatted value to.
+    mask.value = 234
 
     with pytest.raises(RuntimeError):
         mask.value = 'invalid'
