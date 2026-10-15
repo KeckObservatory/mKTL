@@ -76,6 +76,8 @@ class Message:
         so that the arguments for all :class:`Message` instances can have
         a similar structure.
 
+        The *type* of a base Message instance can only be 'ACK' or 'REP'.
+
         :ivar payload: The :class:`Payload`, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
         :ivar timestamp: A UNIX epoch timestamp for the message send time.
@@ -293,6 +295,8 @@ class Broadcast(Message):
     """ A :class:`Broadcast` is a minor variant of a :class:`Message`,
         with a change to format the multipart tuple in a PUB/SUB specific
         fashion.
+
+        The *type* of a Broadcast instance can only be 'PUB'.
     """
 
     valid_types = set(('PUB',))
@@ -389,6 +393,8 @@ class Request(Message):
         a requested value, or signaling that a set operation is complete.
 
         :ivar response: The response (as a :class:`Message`) to this request
+
+        The *type* of a Request instance can only be 'GET' or 'SET'.
     """
 
     valid_types = set(('GET', 'SET'))
