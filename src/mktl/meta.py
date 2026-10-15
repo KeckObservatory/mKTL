@@ -784,7 +784,6 @@ class Catalog:
 
         value = int(value)
         formatted = list()
-        verified = 0
 
         for bit,name in enumerators.items():
             if bit == 'None':
@@ -794,10 +793,11 @@ class Catalog:
             bit_value = 1 << bit
             if value & bit_value:
                 formatted.append(name)
-                verified += bit_value
 
-        if verified != value:
-            raise KeyError('value contains unknown active bits: ' + str(value))
+        # This used to perform verification of the reconstructed value, such
+        # that an error was thrown if any unhandled active bits were present
+        # in the unformatted value. Any unknown bits are now silently dropped,
+        # which is aligned with prior art from KTL.
 
         if len(formatted) == 0:
             try:
