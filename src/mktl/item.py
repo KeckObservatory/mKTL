@@ -812,9 +812,10 @@ class Item:
     def req_get(self, request):
         """ Handle a GET request. The *request* argument is a
             :class:`protocol.message.Request` instance; the value returned
-            from :func:`req_get` is identical to the value returned by
-            :func:`perform_get`, which is where custom handling by subclasses
-            is expected to occur.
+            from :func:`req_get` is always a :class:`protocol.message.Payload`
+            instance, where :func:`perform_get` is allowed the option of
+            returning a Python-native object. Custom handling by subclasses
+            will typically occur in :func:`perform_get` rather than here.
         """
 
         try:
@@ -932,9 +933,9 @@ class Item:
             error['debug'] = traceback.format_exc()
 
         # Provide a default, effectively empty response to indicate the set
-        # request is complete. If the custom implementation had something
-        # special to say, by all means, let them say it, though by default
-        # the contents of the response payload are not inspected.
+        # request is complete. If a custom implementation of perform_set()
+        # had something special to say, by all means, let them say it, though
+        # by default the contents of the response payload are not inspected.
 
         if response is None:
             payload = protocol.message.Payload(value=True)
