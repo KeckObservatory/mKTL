@@ -1355,7 +1355,6 @@ class Item:
 
         if gettable == True:
             def temporary_callback(self, *args, **kwargs):
-                print('temporary_callback')
                 callback_event.set()
 
             self.register(temporary_callback)
