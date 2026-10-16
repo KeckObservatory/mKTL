@@ -951,7 +951,8 @@ class Item:
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
             the caller will be returned a :class:`mktl.protocol.message.Request`
-            instance, which has a :func:`mktl.protocol.message.Request.wait`
+            instance, which has a
+            :func:`wait() <mktl.protocol.message.Request.wait>`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
             satisfied. Set *reply* to False to disable all error handling and
