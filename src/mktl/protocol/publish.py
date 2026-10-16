@@ -410,8 +410,8 @@ class Server:
 
     def publish(self, broadcast):
         """ A *broadcast* is a :class:`Broadcast
-            <mktl.protocol.message.Broadcast>` instance intended for
-            broadcast to any/all subscribers.
+            <mktl.protocol.message.Broadcast>` instance to send to any/all
+            registered subscribers.
         """
 
         self.broadcasts.put(broadcast)
