@@ -26,12 +26,13 @@ involved have consistent names to indicate their role in the handling chain.
     - Responding to an incoming request starts with a handling layer; the
       methods in this layer are visible in the :class:`request.Server`
       class. :func:`req_incoming() <request.Server.req_incoming>`
-      reconstructs a :class:`message.Request` instance; that instance is
-      passed to :class:`req_handler() <request.Server.req_handler>` for
-      dispatch to an appropriate handling endpoint, such as
+      reconstructs a :class:`Request <message.Request>` instance; that
+      instance is passed to :class:`req_handler() <request.Server.req_handler>`
+      for dispatch to an appropriate handling endpoint, such as
       :func:`req_get() <mktl.Item.req_get>` or
-      :func:`req_set() <mktl.Item.req_set>`. The :class:`message.Request`
-      instance stops here, as well as its :class:`message.Payload`, if any.
+      :func:`req_set() <mktl.Item.req_set>`. The :class:`Request
+      <message.Request>` instance stops here, as well as its :class:`Payload
+      <message.Payload>`, if any.
 
   * - **3.**
     - The last step in the handling chain is a method to perform the
@@ -71,6 +72,8 @@ Message classes
 
 .. autoclass:: Broadcast
    :members:
+
+   .. automethod:: _finalize
 
 .. autoclass:: Request
    :members:
