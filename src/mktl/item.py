@@ -305,8 +305,8 @@ class Item:
 
     def from_payload(self, payload):
         """ Recreate the fundamental Python type of the value from the provided
-            :class:`mktl.protocol.message.Payload` instance, and return it to
-            the caller.
+            :class:`Payload <mktl.protocol.message.Payload>` instance, and
+            return it to the caller.
 
             This default handler will interpret the bulk component, if any,
             of the payload as an N-dimensional numpy array, with the
@@ -488,11 +488,12 @@ class Item:
             Python object that can be serialized as JSON; return None if no
             new value is available.
 
-            If a :class:`mktl.protocol.message.Payload` instance is returned
-            it will be used as-is, otherwise the return value will be passed
-            to :func:`to_payload` for encapsulation. The primary motivation
-            for returning a Payload instead of a bare value is if the embedded
-            timestamp needs to be set to some value other than the current time.
+            If a :class:`Payload <mktl.protocol.message.Payload>` instance is
+            returned it will be used as-is, otherwise the return value will be
+            passed to :func:`to_payload` for encapsulation. The primary
+            motivation to return a Payload instead of a bare value is if
+            the embedded timestamp needs to be set to some value other than
+            the current time.
 
             Calls to this method will be handled in a background thread with
             no restrictions on how long a get request takes to process. There
@@ -811,10 +812,12 @@ class Item:
 
     def req_get(self, request):
         """ Handle a GET request. The *request* argument is a
-            :class:`protocol.message.Request` instance; the value returned
-            from :func:`req_get` is identical to the value returned by
-            :func:`perform_get`, which is where custom handling by subclasses
-            is expected to occur.
+            :class:`Request <mktl.protocol.message.Request>` instance; the
+            value returned from :func:`req_get` is always a :class:`Payload
+            <mktl.protocol.message.Payload>`
+            instance, where :func:`perform_get` is allowed the option of
+            returning a Python-native object. Custom handling by subclasses
+            will typically occur in :func:`perform_get` rather than here.
         """
 
         try:
@@ -885,14 +888,14 @@ class Item:
 
     def req_set(self, request):
         """ Handle a SET request. The *request* argument is a
-            :class:`protocol.message.Request` instance; there is no return
-            value provided, this method is invoked in a background worker
-            thread, and any payload response will be issued directly by the
-            background worker. Any calls to :func:`req_set` are expected to
+            :class:`Request <mktl.protocol.message.Request>` instance; there is
+            no return value provided, this method is invoked in a background
+            worker thread, and any payload response will be issued directly by
+            the background worker. Any calls to :func:`req_set` are expected to
             block until completion. Custom handling by subclasses is expected
             to occur in :func:`perform_set`.
 
-            If the `publish_on_set` attribute is set to True (this is the
+            If the local `publish_on_set` attribute is set to True (this is the
             default) a call to :func:`publish` will occur at the tail end
             of any successful SET request. Custom subclasses can set this
             attribute to False to inhibit that behavior.
@@ -932,9 +935,9 @@ class Item:
             error['debug'] = traceback.format_exc()
 
         # Provide a default, effectively empty response to indicate the set
-        # request is complete. If the custom implementation had something
-        # special to say, by all means, let them say it, though by default
-        # the contents of the response payload are not inspected.
+        # request is complete. If a custom implementation of perform_set()
+        # had something special to say, by all means, let them say it, though
+        # by default the contents of the response payload are not inspected.
 
         if response is None:
             payload = protocol.message.Payload(value=True)
@@ -949,8 +952,9 @@ class Item:
     def set(self, new_value, wait=True, reply=True, formatted=False, quantity=False):
         """ Set a new value. Set *wait* to True to block until the request
             completes; this is the default behavior. If *wait* is set to False,
-            the caller will be returned a :class:`mktl.protocol.message.Request`
-            instance, which has a :func:`mktl.protocol.message.Request.wait`
+            the caller will be returned a :class:`Request
+            <mktl.protocol.message.Request>` instance, which has a
+            :func:`wait() <mktl.protocol.message.Request.wait>`
             method that can optionally be invoked to block until completion of
             the request; the wait will return immediately once the request is
             satisfied. Set *reply* to False to disable all error handling and
@@ -1115,10 +1119,10 @@ class Item:
 
     def to_payload(self, value=None, timestamp=None, **kwargs):
         """ Interpret the provided arguments into a
-            :class:`mktl.protocol.message.Payload` instance; if the *value* is
-            not specified the current value of this :class:`Item` will be
-            used; if the *timestamp* is not specified the current time will
-            be used. This is particularly important as a step in a custom
+            :class:`Payload <mktl.protocol.message.Payload>` instance; if the
+            *value* is not specified the current value of this :class:`Item`
+            will be used; if the *timestamp* is not specified the current time
+            will be used. This is particularly important as a step in a custom
             :func:`perform_get` implementation.
 
             This is the inverse of :func:`from_payload`.
