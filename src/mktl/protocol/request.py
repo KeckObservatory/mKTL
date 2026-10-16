@@ -522,8 +522,8 @@ def client(address, port):
 
 def send(address, port, request):
     """ Use :func:`client` to connect to the specified *address* and *port*,
-        and send the specified :class:`mktl.protocol.message.Request` instance.
-        This method blocks until the completion of the request.
+        and send the specified :class:`Request <mktl.protocol.message.Request>`
+        instance. This method blocks until the completion of the request.
     """
 
     connection = client(address, port)
