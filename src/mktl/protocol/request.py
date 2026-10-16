@@ -177,14 +177,14 @@ class Client:
 
     def send(self, request):
         """ A *request* is a fully populated
-            :class:`mktl.protocol.message.Request` instance,
+            :class:`Request <mktl.protocol.message.Request>` instance,
             which normalizes the arguments that will be sent via this method
             as a multi-part message. The request instance will also be used for
             notification of any/all responses from the remote end; this method
             will block while waiting for the ACK request, but will never block
             waiting for the full response; the caller is free to decide whether
             to block or wait for the full response, using the methods in the
-            :class:`mktl.protocol.message.Request` instance.
+            :class:`Request <mktl.protocol.message.Request>` instance.
         """
 
         self.requests.put(request)

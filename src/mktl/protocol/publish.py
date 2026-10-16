@@ -408,12 +408,13 @@ class Server:
         self.broadcast_pull.bind(self.broadcast_address)
 
 
-    def publish(self, message):
-        """ A *message* is a :class:`mktl.protocol.message.Broadcast` instance
-            intended for broadcast to any/all subscribers.
+    def publish(self, broadcast):
+        """ A *broadcast* is a :class:`Broadcast
+            <mktl.protocol.message.Broadcast>` instance intended for
+            broadcast to any/all subscribers.
         """
 
-        self.broadcasts.put(message)
+        self.broadcasts.put(broadcast)
 
         # Broadcasts can happen at high frequency. Each PUSH socket is cached
         # for re-use by a specific thread, rather than create a new socket for
