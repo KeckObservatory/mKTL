@@ -1,6 +1,7 @@
 
 import time as time_module
 
+sleep = time_module.sleep
 time = time_module.time
 time_s = time_module.time
 
