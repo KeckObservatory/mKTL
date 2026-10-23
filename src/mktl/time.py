@@ -1,7 +1,9 @@
 
-import time
+import time as time_module
 
-time_s = time.time
+time = time_module.time
+time_s = time_module.time
+
 
 def time_us():
     """ Return the current time in microseconds since the Epoch. This
@@ -15,7 +17,7 @@ def time_us():
     # accommodates timestamps for the next 200+ years; nanoseconds
     # wouldn't fit.
 
-    timestamp = time.time()
+    timestamp = time_module.time()
     timestamp_us = timestamp * 1000000
     timestamp_us = round(timestamp_us)
 
