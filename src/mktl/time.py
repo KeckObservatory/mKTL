@@ -6,8 +6,10 @@ time = time_module.time
 time_s = time_module.time
 
 
-def time_us():
-    """ Return the current time in microseconds since the Epoch. This
+def time_us(timestamp=None):
+    """ Return the current time in microseconds since the Epoch. If
+        a *timestamp* is specified it should be a floating point number
+        representing seconds since the Epoch; if not specified, this
         relies on :func:`time.time` returning a floating point number
         containing fractional seconds.
     """
@@ -18,7 +20,9 @@ def time_us():
     # accommodates timestamps for the next 200+ years; nanoseconds
     # wouldn't fit.
 
-    timestamp = time_module.time()
+    if timestamp is None:
+        timestamp = time_module.time()
+
     timestamp_us = timestamp * 1000000
     timestamp_us = round(timestamp_us)
 
