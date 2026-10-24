@@ -596,9 +596,10 @@ def print_item(item, value, timestamp):
         # Manipulate metadata as necessary before printing any output.
 
         if timestamp is None:
-            timestamp = 0.0
+            timestamp = 0
 
         if print_item.timestamp:
+            timestamp = timestamp / 1000000     # microseconds to seconds
             timestamp = datetime.datetime.fromtimestamp(timestamp)
             time_string = timestamp.strftime('%H:%M:%S.%f')
 
