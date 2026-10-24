@@ -5,7 +5,6 @@ import math
 import queue
 import sys
 import threading
-import time
 import traceback
 
 try:
@@ -15,6 +14,7 @@ except ImportError:
 
 from . import protocol
 from . import poll
+from . import time
 from . import weakref
 
 
@@ -53,9 +53,9 @@ class Item:
         self.timeout = 120
 
         self._value = None
-        self._value_timestamp = time.time()
+        self._value_timestamp = time.time_us()
         self._daemon_value = None
-        self._daemon_value_timestamp = time.time()
+        self._daemon_value_timestamp = time.time_us()
 
         self.pub = None
         self.sub = None
@@ -670,9 +670,9 @@ class Item:
         """
 
         if timestamp is None:
-            timestamp = time.time()
+            timestamp = time.time_us()
         else:
-            timestamp = float(timestamp)
+            timestamp = int(timestamp)
 
         # publish() does not require a Payload instance as an argument to
         # allow flexibility in cases where the timestamp is not already
@@ -1136,7 +1136,7 @@ class Item:
             # current time as the timestamp-- the next condition would instead
             # use the previous timestamp, which is not appropriate for a new
             # payload.
-            timestamp = time.time()
+            timestamp = time.time_us()
 
         if timestamp is None:
             timestamp = self.timestamp
