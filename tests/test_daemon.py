@@ -197,7 +197,7 @@ def test_subclass_item_interactions(run_mkregistryd):
         def perform_set(self, new_value):
             kwargs = dict()
             kwargs['value'] = 'no-op'
-            kwargs['time'] = time.time()
+            kwargs['time'] = mktl.time.time_us()
             return mktl.protocol.message.Payload(**kwargs)
 
     class Daemon(mktl.Daemon):
