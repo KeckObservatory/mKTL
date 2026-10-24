@@ -27,8 +27,8 @@ a JSON dictionary, with each catalog block keyed by the unique identifier
 For example, the 'kpfguide' store may contain multiple daemons, and therefore
 multiple catalog blocks::
 
-	{'uuid1': {'store': 'kpfguide', 'time': 1724892333.924, ...},
-	 'uuid2': {'store': 'kpfguide', 'time': 1725892343.567, ...}}
+	{'uuid1': {'store': 'kpfguide', 'time': 1724892333924361, ...},
+	 'uuid2': {'store': 'kpfguide', 'time': 1725892343568447, ...}}
 
 Each catalog block will contain the following fields:
 
@@ -244,7 +244,7 @@ like for a store named 'pie'::
         "store": "pie",
         "hash": 236000907473448652729473003892320198915,
         "uuid": "8017ad5b-07a7-5135-a024-c46a0b79b74e",
-        "time": 1738177027.4993615,
+        "time": 17381770274993615,
         "provenance": [
           {
             "stratum": 0,
