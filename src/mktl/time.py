@@ -1,3 +1,9 @@
+""" The primary objective of this module is to implement a variant of
+    time.time() that returns a value in microseconds, similar to how
+    time.time_ns() returns nanoseconds. The standard time module is
+    quite fast, and is implemented in C; while the code implemented
+    here strives to be lean it will never be as performant.
+"""
 
 import time as time_module
 
