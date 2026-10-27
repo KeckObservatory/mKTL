@@ -29,6 +29,11 @@ def time_us(timestamp=None):
     if timestamp is None:
         timestamp = time_module.time()
 
+    # The extra steps to turn this into an integer basically doubles
+    # the time required to generate this timestamp, compared to just
+    # calling time.time() directly. It's still a factor of ten faster
+    # than using datetime and accessing microseconds separately.
+
     timestamp_us = timestamp * 1000000
     timestamp_us = round(timestamp_us)
 
