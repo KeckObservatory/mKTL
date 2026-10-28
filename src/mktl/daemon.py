@@ -1468,7 +1468,7 @@ class Uptime(item.Item):
         current_time = time.time()
         uptime = current_time - self.starttime
 
-        return self.to_payload(uptime, time.time_us(current_time))
+        return self.to_payload(uptime, time.to_microseconds(current_time))
 
 
 # end of class Uptime
