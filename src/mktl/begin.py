@@ -36,9 +36,22 @@ def discover(*targets):
         known to these registries, for all future queries. This is especially
         helpful if the local client is not on the same network as the
         registries of interest.
+
+        The caller can also specify a host:port to query; this could be an
+        individual mKTL daemon, it answers the same _hash and _config queries
+        as a registry, but will only answer for itself.
     """
 
-    registries = protocol.discover.search(wait=True, targets=targets)
+    registries = list()
+    to_probe = list()
+
+    for target in targets:
+        if ':' in target:
+            registries.append(target.split(':'))
+        else:
+            to_probe.append(target)
+
+    registries.extend(protocol.discover.search(wait=True, targets=to_probe))
 
     if len(registries) == 0:
         raise RuntimeError('no registries available')
