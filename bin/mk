@@ -599,7 +599,7 @@ def print_item(item, value, timestamp):
             timestamp = 0
 
         if print_item.timestamp:
-            timestamp = mktl.time.to_seconds(timestamp)
+            timestamp = mktl.time.us_to_s(timestamp)
             timestamp = datetime.datetime.fromtimestamp(timestamp)
             time_string = timestamp.strftime('%H:%M:%S.%f')
 

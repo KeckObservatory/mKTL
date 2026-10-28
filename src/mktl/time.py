@@ -31,7 +31,7 @@ def time_us():
     # calling time.time() directly. It's still a factor of ten faster
     # than using datetime and accessing microseconds separately.
 
-    # This is a duplication of the math in to_microseconds(); calling
+    # This is a duplication of the math in s_to_us(); calling
     # that method instead of duplicating the math results in something
     # like a 20% increase in CPU usage.
 
@@ -41,17 +41,7 @@ def time_us():
     return timestamp_us
 
 
-def to_seconds(microseconds):
-    """ Convert from microseconds to seconds. The result is returned as
-        a floating point number; there may be a loss of precision in the
-        conversion.
-    """
-
-    seconds = microseconds / 1000000.0
-    return seconds
-
-
-def to_microseconds(seconds):
+def s_to_us(seconds):
     """ Convert from seconds to microseconds. The result is returned as
         an integer.
     """
@@ -59,6 +49,16 @@ def to_microseconds(seconds):
     microseconds = seconds * 1000000
     microseconds = round(microseconds)
     return microseconds
+
+
+def us_to_s(microseconds):
+    """ Convert from microseconds to seconds. The result is returned as
+        a floating point number; there may be a loss of precision in the
+        conversion.
+    """
+
+    seconds = microseconds / 1000000.0
+    return seconds
 
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
