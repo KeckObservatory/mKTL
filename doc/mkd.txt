@@ -1,4 +1,5 @@
 usage: mkd [-h] [-m MODULE] [-s SUBCLASS] [-c CATALOG] [-a APPCONFIG]
+           [--no-discovery]
            store alias
 
 This is a generic mKTL daemon. The real work is done in the subclass of
@@ -35,6 +36,10 @@ options:
                         by mKTL, but made available to the mktl.Daemon
                         subclass. How this directive is used is entirely up to
                         the application-specific subclass code.
+  --no-discovery        Do not participate in mKTL discovery. Daemons that do
+                        not participate in discovery will only be accessible
+                        by knowing exactly which ports the daemon is running
+                        on. Discovery is enabled by default.
 
 For example, to run mkd for the store 'rosebud', using the existing
 on-disk catalog block identified as 'innocence', first using the default
