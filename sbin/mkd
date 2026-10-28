@@ -58,9 +58,20 @@ def parse_command_line():
     parser.add_argument('-s', '--subclass', help='Specific mktl.Daemon subclass to invoke; this is the bare class name (Daemon), not a fully qualified class name (mktl.Daemon). The default subclass name is "Daemon".', default='Daemon')
     parser.add_argument('-c', '--catalog', help='File containing daemon-specific mKTL catalog of items; if specified, the contents of this file will supplant any cached daemon-specific catalog for this store+alias.')
     parser.add_argument('-a', '--appconfig', help='Custom configuration file location, not used directly by mKTL, but made available to the mktl.Daemon subclass. How this directive is used is entirely up to the application-specific subclass code.')
+    parser.add_argument('--no-discovery', help='Do not participate in mKTL discovery. Daemons that do not participate in discovery will only be accessible by knowing exactly which ports the daemon is running on. Discovery is enabled by default.', action='store_true', default=False)
 
 
     parsed = parser.parse_args()
+
+    # The argparse.BooleanOptionalAction would be nice to use here, because it
+    # handles both the --foo and --no-foo case, but that wasn't added until
+    # Python 3.9.
+
+    if parsed.no_discovery:
+        parsed.discovery = False
+    else:
+        parsed.discovery = True
+
     return parsed
 
 
