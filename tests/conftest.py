@@ -16,7 +16,6 @@ def run_mkregistryd():
     mkregistryd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     yield
-
     mkregistryd.terminate()
 
 
@@ -44,7 +43,7 @@ def run_mkd():
     time.sleep(1)
 
     yield
-
     mkd.terminate()
+
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:
