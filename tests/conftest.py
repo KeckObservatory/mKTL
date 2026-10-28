@@ -7,6 +7,11 @@ import time
 
 @pytest.fixture(scope="session")
 def run_mkregistryd():
+    """ There is no need to run the registry daemon; the unit test daemons
+        do not participate in the mKTL discovery process. Though the
+        run_mkregistryd fixture is no longer used it is left here in case
+        that changes in the future.
+    """
 
     arguments = list()
     arguments.append(sys.executable)

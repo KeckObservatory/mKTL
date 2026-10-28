@@ -19,7 +19,7 @@ no_discovery = EmptyOptions()
 no_discovery.discovery = False
 
 
-def test_empty(run_mkregistryd):
+def test_empty():
 
     daemon = mktl.Daemon('unittest_daemon_empty', 'unittest', no_discovery)
 
@@ -45,7 +45,7 @@ def test_empty(run_mkregistryd):
     mem.timestamp
 
 
-def test_subclass(run_mkregistryd):
+def test_subclass():
 
     class Daemon(mktl.Daemon):
 
@@ -58,7 +58,7 @@ def test_subclass(run_mkregistryd):
     Daemon('unittest_daemon_subclass', 'unittest', no_discovery)
 
 
-def test_subclass_performers(run_mkregistryd):
+def test_subclass_performers():
 
     def get_a_number():
         get_a_number.custom_value += 1
@@ -156,7 +156,7 @@ def test_subclass_performers(run_mkregistryd):
     assert a_number == 18
 
 
-def test_subclass_item(run_mkregistryd):
+def test_subclass_item():
 
     class Something(mktl.Item):
         pass
@@ -183,7 +183,7 @@ def test_subclass_item(run_mkregistryd):
     Daemon('unittest_daemon_subclass_item', 'unittest', no_discovery)
 
 
-def test_subclass_item_interactions(run_mkregistryd):
+def test_subclass_item_interactions():
 
     class Something(mktl.Item):
 

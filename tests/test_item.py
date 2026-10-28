@@ -14,7 +14,7 @@ except ImportError:
     pint = None
 
 
-def test_get(run_mkregistryd, run_mkd):
+def test_get(run_mkd):
 
     number = mktl.get('unittest.number')
     number.get()
@@ -34,7 +34,7 @@ def test_get(run_mkregistryd, run_mkd):
         writeonly.subscribe()
 
 
-def test_set(run_mkregistryd, run_mkd):
+def test_set(run_mkd):
 
     number = mktl.get('unittest.number')
     number.set(-1)
@@ -68,7 +68,7 @@ def test_set(run_mkregistryd, run_mkd):
         writeonly += 33
 
 
-def test_boolean(run_mkregistryd, run_mkd):
+def test_boolean(run_mkd):
 
     boolean = mktl.get('unittest.boolean')
 
@@ -123,7 +123,7 @@ def test_boolean(run_mkregistryd, run_mkd):
     assert noyes == True
 
 
-def test_bulk(run_mkregistryd, run_mkd):
+def test_bulk(run_mkd):
 
     if numpy is None:
         return
@@ -137,7 +137,7 @@ def test_bulk(run_mkregistryd, run_mkd):
         bulk.value = False
 
 
-def test_enumerated(run_mkregistryd, run_mkd):
+def test_enumerated(run_mkd):
 
     enumerated = mktl.get('unittest.enumerated')
 
@@ -165,7 +165,7 @@ def test_enumerated(run_mkregistryd, run_mkd):
         enumerated.value = 'invalid'
 
 
-def test_logic(run_mkregistryd, run_mkd):
+def test_logic(run_mkd):
 
     string = mktl.get('unittest.string')
 
@@ -237,7 +237,7 @@ def test_logic(run_mkregistryd, run_mkd):
         number ^ 1
 
 
-def test_mask(run_mkregistryd, run_mkd):
+def test_mask(run_mkd):
 
     mask = mktl.get('unittest.mask')
 
@@ -271,7 +271,7 @@ def test_mask(run_mkregistryd, run_mkd):
         mask.value = 'invalid'
 
 
-def test_math(run_mkregistryd, run_mkd):
+def test_math(run_mkd):
 
     number = mktl.get('unittest.number')
 
@@ -351,7 +351,7 @@ def test_math(run_mkregistryd, run_mkd):
         assert math.trunc(number) == math.trunc(test_value)
 
 
-def test_quantity(run_mkregistryd, run_mkd):
+def test_quantity(run_mkd):
 
     if pint is None:
         return
@@ -413,7 +413,7 @@ def test_quantity(run_mkregistryd, run_mkd):
         basicangle.set(degrees + 1, formatted='not a boolean')
 
 
-def test_sexagesimal(run_mkregistryd, run_mkd):
+def test_sexagesimal(run_mkd):
 
     if pint is None:
         return
@@ -471,7 +471,7 @@ def test_sexagesimal(run_mkregistryd, run_mkd):
     assert hourangle.value == 108.29768008624816
 
 
-def test_string(run_mkregistryd, run_mkd):
+def test_string(run_mkd):
 
     string = mktl.get('unittest.string')
 
@@ -550,7 +550,7 @@ def test_string(run_mkregistryd, run_mkd):
     assert string == test_value * 2
 
 
-def test_timestamp(run_mkregistryd, run_mkd):
+def test_timestamp(run_mkd):
 
     number = mktl.get('unittest.number')
 
@@ -568,7 +568,7 @@ def test_timestamp(run_mkregistryd, run_mkd):
     assert isinstance(number.timestamp, int)
 
 
-def test_typeless(run_mkregistryd, run_mkd):
+def test_typeless(run_mkd):
 
     typeless = mktl.get('unittest.typeless')
 
@@ -586,7 +586,7 @@ def test_typeless(run_mkregistryd, run_mkd):
     typeless.formatted
 
 
-def test_callback(run_mkregistryd, run_mkd):
+def test_callback(run_mkd):
 
     string = mktl.get('unittest.string')
 
