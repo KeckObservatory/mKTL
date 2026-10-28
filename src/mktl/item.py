@@ -654,9 +654,9 @@ class Item:
     def publish(self, new_value, timestamp=None, repeat=False):
         """ Publish a new value, which is expected to be the Python native
             representation of the new value. If *timestamp* is set it is
-            expected to be a UNIX epoch timestamp; the current time will be
-            used if it is not provided. Newly published values are always
-            cached locally. If *repeat* is set to True the value will be
+            expected to be a UNIX Epoch timestamp in microseconds; the current
+            time will be used if it is not provided. Newly published values are
+            always cached locally. If *repeat* is set to True the value will be
             published regardless of whether it is a repeat of the previously
             published value.
 
@@ -1094,6 +1094,7 @@ class Item:
     @property
     def timestamp(self):
         """ Get the timestamp associated with the current value of the item.
+            This is a UNIX Epoch timestamp in microseconds.
         """
 
         return self._timestamp_getter()
