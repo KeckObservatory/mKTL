@@ -2,10 +2,28 @@ import time
 import mktl
 
 
+def test_conversions():
+
+    now = time.time()
+    now_us = mktl.time.to_microseconds(now)
+    now_s = mktl.time.to_seconds(now_us)
+
+    low = now - 0.000001
+    high = now + 0.000001
+
+    manual_us = now * 1000000
+    manual_us = round(manual_us)
+    manual_s = manual_us / 1000000.0
+    assert manual_s > low and manual_s < high
+
+    assert now_us == manual_us
+    assert now_s > low and now_s < high
+
+
 def test_microseconds():
 
     now = time.time()
-    now_microseconds = mktl.time.time_us(now)
+    now_microseconds = mktl.time.to_microseconds(now)
 
     assert isinstance(now_microseconds, int)
     assert mktl.time.time_us() > now_microseconds
