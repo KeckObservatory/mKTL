@@ -43,7 +43,7 @@ def main():
     daemon = Daemon(store, alias=store)
 
     # Run discovery once upon startup, rely on daemon announcements to
-    # learn of any additions to the local network.
+    # learn of any post-startup additions to the local network.
 
     daemon.registry.discover_daemons()
 
