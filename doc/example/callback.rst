@@ -52,6 +52,7 @@ that ignores the arguments provided, an approach made easier by the use of
             old = old_weight * average.computed
             average.computed = new + old
 
+        time = mktl.time.us_to_s(time)
         print("%.3f %s average: %.1f" % (time, item.key, average.computed)
 
     average.computed = None
@@ -74,7 +75,7 @@ that ignores the arguments provided, an approach made easier by the use of
             old = old_weight * average.computed
             average.computed = new + old
 
-        timestamp = temp.timestamp
+        timestamp = mktl.time.us_to_s(temp.timestamp)
         print("%.3f %s average: %.1f" % (timestamp, temp.key, average.computed)
 
     average.computed = None
@@ -122,7 +123,7 @@ Putting it all together::
 
         temp = mktl.get('oven.TEMP')
         value = float(temp)
-        time = temp.timestamp
+        time = mktl.time.us_to_s(temp.timestamp)
         print ("%.3f oven.TEMP: %.1f" % (time, value))
 
     def average(*args, **kwargs):
@@ -140,7 +141,7 @@ Putting it all together::
             old = old_weight * average.computed
             average.computed = new + old
 
-        timestamp = temp.timestamp
+        timestamp = mktl.time.us_to_s(temp.timestamp)
         print("%.3f %s average: %.1f" % (timestamp, temp.full_key, average.computed)
 
     average.computed = None
