@@ -555,7 +555,7 @@ def test_timestamp(run_mkregistryd, run_mkd):
     number = mktl.get('unittest.number')
 
     now = time.time()
-    now_microseconds = mktl.time.time_us(now)
+    now_microseconds = mktl.time.to_microseconds(now)
 
     assert isinstance(number.timestamp, int)
     assert number.timestamp > now
