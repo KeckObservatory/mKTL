@@ -7,6 +7,11 @@ import time
 
 @pytest.fixture(scope="session")
 def run_mkregistryd():
+    """ There is no need to run the registry daemon; the unit test daemons
+        do not participate in the mKTL discovery process. Though the
+        run_mkregistryd fixture is no longer used it is left here in case
+        that changes in the future.
+    """
 
     arguments = list()
     arguments.append(sys.executable)
@@ -16,7 +21,6 @@ def run_mkregistryd():
     mkregistryd = subprocess.Popen(arguments, stdout=pipe, stderr=pipe)
 
     yield
-
     mkregistryd.terminate()
 
 
@@ -28,7 +32,8 @@ def run_mkd():
     arguments = list()
     arguments.append(sys.executable)
     arguments.append('../sbin/mkd')
-    arguments.append('-m')
+    arguments.append('--no-discovery')
+    arguments.append('--module')
     arguments.append('unitdaemon')
     arguments.append('unittest')
     arguments.append('unittest')    # Yes, twice.
@@ -43,7 +48,7 @@ def run_mkd():
     time.sleep(1)
 
     yield
-
     mkd.terminate()
+
 
 # vim: set expandtab tabstop=8 softtabstop=4 shiftwidth=4 autoindent:

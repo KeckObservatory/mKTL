@@ -12,9 +12,16 @@ except ImportError:
 # Daemons invoked throughout this file use different store names in
 # order to avoid overlap with other unit test fixtures.
 
+class EmptyOptions:
+    pass
 
-def test_empty(run_mkregistryd):
-    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest')
+no_discovery = EmptyOptions()
+no_discovery.discovery = False
+
+
+def test_empty():
+
+    daemon = mktl.Daemon('unittest_daemon_empty', 'unittest', no_discovery)
 
     # Exercise the custom built-in items.
 
@@ -38,7 +45,7 @@ def test_empty(run_mkregistryd):
     mem.timestamp
 
 
-def test_subclass(run_mkregistryd):
+def test_subclass():
 
     class Daemon(mktl.Daemon):
 
@@ -48,10 +55,10 @@ def test_subclass(run_mkregistryd):
             items['something']['description'] = 'A test item'
             return items
 
-    Daemon('unittest_daemon_subclass', 'unittest')
+    Daemon('unittest_daemon_subclass', 'unittest', no_discovery)
 
 
-def test_subclass_performers(run_mkregistryd):
+def test_subclass_performers():
 
     def get_a_number():
         get_a_number.custom_value += 1
@@ -102,7 +109,7 @@ def test_subclass_performers(run_mkregistryd):
 
 
 
-    Daemon('unittest_daemon_subclass_performers', 'unittest')
+    Daemon('unittest_daemon_subclass_performers', 'unittest', no_discovery)
 
 
     a_number = mktl.get('unittest_daemon_subclass_performers', 'a_number')
@@ -149,7 +156,7 @@ def test_subclass_performers(run_mkregistryd):
     assert a_number == 18
 
 
-def test_subclass_item(run_mkregistryd):
+def test_subclass_item():
 
     class Something(mktl.Item):
         pass
@@ -173,10 +180,10 @@ def test_subclass_item(run_mkregistryd):
                 self.add_item(mktl.Item, 'invalid_item_name')
 
 
-    Daemon('unittest_daemon_subclass_item', 'unittest')
+    Daemon('unittest_daemon_subclass_item', 'unittest', no_discovery)
 
 
-def test_subclass_item_interactions(run_mkregistryd):
+def test_subclass_item_interactions():
 
     class Something(mktl.Item):
 
@@ -253,7 +260,7 @@ def test_subclass_item_interactions(run_mkregistryd):
             self.add_item(Something, 'something')
             self.add_item(Payloader, 'payloader')
 
-    Daemon('unittest_daemon_subclass_item_interact', 'unittest')
+    Daemon('unittest_daemon_subclass_item_interact', 'unittest', no_discovery)
 
     empty = mktl.get('unittest_daemon_subclass_item_interact', 'empty')
     empty.set('not empty')

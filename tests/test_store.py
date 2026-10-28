@@ -2,7 +2,7 @@ import mktl
 import pytest
 
 
-def test_store(run_mkregistryd, run_mkd):
+def test_store(run_mkd):
 
     store = mktl.get('unittest')
 
