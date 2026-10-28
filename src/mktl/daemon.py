@@ -202,8 +202,17 @@ class Daemon:
 
         # Ready to go on the air.
 
-        self._discovery = protocol.discover.DirectServer(self.rep.port)
-        meta.announce(self.catalog[self.block_uuid])
+        try:
+            discovery = options.discovery
+        except AttributeError:
+            discovery = True
+
+        if discovery:
+            self._discovery = protocol.discover.DirectServer(self.rep.port)
+            meta.announce(self.catalog[self.block_uuid])
+        else:
+            self.logger.info('discovery is disabled')
+
         self.logger.debug('daemon initialization complete')
 
 
