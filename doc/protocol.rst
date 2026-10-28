@@ -184,7 +184,7 @@ for a simple GET request::
 	b'REP'
 	b''
 	b''
-	b'{"value": /sdata1701/kpf1/2025-06-23/image_672.fits', "time": 234.23}'
+	b'{"value": /sdata1701/kpf1/2025-06-23/image_672.fits', "time": 23423}'
 
 The reference implementation provides a :class:`mktl.protocol.message.Message`
 class to minimize the amount of code that has to be aware about the on-the-wire
@@ -217,9 +217,9 @@ also exists, but has its own message structure outside this scheme.
       'True'; see the :ref:`message_payload` section for additional details.
 
       The payload of the response will contain 'value' and 'time' fields,
-      corresponding to the item value and the last-changed timestamp. If
-      the item has a bulk data component, the payload will instead describe
-      the bulk data.
+      corresponding to the item value and the last-changed timestamp. The
+      timestamp is an integer in Epoch microseconds. If the item has a bulk
+      data component, the payload will instead describe the bulk data.
 
   * - **SET**
     - Request a change to the value of a single key. Depending on the daemon,
@@ -273,8 +273,8 @@ allowed, but a standard mKTL client will not notice or handle them.
   * - **time**
     - The timestamp associated with the transmitted value. This should be
       interpreted as the "last modified" timestamp for an item, indicating
-      when the item assumed the transmitted value. The timestamp is a numeric
-      representation of UNIX epoch seconds.
+      when the item assumed the transmitted value. The timestamp is an integer
+      representation of UNIX Epoch microseconds.
 
   * - **error**
     - A JSON dictionary with information about any error that occurred while

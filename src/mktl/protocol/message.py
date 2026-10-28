@@ -8,7 +8,6 @@ import os
 import socket
 import sys
 import threading
-import time
 
 from .. import json
 
@@ -80,7 +79,6 @@ class Message:
 
         :ivar payload: The :class:`Payload`, if any, for the message.
         :ivar valid_types: A set of valid strings for the message type.
-        :ivar timestamp: A UNIX epoch timestamp for the message send time.
     """
 
     valid_types = set(('ACK', 'REP'))
@@ -102,7 +100,6 @@ class Message:
         self.payload = payload
         self.prefix = None
         self.target = target
-        self.timestamp = time.time()
 
         self._parts = None
 
@@ -559,7 +556,7 @@ class Payload:
             and .time attributes of a :class:`Payload` are assigned, the caller
             will receive a value like::
 
-                b'{"value": 12, "time": 1761100609.234571}'
+                b'{"value": 12, "time": 1761100609234571}'
         """
 
         # The output from this method was initially cached, but there's never

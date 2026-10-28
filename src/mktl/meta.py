@@ -7,7 +7,6 @@ import hashlib
 import os
 import sys
 import threading
-import time
 import uuid
 import weakref
 
@@ -23,6 +22,7 @@ else:
 
 from . import json
 from . import protocol
+from . import time
 
 
 _cache = dict()
@@ -1120,7 +1120,7 @@ class Catalog:
 
             if old_hash != new_hash:
                 block['hash'] = new_hash
-                block['time'] = time.time()
+                block['time'] = time.time_us()
 
         else:
             # The block should always have a hash; provide one if, for some
@@ -1261,7 +1261,7 @@ def to_block(store, alias, blkid, uuid, items):
     block['alias'] = alias
     block['blkid'] = blkid
     block['uuid'] = uuid
-    block['time'] = time.time()
+    block['time'] = time.time_us()
     block['hash'] = generate_hash(items)
     block['items'] = items
 

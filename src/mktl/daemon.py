@@ -8,7 +8,6 @@ import socket
 import subprocess
 import sys
 import threading
-import time
 
 from . import begin
 from . import item
@@ -17,6 +16,7 @@ from . import meta
 from . import poll
 from . import protocol
 from . import store
+from . import time
 
 
 class Daemon:
@@ -1425,7 +1425,7 @@ class ProcessorUsage(item.Item):
     def __init__(self, *args, **kwargs):
         resources = resource.getrusage(resource.RUSAGE_SELF)
         self.previous_usage = resources.ru_utime + resources.ru_stime
-        self.previous_time = time.time()
+        self.previous_time = time.time_us()
 
         item.Item.__init__(self, *args, **kwargs)
 
@@ -1434,7 +1434,7 @@ class ProcessorUsage(item.Item):
 
         resources = resource.getrusage(resource.RUSAGE_SELF)
         current_usage = resources.ru_utime + resources.ru_stime
-        current_time = time.time()
+        current_time = time.time_us()
 
         consumed = current_usage - self.previous_usage
         elapsed = current_time - self.previous_time
@@ -1468,7 +1468,7 @@ class Uptime(item.Item):
         current_time = time.time()
         uptime = current_time - self.starttime
 
-        return self.to_payload(uptime, current_time)
+        return self.to_payload(uptime, time.s_to_us(current_time))
 
 
 # end of class Uptime
