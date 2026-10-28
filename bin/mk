@@ -351,7 +351,7 @@ def execute_get_requests(requests):
             getting.append(gotten)
 
     for item in getting:
-        print_item(item, item.value, item._value_timestamp)
+        print_item(item, item.value, item.timestamp)
 
 
 
