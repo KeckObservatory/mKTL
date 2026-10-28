@@ -38,10 +38,10 @@ class Daemon:
         *options* is expected to be an :class:`argparse.ArgumentParser`
         instance, though in practice it can be any Python object with specific
         named attributes of interest to a :class:`Daemon` subclass; the
-        *options* argument is not required. This is intended to be a vehicle
-        for custom subclasses to receive key information from command-line
-        options, such as the location of an auxiliary configuration file
-        containing information about a hardware controller.
+        *options* argument is not required. The :func:`parse_options` method
+        is the entry point for subclasses to parse any configuration options
+        set in this fashion; this method is invoked early in the initialization
+        sequence.
     """
 
     def __init__(self, store, alias, options=None):
