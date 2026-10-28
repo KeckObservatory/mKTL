@@ -137,7 +137,6 @@ def test_bulk(run_mkregistryd, run_mkd):
         bulk.value = False
 
 
-
 def test_enumerated(run_mkregistryd, run_mkd):
 
     enumerated = mktl.get('unittest.enumerated')
@@ -549,6 +548,24 @@ def test_string(run_mkregistryd, run_mkd):
     string.value = test_value
     string *= 2
     assert string == test_value * 2
+
+
+def test_timestamp(run_mkregistryd, run_mkd):
+
+    number = mktl.get('unittest.number')
+
+    now = time.time()
+    now_microseconds = mktl.time.time_us(now)
+
+    assert isinstance(number.timestamp, int)
+    assert number.timestamp > now
+    assert number.timestamp < now_microseconds
+
+    old_timestamp = number.timestamp
+
+    number.value += 5
+    assert number.timestamp > old_timestamp
+    assert isinstance(number.timestamp, int)
 
 
 def test_typeless(run_mkregistryd, run_mkd):
