@@ -28,7 +28,8 @@ def run_mkd():
     arguments = list()
     arguments.append(sys.executable)
     arguments.append('../sbin/mkd')
-    arguments.append('-m')
+    arguments.append('--no-discovery')
+    arguments.append('--module')
     arguments.append('unitdaemon')
     arguments.append('unittest')
     arguments.append('unittest')    # Yes, twice.
