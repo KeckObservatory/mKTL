@@ -393,26 +393,39 @@ class Server:
             No response will be issued if :func:`req_handler` returns None.
         """
 
-        ### This all needs to move into a try/except block so that any
-        ### exceptions are passed back to the originator of the request.
-        ### Presumably that means calling something like _req_incoming().
-
-        ident = parts[0]
-        parts = parts[1:]
-        request = message.Request.reconstruct(parts)
-        request.prefix = (ident,)
-
         payload = None
         error = None
 
+        ident = parts[0]
+        parts = parts[1:]
+
         try:
-            payload = self.req_handler(request)
+            request = message.Request.reconstruct(parts)
         except:
+            # Because the reconstruction of the request failed any response
+            # cannot be fully associated with the incoming request. This error
+            # response will likely get dropped, but attempting a response feels
+            # more complete than just ignoring the request.
+
             e_class, e_instance, e_traceback = sys.exc_info()
             error = dict()
             error['type'] = e_class.__name__
             error['text'] = str(e_instance)
             error['debug'] = traceback.format_exc()
+            request = message.Request('GET')
+            request.id = -1
+        finally:
+            request.prefix = (ident,)
+
+        if error is None:
+            try:
+                payload = self.req_handler(request)
+            except:
+                e_class, e_instance, e_traceback = sys.exc_info()
+                error = dict()
+                error['type'] = e_class.__name__
+                error['text'] = str(e_instance)
+                error['debug'] = traceback.format_exc()
 
         if payload or error:
             self.respond(request, payload, error)
