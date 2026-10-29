@@ -79,6 +79,7 @@ class Item(mktl.Item):
         # that would normally occur via KTL asc2bin and bin2asc ioctl calls.
 
         timestamp = slice.time
+        timestamp = mktl.time.s_to_us(timestamp)
         unformatted = slice.binary
 
         # This method could assign self.value = unformatted, but that wouldn't
