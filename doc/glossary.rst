@@ -77,7 +77,7 @@ mKTL-specific terms
 	A unique name within a store, identifying a single key-value
 	pair. This is analogous to a KTL keyword, or an EPICS channel.
 	mKTL treats the key as case-insensitive, any actual usage will
-	render it as all upper-case.
+	render it as all lower-case.
 
  * **Value**:
 	The other half of the key-value pair. Like a KTL keyword,
